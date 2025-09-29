@@ -1,0 +1,196 @@
+@model GarageManagementSystem.IdentityServer.Controllers.CreateClientViewModel
+
+<input type="hidden" id="editClientDbId" value="@ViewBag.ClientId" />
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="form-group">
+            <label for="editClientId">Client ID</label>
+            <input type="text" class="form-control form-control-sm" id="editClientIdInput" name="ClientId" value="@Model.ClientId" required readonly>
+        </div>
+        <div class="form-group">
+            <label for="editClientName">Client Name</label>
+            <input type="text" class="form-control form-control-sm" id="editClientName" name="ClientName" value="@Model.ClientName" required>
+        </div>
+        <div class="form-group">
+            <label for="editDescription">Description</label>
+            <textarea class="form-control form-control-sm" id="editDescription" name="Description" rows="3">@Model.Description</textarea>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="form-group">
+            <label for="editClientSecret">Client Secret (leave blank to keep current)</label>
+            <input type="text" class="form-control form-control-sm" id="editClientSecret" name="ClientSecret">
+        </div>
+        <div class="form-group">
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" id="editEnabled" name="Enabled" @(Model.Enabled ? "checked" : "")>
+                <label class="form-check-label" for="editEnabled">Enabled</label>
+            </div>
+        </div>
+        <div class="form-group">
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" id="editRequireClientSecret" name="RequireClientSecret" @(Model.RequireClientSecret ? "checked" : "")>
+                <label class="form-check-label" for="editRequireClientSecret">Require Client Secret</label>
+            </div>
+        </div>
+        <div class="form-group">
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" id="editRequirePkce" name="RequirePkce" @(Model.RequirePkce ? "checked" : "")>
+                <label class="form-check-label" for="editRequirePkce">Require PKCE</label>
+            </div>
+        </div>
+        <div class="form-group">
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" id="editAllowOfflineAccess" name="AllowOfflineAccess" @(Model.AllowOfflineAccess ? "checked" : "")>
+                <label class="form-check-label" for="editAllowOfflineAccess">Allow Offline Access</label>
+            </div>
+        </div>
+        <div class="form-group">
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" id="editRequireConsent" name="RequireConsent" @(Model.RequireConsent ? "checked" : "")>
+                <label class="form-check-label" for="editRequireConsent">Require Consent</label>
+            </div>
+        </div>
+        <div class="form-group">
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" id="editAllowRememberConsent" name="AllowRememberConsent" @(Model.AllowRememberConsent ? "checked" : "")>
+                <label class="form-check-label" for="editAllowRememberConsent">Allow Remember Consent</label>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-6">
+        <div class="form-group">
+            <label for="editGrantTypes">Grant Types</label>
+            <select class="form-control form-control-sm select2" id="editGrantTypes" name="GrantTypes" multiple data-selected-values='@Html.Raw(Json.Serialize(Model.GrantTypes))'>
+                <!-- Options will be loaded dynamically -->
+            </select>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="form-group">
+            <label for="editScopes">Scopes</label>
+            <select class="form-control form-control-sm select2" id="editScopes" name="Scopes" multiple data-selected-values='@Html.Raw(Json.Serialize(Model.Scopes))'>
+                <!-- Options will be loaded dynamically -->
+            </select>
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-6">
+        <div class="form-group">
+            <label for="editRedirectUris">Redirect URIs</label>
+            <textarea class="form-control form-control-sm" id="editRedirectUris" name="RedirectUris" rows="3" placeholder="Enter URIs, one per line">@string.Join("\n", Model.RedirectUris)</textarea>
+            <small class="form-text text-muted">Enter one URI per line</small>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="form-group">
+            <label for="editPostLogoutRedirectUris">Post Logout Redirect URIs</label>
+            <textarea class="form-control form-control-sm" id="editPostLogoutRedirectUris" name="PostLogoutRedirectUris" rows="3" placeholder="Enter URIs, one per line">@string.Join("\n", Model.PostLogoutRedirectUris)</textarea>
+            <small class="form-text text-muted">Enter one URI per line</small>
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-6">
+        <div class="form-group">
+            <label for="editAccessTokenLifetime">Access Token Lifetime (seconds)</label>
+            <input type="number" class="form-control" id="editAccessTokenLifetime" name="AccessTokenLifetime" value="@Model.AccessTokenLifetime" min="60">
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="form-group">
+            <label for="editIdentityTokenLifetime">Identity Token Lifetime (seconds)</label>
+            <input type="number" class="form-control" id="editIdentityTokenLifetime" name="IdentityTokenLifetime" value="@Model.IdentityTokenLifetime" min="60">
+        </div>
+    </div>
+</div>
+
+<!-- Additional Fields -->
+<div class="row">
+    <div class="col-md-6">
+        <div class="form-group">
+            <label for="editAllowedCorsOrigins">CORS Origins</label>
+            <textarea class="form-control form-control-sm" id="editAllowedCorsOrigins" name="AllowedCorsOrigins" rows="3" placeholder="Enter origins, one per line">@string.Join("\n", Model.AllowedCorsOrigins)</textarea>
+            <small class="form-text text-muted">Enter one origin per line (e.g., https://example.com)</small>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="form-group">
+            <label for="editAuthorizationCodeLifetime">Authorization Code Lifetime (seconds)</label>
+            <input type="number" class="form-control" id="editAuthorizationCodeLifetime" name="AuthorizationCodeLifetime" value="@Model.AuthorizationCodeLifetime" min="60">
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="form-group">
+            <label for="editUserSsoLifetime">User SSO Lifetime (seconds)</label>
+            <input type="number" class="form-control" id="editUserSsoLifetime" name="UserSsoLifetime" value="@Model.UserSsoLifetime" min="60">
+            <small class="form-text text-muted">Default: 30 days (2592000 seconds)</small>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="form-group">
+            <label for="editConsentLifetime">Consent Lifetime (seconds)</label>
+            <input type="number" class="form-control" id="editConsentLifetime" name="ConsentLifetime" value="@(Model.ConsentLifetime ?? 0)" min="60">
+            <small class="form-text text-muted">Leave empty for no expiration</small>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="form-group">
+            <label for="editFrontChannelLogoutUri">Front Channel Logout URI</label>
+            <input type="url" class="form-control" id="editFrontChannelLogoutUri" name="FrontChannelLogoutUri" value="@Model.FrontChannelLogoutUri" placeholder="https://example.com/logout">
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="form-group">
+            <label for="editBackChannelLogoutUri">Back Channel Logout URI</label>
+            <input type="url" class="form-control" id="editBackChannelLogoutUri" name="BackChannelLogoutUri" value="@Model.BackChannelLogoutUri" placeholder="https://example.com/backchannel-logout">
+        </div>
+    </div>
+</div>
+
+<!-- Advanced Settings -->
+<div class="advanced-settings-section">
+    <h6><i class="fas fa-cogs"></i> Advanced Settings</h6>
+    <div class="row">
+        <div class="col-md-12">
+            <div class="form-check mb-2">
+                <input type="checkbox" class="form-check-input" id="editRequireRequestObject" name="RequireRequestObject" @(Model.RequireRequestObject ? "checked" : "")>
+                <label class="form-check-label" for="editRequireRequestObject">Require Request Object</label>
+            </div>
+            <div class="form-check mb-2">
+                <input type="checkbox" class="form-check-input" id="editFrontChannelLogoutSessionRequired" name="FrontChannelLogoutSessionRequired" @(Model.FrontChannelLogoutSessionRequired ? "checked" : "")>
+                <label class="form-check-label" for="editFrontChannelLogoutSessionRequired">Front Channel Logout Session Required</label>
+            </div>
+            <div class="form-check mb-2">
+                <input type="checkbox" class="form-check-input" id="editBackChannelLogoutSessionRequired" name="BackChannelLogoutSessionRequired" @(Model.BackChannelLogoutSessionRequired ? "checked" : "")>
+                <label class="form-check-label" for="editBackChannelLogoutSessionRequired">Back Channel Logout Session Required</label>
+            </div>
+            <div class="form-check mb-2">
+                <input type="checkbox" class="form-check-input" id="editAlwaysSendClientClaims" name="AlwaysSendClientClaims" @(Model.AlwaysSendClientClaims ? "checked" : "")>
+                <label class="form-check-label" for="editAlwaysSendClientClaims">Always Send Client Claims</label>
+            </div>
+            <div class="form-check mb-2">
+                <input type="checkbox" class="form-check-input" id="editIncludeJwtId" name="IncludeJwtId" @(Model.IncludeJwtId ? "checked" : "")>
+                <label class="form-check-label" for="editIncludeJwtId">Include JWT ID</label>
+            </div>
+            <div class="form-check mb-2">
+                <input type="checkbox" class="form-check-input" id="editAllowAccessTokensViaBrowser" name="AllowAccessTokensViaBrowser" @(Model.AllowAccessTokensViaBrowser ? "checked" : "")>
+                <label class="form-check-label" for="editAllowAccessTokensViaBrowser">Allow Access Tokens via Browser</label>
+            </div>
+            <div class="form-check mb-2">
+                <input type="checkbox" class="form-check-input" id="editUpdateAccessTokenClaimsOnRefresh" name="UpdateAccessTokenClaimsOnRefresh" @(Model.UpdateAccessTokenClaimsOnRefresh ? "checked" : "")>
+                <label class="form-check-label" for="editUpdateAccessTokenClaimsOnRefresh">Update Access Token Claims on Refresh</label>
+            </div>
+        </div>
+    </div>
+</div>

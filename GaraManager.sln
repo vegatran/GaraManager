@@ -1,0 +1,54 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GarageManagementSystem.Core", "src\GarageManagementSystem.Core\GarageManagementSystem.Core.csproj", "{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GarageManagementSystem.Infrastructure", "src\GarageManagementSystem.Infrastructure\GarageManagementSystem.Infrastructure.csproj", "{FDBAB2CD-1674-40AD-9DBB-3F954EE6D5C1}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GarageManagementSystem.API", "src\GarageManagementSystem.API\GarageManagementSystem.API.csproj", "{357F1331-E5AD-444E-9F6E-9347CB184A30}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GarageManagementSystem.Web", "src\GarageManagementSystem.Web\GarageManagementSystem.Web.csproj", "{7756EE43-0B28-4FE8-9497-BFF0CF5E9954}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GarageManagementSystem.Shared", "src\GarageManagementSystem.Shared\GarageManagementSystem.Shared.csproj", "{FAEC6D16-4021-4802-BE30-A21A8DE03910}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GarageManagementSystem.IdentityServer", "src\GarageManagementSystem.IdentityServer\GarageManagementSystem.IdentityServer.csproj", "{C887BEFF-2424-4263-9113-542A7B5F78DF}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FDBAB2CD-1674-40AD-9DBB-3F954EE6D5C1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FDBAB2CD-1674-40AD-9DBB-3F954EE6D5C1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FDBAB2CD-1674-40AD-9DBB-3F954EE6D5C1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FDBAB2CD-1674-40AD-9DBB-3F954EE6D5C1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{357F1331-E5AD-444E-9F6E-9347CB184A30}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{357F1331-E5AD-444E-9F6E-9347CB184A30}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{357F1331-E5AD-444E-9F6E-9347CB184A30}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{357F1331-E5AD-444E-9F6E-9347CB184A30}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7756EE43-0B28-4FE8-9497-BFF0CF5E9954}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7756EE43-0B28-4FE8-9497-BFF0CF5E9954}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7756EE43-0B28-4FE8-9497-BFF0CF5E9954}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7756EE43-0B28-4FE8-9497-BFF0CF5E9954}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FAEC6D16-4021-4802-BE30-A21A8DE03910}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FAEC6D16-4021-4802-BE30-A21A8DE03910}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FAEC6D16-4021-4802-BE30-A21A8DE03910}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FAEC6D16-4021-4802-BE30-A21A8DE03910}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C887BEFF-2424-4263-9113-542A7B5F78DF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C887BEFF-2424-4263-9113-542A7B5F78DF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C887BEFF-2424-4263-9113-542A7B5F78DF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C887BEFF-2424-4263-9113-542A7B5F78DF}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {5A535766-BC08-4822-A8AF-78DEEDFAAA13}
+	EndGlobalSection
+EndGlobal

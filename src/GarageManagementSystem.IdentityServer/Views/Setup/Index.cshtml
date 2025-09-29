@@ -1,0 +1,136 @@
+@{
+    ViewData["Title"] = "Setup";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Identity Server | Setup</title>
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="~/lib/font-awesome/css/all.min.css">
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="~/lib/bootstrap/css/bootstrap.min.css">
+    <!-- Theme style -->
+    <link rel="stylesheet" href="~/lib/adminlte/css/adminlte.min.css">
+    <!-- SweetAlert2 -->
+    <link rel="stylesheet" href="~/lib/sweetalert2/sweetalert2.min.css">
+</head>
+<body class="hold-transition login-page">
+    <div class="login-box" style="width: 500px;">
+        <div class="login-logo">
+            <a href="#"><b>Identity</b>Server</a>
+        </div>
+        <!-- /.login-logo -->
+        <div class="card">
+            <div class="card-body login-card-body">
+                <p class="login-box-msg">Initialize Identity Server System</p>
+
+                @if (TempData["SuccessMessage"] != null)
+                {
+                    <div class="alert alert-success alert-dismissible">
+                        <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
+                        <i class="fas fa-check"></i> @TempData["SuccessMessage"]
+                    </div>
+                }
+
+                @if (TempData["ErrorMessage"] != null)
+                {
+                    <div class="alert alert-danger alert-dismissible">
+                        <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
+                        <i class="fas fa-exclamation-triangle"></i> @TempData["ErrorMessage"]
+                    </div>
+                }
+
+                @if (TempData["InfoMessage"] != null)
+                {
+                    <div class="alert alert-info alert-dismissible">
+                        <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
+                        <i class="fas fa-info-circle"></i> @TempData["InfoMessage"]
+                    </div>
+                }
+
+                <div class="text-center mb-4">
+                    <i class="fas fa-rocket fa-3x text-success mb-3"></i>
+                    <h5>Quick Setup with Demo Data</h5>
+                    <p class="text-muted">Initialize the complete system with demo data, users, and configurations.</p>
+                </div>
+
+                <form asp-controller="Setup" asp-action="InitializeSystem" method="post">
+                    <div class="row">
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-success btn-block btn-lg">
+                                <i class="fas fa-magic"></i> Initialize System with Demo Data
+                            </button>
+                        </div>
+                    </div>
+                </form>
+
+                <div class="mt-4">
+                    <div class="card card-outline card-info">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-users"></i> Demo Accounts sẽ được tạo
+                            </h3>
+                        </div>
+                        <div class="card-body">
+                            <small class="text-muted">
+                                <strong>Super Admin:</strong> superadmin@demo.com / SuperAdmin@123<br>
+                                <strong>Admin:</strong> admin@demo.com / Admin@123<br>
+                                <strong>Manager:</strong> manager@demo.com / Manager@123<br>
+                                <strong>Technician:</strong> technician@demo.com / Tech@123<br>
+                                <strong>Reception:</strong> reception@demo.com / Reception@123<br>
+                                <strong>Customer:</strong> customer@demo.com / Customer@123<br>
+                                <strong>Demo:</strong> demo@demo.com / Demo@123
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-3">
+                    <div class="card card-outline card-primary">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-cogs"></i> System Components
+                            </h3>
+                        </div>
+                        <div class="card-body">
+                            <small class="text-muted">
+                                ✅ Identity Resources (OpenId, Profile, Email, Roles)<br>
+                                ✅ API Scopes (garage.api, admin.api)<br>
+                                ✅ API Resources (garage.api, admin.api)<br>
+                                ✅ Clients (Web, API, SPA, Admin)<br>
+                                ✅ Demo Users & Roles<br>
+                                ✅ Claims & Permissions
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-center mt-3">
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle"></i> 
+                        Sau khi khởi tạo, bạn có thể đăng nhập với bất kỳ tài khoản demo nào ở trên.
+                    </small>
+                </div>
+            </div>
+            <!-- /.login-card-body -->
+        </div>
+    </div>
+    <!-- /.login-box -->
+
+    <!-- jQuery -->
+    <script src="~/lib/jquery/jquery.min.js"></script>
+    <!-- Bootstrap -->
+    <script src="~/lib/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <!-- AdminLTE -->
+    <script src="~/lib/adminlte/js/adminlte.min.js"></script>
+    <!-- SweetAlert2 -->
+    <script src="~/lib/sweetalert2/sweetalert2.min.js"></script>
+    <!-- Custom JS -->
+    <script src="~/js/site.js" asp-append-version="true"></script>
+</body>
+</html>

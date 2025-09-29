@@ -1,0 +1,15 @@
+{
+  "version": "1.0",
+  "defaultProvider": "cdnjs",
+  "libraries": [
+    {
+      "library": "swagger-ui@5.9.0",
+      "destination": "wwwroot/lib/swagger-ui/",
+      "files": [
+        "swagger-ui-bundle.js",
+        "swagger-ui-standalone-preset.js",
+        "swagger-ui.css"
+      ]
+    }
+  ]
+}

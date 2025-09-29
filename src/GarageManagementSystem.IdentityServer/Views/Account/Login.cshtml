@@ -1,0 +1,94 @@
+@model GarageManagementSystem.IdentityServer.Controllers.LoginViewModel
+
+@{
+    ViewData["Title"] = "Login";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Identity Server | Log in</title>
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="~/lib/font-awesome/css/all.min.css">
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="~/lib/bootstrap/css/bootstrap.min.css">
+    <!-- Theme style -->
+    <link rel="stylesheet" href="~/lib/adminlte/css/adminlte.min.css">
+</head>
+<body class="hold-transition login-page">
+    <div class="login-box">
+        <div class="login-logo">
+            <a href="#"><b>Identity</b>Server</a>
+        </div>
+        <!-- /.login-logo -->
+        <div class="card">
+            <div class="card-body login-card-body">
+                <p class="login-box-msg">Sign in to start your session</p>
+
+                <form asp-controller="Account" asp-action="Login" asp-route-returnUrl="@ViewData["ReturnUrl"]" method="post">
+                    <div asp-validation-summary="All" class="text-danger"></div>
+                    <div class="input-group mb-3">
+                        <input asp-for="Email" type="email" class="form-control" placeholder="Email">
+                        <div class="input-group-append">
+                            <div class="input-group-text">
+                                <span class="fas fa-envelope"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="input-group mb-3">
+                        <input asp-for="Password" type="password" class="form-control" placeholder="Password">
+                        <div class="input-group-append">
+                            <div class="input-group-text">
+                                <span class="fas fa-lock"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-8">
+                            <div class="icheck-primary">
+                                <input asp-for="RememberMe" type="checkbox" id="remember">
+                                <label for="remember">
+                                    Remember Me
+                                </label>
+                            </div>
+                        </div>
+                        <!-- /.col -->
+                        <div class="col-4">
+                            <button type="submit" class="btn btn-primary btn-block">Sign In</button>
+                        </div>
+                        <!-- /.col -->
+                    </div>
+                </form>
+
+                <div class="social-auth-links text-center mb-3">
+                    <p>- OR -</p>
+                    <div class="card card-outline card-info">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-info-circle"></i> Default Admin Credentials
+                            </h3>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Email:</strong> admin@test.com</p>
+                            <p><strong>Password:</strong> 123456</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- /.login-card-body -->
+        </div>
+    </div>
+    <!-- /.login-box -->
+
+    <!-- jQuery -->
+    <script src="~/lib/jquery/jquery.min.js"></script>
+    <!-- Bootstrap -->
+    <script src="~/lib/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <!-- AdminLTE -->
+    <script src="~/lib/adminlte/js/adminlte.min.js"></script>
+</body>
+</html>
