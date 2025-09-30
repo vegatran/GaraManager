@@ -179,10 +179,13 @@
     <script src="~/lib/sweetalert2/sweetalert2.min.js"></script>
     <!-- Chart.js -->
     <script src="~/lib/chart.js/dist/chart.umd.min.js"></script>
-    <!-- Modal Select2 Manager -->
+    <!-- Core Utilities (load first) -->
     <script src="~/js/modal-select2.js" asp-append-version="true"></script>
-    <!-- Custom JS -->
+    <script src="~/js/ajax-utility.js" asp-append-version="true"></script>
+    <script src="~/js/datatables-utility.js" asp-append-version="true"></script>
+    <!-- Site Utilities -->
     <script src="~/js/site.js" asp-append-version="true"></script>
+    
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

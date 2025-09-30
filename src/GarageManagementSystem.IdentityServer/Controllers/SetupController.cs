@@ -2,6 +2,7 @@ using GarageManagementSystem.IdentityServer.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Duende.IdentityServer.EntityFramework.DbContexts;
+using GarageManagementSystem.IdentityServer.Data;
 using Duende.IdentityServer.EntityFramework.Mappers;
 using Duende.IdentityServer.Models;
 using Microsoft.EntityFrameworkCore;

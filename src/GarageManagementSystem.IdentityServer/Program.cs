@@ -68,7 +68,7 @@ builder.Services.AddIdentityServer(options =>
     options.Endpoints.EnableUserInfoEndpoint = true;
     options.Endpoints.EnableDiscoveryEndpoint = true;
 })
-.AddConfigurationStore(options =>
+.AddConfigurationStore<ConfigurationDbContext>(options =>
 {
     options.ConfigureDbContext = b => b.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"),
         sql => sql.MigrationsAssembly(typeof(Program).Assembly.GetName().Name));
@@ -158,8 +158,8 @@ using (var scope = app.Services.CreateScope())
         Console.WriteLine("Admin user already exists!");
     }
 
-    // Seed IdentityServer4 data
-    var configContext = scope.ServiceProvider.GetRequiredService<ConfigurationDbContext>();
+        // Seed IdentityServer4 data
+        var configContext = scope.ServiceProvider.GetRequiredService<ConfigurationDbContext>();
     await GarageManagementSystem.IdentityServer.Data.ConfigurationDbContextSeedData.SeedAsync(scope.ServiceProvider);
     Console.WriteLine("IdentityServer4 configuration store ready!");
 }
