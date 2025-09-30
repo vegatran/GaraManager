@@ -1,0 +1,263 @@
+<!-- Create Client Modal -->
+<div class="modal fade" id="createClientModal" tabindex="-1" role="dialog" aria-labelledby="createClientModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createClientModalLabel">Create New Client</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form id="createClientForm">
+                @Html.AntiForgeryToken()
+                <div class="modal-body p-3">
+                    <!-- Basic Information -->
+                    <div class="row">
+                        <div class="col-md-12">
+                            <h6 class="text-primary mb-3"><i class="fas fa-info-circle"></i> Basic Information</h6>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createClientId">Client ID <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control form-control-sm" id="createClientId" name="ClientId" required placeholder="my-client-app" pattern="[a-zA-Z0-9._\-]+" title="Only letters, numbers, dots, underscores, and hyphens allowed">
+                                <small class="form-text text-muted">Unique identifier for your client application</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createClientName">Client Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control form-control-sm" id="createClientName" name="ClientName" required placeholder="My Client Application">
+                                <small class="form-text text-muted">Display name for this client</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label for="createDescription">Description</label>
+                                <textarea class="form-control form-control-sm" id="createDescription" name="Description" rows="2" placeholder="Client description..."></textarea>
+                                <small class="form-text text-muted">Helpful description for administration</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Security Settings -->
+                    <div class="row">
+                        <div class="col-md-12">
+                            <h6 class="text-primary mb-3"><i class="fas fa-shield-alt"></i> Security Settings</h6>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createProtocolType">Protocol Type</label>
+                                <select class="form-control form-control-sm" id="createProtocolType" name="ProtocolType">
+                                    <option value="oidc" selected>OpenID Connect</option>
+                                    <option value="oauth2">OAuth 2.0</option>
+                                    <option value="wsfed">WS-Federation</option>
+                                    <option value="saml2p">SAML 2.0</option>
+                                </select>
+                                <small class="form-text text-muted">Choose authentication protocol</small>
+                            </div>
+                            
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createClientSecret">Client Secret</label>
+                                <input type="password" class="form-control form-control-sm" id="createClientSecret" name="ClientSecret" placeholder="Optional client secret">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label class="font-weight-bold">Security Options</label>
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <div class="form-check">
+                                            <input type="checkbox" class="form-check-input" id="createEnabled" name="Enabled" checked>
+                                            <label class="form-check-label" for="createEnabled">Enabled</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input type="checkbox" class="form-check-input" id="createRequireClientSecret" name="RequireClientSecret">
+                                            <label class="form-check-label" for="createRequireClientSecret">Require Client Secret</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="form-check">
+                                            <input type="checkbox" class="form-check-input" id="createRequirePkce" name="RequirePkce" checked>
+                                            <label class="form-check-label" for="createRequirePkce">Require PKCE</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input type="checkbox" class="form-check-input" id="createAllowOfflineAccess" name="AllowOfflineAccess">
+                                            <label class="form-check-label" for="createAllowOfflineAccess">Allow Offline Access</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="form-check">
+                                            <input type="checkbox" class="form-check-input" id="createIncludeJwtId" name="IncludeJwtId">
+                                            <label class="form-check-label" for="createIncludeJwtId">Include JWT ID</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input type="checkbox" class="form-check-input" id="createRequireConsent" name="RequireConsent">
+                                            <label class="form-check-label" for="createRequireConsent">Require Consent</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="form-check">
+                                            <input type="checkbox" class="form-check-input" id="createAllowRememberConsent" name="AllowRememberConsent" checked>
+                                            <label class="form-check-label" for="createAllowRememberConsent">Allow Remember Consent</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createAccessTokenLifetime">Access Token Lifetime (seconds)</label>
+                                <input type="number" class="form-control form-control-sm" id="createAccessTokenLifetime" name="AccessTokenLifetime" value="3600">
+                            </div>
+                            <div class="form-group">
+                                <label for="createIdentityTokenLifetime">Identity Token Lifetime (seconds)</label>
+                                <input type="number" class="form-control form-control-sm" id="createIdentityTokenLifetime" name="IdentityTokenLifetime" value="300">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createAuthorizationCodeLifetime">Authorization Code Lifetime (seconds)</label>
+                                <input type="number" class="form-control form-control-sm" id="createAuthorizationCodeLifetime" name="AuthorizationCodeLifetime" value="300">
+                            </div>
+                            <div class="form-group">
+                                <label for="createUserSsoLifetime">User SSO Lifetime (seconds)</label>
+                                <input type="number" class="form-control form-control-sm" id="createUserSsoLifetime" name="UserSsoLifetime" value="2592000">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Authentication -->
+                    <div class="row">
+                        <div class="col-md-12">
+                            <h6 class="text-primary mb-3"><i class="fas fa-key"></i> Authentication</h6>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createGrantTypes">Grant Types</label>
+                                <select class="form-control select2" id="createGrantTypes" name="GrantTypes" multiple>
+                                    <!-- Dynamic options loaded -->
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createScopes">Scopes</label>
+                                <select class="form-control select2" id="createScopes" name="Scopes" multiple>
+                                    <!-- Dynamic options loaded -->
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- URLs Configuration -->
+                    <div class="row">
+                        <div class="col-md-12">
+                            <h6 class="text-primary mb-3"><i class="fas fa-globe"></i> URLs Configuration</h6>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createRedirectUris">Redirect URIs</label>
+                                <textarea class="form-control form-control-sm" id="createRedirectUris" name="RedirectUris" rows="4" placeholder="https://myapp.com/callback&#10;http://localhost:3000/callback"></textarea>
+                                <small class="form-text text-muted">One URI per line</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createPostLogoutRedirectUris">Post Logout URIs</label>
+                                <textarea class="form-control form-control-sm" id="createPostLogoutRedirectUris" name="PostLogoutRedirectUris" rows="4" placeholder="https://myapp.com/logged-out&#10;http://localhost:3000/logged-out"></textarea>
+                                <small class="form-text text-muted">One URI per line</small>
+                            </div>
+                        </div>
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label for="createAllowedCorsOrigins">Allowed CORS Origins</label>
+                                <textarea class="form-control form-control-sm" id="createAllowedCorsOrigins" name="AllowedCorsOrigins" rows="3" placeholder="https://myapp.com&#10;http://localhost:3000"></textarea>
+                                <small class="form-text text-muted">One origin per line</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Advanced Settings -->
+                    <div class="row">
+                        <div class="col-md-12">
+                            <h6 class="text-primary mb-3"><i class="fas fa-cogs"></i> Advanced Settings</h6>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" id="createRequireRequestObject" name="RequireRequestObject">
+                                    <label class="form-check-label" for="createRequireRequestObject">Require Request Object</label>
+                                </div>
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" id="createFrontChannelLogoutSessionRequired" name="FrontChannelLogoutSessionRequired" checked>
+                                    <label class="form-check-label" for="createFrontChannelLogoutSessionRequired">Front Channel Logout Session Required</label>
+                                </div>
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" id="createBackChannelLogoutSessionRequired" name="BackChannelLogoutSessionRequired" checked>
+                                    <label class="form-check-label" for="createBackChannelLogoutSessionRequired">Back Channel Logout Session Required</label>
+                                </div>
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" id="createAllowAccessTokensViaBrowser" name="AllowAccessTokensViaBrowser">
+                                    <label class="form-check-label" for="createAllowAccessTokensViaBrowser">Allow Access Tokens via Browser</label>
+                                </div>
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" id="createUpdateAccessTokenClaimsOnRefresh" name="UpdateAccessTokenClaimsOnRefresh">
+                                    <label class="form-check-label" for="createUpdateAccessTokenClaimsOnRefresh">Update Access Token Claims on Refresh</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" id="createAlwaysSendClientClaims" name="AlwaysSendClientClaims">
+                                    <label class="form-check-label" for="createAlwaysSendClientClaims">Always Send Client Claims</label>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="createClientClaimsPrefix">Client Claims Prefix</label>
+                                <input type="text" class="form-control form-control-sm" id="createClientClaimsPrefix" name="ClientClaimsPrefix" placeholder="client_">
+                                <small class="form-text text-muted">Prefix for client claims</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createFrontChannelLogoutUri">Front Channel Logout URI</label>
+                                <input type="url" class="form-control form-control-sm" id="createFrontChannelLogoutUri" name="FrontChannelLogoutUri" placeholder="https://example.com/logout">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createBackChannelLogoutUri">Back Channel Logout URI</label>
+                                <input type="url" class="form-control form-control-sm" id="createBackChannelLogoutUri" name="BackChannelLogoutUri" placeholder="https://example.com/backchannel-logout">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary btn-sm">Create Client</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
