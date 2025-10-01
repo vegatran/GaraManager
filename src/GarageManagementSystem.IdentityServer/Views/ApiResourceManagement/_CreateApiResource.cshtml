@@ -33,22 +33,22 @@
                             </div>
                         </div>
 
-                        <!-- Settings -->
-                        <div class="col-md-6">
-                            <h6 class="font-weight-bold text-primary">Settings</h6>
-                            <div class="form-group">
-                                <div class="custom-control custom-switch">
-                                    <input type="checkbox" class="custom-control-input" id="createEnabled" name="Enabled" checked>
-                                    <label class="custom-control-label" for="createEnabled">Enabled</label>
+                                <!-- Settings -->
+                                <div class="col-md-6">
+                                    <h6 class="font-weight-bold text-primary">Settings</h6>
+                                    <div class="form-group">
+                                        <div class="custom-control custom-switch">
+                                            <input type="checkbox" class="custom-control-input" id="createEnabled" name="Enabled" checked>
+                                            <label class="custom-control-label" for="createEnabled">Enabled</label>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <div class="custom-control custom-switch">
+                                            <input type="checkbox" class="custom-control-input" id="createShowInDiscoveryDocument" name="ShowInDiscoveryDocument" checked>
+                                            <label class="custom-control-label" for="createShowInDiscoveryDocument">Show in Discovery Document</label>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="form-group">
-                                <div class="custom-control custom-switch">
-                                    <input type="checkbox" class="custom-control-input" id="createShowInDiscoveryDocument" name="ShowInDiscoveryDocument" checked>
-                                    <label class="custom-control-label" for="createShowInDiscoveryDocument">Show in Discovery Document</label>
-                                </div>
-                            </div>
-                        </div>
                     </div>
 
                     <div class="row mt-3">
@@ -56,30 +56,9 @@
                         <div class="col-md-6">
                             <h6 class="font-weight-bold text-primary">User Claims</h6>
                             <div class="form-group">
-                                <label for="createUserClaims">Available Claims</label>
-                                <select id="createUserClaims" name="UserClaims" class="form-control form-control-sm" multiple>
-                                    <option value="sub">Subject ID (sub)</option>
-                                    <option value="name">Name</option>
-                                    <option value="given_name">Given Name</option>
-                                    <option value="family_name">Family Name</option>
-                                    <option value="middle_name">Middle Name</option>
-                                    <option value="nickname">Nickname</option>
-                                    <option value="preferred_username">Preferred Username</option>
-                                    <option value="profile">Profile</option>
-                                    <option value="picture">Picture</option>
-                                    <option value="website">Website</option>
-                                    <option value="email">Email</option>
-                                    <option value="email_verified">Email Verified</option>
-                                    <option value="gender">Gender</option>
-                                    <option value="birthdate">Birthdate</option>
-                                    <option value="zoneinfo">Zone Info</option>
-                                    <option value="locale">Locale</option>
-                                    <option value="phone_number">Phone Number</option>
-                                    <option value="phone_number_verified">Phone Number Verified</option>
-                                    <option value="address">Address</option>
-                                    <option value="updated_at">Updated At</option>
-                                    <option value="role">Role</option>
-                                    <option value="permission">Permission</option>
+                                <label for="createApiResourceUserClaims">Available Claims</label>
+                                <select id="createApiResourceUserClaims" name="UserClaims" class="form-control form-control-sm" multiple>
+                                    <!-- Claims will be loaded dynamically -->
                                 </select>
                             </div>
                         </div>
@@ -88,26 +67,14 @@
                         <div class="col-md-6">
                             <h6 class="font-weight-bold text-primary">API Scopes</h6>
                             <div class="form-group">
-                                <label for="createScopes">Available Scopes</label>
-                                <select id="createScopes" name="Scopes" class="form-control form-control-sm" multiple>
+                                <label for="createApiResourceScopes">Available Scopes</label>
+                                <select id="createApiResourceScopes" name="Scopes" class="form-control form-control-sm" multiple>
                                     <!-- Scopes will be loaded dynamically -->
                                 </select>
                             </div>
                         </div>
                     </div>
 
-                    <div class="row mt-3">
-                        <!-- Secrets -->
-                        <div class="col-12">
-                            <h6 class="font-weight-bold text-primary">Secrets</h6>
-                            <div class="form-group">
-                                <label for="createSecrets">Client Secrets (one per line)</label>
-                                <textarea class="form-control form-control-sm" id="createSecrets" name="Secrets" rows="3" 
-                                          placeholder="Enter secrets, one per line"></textarea>
-                                <small class="form-text text-muted">Secrets will be hashed before storage</small>
-                            </div>
-                        </div>
-                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>

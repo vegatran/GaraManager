@@ -1,0 +1,502 @@
+@{
+    ViewData["Title"] = "Cache Management";
+}
+
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1 class="m-0">Cache Management</h1>
+            </div>
+            <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-right">
+                    <li class="breadcrumb-item"><a href="#">Home</a></li>
+                    <li class="breadcrumb-item active">Cache Management</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="content">
+    <div class="container-fluid">
+        <!-- Cache Statistics -->
+        <div class="row">
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-info">
+                    <div class="inner">
+                        <h3 id="totalCachedItems">-</h3>
+                        <p>Total Cached Items</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-memory"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-success">
+                    <div class="inner">
+                        <h3 id="memoryUsage">-</h3>
+                        <p>Memory Usage (MB)</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-server"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-warning">
+                    <div class="inner">
+                        <h3 id="activeCacheCount">-</h3>
+                        <p>Active Caches</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-database"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-danger">
+                    <div class="inner">
+                        <h3 id="inactiveCacheCount">-</h3>
+                        <p>Inactive Caches</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cache Management Actions -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Cache Management Actions</h3>
+                        <div class="card-tools">
+                            <button type="button" class="btn btn-info btn-sm" onclick="CacheManagement.refreshCacheInfo()">
+                                <i class="fas fa-sync-alt"></i> Refresh
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h5>Clear Cache by Type</h5>
+                                <div class="btn-group-vertical w-100 mb-3">
+                                    <button type="button" class="btn btn-warning mb-2" onclick="CacheManagement.clearCacheByType('claims')">
+                                        <i class="fas fa-tags"></i> Clear Claims Cache
+                                    </button>
+                                    <button type="button" class="btn btn-warning mb-2" onclick="CacheManagement.clearCacheByType('api_scopes')">
+                                        <i class="fas fa-code"></i> Clear API Scopes Cache
+                                    </button>
+                                    <button type="button" class="btn btn-warning mb-2" onclick="CacheManagement.clearCacheByType('identity_resources')">
+                                        <i class="fas fa-id-card"></i> Clear Identity Resources Cache
+                                    </button>
+                                    <button type="button" class="btn btn-warning mb-2" onclick="CacheManagement.clearCacheByType('api_resources')">
+                                        <i class="fas fa-cogs"></i> Clear API Resources Cache
+                                    </button>
+                                    <button type="button" class="btn btn-warning mb-2" onclick="CacheManagement.clearCacheByType('clients')">
+                                        <i class="fas fa-users"></i> Clear Clients Cache
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <h5>Global Actions</h5>
+                                <div class="btn-group-vertical w-100 mb-3">
+                                    <button type="button" class="btn btn-primary mb-2" onclick="CacheManagement.triggerAllCaches()">
+                                        <i class="fas fa-play"></i> Trigger All Caches
+                                    </button>
+                                    <button type="button" class="btn btn-info mb-2" onclick="CacheManagement.preloadCache()">
+                                        <i class="fas fa-download"></i> Preload Sample Cache
+                                    </button>
+                                    <button type="button" class="btn btn-danger mb-2" onclick="CacheManagement.clearAllCache()">
+                                        <i class="fas fa-trash-alt"></i> Clear All Cache
+                                    </button>
+                                    <button type="button" class="btn btn-success mb-2" onclick="CacheManagement.refreshCacheInfo()">
+                                        <i class="fas fa-sync-alt"></i> Refresh Cache Info
+                                    </button>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="specificCacheKey">Clear Specific Cache Key:</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" id="specificCacheKey" placeholder="Enter cache key...">
+                                        <div class="input-group-append">
+                                            <button type="button" class="btn btn-outline-secondary" onclick="CacheManagement.clearSpecificCache()">
+                                                <i class="fas fa-trash"></i> Clear
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cache Status Table -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Cache Status</h3>
+                    </div>
+                    <div class="card-body">
+                        <table id="cacheStatusTable" class="table table-bordered table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Cache Type</th>
+                                    <th>Cache Key</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cacheStatusTableBody">
+                                <!-- Cache status will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        window.CacheManagement = {
+            // Initialize
+            init: function() {
+                this.refreshCacheInfo();
+                
+                // Auto refresh every 30 seconds
+                setInterval(() => {
+                    this.refreshCacheInfo();
+                }, 30000);
+            },
+
+            // Refresh cache information
+            refreshCacheInfo: function() {
+                $.get('/CacheManagement/GetCacheInfo')
+                    .done(function(response) {
+                        if (response.success) {
+                            CacheManagement.updateCacheStats(response.data);
+                            CacheManagement.updateCacheStatusTable(response.data);
+                        }
+                    })
+                    .fail(function() {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'Failed to load cache information'
+                        });
+                    });
+            },
+
+            // Update cache statistics
+            updateCacheStats: function(data) {
+                $('#totalCachedItems').text(data.totalCachedItems || 0);
+                
+                if (data.memoryUsage) {
+                    var memoryMB = Math.round(data.memoryUsage.workingSet / 1024 / 1024);
+                    $('#memoryUsage').text(memoryMB);
+                }
+
+                // Count active caches
+                var activeCount = 0;
+                var inactiveCount = 0;
+                
+                if (data.claimsCache === 'Active') activeCount++; else inactiveCount++;
+                if (data.claimsApiScopeCache === 'Active') activeCount++; else inactiveCount++;
+                if (data.claimsIdentityResourceCache === 'Active') activeCount++; else inactiveCount++;
+                if (data.claimsApiResourceCache === 'Active') activeCount++; else inactiveCount++;
+                if (data.apiScopesCache === 'Active') activeCount++; else inactiveCount++;
+                if (data.identityResourcesCache === 'Active') activeCount++; else inactiveCount++;
+                if (data.apiResourcesCache === 'Active') activeCount++; else inactiveCount++;
+                if (data.clientsCache === 'Active') activeCount++; else inactiveCount++;
+
+                $('#activeCacheCount').text(activeCount);
+                $('#inactiveCacheCount').text(inactiveCount);
+            },
+
+            // Update cache status table
+            updateCacheStatusTable: function(data) {
+                var tbody = $('#cacheStatusTableBody');
+                tbody.empty();
+
+                var cacheItems = [
+                    { type: 'Claims Management', key: 'available_claims', status: data.claimsCache },
+                    { type: 'Claims for API Scopes', key: 'available_claims_for_api_scope', status: data.claimsApiScopeCache },
+                    { type: 'Claims for Identity Resources', key: 'available_claims_for_identity_resource', status: data.claimsIdentityResourceCache },
+                    { type: 'Claims for API Resources', key: 'available_claims_for_api_resource', status: data.claimsApiResourceCache },
+                    { type: 'API Scopes', key: 'available_api_scopes', status: data.apiScopesCache },
+                    { type: 'Identity Resources', key: 'available_claims_for_identity_resource', status: data.identityResourcesCache },
+                    { type: 'API Resources', key: 'available_claims_for_api_resource', status: data.apiResourcesCache },
+                    { type: 'Clients', key: 'available_clients', status: data.clientsCache }
+                ];
+
+                cacheItems.forEach(function(item) {
+                    var statusBadge = item.status === 'Active' ? 
+                        '<span class="badge badge-success">Active</span>' : 
+                        '<span class="badge badge-secondary">Not Cached</span>';
+
+                    var clearButton = item.status === 'Active' ?
+                        `<button class="btn btn-sm btn-outline-danger" onclick="CacheManagement.clearSpecificCacheKey('${item.key}')">
+                            <i class="fas fa-trash"></i> Clear
+                        </button>` :
+                        '<span class="text-muted">-</span>';
+
+                    tbody.append(`
+                        <tr>
+                            <td>${item.type}</td>
+                            <td><code>${item.key}</code></td>
+                            <td>${statusBadge}</td>
+                            <td>${clearButton}</td>
+                        </tr>
+                    `);
+                });
+            },
+
+            // Clear all cache
+            clearAllCache: function() {
+                Swal.fire({
+                    title: 'Are you sure?',
+                    text: "This will clear ALL cache entries. This action cannot be undone!",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#3085d6',
+                    confirmButtonText: 'Yes, clear all!'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.post('/CacheManagement/ClearAllCache')
+                            .done(function(response) {
+                                if (response.success) {
+                                    Swal.fire({
+                                        icon: 'success',
+                                        title: 'Success',
+                                        text: response.message,
+                                        timer: 2000
+                                    }).then(() => {
+                                        CacheManagement.refreshCacheInfo();
+                                    });
+                                } else {
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: 'Error',
+                                        text: response.message
+                                    });
+                                }
+                            })
+                            .fail(function() {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Error',
+                                    text: 'Failed to clear cache'
+                                });
+                            });
+                    }
+                });
+            },
+
+            // Clear cache by type
+            clearCacheByType: function(cacheType) {
+                Swal.fire({
+                    title: 'Clear Cache',
+                    text: `Are you sure you want to clear all ${cacheType} cache entries?`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#3085d6',
+                    confirmButtonText: 'Yes, clear it!'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.post('/CacheManagement/ClearCacheByType', JSON.stringify({ cacheType: cacheType }), 'application/json')
+                            .done(function(response) {
+                                if (response.success) {
+                                    Swal.fire({
+                                        icon: 'success',
+                                        title: 'Success',
+                                        text: response.message,
+                                        timer: 2000
+                                    }).then(() => {
+                                        CacheManagement.refreshCacheInfo();
+                                    });
+                                } else {
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: 'Error',
+                                        text: response.message
+                                    });
+                                }
+                            })
+                            .fail(function() {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Error',
+                                    text: 'Failed to clear cache'
+                                });
+                            });
+                    }
+                });
+            },
+
+            // Clear specific cache
+            clearSpecificCache: function() {
+                var cacheKey = $('#specificCacheKey').val();
+                if (!cacheKey) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Warning',
+                        text: 'Please enter a cache key'
+                    });
+                    return;
+                }
+
+                this.clearSpecificCacheKey(cacheKey);
+            },
+
+            // Clear specific cache by key
+            clearSpecificCacheKey: function(cacheKey) {
+                Swal.fire({
+                    title: 'Clear Cache Key',
+                    text: `Are you sure you want to clear cache key: ${cacheKey}?`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#3085d6',
+                    confirmButtonText: 'Yes, clear it!'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.post('/CacheManagement/ClearSpecificCache', JSON.stringify({ cacheKey: cacheKey }), 'application/json')
+                            .done(function(response) {
+                                if (response.success) {
+                                    Swal.fire({
+                                        icon: 'success',
+                                        title: 'Success',
+                                        text: response.message,
+                                        timer: 2000
+                                    }).then(() => {
+                                        CacheManagement.refreshCacheInfo();
+                                    });
+                                } else {
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: 'Error',
+                                        text: response.message
+                                    });
+                                }
+                            })
+                            .fail(function() {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Error',
+                                    text: 'Failed to clear cache'
+                                });
+                            });
+                    }
+                });
+            },
+
+            // Trigger all caches
+            triggerAllCaches: function() {
+                Swal.fire({
+                    title: 'Trigger All Caches',
+                    text: 'This will call all GetAvailableClaims endpoints to create real cache entries. Continue?',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: '#007bff',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Yes, trigger!'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        Swal.fire({
+                            title: 'Triggering Caches...',
+                            text: 'Please wait while we trigger all cache endpoints',
+                            allowOutsideClick: false,
+                            didOpen: () => {
+                                Swal.showLoading();
+                            }
+                        });
+
+                        $.post('/CacheManagement/TriggerAllCaches')
+                            .done(function(response) {
+                                if (response.success) {
+                                    Swal.fire({
+                                        icon: 'success',
+                                        title: 'Success',
+                                        text: response.message,
+                                        timer: 2000
+                                    }).then(() => {
+                                        CacheManagement.refreshCacheInfo();
+                                    });
+                                } else {
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: 'Error',
+                                        text: response.message
+                                    });
+                                }
+                            })
+                            .fail(function() {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Error',
+                                    text: 'Failed to trigger caches'
+                                });
+                            });
+                    }
+                });
+            },
+
+            // Preload sample cache
+            preloadCache: function() {
+                Swal.fire({
+                    title: 'Preload Sample Cache',
+                    text: 'This will create sample cache entries for testing. Continue?',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: '#17a2b8',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Yes, preload!'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.post('/CacheManagement/PreloadCache')
+                            .done(function(response) {
+                                if (response.success) {
+                                    Swal.fire({
+                                        icon: 'success',
+                                        title: 'Success',
+                                        text: response.message,
+                                        timer: 2000
+                                    }).then(() => {
+                                        CacheManagement.refreshCacheInfo();
+                                    });
+                                } else {
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: 'Error',
+                                        text: response.message
+                                    });
+                                }
+                            })
+                            .fail(function() {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Error',
+                                    text: 'Failed to preload cache'
+                                });
+                            });
+                    }
+                });
+            }
+        };
+
+        $(document).ready(function() {
+            CacheManagement.init();
+        });
+    </script>
+}

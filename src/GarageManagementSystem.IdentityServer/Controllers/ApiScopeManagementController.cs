@@ -1,12 +1,13 @@
-using Duende.IdentityServer.EntityFramework.DbContexts;
-using Duende.IdentityServer.EntityFramework.Entities;
-using Duende.IdentityServer.Models;
+using IdentityServer4.EntityFramework.DbContexts;
+using IdentityServer4.EntityFramework.Entities;
+using IdentityServer4.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using System.ComponentModel.DataAnnotations;
 using GarageManagementSystem.IdentityServer.Data; // Added for GaraManagementContext
-using ApiScopeEntity = Duende.IdentityServer.EntityFramework.Entities.ApiScope;
+using ApiScopeEntity = IdentityServer4.EntityFramework.Entities.ApiScope;
 
 namespace GarageManagementSystem.IdentityServer.Controllers
 {
@@ -14,12 +15,21 @@ namespace GarageManagementSystem.IdentityServer.Controllers
     public class ApiScopeManagementController : Controller
     {
         private readonly ConfigurationDbContext _context;
-        private readonly GaraManagementContext _garaContext; // Added
+        private readonly GaraManagementContext _garaContext;
+        private readonly IMemoryCache _cache;
 
-        public ApiScopeManagementController(ConfigurationDbContext context, GaraManagementContext garaContext)
+        public ApiScopeManagementController(ConfigurationDbContext context, GaraManagementContext garaContext, IMemoryCache cache)
         {
             _context = context;
-            _garaContext = garaContext; // Added
+            _garaContext = garaContext;
+            _cache = cache;
+        }
+
+        // Helper method to invalidate cache when API scopes are modified
+        private void InvalidateApiScopeCache()
+        {
+            _cache.Remove("available_api_scopes");
+            _cache.Remove("all_api_scopes");
         }
 
         public IActionResult Index()
@@ -52,6 +62,9 @@ namespace GarageManagementSystem.IdentityServer.Controllers
 
                 _context.ApiScopes.Add(scope);
                 await _context.SaveChangesAsync();
+
+                // Invalidate cache after creating new API scope
+                InvalidateApiScopeCache();
 
                 return Json(new { success = true, message = "API Scope created successfully!" });
             }
@@ -114,6 +127,9 @@ namespace GarageManagementSystem.IdentityServer.Controllers
 
                 await _context.SaveChangesAsync();
 
+                // Invalidate cache after updating API scope
+                InvalidateApiScopeCache();
+
                 return Json(new { success = true, message = "API Scope updated successfully!" });
             }
 
@@ -166,6 +182,9 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                 new Microsoft.Data.SqlClient.SqlParameter("@DeletedBy", User.Identity?.Name ?? "System"),
                 new Microsoft.Data.SqlClient.SqlParameter("@Reason", "User requested deletion"));
 
+            // Invalidate cache after deleting API scope
+            InvalidateApiScopeCache();
+
             return Json(new { success = true, message = "API Scope deleted successfully!" });
         }
 
@@ -184,6 +203,9 @@ namespace GarageManagementSystem.IdentityServer.Controllers
             
             await _context.Database.ExecuteSqlRawAsync(sql,
                 new Microsoft.Data.SqlClient.SqlParameter("@EntityName", scope.Name));
+
+            // Invalidate cache after restoring API scope
+            InvalidateApiScopeCache();
 
             return Json(new { success = true, message = "API Scope restored successfully!" });
         }
@@ -234,6 +256,14 @@ namespace GarageManagementSystem.IdentityServer.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAvailableClaims()
         {
+            const string cacheKey = "available_claims_for_api_scope";
+            
+            // Try to get from cache first
+            if (_cache.TryGetValue(cacheKey, out var cachedClaims))
+            {
+                return Json(cachedClaims);
+            }
+
             // Get all claims first
             var allClaims = await _garaContext.Claims
                 .OrderBy(c => c.Category)
@@ -252,6 +282,17 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                 .Where(c => !deletedClaimNames.Contains(c.Name))
                 .Select(c => new { value = c.Name, text = c.DisplayName ?? c.Name })
                 .ToList();
+
+                    // Cache for 30 minutes (claims don't change often)
+                    var cacheOptions = new MemoryCacheEntryOptions
+                    {
+                        AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(30),
+                        SlidingExpiration = TimeSpan.FromMinutes(10),
+                        Priority = CacheItemPriority.High,
+                        Size = 1 // Each cache entry counts as 1 unit toward the size limit
+                    };
+                    
+                    _cache.Set(cacheKey, activeClaims, cacheOptions);
 
             return Json(activeClaims);
         }

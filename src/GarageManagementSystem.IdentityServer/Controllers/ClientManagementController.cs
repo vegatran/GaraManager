@@ -1,13 +1,14 @@
-using Duende.IdentityServer.EntityFramework.DbContexts;
+using IdentityServer4.EntityFramework.DbContexts;
 using GarageManagementSystem.IdentityServer.Models;
 using GarageManagementSystem.IdentityServer.Data;
-using Duende.IdentityServer.EntityFramework.Entities;
-using Duende.IdentityServer.Models;
+using IdentityServer4.EntityFramework.Entities;
+using IdentityServer4.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using System.ComponentModel.DataAnnotations;
-using ClientEntity = Duende.IdentityServer.EntityFramework.Entities.Client;
+using ClientEntity = IdentityServer4.EntityFramework.Entities.Client;
 
 namespace GarageManagementSystem.IdentityServer.Controllers
 {
@@ -16,11 +17,21 @@ namespace GarageManagementSystem.IdentityServer.Controllers
     {
         private readonly ConfigurationDbContext _context;
         private readonly GaraManagementContext _garaContext;
+        private readonly IMemoryCache _cache;
 
-        public ClientManagementController(ConfigurationDbContext context, GaraManagementContext garaContext)
+        public ClientManagementController(ConfigurationDbContext context, GaraManagementContext garaContext, IMemoryCache cache)
         {
             _context = context;
             _garaContext = garaContext;
+            _cache = cache;
+        }
+
+        // Helper method to invalidate cache when clients are modified
+        private void InvalidateClientCache()
+        {
+            _cache.Remove("available_clients");
+            _cache.Remove("available_scopes_for_client");
+            _cache.Remove("available_grant_types_for_client");
         }
 
         public IActionResult Index()
@@ -178,13 +189,13 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                         .Select(pru => new ClientPostLogoutRedirectUri { PostLogoutRedirectUri = pru }).ToList() ?? new List<ClientPostLogoutRedirectUri>(),
                     AllowedCorsOrigins = model.AllowedCorsOrigins?.Where(co => !string.IsNullOrWhiteSpace(co))
                         .Select(co => new ClientCorsOrigin { Origin = co }).ToList() ?? new List<ClientCorsOrigin>(),
-                    Claims = new List<Duende.IdentityServer.EntityFramework.Entities.ClientClaim>()
+                    Claims = new List<IdentityServer4.EntityFramework.Entities.ClientClaim>()
                     {
                         // Manual client claims
                     }.Concat(model.ClientClaims?.Where(cc => !string.IsNullOrWhiteSpace(cc.Type) && !string.IsNullOrWhiteSpace(cc.Value))
-                            .Select(cc => new Duende.IdentityServer.EntityFramework.Entities.ClientClaim { Type = cc.Type, Value = cc.Value }) ?? new List<Duende.IdentityServer.EntityFramework.Entities.ClientClaim>())
+                            .Select(cc => new IdentityServer4.EntityFramework.Entities.ClientClaim { Type = cc.Type, Value = cc.Value }) ?? new List<IdentityServer4.EntityFramework.Entities.ClientClaim>())
                      .Concat(model.SelectedClaims?.Where(sc => !string.IsNullOrWhiteSpace(sc))
-                            .Select(sc => new Duende.IdentityServer.EntityFramework.Entities.ClientClaim { Type = sc, Value = "true" }) ?? new List<Duende.IdentityServer.EntityFramework.Entities.ClientClaim>())
+                            .Select(sc => new IdentityServer4.EntityFramework.Entities.ClientClaim { Type = sc, Value = "true" }) ?? new List<IdentityServer4.EntityFramework.Entities.ClientClaim>())
                      .ToList()
                 };
 
@@ -192,6 +203,9 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                 {
                     _context.Clients.Add(client);
                     await _context.SaveChangesAsync();
+
+                    // Invalidate cache after creating new client
+                    InvalidateClientCache();
 
                     return Json(new { success = true, message = "Client created successfully!" });
                 }
@@ -392,14 +406,14 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                 var existingRedirectUris = _context.Set<ClientRedirectUri>().Where(cru => cru.ClientId == client.Id).ToList();
                 var existingPostLogoutUris = _context.Set<ClientPostLogoutRedirectUri>().Where(cpru => cpru.ClientId == client.Id).ToList();
                 var existingCorsOrigins = _context.Set<ClientCorsOrigin>().Where(cco => cco.ClientId == client.Id).ToList();
-                var existingClaims = _context.Set<Duende.IdentityServer.EntityFramework.Entities.ClientClaim>().Where(cc => cc.ClientId == client.Id).ToList();
+                var existingClaims = _context.Set<IdentityServer4.EntityFramework.Entities.ClientClaim>().Where(cc => cc.ClientId == client.Id).ToList();
                 
                 _context.Set<ClientGrantType>().RemoveRange(existingGrantTypes);
                 _context.Set<ClientScope>().RemoveRange(existingScopes);
                 _context.Set<ClientRedirectUri>().RemoveRange(existingRedirectUris);
                 _context.Set<ClientPostLogoutRedirectUri>().RemoveRange(existingPostLogoutUris);
                 _context.Set<ClientCorsOrigin>().RemoveRange(existingCorsOrigins);
-                _context.Set<Duende.IdentityServer.EntityFramework.Entities.ClientClaim>().RemoveRange(existingClaims);
+                _context.Set<IdentityServer4.EntityFramework.Entities.ClientClaim>().RemoveRange(existingClaims);
 
                 // Use backward compatibility properties if new ones are empty
                 client.AllowedGrantTypes = (model.AllowedGrantTypes?.Any() == true ? model.AllowedGrantTypes : model.GrantTypes)
@@ -424,16 +438,19 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                     .ToList();
                 
                 // Update Client Claims (merge manual and selected claims)
-                client.Claims = new List<Duende.IdentityServer.EntityFramework.Entities.ClientClaim>()
+                client.Claims = new List<IdentityServer4.EntityFramework.Entities.ClientClaim>()
                 {
                     // Manual client claims
                 }.Concat(model.ClientClaims?.Where(cc => !string.IsNullOrWhiteSpace(cc.Type) && !string.IsNullOrWhiteSpace(cc.Value))
-                        .Select(cc => new Duende.IdentityServer.EntityFramework.Entities.ClientClaim { Type = cc.Type, Value = cc.Value }) ?? new List<Duende.IdentityServer.EntityFramework.Entities.ClientClaim>())
+                        .Select(cc => new IdentityServer4.EntityFramework.Entities.ClientClaim { Type = cc.Type, Value = cc.Value }) ?? new List<IdentityServer4.EntityFramework.Entities.ClientClaim>())
                  .Concat(model.SelectedClaims?.Where(sc => !string.IsNullOrWhiteSpace(sc))
-                        .Select(sc => new Duende.IdentityServer.EntityFramework.Entities.ClientClaim { Type = sc, Value = "true" }) ?? new List<Duende.IdentityServer.EntityFramework.Entities.ClientClaim>())
+                        .Select(sc => new IdentityServer4.EntityFramework.Entities.ClientClaim { Type = sc, Value = "true" }) ?? new List<IdentityServer4.EntityFramework.Entities.ClientClaim>())
                  .ToList();
 
                 await _context.SaveChangesAsync();
+
+                // Invalidate cache after updating client
+                InvalidateClientCache();
 
                 return Json(new { success = true, message = "Client updated successfully!" });
             }
@@ -501,6 +518,9 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                     new Microsoft.Data.SqlClient.SqlParameter("@DeletedAt", DateTime.Now),
                     new Microsoft.Data.SqlClient.SqlParameter("@DeletedBy", User.Identity?.Name ?? "System"),
                     new Microsoft.Data.SqlClient.SqlParameter("@Reason", "User requested deletion"));
+
+                // Invalidate cache after deleting client
+                InvalidateClientCache();
 
                 return Json(new { success = true, message = "Client deleted successfully!" });
             }
@@ -652,6 +672,14 @@ namespace GarageManagementSystem.IdentityServer.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAvailableClaims()
         {
+            const string cacheKey = "available_clients";
+            
+            // Try to get from cache first
+            if (_cache.TryGetValue(cacheKey, out var cachedClaims))
+            {
+                return Json(cachedClaims);
+            }
+
             try
             {
                 // Get all claims first
@@ -672,6 +700,17 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                     .Where(c => !deletedClaimNames.Contains(c.Name))
                     .Select(c => new { value = c.Name, text = c.DisplayName ?? c.Name })
                     .ToList();
+
+                // Cache for 30 minutes (claims don't change often)
+                var cacheOptions = new MemoryCacheEntryOptions
+                {
+                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(30),
+                    SlidingExpiration = TimeSpan.FromMinutes(10),
+                    Priority = CacheItemPriority.High,
+                    Size = 1 // Each cache entry counts as 1 unit toward the size limit
+                };
+                
+                _cache.Set(cacheKey, activeClaims, cacheOptions);
 
                 return Json(activeClaims);
             }

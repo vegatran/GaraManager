@@ -1,0 +1,93 @@
+@model GarageManagementSystem.IdentityServer.Controllers.UserDetailsViewModel
+
+<div class="row">
+    <div class="col-md-6">
+        <h6 class="font-weight-bold text-primary">Basic Information</h6>
+        <table class="table table-sm">
+            <tr>
+                <td><strong>Email:</strong></td>
+                <td>@Model.Email</td>
+            </tr>
+            <tr>
+                <td><strong>First Name:</strong></td>
+                <td>@Model.FirstName</td>
+            </tr>
+            <tr>
+                <td><strong>Last Name:</strong></td>
+                <td>@Model.LastName</td>
+            </tr>
+            <tr>
+                <td><strong>Full Name:</strong></td>
+                <td>@Model.FirstName @Model.LastName</td>
+            </tr>
+        </table>
+    </div>
+    
+    <div class="col-md-6">
+        <h6 class="font-weight-bold text-primary">Account Status</h6>
+        <table class="table table-sm">
+            <tr>
+                <td><strong>Status:</strong></td>
+                <td>
+                    @if (Model.IsActive)
+                    {
+                        <span class="badge badge-success">Active</span>
+                    }
+                    else
+                    {
+                        <span class="badge badge-danger">Inactive</span>
+                    }
+                </td>
+            </tr>
+            <tr>
+                <td><strong>Email Confirmed:</strong></td>
+                <td>
+                    @if (Model.EmailConfirmed)
+                    {
+                        <span class="badge badge-success">Confirmed</span>
+                    }
+                    else
+                    {
+                        <span class="badge badge-warning">Not Confirmed</span>
+                    }
+                </td>
+            </tr>
+            <tr>
+                <td><strong>Created At:</strong></td>
+                <td>@Model.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+            </tr>
+            <tr>
+                <td><strong>Last Login:</strong></td>
+                <td>
+                    @if (Model.LastLoginAt.HasValue)
+                    {
+                        @Model.LastLoginAt.Value.ToString("yyyy-MM-dd HH:mm")
+                    }
+                    else
+                    {
+                        <span class="text-muted">Never</span>
+                    }
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+
+<div class="row mt-3">
+    <div class="col-12">
+        <h6 class="font-weight-bold text-primary">Roles</h6>
+        @if (Model.Roles.Any())
+        {
+            <div class="d-flex flex-wrap">
+                @foreach (var role in Model.Roles)
+                {
+                    <span class="badge badge-info mr-2 mb-2">@role</span>
+                }
+            </div>
+        }
+        else
+        {
+            <p class="text-muted">No roles assigned</p>
+        }
+    </div>
+</div>

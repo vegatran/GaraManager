@@ -330,18 +330,30 @@ window.AjaxUtility = {
                 }
             }.bind(this),
             function(xhr, status, error) {
+                console.log('AJAX Error Details:', {
+                    status: xhr.status,
+                    statusText: xhr.statusText,
+                    responseText: xhr.responseText,
+                    responseJSON: xhr.responseJSON
+                });
+                
                 var errorMessage = 'An unknown error occurred.';
                 if (xhr.responseJSON && xhr.responseJSON.message) {
                     errorMessage = xhr.responseJSON.message;
                     if (xhr.responseJSON.errorMessages) {
                         errorMessage += '<br>' + xhr.responseJSON.errorMessages.join('<br>');
                     }
+                    if (xhr.responseJSON.errors) {
+                        errorMessage += '<br>' + xhr.responseJSON.errors.join('<br>');
+                    }
                 } else if (xhr.responseText) {
                     errorMessage = xhr.responseText;
+                } else {
+                    errorMessage = `HTTP ${xhr.status}: ${xhr.statusText || error}`;
                 }
                 
                 if (callbacks.error) {
-                    callbacks.error(errorMessage);
+                    callbacks.error(errorMessage, xhr.responseJSON);
                 } else {
                     this.handleError({ responseJSON: { message: errorMessage } });
                 }

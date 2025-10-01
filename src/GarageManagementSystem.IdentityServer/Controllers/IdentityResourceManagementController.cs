@@ -1,11 +1,12 @@
-using Duende.IdentityServer.EntityFramework.DbContexts;
-using Duende.IdentityServer.EntityFramework.Entities;
+using IdentityServer4.EntityFramework.DbContexts;
+using IdentityServer4.EntityFramework.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using System.ComponentModel.DataAnnotations;
 using GarageManagementSystem.IdentityServer.Data;
-using IdentityResourceEntity = Duende.IdentityServer.EntityFramework.Entities.IdentityResource;
+using IdentityResourceEntity = IdentityServer4.EntityFramework.Entities.IdentityResource;
 
 namespace GarageManagementSystem.IdentityServer.Controllers
 {
@@ -14,11 +15,20 @@ namespace GarageManagementSystem.IdentityServer.Controllers
     {
         private readonly ConfigurationDbContext _context;
         private readonly GaraManagementContext _garaContext;
+        private readonly IMemoryCache _cache;
 
-        public IdentityResourceManagementController(ConfigurationDbContext context, GaraManagementContext garaContext)
+        public IdentityResourceManagementController(ConfigurationDbContext context, GaraManagementContext garaContext, IMemoryCache cache)
         {
             _context = context;
             _garaContext = garaContext;
+            _cache = cache;
+        }
+
+        // Helper method to invalidate cache when Identity Resources are modified
+        private void InvalidateIdentityResourceCache()
+        {
+            _cache.Remove("available_claims_for_identity_resource");
+            _cache.Remove("all_identity_resources");
         }
 
         public IActionResult Index()
@@ -49,10 +59,13 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                     UserClaims = model.UserClaims.Select(uc => new IdentityResourceClaim { Type = uc }).ToList()
                 };
 
-                _context.IdentityResources.Add(resource);
-                await _context.SaveChangesAsync();
+                        _context.IdentityResources.Add(resource);
+                        await _context.SaveChangesAsync();
 
-                return Json(new { success = true, message = "Identity Resource created successfully!" });
+                        // Invalidate cache after creating new Identity Resource
+                        InvalidateIdentityResourceCache();
+
+                        return Json(new { success = true, message = "Identity Resource created successfully!" });
             }
 
             var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList();
@@ -112,9 +125,12 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                 _context.RemoveRange(resource.UserClaims);
                 resource.UserClaims = model.UserClaims.Select(uc => new IdentityResourceClaim { Type = uc }).ToList();
 
-                await _context.SaveChangesAsync();
+                        await _context.SaveChangesAsync();
 
-                return Json(new { success = true, message = "Identity Resource updated successfully!" });
+                        // Invalidate cache after updating Identity Resource
+                        InvalidateIdentityResourceCache();
+
+                        return Json(new { success = true, message = "Identity Resource updated successfully!" });
             }
 
             var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList();
@@ -160,14 +176,17 @@ namespace GarageManagementSystem.IdentityServer.Controllers
             var sql = @"INSERT INTO SoftDeleteRecords (EntityType, EntityName, DeletedAt, DeletedBy, Reason) 
                        VALUES (@EntityType, @EntityName, @DeletedAt, @DeletedBy, @Reason)";
             
-            await _context.Database.ExecuteSqlRawAsync(sql,
-                new Microsoft.Data.SqlClient.SqlParameter("@EntityType", "IdentityResource"),
-                new Microsoft.Data.SqlClient.SqlParameter("@EntityName", resource.Name),
-                new Microsoft.Data.SqlClient.SqlParameter("@DeletedAt", DateTime.Now),
-                new Microsoft.Data.SqlClient.SqlParameter("@DeletedBy", User.Identity?.Name ?? "System"),
-                new Microsoft.Data.SqlClient.SqlParameter("@Reason", "User requested deletion"));
+                    await _context.Database.ExecuteSqlRawAsync(sql,
+                        new Microsoft.Data.SqlClient.SqlParameter("@EntityType", "IdentityResource"),
+                        new Microsoft.Data.SqlClient.SqlParameter("@EntityName", resource.Name),
+                        new Microsoft.Data.SqlClient.SqlParameter("@DeletedAt", DateTime.Now),
+                        new Microsoft.Data.SqlClient.SqlParameter("@DeletedBy", User.Identity?.Name ?? "System"),
+                        new Microsoft.Data.SqlClient.SqlParameter("@Reason", "User requested deletion"));
 
-            return Json(new { success = true, message = "Identity Resource deleted successfully!" });
+                    // Invalidate cache after deleting Identity Resource
+                    InvalidateIdentityResourceCache();
+
+                    return Json(new { success = true, message = "Identity Resource deleted successfully!" });
         }
 
         [HttpPost]
@@ -183,10 +202,13 @@ namespace GarageManagementSystem.IdentityServer.Controllers
             var sql = @"DELETE FROM SoftDeleteRecords 
                        WHERE EntityType = 'IdentityResource' AND EntityName = @EntityName";
             
-            await _context.Database.ExecuteSqlRawAsync(sql,
-                new Microsoft.Data.SqlClient.SqlParameter("@EntityName", resource.Name));
+                    await _context.Database.ExecuteSqlRawAsync(sql,
+                        new Microsoft.Data.SqlClient.SqlParameter("@EntityName", resource.Name));
 
-            return Json(new { success = true, message = "Identity Resource restored successfully!" });
+                    // Invalidate cache after restoring Identity Resource
+                    InvalidateIdentityResourceCache();
+
+                    return Json(new { success = true, message = "Identity Resource restored successfully!" });
         }
 
         [HttpGet]
@@ -235,6 +257,14 @@ namespace GarageManagementSystem.IdentityServer.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAvailableClaims()
         {
+            const string cacheKey = "available_claims_for_identity_resource";
+            
+            // Try to get from cache first
+            if (_cache.TryGetValue(cacheKey, out var cachedClaims))
+            {
+                return Json(cachedClaims);
+            }
+
             // Get all claims first
             var allClaims = await _garaContext.Claims
                 .OrderBy(c => c.Category)
@@ -253,6 +283,17 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                 .Where(c => !deletedClaimNames.Contains(c.Name))
                 .Select(c => new { value = c.Name, text = c.DisplayName ?? c.Name })
                 .ToList();
+
+                    // Cache for 30 minutes (claims don't change often)
+                    var cacheOptions = new MemoryCacheEntryOptions
+                    {
+                        AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(30),
+                        SlidingExpiration = TimeSpan.FromMinutes(10),
+                        Priority = CacheItemPriority.High,
+                        Size = 1 // Each cache entry counts as 1 unit toward the size limit
+                    };
+                    
+                    _cache.Set(cacheKey, activeClaims, cacheOptions);
 
             return Json(activeClaims);
         }

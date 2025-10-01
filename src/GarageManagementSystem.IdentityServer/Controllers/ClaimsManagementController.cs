@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using GarageManagementSystem.IdentityServer.Data;
 using GarageManagementSystem.IdentityServer.Models;
 using System.ComponentModel.DataAnnotations;
@@ -11,10 +12,19 @@ namespace GarageManagementSystem.IdentityServer.Controllers
     public class ClaimsManagementController : Controller
     {
         private readonly GaraManagementContext _context;
+        private readonly IMemoryCache _cache;
 
-        public ClaimsManagementController(GaraManagementContext context)
+        public ClaimsManagementController(GaraManagementContext context, IMemoryCache cache)
         {
             _context = context;
+            _cache = cache;
+        }
+
+        // Helper method to invalidate cache when claims are modified
+        private void InvalidateClaimsCache()
+        {
+            _cache.Remove("available_claims");
+            _cache.Remove("all_claims");
         }
 
         // GET: ClaimsManagement
@@ -128,6 +138,9 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                 _context.Claims.Add(claim);
                 await _context.SaveChangesAsync();
 
+                // Invalidate cache after creating new claim
+                InvalidateClaimsCache();
+
                 return Json(new { success = true, message = "Claim created successfully" });
             }
 
@@ -194,6 +207,9 @@ namespace GarageManagementSystem.IdentityServer.Controllers
 
             await _context.SaveChangesAsync();
 
+            // Invalidate cache after updating claim
+            InvalidateClaimsCache();
+
             return Json(new { success = true, message = "Claim updated successfully" });
         }
 
@@ -219,6 +235,9 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                 new Microsoft.Data.SqlClient.SqlParameter("@DeletedBy", User.Identity?.Name ?? "System"),
                 new Microsoft.Data.SqlClient.SqlParameter("@Reason", "User requested deletion"));
 
+            // Invalidate cache after deleting claim
+            InvalidateClaimsCache();
+
             return Json(new { success = true, message = "Claim deleted successfully" });
         }
 
@@ -240,6 +259,9 @@ namespace GarageManagementSystem.IdentityServer.Controllers
             await _context.Database.ExecuteSqlRawAsync(sql,
                 new Microsoft.Data.SqlClient.SqlParameter("@EntityName", claim.Name));
 
+            // Invalidate cache after restoring claim
+            InvalidateClaimsCache();
+
             return Json(new { success = true, message = "Claim restored successfully" });
         }
 
@@ -247,12 +269,32 @@ namespace GarageManagementSystem.IdentityServer.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAvailableClaims()
         {
+            const string cacheKey = "available_claims";
+            
+            // Try to get from cache first
+            if (_cache.TryGetValue(cacheKey, out var cachedClaims))
+            {
+                return Json(cachedClaims);
+            }
+
+            // Get from database if not in cache
             var claims = await _context.Claims
                 .Where(c => c.IsActive)
                 .OrderBy(c => c.Category)
                 .ThenBy(c => c.DisplayName)
                 .Select(c => new { value = c.Name, text = c.DisplayName ?? c.Name })
                 .ToListAsync();
+
+            // Cache for 30 minutes (claims don't change often)
+            var cacheOptions = new MemoryCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(30),
+                SlidingExpiration = TimeSpan.FromMinutes(10),
+                Priority = CacheItemPriority.High,
+                Size = 1 // Each cache entry counts as 1 unit toward the size limit
+            };
+            
+            _cache.Set(cacheKey, claims, cacheOptions);
 
             return Json(claims);
         }

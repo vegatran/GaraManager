@@ -1,12 +1,14 @@
-using Duende.IdentityServer.EntityFramework.DbContexts;
-using Duende.IdentityServer.EntityFramework.Entities;
-using Duende.IdentityServer.Models;
+using IdentityServer4.EntityFramework.DbContexts;
+using IdentityServer4.EntityFramework.Entities;
+using IdentityServer4.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Data.SqlClient;
 using System.ComponentModel.DataAnnotations;
 using GarageManagementSystem.IdentityServer.Data;
-using ApiResourceEntity = Duende.IdentityServer.EntityFramework.Entities.ApiResource;
+using ApiResourceEntity = IdentityServer4.EntityFramework.Entities.ApiResource;
 
 namespace GarageManagementSystem.IdentityServer.Controllers
 {
@@ -15,11 +17,21 @@ namespace GarageManagementSystem.IdentityServer.Controllers
     {
         private readonly ConfigurationDbContext _context;
         private readonly GaraManagementContext _garaContext;
+        private readonly IMemoryCache _cache;
 
-        public ApiResourceManagementController(ConfigurationDbContext context, GaraManagementContext garaContext)
+        public ApiResourceManagementController(ConfigurationDbContext context, GaraManagementContext garaContext, IMemoryCache cache)
         {
             _context = context;
             _garaContext = garaContext;
+            _cache = cache;
+        }
+
+        // Helper method to invalidate cache when API Resources are modified
+        private void InvalidateApiResourceCache()
+        {
+            _cache.Remove("available_api_resources");
+            _cache.Remove("available_claims_for_api_resource");
+            _cache.Remove("available_scopes_for_api_resource");
         }
 
         public IActionResult Index()
@@ -46,17 +58,76 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                     Enabled = model.Enabled,
                     ShowInDiscoveryDocument = model.ShowInDiscoveryDocument,
                     UserClaims = model.UserClaims.Select(uc => new ApiResourceClaim { Type = uc }).ToList(),
-                    Scopes = model.Scopes.Select(s => new ApiResourceScope { Scope = s }).ToList(),
-                    Secrets = model.Secrets.Select(secret => new ApiResourceSecret { Value = secret.Sha256(), Description = "API Resource Secret" }).ToList()
+                    Scopes = model.Scopes.Select(s => new ApiResourceScope { Scope = s }).ToList()
                 };
 
-                _context.ApiResources.Add(resource);
-                await _context.SaveChangesAsync();
+                try
+                {
+                    _context.ApiResources.Add(resource);
+                    await _context.SaveChangesAsync();
 
-                return Json(new { success = true, message = "API Resource created successfully!" });
+                    // Invalidate cache after creating new API Resource
+                    InvalidateApiResourceCache();
+
+                    return Json(new { success = true, message = "API Resource created successfully!" });
+                }
+                catch (DbUpdateException ex) when (ex.InnerException is SqlException sqlEx)
+                {
+                    // Handle specific SQL errors
+                    var errorMessage = "Database error occurred.";
+                    var fieldErrors = new List<string>();
+
+                    if (sqlEx.Message.Contains("RequireResourceIndicator"))
+                    {
+                        fieldErrors.Add("RequireResourceIndicator: This field cannot be null");
+                    }
+                    else if (sqlEx.Message.Contains("Name"))
+                    {
+                        fieldErrors.Add("Name: Database constraint violation");
+                    }
+                    else if (sqlEx.Message.Contains("Cannot insert"))
+                    {
+                        // Extract field name from error message
+                        var match = System.Text.RegularExpressions.Regex.Match(sqlEx.Message, @"column '([^']+)'");
+                        if (match.Success)
+                        {
+                            fieldErrors.Add($"{match.Groups[1].Value}: This field cannot be null");
+                        }
+                    }
+
+                    if (fieldErrors.Any())
+                    {
+                        errorMessage = $"Database validation failed: {string.Join(", ", fieldErrors)}";
+                    }
+
+                    return Json(new { 
+                        success = false, 
+                        message = errorMessage,
+                        fieldErrors = fieldErrors,
+                        sqlError = sqlEx.Message
+                    });
+                }
+                catch (Exception ex)
+                {
+                    return Json(new { 
+                        success = false, 
+                        message = $"An error occurred: {ex.Message}",
+                        exception = ex.ToString()
+                    });
+                }
             }
 
-            return Json(new { success = false, message = "Invalid model", errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage) });
+            // ModelState validation errors
+            var modelErrors = ModelState.Keys.SelectMany(key => 
+                ModelState[key].Errors.Select(error => new { Field = key, Error = error.ErrorMessage })
+            ).ToList();
+
+            return Json(new { 
+                success = false, 
+                message = "Invalid model data", 
+                modelErrors = modelErrors,
+                errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage)
+            });
         }
 
         public async Task<IActionResult> Edit(int id)
@@ -91,38 +162,73 @@ namespace GarageManagementSystem.IdentityServer.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(EditApiResourceViewModel model)
         {
-            if (ModelState.IsValid)
+            try
             {
-                var resource = await _context.ApiResources
-                    .Include(r => r.UserClaims)
-                    .Include(r => r.Scopes)
-                    .Include(r => r.Secrets)
-                    .FirstOrDefaultAsync(r => r.Id == model.Id);
-
-                if (resource == null)
+                // Log incoming model data for debugging
+                var modelData = new
                 {
-                    return Json(new { success = false, message = "API Resource not found" });
+                    Id = model.Id,
+                    Name = model.Name,
+                    DisplayName = model.DisplayName,
+                    Description = model.Description,
+                    Enabled = model.Enabled,
+                    ShowInDiscoveryDocument = model.ShowInDiscoveryDocument,
+                    UserClaimsCount = model.UserClaims?.Count ?? 0,
+                    ScopesCount = model.Scopes?.Count ?? 0,
+                    UserClaims = model.UserClaims,
+                    Scopes = model.Scopes
+                };
+
+                if (ModelState.IsValid)
+                {
+                    var resource = await _context.ApiResources
+                        .Include(r => r.UserClaims)
+                        .Include(r => r.Scopes)
+                        .Include(r => r.Secrets)
+                        .FirstOrDefaultAsync(r => r.Id == model.Id);
+
+                    if (resource == null)
+                    {
+                        return Json(new { success = false, message = "API Resource not found" });
+                    }
+
+                    resource.Name = model.Name;
+                    resource.DisplayName = model.DisplayName;
+                    resource.Description = model.Description;
+                    resource.Enabled = model.Enabled;
+                    resource.ShowInDiscoveryDocument = model.ShowInDiscoveryDocument;
+
+                    // Update collections
+                    _context.RemoveRange(resource.UserClaims);
+                    _context.RemoveRange(resource.Scopes);
+
+                    resource.UserClaims = model.UserClaims?.Select(uc => new ApiResourceClaim { Type = uc }).ToList() ?? new List<ApiResourceClaim>();
+                    resource.Scopes = model.Scopes?.Select(s => new ApiResourceScope { Scope = s }).ToList() ?? new List<ApiResourceScope>();
+
+                    await _context.SaveChangesAsync();
+
+                    // Invalidate cache after updating API Resource
+                    InvalidateApiResourceCache();
+
+                    return Json(new { success = true, message = "API Resource updated successfully!" });
                 }
 
-                resource.Name = model.Name;
-                resource.DisplayName = model.DisplayName;
-                resource.Description = model.Description;
-                resource.Enabled = model.Enabled;
-                resource.ShowInDiscoveryDocument = model.ShowInDiscoveryDocument;
-
-                // Update collections
-                _context.RemoveRange(resource.UserClaims);
-                _context.RemoveRange(resource.Scopes);
-
-                resource.UserClaims = model.UserClaims.Select(uc => new ApiResourceClaim { Type = uc }).ToList();
-                resource.Scopes = model.Scopes.Select(s => new ApiResourceScope { Scope = s }).ToList();
-
-                await _context.SaveChangesAsync();
-
-                return Json(new { success = true, message = "API Resource updated successfully!" });
+                // Log ModelState errors for debugging
+                var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList();
+                var modelStateErrors = ModelState.Keys.SelectMany(key => ModelState[key].Errors.Select(x => new { Field = key, Error = x.ErrorMessage })).ToList();
+                
+                return Json(new { 
+                    success = false, 
+                    message = "Invalid model", 
+                    errors = errors,
+                    modelStateErrors = modelStateErrors,
+                    modelData = modelData
+                });
             }
-
-            return Json(new { success = false, message = "Invalid model", errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage) });
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"An error occurred: {ex.Message}", stackTrace = ex.StackTrace });
+            }
         }
 
         [HttpPost]
@@ -145,6 +251,9 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                 new Microsoft.Data.SqlClient.SqlParameter("@DeletedBy", User.Identity?.Name ?? "System"),
                 new Microsoft.Data.SqlClient.SqlParameter("@Reason", "User requested deletion"));
 
+            // Invalidate cache after deleting API Resource
+            InvalidateApiResourceCache();
+
             return Json(new { success = true, message = "API Resource deleted successfully!" });
         }
 
@@ -163,6 +272,9 @@ namespace GarageManagementSystem.IdentityServer.Controllers
             
             await _context.Database.ExecuteSqlRawAsync(sql,
                 new Microsoft.Data.SqlClient.SqlParameter("@EntityName", resource.Name));
+
+            // Invalidate cache after restoring API Resource
+            InvalidateApiResourceCache();
 
             return Json(new { success = true, message = "API Resource restored successfully!" });
         }
@@ -198,6 +310,14 @@ namespace GarageManagementSystem.IdentityServer.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAvailableScopes()
         {
+            const string cacheKey = "available_scopes_for_api_resource";
+            
+            // Try to get from cache first
+            if (_cache.TryGetValue(cacheKey, out var cachedScopes))
+            {
+                return Json(cachedScopes);
+            }
+
             // Get all API Scopes first
             var allScopes = await _context.ApiScopes
                 .Select(s => new { s.Name, s.DisplayName })
@@ -215,12 +335,73 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                 .Select(s => new { value = s.Name, text = s.DisplayName ?? s.Name })
                 .ToList();
 
+            // Cache for 30 minutes (scopes don't change often)
+            var cacheOptions = new MemoryCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(30),
+                SlidingExpiration = TimeSpan.FromMinutes(10),
+                Priority = CacheItemPriority.High,
+                Size = 1 // Each cache entry counts as 1 unit toward the size limit
+            };
+            
+            _cache.Set(cacheKey, activeScopes, cacheOptions);
+
+            return Json(activeScopes);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetApiScopes()
+        {
+            const string cacheKey = "available_api_scopes";
+            
+            // Try to get from cache first
+            if (_cache.TryGetValue(cacheKey, out var cachedScopes))
+            {
+                return Json(cachedScopes);
+            }
+
+            // Get all API Scopes first
+            var allScopes = await _context.ApiScopes
+                .Select(s => new { s.Name, s.DisplayName })
+                .ToListAsync();
+
+            // Get soft deleted scope names
+            var deletedScopeNames = await _garaContext.SoftDeleteRecords
+                .Where(s => s.EntityType == "ApiScope")
+                .Select(s => s.EntityName)
+                .ToListAsync();
+
+            // Filter out soft deleted scopes
+            var activeScopes = allScopes
+                .Where(s => !deletedScopeNames.Contains(s.Name))
+                .Select(s => new { value = s.Name, text = s.DisplayName ?? s.Name })
+                .ToList();
+
+            // Cache for 30 minutes (scopes don't change often)
+            var cacheOptions = new MemoryCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(30),
+                SlidingExpiration = TimeSpan.FromMinutes(10),
+                Priority = CacheItemPriority.High,
+                Size = 1 // Each cache entry counts as 1 unit toward the size limit
+            };
+            
+            _cache.Set(cacheKey, activeScopes, cacheOptions);
+
             return Json(activeScopes);
         }
 
         [HttpGet]
         public async Task<IActionResult> GetAvailableClaims()
         {
+            const string cacheKey = "available_claims_for_api_resource";
+            
+            // Try to get from cache first
+            if (_cache.TryGetValue(cacheKey, out var cachedClaims))
+            {
+                return Json(cachedClaims);
+            }
+
             // Get all claims first
             var allClaims = await _garaContext.Claims
                 .OrderBy(c => c.Category)
@@ -240,12 +421,31 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                 .Select(c => new { value = c.Name, text = c.DisplayName ?? c.Name })
                 .ToList();
 
+            // Cache for 30 minutes (claims don't change often)
+            var cacheOptions = new MemoryCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(30),
+                SlidingExpiration = TimeSpan.FromMinutes(10),
+                Priority = CacheItemPriority.High,
+                Size = 1 // Each cache entry counts as 1 unit toward the size limit
+            };
+            
+            _cache.Set(cacheKey, activeClaims, cacheOptions);
+
             return Json(activeClaims);
         }
 
         [HttpGet]
         public async Task<IActionResult> GetApiResources()
         {
+            const string cacheKey = "available_api_resources";
+            
+            // Try to get from cache first
+            if (_cache.TryGetValue(cacheKey, out var cachedResources))
+            {
+                return Json(new { data = cachedResources });
+            }
+
             // Get all API Resources first
             var allResources = await _context.ApiResources
                 .Include(r => r.UserClaims)
@@ -284,6 +484,17 @@ namespace GarageManagementSystem.IdentityServer.Controllers
               .ThenBy(r => r.name)
               .ToList();
 
+            // Cache for 30 minutes (API Resources don't change often)
+            var cacheOptions = new MemoryCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(30),
+                SlidingExpiration = TimeSpan.FromMinutes(10),
+                Priority = CacheItemPriority.High,
+                Size = 1 // Each cache entry counts as 1 unit toward the size limit
+            };
+            
+            _cache.Set(cacheKey, processedResources, cacheOptions);
+
             return Json(new { data = processedResources });
         }
     }
@@ -304,8 +515,6 @@ namespace GarageManagementSystem.IdentityServer.Controllers
         public List<string> UserClaims { get; set; } = new List<string>();
 
         public List<string> Scopes { get; set; } = new List<string>();
-
-        public List<string> Secrets { get; set; } = new List<string>();
     }
 
     public class EditApiResourceViewModel : CreateApiResourceViewModel

@@ -19,31 +19,10 @@ var ApiResourceManagement = {
             self.handleEditApiResource();
         });
 
-        // Create Modal Events - Use ModalSelect2
+        // Create Modal Events - Load dynamic data and initialize Select2
         $('#createApiResourceModal').on('shown.bs.modal', function() {
-            $('#createApiResourceUserClaims').select2({
-                placeholder: 'Select user claims',
-                dropdownParent: $('#createApiResourceModal')
-            });
-            
-            $('#createApiResourceScopes').select2({
-                placeholder: 'Select API scopes',
-                dropdownParent: $('#createApiResourceModal'),
-                ajax: {
-                    url: '/ApiResourceManagement/GetAvailableScopes',
-                    dataType: 'json',
-                    processResults: function(data) {
-                        return {
-                            results: $.map(data, function(item) {
-                                return {
-                                    id: item.name,
-                                    text: item.displayName || item.name
-                                };
-                            })
-                        };
-                    }
-                }
-            });
+            // Load dynamic data for Create modal
+            self.loadCreateModalData();
         });
 
         // Edit Modal Events - Initialize Select2 when modal is shown
@@ -148,17 +127,63 @@ var ApiResourceManagement = {
         // Keeping for backward compatibility if needed
     },
 
+    loadCreateModalData: function() {
+        var self = this;
+        
+        // Load Claims dynamically
+        $.get('/ClaimsManagement/GetAvailableClaims')
+            .done(function(data) {
+                var $userClaimsSelect = $('#createApiResourceUserClaims');
+                $userClaimsSelect.empty();
+                
+                // Add options from dynamic data
+                $.each(data, function(index, item) {
+                    $userClaimsSelect.append(new Option(item.text, item.value));
+                });
+                
+                // Initialize Select2 for User Claims
+                $userClaimsSelect.select2({
+                    placeholder: 'Select user claims',
+                    dropdownParent: $('#createApiResourceModal')
+                });
+            })
+            .fail(function() {
+                console.error('Failed to load claims');
+            });
+        
+        // Load API Scopes dynamically
+        $.get('/ApiResourceManagement/GetAvailableScopes')
+            .done(function(data) {
+                var $scopesSelect = $('#createApiResourceScopes');
+                $scopesSelect.empty();
+                
+                // Add options from dynamic data
+                $.each(data, function(index, item) {
+                    $scopesSelect.append(new Option(item.text, item.value));
+                });
+                
+                // Initialize Select2 for API Scopes
+                $scopesSelect.select2({
+                    placeholder: 'Select API scopes',
+                    dropdownParent: $('#createApiResourceModal')
+                });
+            })
+            .fail(function() {
+                console.error('Failed to load API scopes');
+            });
+    },
+
     handleCreateApiResource: function() {
         var formData = new FormData();
         
         // Basic Information
-        formData.append('Name', $('#createApiResourceName').val());
-        formData.append('DisplayName', $('#createApiResourceDisplayName').val());
-        formData.append('Description', $('#createApiResourceDescription').val());
+        formData.append('Name', $('#createName').val());
+        formData.append('DisplayName', $('#createDisplayName').val());
+        formData.append('Description', $('#createDescription').val());
         
-        // Settings
-        formData.append('Enabled', $('#createApiResourceEnabled').is(':checked'));
-        formData.append('ShowInDiscoveryDocument', $('#createApiResourceShowInDiscoveryDocument').is(':checked'));
+                // Settings
+                formData.append('Enabled', $('#createEnabled').is(':checked'));
+                formData.append('ShowInDiscoveryDocument', $('#createShowInDiscoveryDocument').is(':checked'));
         
         // Collections
         var userClaims = $('#createApiResourceUserClaims').val() || [];
@@ -169,13 +194,6 @@ var ApiResourceManagement = {
         var scopes = $('#createApiResourceScopes').val() || [];
         scopes.forEach(function(scope) {
             formData.append('Scopes', scope);
-        });
-        
-        var secrets = $('#createApiResourceSecrets').val().split('\n').filter(function(secret) { 
-            return secret.trim() !== ''; 
-        });
-        secrets.forEach(function(secret) {
-            formData.append('Secrets', secret.trim());
         });
         
         // Add antiforgery token
@@ -226,7 +244,7 @@ var ApiResourceManagement = {
         // Get all form data
         for (var i = 0; i < form.elements.length; i++) {
             var element = form.elements[i];
-            if (element.name && element.type !== 'file') {
+            if (element.name && element.type !== 'file' && element.name !== '__RequestVerificationToken') {
                 if (element.type === 'checkbox') {
                     formData.append(element.name, element.checked);
                 } else if (element.type === 'select-multiple') {
@@ -240,15 +258,22 @@ var ApiResourceManagement = {
             }
         }
         
-        // Add antiforgery token from the main document
-        var token = $('input[name="__RequestVerificationToken"]').first().val();
+        // Add antiforgery token from the edit form itself (only once)
+        var token = $('#editApiResourceForm input[name="__RequestVerificationToken"]').val();
         if (token) {
             formData.append('__RequestVerificationToken', token);
+        }
+
+        // Debug: Log form data being sent
+        console.log('Form data being sent:');
+        for (var pair of formData.entries()) {
+            console.log(pair[0] + ': ' + pair[1]);
         }
 
         // Use AjaxUtility for consistent error handling
         AjaxUtility.submitForm('/ApiResourceManagement/Edit', formData, {
             success: function(response) {
+                console.log('Success response:', response);
                 Swal.fire({
                     icon: 'success',
                     title: 'Success',
@@ -260,7 +285,9 @@ var ApiResourceManagement = {
                     DataTablesUtility.refresh('#apiResourcesTable');
                 });
             },
-            error: function(errorMessage) {
+            error: function(errorMessage, response) {
+                console.log('Error response:', response);
+                console.log('Error message:', errorMessage);
                 Swal.fire({
                     icon: 'error',
                     title: 'Update Failed',

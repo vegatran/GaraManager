@@ -2,13 +2,13 @@ using GarageManagementSystem.IdentityServer.Data;
 using GarageManagementSystem.IdentityServer.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Duende.IdentityServer.EntityFramework.DbContexts;
-using Duende.IdentityServer.EntityFramework.Mappers;
-using Duende.IdentityServer.Extensions;
+using IdentityServer4.EntityFramework.DbContexts;
+using IdentityServer4.EntityFramework.Mappers;
+using IdentityServer4.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configure logging for Duende IdentityServer
+// Configure logging for IdentityServer4
 builder.Logging.AddConsole();
 builder.Logging.AddDebug();
 
@@ -17,11 +17,13 @@ builder.Logging.SetMinimumLevel(LogLevel.Debug);
 
     // Add services to the container.
     builder.Services.AddDbContext<IdentityDbContext>(options =>
-        options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+        options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"), 
+            sqlOptions => sqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)));
 
     // Add GaraManagementContext for Claims Management
     builder.Services.AddDbContext<GaraManagementContext>(options =>
-        options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+        options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"),
+            sqlOptions => sqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)));
 
 builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
 {
@@ -49,7 +51,7 @@ builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
 .AddEntityFrameworkStores<IdentityDbContext>()
 .AddDefaultTokenProviders();
 
-// Duende IdentityServer - Cấu hình theo tài liệu chính thức
+// IdentityServer4 - Cấu hình theo tài liệu chính thức
 builder.Services.AddIdentityServer(options =>
 {
     // Events configuration
@@ -71,19 +73,24 @@ builder.Services.AddIdentityServer(options =>
     options.Endpoints.EnableTokenEndpoint = true;
     options.Endpoints.EnableUserInfoEndpoint = true;
     options.Endpoints.EnableDiscoveryEndpoint = true;
-    
-    // Disable automatic key management to avoid license warning
-    options.KeyManagement.Enabled = false;
 })
 .AddConfigurationStore<ConfigurationDbContext>(options =>
 {
     options.ConfigureDbContext = b => b.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"),
-        sql => sql.MigrationsAssembly(typeof(Program).Assembly.GetName().Name));
+        sql => 
+        {
+            sql.MigrationsAssembly(typeof(Program).Assembly.GetName().Name);
+            sql.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery); // Split queries for better performance
+        });
 })
 .AddOperationalStore(options =>
 {
     options.ConfigureDbContext = b => b.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"),
-        sql => sql.MigrationsAssembly(typeof(Program).Assembly.GetName().Name));
+        sql => 
+        {
+            sql.MigrationsAssembly(typeof(Program).Assembly.GetName().Name);
+            sql.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery); // Split queries for better performance
+        });
     options.EnableTokenCleanup = true;
     options.TokenCleanupInterval = 30;
 })
@@ -104,6 +111,14 @@ builder.Services.ConfigureApplicationCookie(options =>
 
 builder.Services.AddAuthorization();
 builder.Services.AddControllersWithViews();
+
+// Add Memory Cache for better performance with optimized settings
+builder.Services.AddMemoryCache(options =>
+{
+    options.SizeLimit = 1000; // Maximum number of cache entries
+    options.CompactionPercentage = 0.25; // Remove 25% of entries when limit is reached
+    options.ExpirationScanFrequency = TimeSpan.FromMinutes(5); // Scan for expired entries every 5 minutes
+});
 
 var app = builder.Build();
 

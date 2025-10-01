@@ -1,14 +1,14 @@
 using GarageManagementSystem.IdentityServer.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Duende.IdentityServer.EntityFramework.DbContexts;
+using IdentityServer4.EntityFramework.DbContexts;
 using GarageManagementSystem.IdentityServer.Data;
-using Duende.IdentityServer.EntityFramework.Mappers;
-using Duende.IdentityServer.Models;
+using IdentityServer4.EntityFramework.Mappers;
+using IdentityServer4.Models;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Cryptography;
 using System.Text;
-using Duende.IdentityServer.EntityFramework.Entities;
+using IdentityServer4.EntityFramework.Entities;
 
 namespace GarageManagementSystem.IdentityServer.Controllers
 {
@@ -102,7 +102,7 @@ namespace GarageManagementSystem.IdentityServer.Controllers
             // Create Identity Resources directly as entities
             var identityResources = new[]
             {
-                new Duende.IdentityServer.EntityFramework.Entities.IdentityResource
+                new IdentityServer4.EntityFramework.Entities.IdentityResource
                 {
                     Enabled = true,
                     Name = "openid",
@@ -114,7 +114,7 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                     Created = DateTime.UtcNow,
                     NonEditable = false
                 },
-                new Duende.IdentityServer.EntityFramework.Entities.IdentityResource
+                new IdentityServer4.EntityFramework.Entities.IdentityResource
                 {
                     Enabled = true,
                     Name = "profile",
@@ -126,7 +126,7 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                     Created = DateTime.UtcNow,
                     NonEditable = false
                 },
-                new Duende.IdentityServer.EntityFramework.Entities.IdentityResource
+                new IdentityServer4.EntityFramework.Entities.IdentityResource
                 {
                     Enabled = true,
                     Name = "email",
@@ -138,7 +138,7 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                     Created = DateTime.UtcNow,
                     NonEditable = false
                 },
-                new Duende.IdentityServer.EntityFramework.Entities.IdentityResource
+                new IdentityServer4.EntityFramework.Entities.IdentityResource
                 {
                     Enabled = true,
                     Name = "roles",
@@ -163,7 +163,7 @@ namespace GarageManagementSystem.IdentityServer.Controllers
         {
             var apiScopes = new[]
             {
-                new Duende.IdentityServer.EntityFramework.Entities.ApiScope
+                new IdentityServer4.EntityFramework.Entities.ApiScope
                 {
                     Enabled = true,
                     Name = "garage.api",
@@ -173,7 +173,7 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                     Emphasize = false,
                     ShowInDiscoveryDocument = true
                 },
-                new Duende.IdentityServer.EntityFramework.Entities.ApiScope
+                new IdentityServer4.EntityFramework.Entities.ApiScope
                 {
                     Enabled = true,
                     Name = "garage.api.read",
@@ -183,7 +183,7 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                     Emphasize = false,
                     ShowInDiscoveryDocument = true
                 },
-                new Duende.IdentityServer.EntityFramework.Entities.ApiScope
+                new IdentityServer4.EntityFramework.Entities.ApiScope
                 {
                     Enabled = true,
                     Name = "garage.api.write",
@@ -193,7 +193,7 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                     Emphasize = false,
                     ShowInDiscoveryDocument = true
                 },
-                new Duende.IdentityServer.EntityFramework.Entities.ApiScope
+                new IdentityServer4.EntityFramework.Entities.ApiScope
                 {
                     Enabled = true,
                     Name = "admin.api",
@@ -214,9 +214,9 @@ namespace GarageManagementSystem.IdentityServer.Controllers
 
         private async Task SeedApiResources()
         {
-            var apiResources = new[]
-            {
-                new Duende.IdentityServer.EntityFramework.Entities.ApiResource
+                    var apiResources = new[]
+                    {
+                        new IdentityServer4.EntityFramework.Entities.ApiResource
                 {
                     Enabled = true,
                     Name = "garage.api",
@@ -241,7 +241,7 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                         new ApiResourceClaim { Type = "role" }
                     }
                 },
-                new Duende.IdentityServer.EntityFramework.Entities.ApiResource
+                        new IdentityServer4.EntityFramework.Entities.ApiResource
                 {
                     Enabled = true,
                     Name = "admin.api",
@@ -275,9 +275,9 @@ namespace GarageManagementSystem.IdentityServer.Controllers
 
         private async Task SeedClients()
         {
-            var clients = new[]
-            {
-                new Duende.IdentityServer.EntityFramework.Entities.Client
+                    var clients = new[]
+                    {
+                        new IdentityServer4.EntityFramework.Entities.Client
                 {
                     Enabled = true,
                     ClientId = "garage.web",
@@ -317,7 +317,7 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                         new ClientScope { Scope = "garage.api.read" }
                     }
                 },
-                new Duende.IdentityServer.EntityFramework.Entities.Client
+                        new IdentityServer4.EntityFramework.Entities.Client
                 {
                     Enabled = true,
                     ClientId = "garage.api.client",
