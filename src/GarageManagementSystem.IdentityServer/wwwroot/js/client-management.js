@@ -12,6 +12,7 @@ window.ClientManagement = {
     init: function() {
         this.initDataTable();
         this.loadApiData();
+        this.loadAvailableClaims();
         this.bindEvents();
     },
 
@@ -128,6 +129,41 @@ window.ClientManagement = {
         });
     },
 
+    // Load Available Claims from ClaimsManagement
+    loadAvailableClaims: function() {
+        // Load Claims from ClaimsManagement
+        $.get('/ClaimsManagement/GetAvailableClaims', function(data) {
+            $('#createClientClaims, #editClientClaims').empty();
+            $.each(data, function(index, item) {
+                $('#createClientClaims, #editClientClaims').append(new Option(item.text, item.value));
+            });
+            
+            // Initialize Select2 for claims dropdown
+            $('#createClientClaims, #editClientClaims').select2({
+                placeholder: 'Select claims...',
+                allowClear: true,
+                dropdownParent: $('#createClientModal, #editClientModal')
+            });
+        }).fail(function() {
+            // Fallback options if API fails
+            $('#createClientClaims, #editClientClaims').empty().append(
+                '<option value="sub">Subject ID</option>' +
+                '<option value="name">Name</option>' +
+                '<option value="given_name">Given Name</option>' +
+                '<option value="family_name">Family Name</option>' +
+                '<option value="email">Email</option>' +
+                '<option value="email_verified">Email Verified</option>'
+            );
+            
+            // Initialize Select2 for claims dropdown
+            $('#createClientClaims, #editClientClaims').select2({
+                placeholder: 'Select claims...',
+                allowClear: true,
+                dropdownParent: $('#createClientModal, #editClientModal')
+            });
+        });
+    },
+
     // Bind event handlers
     bindEvents: function() {
         var self = this;
@@ -183,12 +219,23 @@ window.ClientManagement = {
                 dropdownParent: $('#createClientModal')
             });
             
+            // Initialize Select2 for Client Claims
+            $('#createClientClaims').select2({
+                placeholder: 'Select claims...',
+                allowClear: true,
+                dropdownParent: $('#createClientModal')
+            });
+            
             // Add change event handlers for Create modal
             $('#createGrantTypes').on('change', function() {
                 $(this).trigger('change.select2');
             });
             
             $('#createScopes').on('change', function() {
+                $(this).trigger('change.select2');
+            });
+            
+            $('#createClientClaims').on('change', function() {
                 $(this).trigger('change.select2');
             });
         });
@@ -209,6 +256,48 @@ window.ClientManagement = {
                     placeholder: 'Select scopes...',
                     allowClear: true,
                     dropdownParent: $('#editClientModal')
+                });
+            }
+            
+            if ($('#editClientClaims').length) {
+                // Load claims options first
+                $.get('/ClientManagement/GetAvailableClaims', function(data) {
+                    $('#editClientClaims').empty();
+                    $.each(data, function(index, item) {
+                        $('#editClientClaims').append(new Option(item.text, item.value));
+                    });
+                    
+                    // Initialize Select2 after options are loaded
+                    $('#editClientClaims').select2({
+                        placeholder: 'Select claims...',
+                        allowClear: true,
+                        dropdownParent: $('#editClientModal')
+                    });
+                    
+                    // Set selected values from data attributes
+                    var selectedClaims = $('#editClientClaims').data('selected-values');
+                    if (selectedClaims && selectedClaims.length > 0) {
+                        var values = selectedClaims.split(',').filter(v => v.trim() !== '');
+                        if (values.length > 0) {
+                            $('#editClientClaims').val(values).trigger('change');
+                        }
+                    }
+                }).fail(function() {
+                    // Fallback options if API fails
+                    $('#editClientClaims').empty().append(
+                        '<option value="sub">Subject ID</option>' +
+                        '<option value="name">Name</option>' +
+                        '<option value="given_name">Given Name</option>' +
+                        '<option value="family_name">Family Name</option>' +
+                        '<option value="email">Email</option>' +
+                        '<option value="email_verified">Email Verified</option>'
+                    );
+                    
+                    $('#editClientClaims').select2({
+                        placeholder: 'Select claims...',
+                        allowClear: true,
+                        dropdownParent: $('#editClientModal')
+                    });
                 });
             }
         });
@@ -279,6 +368,12 @@ window.ClientManagement = {
             formData.append('AllowedCorsOrigins', origin);
         });
         
+        // Client Claims
+        var selectedClaims = $('#createClientClaims').val() || [];
+        selectedClaims.forEach(function(claim) {
+            formData.append('SelectedClaims', claim);
+        });
+        
         // Add antiforgery token
         var token = $('input[name="__RequestVerificationToken"]').val();
         if (token) {
@@ -342,6 +437,14 @@ window.ClientManagement = {
         if (!formData.has('ClientName') || !formData.get('ClientName')) {
             formData.set('ClientName', clientName);
         }
+        // Add SelectedClaims manually
+        var selectedClaims = $('#editClientClaims').val() || [];
+        // Remove any existing SelectedClaims entries
+        formData.delete('SelectedClaims');
+        selectedClaims.forEach(function(claim) {
+            formData.append('SelectedClaims', claim);
+        });
+        
         // Add antiforgery token from the main document (not from modal)
         var token = $('input[name="__RequestVerificationToken"]').val();
         if (token) {
@@ -408,17 +511,6 @@ window.ClientManagement = {
                     width: '600px'
                 });
                 
-                console.log('Update Error:', {
-                    status: xhr.status,
-                    statusText: xhr.statusText,
-                    responseText: xhr.responseText,
-                    responseJSON: xhr.responseJSON
-                });
-                
-                // Log detailed error for debugging
-                if (xhr.responseJSON && xhr.responseJSON.details) {
-                    console.log('Server Error Details:', xhr.responseJSON.details);
-                }
             }
         });
     },
@@ -426,7 +518,7 @@ window.ClientManagement = {
     // Show Client Details
     showClientDetails: function(clientId) {
         $.get('/ClientManagement/Details/' + clientId, function(data) {
-            $('#viewClientContent').html(data);
+            $('#viewClientModalBody').html(data);
             $('#viewClientModal').modal('show');
         }).fail(function() {
             Swal.fire({
@@ -460,7 +552,6 @@ window.ClientManagement = {
         
         // Load Grant Types
         $.get('/ClientManagement/GetAvailableGrantTypes', function(data) {
-            console.log('Grant Types API Response:', data);
             $('#editGrantTypes').empty();
             $.each(data, function(index, item) {
                 $('#editGrantTypes').append(new Option(item.text, item.value));
@@ -475,10 +566,8 @@ window.ClientManagement = {
             
             // Set selected values
             var selectedGrantTypes = $('#editGrantTypes').data('selected-values');
-            console.log('Selected Grant Types from data attribute:', selectedGrantTypes);
             if (selectedGrantTypes) {
                 var values = selectedGrantTypes.split(',');
-                console.log('Setting Grant Types values:', values);
                 $('#editGrantTypes').val(values).trigger('change');
                 
                 // Trigger change event for form validation
@@ -501,9 +590,49 @@ window.ClientManagement = {
             });
         });
 
+        // Load Claims
+        $.get('/ClientManagement/GetAvailableClaims', function(data) {
+            $('#editClientClaims').empty();
+            $.each(data, function(index, item) {
+                $('#editClientClaims').append(new Option(item.text, item.value));
+            });
+            
+            // Initialize Select2 after options are loaded
+            $('#editClientClaims').select2({
+                placeholder: 'Select claims...',
+                allowClear: true,
+                dropdownParent: $('#editClientModal')
+            });
+            
+            // Set selected values
+            var selectedClaims = $('#editClientClaims').data('selected-values');
+            if (selectedClaims) {
+                var values = selectedClaims.split(',');
+                $('#editClientClaims').val(values).trigger('change');
+                
+                // Trigger change event for form validation
+                $('#editClientClaims').on('change', function() {
+                    $(this).trigger('change.select2');
+                });
+            }
+        }).fail(function() {
+            // Fallback options
+            $('#editClientClaims').empty().append(
+                '<option value="sub">Subject ID</option>' +
+                '<option value="name">Name</option>' +
+                '<option value="email">Email</option>' +
+                '<option value="role">Role</option>'
+            );
+            
+            $('#editClientClaims').select2({
+                placeholder: 'Select claims...',
+                allowClear: true,
+                dropdownParent: $('#editClientModal')
+            });
+        });
+
         // Load Scopes
         $.get('/ClientManagement/GetAvailableScopes', function(data) {
-            console.log('Scopes API Response:', data);
             $('#editScopes').empty();
             $.each(data, function(index, item) {
                 $('#editScopes').append(new Option(item.text, item.value));
@@ -518,10 +647,8 @@ window.ClientManagement = {
             
             // Set selected values
             var selectedScopes = $('#editScopes').data('selected-values');
-            console.log('Selected Scopes from data attribute:', selectedScopes);
             if (selectedScopes) {
                 var values = selectedScopes.split(',');
-                console.log('Setting Scopes values:', values);
                 $('#editScopes').val(values).trigger('change');
                 
                 // Trigger change event for form validation

@@ -51,6 +51,109 @@ window.DataTablesUtility = {
         return $(tableId).DataTable(config);
     },
 
+    // Quick initialize for common scenarios
+    initializeTable: function(tableId, options) {
+        var defaults = {
+            ajaxUrl: null,
+            columns: [],
+            pageLength: 25,
+            showActions: true,
+            actionCallbacks: {
+                view: null,
+                edit: null,
+                delete: null
+            },
+            language: {
+                processing: "Loading data...",
+                emptyTable: "No data available",
+                info: "Showing _START_ to _END_ of _TOTAL_ entries",
+                infoEmpty: "Showing 0 to 0 of 0 entries",
+                infoFiltered: "(filtered from _MAX_ total entries)"
+            }
+        };
+        
+        var settings = $.extend(true, {}, defaults, options);
+        var config = $.extend(true, {}, this.defaultConfig, {
+            pageLength: settings.pageLength,
+            language: settings.language
+        });
+        
+        // Add AJAX configuration if URL provided
+        if (settings.ajaxUrl) {
+            config.ajax = {
+                url: settings.ajaxUrl,
+                type: 'GET',
+                dataSrc: 'data'
+            };
+        }
+        
+        // Add columns
+        config.columns = settings.columns.slice();
+        
+        // Add action column if requested
+        if (settings.showActions) {
+            config.columns.push({
+                data: null,
+                orderable: false,
+                render: function(data, type, row) {
+                    var buttons = '<div class="action-buttons">';
+                    
+                        // Determine which value to use for actions
+                        var useId = settings.actionCallbacks.useIdForActions === true;
+                        var paramValue = useId ? row.id : (row.name || row.clientId || row.id);
+                    
+                    if (settings.actionCallbacks.view) {
+                        buttons += `<button class="btn btn-info btn-sm" onclick="${settings.actionCallbacks.view}(${paramValue})" title="View">
+                                       <i class="fas fa-eye"></i>
+                                   </button>`;
+                    }
+                    
+                    if (settings.actionCallbacks.edit) {
+                        buttons += `<button class="btn btn-warning btn-sm" onclick="${settings.actionCallbacks.edit}(${paramValue})" title="Edit">
+                                           <i class="fas fa-edit"></i>
+                                       </button>`;
+                    }
+                    
+                    // Conditional actions based on row data
+                    if (settings.actionCallbacks.conditionalActions) {
+                        if (row.isActive) {
+                            // Show Delete button for active claims
+                            if (settings.actionCallbacks.delete) {
+                                buttons += `<button class="btn btn-danger btn-sm" onclick="${settings.actionCallbacks.delete}(${row.id})" title="Delete">
+                                               <i class="fas fa-trash"></i>
+                                           </button>`;
+                            }
+                        } else {
+                            // Show Restore button for inactive claims
+                            if (settings.actionCallbacks.restore) {
+                                buttons += `<button class="btn btn-success btn-sm" onclick="${settings.actionCallbacks.restore}(${row.id})" title="Restore">
+                                               <i class="fas fa-undo"></i>
+                                           </button>`;
+                            }
+                        }
+                    } else {
+                        // Default behavior - always show delete button
+                        if (settings.actionCallbacks.delete) {
+                            buttons += `<button class="btn btn-danger btn-sm" onclick="${settings.actionCallbacks.delete}(${row.id})" title="Delete">
+                                           <i class="fas fa-trash"></i>
+                                       </button>`;
+                        }
+                    }
+                    
+                    buttons += '</div>';
+                    return buttons;
+                }
+            });
+        }
+        
+        // Destroy existing DataTable if exists
+        if ($.fn.DataTable.isDataTable(tableId)) {
+            $(tableId).DataTable().destroy();
+        }
+        
+        return $(tableId).DataTable(config);
+    },
+
     // Create action buttons column
     createActionColumn: function(options) {
         var defaults = {

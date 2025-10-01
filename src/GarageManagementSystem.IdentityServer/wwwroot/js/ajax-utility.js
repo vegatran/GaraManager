@@ -307,6 +307,130 @@ window.AjaxUtility = {
                 window.URL.revokeObjectURL(downloadUrl);
             }
         }, options));
+    },
+
+    // Submit form with FormData
+    submitForm: function(url, formData, callbacks) {
+        callbacks = callbacks || {};
+        
+        return this.postFormData(url, formData, 
+            function(response) {
+                if (response && response.success === false) {
+                    var errorMessage = response.message || 'Operation failed';
+                    if (response.errorMessages) {
+                        errorMessage += '<br>' + response.errorMessages.join('<br>');
+                    }
+                    if (callbacks.error) {
+                        callbacks.error(errorMessage);
+                    } else {
+                        this.handleError({ responseJSON: { message: errorMessage } });
+                    }
+                } else if (callbacks.success) {
+                    callbacks.success(response);
+                }
+            }.bind(this),
+            function(xhr, status, error) {
+                var errorMessage = 'An unknown error occurred.';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMessage = xhr.responseJSON.message;
+                    if (xhr.responseJSON.errorMessages) {
+                        errorMessage += '<br>' + xhr.responseJSON.errorMessages.join('<br>');
+                    }
+                } else if (xhr.responseText) {
+                    errorMessage = xhr.responseText;
+                }
+                
+                if (callbacks.error) {
+                    callbacks.error(errorMessage);
+                } else {
+                    this.handleError({ responseJSON: { message: errorMessage } });
+                }
+            }.bind(this)
+        );
+    },
+
+        // Load partial view into modal
+        loadPartialView: function(url, targetSelector, modalSelector) {
+            return this.get(url, 
+                function(data) {
+                    $(targetSelector).html(data);
+                    $(modalSelector).modal('show');
+                },
+                function(xhr, status, error) {
+                
+                var errorMessage = 'Failed to load data.';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMessage = xhr.responseJSON.message;
+                } else if (xhr.responseText) {
+                    errorMessage = xhr.responseText;
+                }
+                
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: errorMessage
+                });
+            }
+        );
+    },
+
+    // Confirm delete with SweetAlert2
+    confirmDelete: function(title, text, callback) {
+        Swal.fire({
+            title: title || 'Are you sure?',
+            text: text || "You won't be able to revert this!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, delete it!'
+        }).then(function(result) {
+            if (result.isConfirmed && callback) {
+                callback();
+            }
+        });
+    },
+
+    // Delete record with consistent error handling
+    deleteRecord: function(url, callbacks) {
+        callbacks = callbacks || {};
+        
+        // Add antiforgery token
+        var token = $('input[name="__RequestVerificationToken"]').first().val();
+        var headers = {};
+        if (token) {
+            headers['RequestVerificationToken'] = token;
+        }
+        
+        return this.post(url, null,
+            function(response) {
+                if (response && response.success === false) {
+                    var errorMessage = response.message || 'Delete failed';
+                    if (callbacks.error) {
+                        callbacks.error(errorMessage);
+                    } else {
+                        this.handleError({ responseJSON: { message: errorMessage } });
+                    }
+                } else if (callbacks.success) {
+                    callbacks.success(response);
+                }
+            }.bind(this),
+            function(xhr, status, error) {
+                var errorMessage = 'An error occurred while deleting the record.';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMessage = xhr.responseJSON.message;
+                } else if (xhr.responseText) {
+                    errorMessage = xhr.responseText;
+                }
+                
+                if (callbacks.error) {
+                    callbacks.error(errorMessage);
+                } else {
+                    this.handleError({ responseJSON: { message: errorMessage } });
+                }
+            }.bind(this),
+            { headers: headers }
+        );
     }
 };
 

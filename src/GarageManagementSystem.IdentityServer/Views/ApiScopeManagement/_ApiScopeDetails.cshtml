@@ -1,0 +1,63 @@
+@model dynamic
+
+<dl class="row">
+    <dt class="col-sm-4">Name:</dt>
+    <dd class="col-sm-8"><code>@Model.Name</code></dd>
+
+    <dt class="col-sm-4">Display Name:</dt>
+    <dd class="col-sm-8">@Model.DisplayName</dd>
+
+    <dt class="col-sm-4">Description:</dt>
+    <dd class="col-sm-8">@Model.Description</dd>
+
+    <dt class="col-sm-4">Required:</dt>
+    <dd class="col-sm-8">
+        @if (Model.Required)
+        {
+            <span class="badge badge-warning">Required</span>
+        }
+        else
+        {
+            <span class="badge badge-secondary">Optional</span>
+        }
+    </dd>
+
+    <dt class="col-sm-4">Emphasize:</dt>
+    <dd class="col-sm-8">
+        @if (Model.Emphasize)
+        {
+            <span class="badge badge-info">Emphasize</span>
+        }
+        else
+        {
+            <span class="badge badge-secondary">Normal</span>
+        }
+    </dd>
+
+    <dt class="col-sm-4">Show in Discovery Document:</dt>
+    <dd class="col-sm-8">
+        @if (Model.ShowInDiscoveryDocument)
+        {
+            <span class="badge badge-success">Yes</span>
+        }
+        else
+        {
+            <span class="badge badge-danger">No</span>
+        }
+    </dd>
+
+    <dt class="col-sm-4">User Claims:</dt>
+    <dd class="col-sm-8">
+        @if (Model.UserClaims != null && Model.UserClaims.Count > 0)
+        {
+            @foreach (var claim in Model.UserClaims)
+            {
+                <span class="badge badge-primary mr-1 mb-1">@claim</span>
+            }
+        }
+        else
+        {
+            <span class="text-muted">None</span>
+        }
+    </dd>
+</dl>

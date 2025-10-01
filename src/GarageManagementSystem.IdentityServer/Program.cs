@@ -19,6 +19,10 @@ builder.Logging.SetMinimumLevel(LogLevel.Debug);
     builder.Services.AddDbContext<IdentityDbContext>(options =>
         options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+    // Add GaraManagementContext for Claims Management
+    builder.Services.AddDbContext<GaraManagementContext>(options =>
+        options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
 builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
 {
     // Password settings
@@ -67,6 +71,9 @@ builder.Services.AddIdentityServer(options =>
     options.Endpoints.EnableTokenEndpoint = true;
     options.Endpoints.EnableUserInfoEndpoint = true;
     options.Endpoints.EnableDiscoveryEndpoint = true;
+    
+    // Disable automatic key management to avoid license warning
+    options.KeyManagement.Enabled = false;
 })
 .AddConfigurationStore<ConfigurationDbContext>(options =>
 {

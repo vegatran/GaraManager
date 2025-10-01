@@ -1,5 +1,6 @@
 using Duende.IdentityServer.EntityFramework.DbContexts;
 using GarageManagementSystem.IdentityServer.Models;
+using GarageManagementSystem.IdentityServer.Data;
 using Duende.IdentityServer.EntityFramework.Entities;
 using Duende.IdentityServer.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -13,12 +14,14 @@ namespace GarageManagementSystem.IdentityServer.Controllers
     [Authorize]
     public class ClientManagementController : Controller
     {
-    private readonly ConfigurationDbContext _context;
+        private readonly ConfigurationDbContext _context;
+        private readonly GaraManagementContext _garaContext;
 
-    public ClientManagementController(ConfigurationDbContext context)
-    {
-        _context = context;
-    }
+        public ClientManagementController(ConfigurationDbContext context, GaraManagementContext garaContext)
+        {
+            _context = context;
+            _garaContext = garaContext;
+        }
 
         public IActionResult Index()
         {
@@ -30,20 +33,25 @@ namespace GarageManagementSystem.IdentityServer.Controllers
         {
             try
             {
-                // Use raw SQL to get clients excluding soft deleted ones
-                var clients = await _context.Clients
-                    .FromSqlRaw(@"
-                        SELECT c.* FROM Clients c 
-                        WHERE c.ClientId NOT IN (
-                            SELECT EntityName FROM SoftDeleteRecords 
-                            WHERE EntityType = 'Client'
-                        )")
+                // Get soft deleted client IDs from GaraManagementContext
+                var deletedClientIds = await _garaContext.SoftDeleteRecords
+                    .Where(s => s.EntityType == "Client")
+                    .Select(s => s.EntityName)
+                    .ToListAsync();
+
+                // Get all clients first
+                var allClients = await _context.Clients
                     .Include(c => c.AllowedGrantTypes)
                     .Include(c => c.AllowedScopes)
                     .Include(c => c.RedirectUris)
                     .Include(c => c.PostLogoutRedirectUris)
                     .Include(c => c.AllowedCorsOrigins)
                     .Include(c => c.Claims)
+                    .ToListAsync();
+
+                // Filter out soft deleted clients in memory
+                var clients = allClients
+                    .Where(c => !deletedClientIds.Contains(c.ClientId))
                     .Select(c => new
                     {
                         id = c.Id,
@@ -79,7 +87,7 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                         claims = c.Claims.Select(cl => new { cl.Type, cl.Value }).ToList(),
                         created = c.Created
                     })
-                    .ToListAsync();
+                    .ToList();
 
                 // Return data in DataTables expected format
                 return Json(new { data = clients });
@@ -103,14 +111,6 @@ namespace GarageManagementSystem.IdentityServer.Controllers
             // Log ModelState errors
             if (!ModelState.IsValid)
             {
-                Console.WriteLine("=== MODELSTATE ERRORS ===");
-                foreach (var error in ModelState)
-                {
-                    if (error.Value.Errors.Count > 0)
-                    {
-                        Console.WriteLine($"Field: {error.Key}, Errors: {string.Join(", ", error.Value.Errors.Select(e => e.ErrorMessage))}");
-                    }
-                }
             }
             
             if (ModelState.IsValid)
@@ -178,8 +178,14 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                         .Select(pru => new ClientPostLogoutRedirectUri { PostLogoutRedirectUri = pru }).ToList() ?? new List<ClientPostLogoutRedirectUri>(),
                     AllowedCorsOrigins = model.AllowedCorsOrigins?.Where(co => !string.IsNullOrWhiteSpace(co))
                         .Select(co => new ClientCorsOrigin { Origin = co }).ToList() ?? new List<ClientCorsOrigin>(),
-                    Claims = model.ClientClaims?.Where(cc => !string.IsNullOrWhiteSpace(cc.Type) && !string.IsNullOrWhiteSpace(cc.Value))
-                        .Select(cc => new Duende.IdentityServer.EntityFramework.Entities.ClientClaim { Type = cc.Type, Value = cc.Value }).ToList() ?? new List<Duende.IdentityServer.EntityFramework.Entities.ClientClaim>()
+                    Claims = new List<Duende.IdentityServer.EntityFramework.Entities.ClientClaim>()
+                    {
+                        // Manual client claims
+                    }.Concat(model.ClientClaims?.Where(cc => !string.IsNullOrWhiteSpace(cc.Type) && !string.IsNullOrWhiteSpace(cc.Value))
+                            .Select(cc => new Duende.IdentityServer.EntityFramework.Entities.ClientClaim { Type = cc.Type, Value = cc.Value }) ?? new List<Duende.IdentityServer.EntityFramework.Entities.ClientClaim>())
+                     .Concat(model.SelectedClaims?.Where(sc => !string.IsNullOrWhiteSpace(sc))
+                            .Select(sc => new Duende.IdentityServer.EntityFramework.Entities.ClientClaim { Type = sc, Value = "true" }) ?? new List<Duende.IdentityServer.EntityFramework.Entities.ClientClaim>())
+                     .ToList()
                 };
 
                 try
@@ -191,12 +197,6 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Error creating client: {ex.Message}");
-                    Console.WriteLine($"Stack trace: {ex.StackTrace}");
-                    if (ex.InnerException != null)
-                    {
-                        Console.WriteLine($"Inner exception: {ex.InnerException.Message}");
-                    }
                     return Json(new { success = false, message = $"Error creating client: {ex.Message}", details = ex.StackTrace });
                 }
             }
@@ -210,7 +210,6 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                 .ToList();
             
             var errorMessages = errors.Select(e => $"{e.Field}: {e.Message}").ToList();
-            Console.WriteLine($"Create Client validation errors: {string.Join(", ", errorMessages)}");
             
             return Json(new { 
                 success = false, 
@@ -287,6 +286,7 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                 PostLogoutRedirectUris = client.PostLogoutRedirectUris.Select(pru => pru.PostLogoutRedirectUri).ToList(),
                 AllowedCorsOrigins = client.AllowedCorsOrigins.Select(co => co.Origin).ToList(),
                 ClientClaims = client.Claims.Select(cc => new ClientClaimViewModel { Id = cc.Id, Type = cc.Type, Value = cc.Value }).ToList(),
+                SelectedClaims = client.Claims.Where(cc => cc.Value == "true").Select(cc => cc.Type).ToList(), // Claims from dropdown
                 
                 // Debug logging - Also set AllowedGrantTypes and AllowedScopes for data attributes
                 AllowedGrantTypes = client.AllowedGrantTypes.Select(gt => gt.GrantType).ToList(),
@@ -423,14 +423,15 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                     .Select(co => new ClientCorsOrigin { Origin = co })
                     .ToList();
                 
-                // Update Client Claims
-                client.Claims = model.ClientClaims?
-                    .Where(cc => !string.IsNullOrWhiteSpace(cc.Type) && !string.IsNullOrWhiteSpace(cc.Value))
-                    .Select(cc => new Duende.IdentityServer.EntityFramework.Entities.ClientClaim 
-                    { 
-                        Type = cc.Type, 
-                        Value = cc.Value 
-                    }).ToList() ?? new List<Duende.IdentityServer.EntityFramework.Entities.ClientClaim>();
+                // Update Client Claims (merge manual and selected claims)
+                client.Claims = new List<Duende.IdentityServer.EntityFramework.Entities.ClientClaim>()
+                {
+                    // Manual client claims
+                }.Concat(model.ClientClaims?.Where(cc => !string.IsNullOrWhiteSpace(cc.Type) && !string.IsNullOrWhiteSpace(cc.Value))
+                        .Select(cc => new Duende.IdentityServer.EntityFramework.Entities.ClientClaim { Type = cc.Type, Value = cc.Value }) ?? new List<Duende.IdentityServer.EntityFramework.Entities.ClientClaim>())
+                 .Concat(model.SelectedClaims?.Where(sc => !string.IsNullOrWhiteSpace(sc))
+                        .Select(sc => new Duende.IdentityServer.EntityFramework.Entities.ClientClaim { Type = sc, Value = "true" }) ?? new List<Duende.IdentityServer.EntityFramework.Entities.ClientClaim>())
+                 .ToList();
 
                 await _context.SaveChangesAsync();
 
@@ -440,7 +441,6 @@ namespace GarageManagementSystem.IdentityServer.Controllers
             {
                 if (ex.InnerException != null)
                 {
-                    Console.WriteLine($"Inner exception: {ex.InnerException.Message}");
                 }
                 return Json(new { success = false, message = $"Error updating client: {ex.Message}", details = ex.StackTrace });
             }
@@ -511,7 +511,7 @@ namespace GarageManagementSystem.IdentityServer.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Details(int id)
+        public async Task<IActionResult> Details(string id)
         {
             var client = await _context.Clients
                 .Include(c => c.AllowedGrantTypes)
@@ -520,12 +520,13 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                 .Include(c => c.PostLogoutRedirectUris)
                 .Include(c => c.AllowedCorsOrigins)
                 .Include(c => c.Claims)
-                .FirstOrDefaultAsync(c => c.Id == id);
+                .FirstOrDefaultAsync(c => c.ClientId == id);
 
             if (client == null)
             {
                 return NotFound();
             }
+            
 
             var viewModel = new
             {
@@ -588,10 +589,22 @@ namespace GarageManagementSystem.IdentityServer.Controllers
         {
             try
             {
-                var scopes = await _context.ApiScopes
-                    .Where(s => s.Enabled)
-                    .Select(s => new { value = s.Name, text = s.DisplayName ?? s.Name })
+                // Get all API Scopes first
+                var allScopes = await _context.ApiScopes
+                    .Select(s => new { s.Name, s.DisplayName })
                     .ToListAsync();
+
+                // Get soft deleted scope names
+                var deletedScopeNames = await _garaContext.SoftDeleteRecords
+                    .Where(s => s.EntityType == "ApiScope")
+                    .Select(s => s.EntityName)
+                    .ToListAsync();
+
+                // Filter out soft deleted scopes
+                var scopes = allScopes
+                    .Where(s => !deletedScopeNames.Contains(s.Name))
+                    .Select(s => new { value = s.Name, text = s.DisplayName ?? s.Name })
+                    .ToList();
 
                 // Add default OpenID Connect scopes
                 var defaultScopes = new[]
@@ -604,8 +617,8 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                     new { value = "roles", text = "Roles" }
                 };
 
-                var allScopes = defaultScopes.Concat(scopes).ToList();
-                return Json(allScopes);
+                var allScopesCombined = defaultScopes.Concat(scopes).ToList();
+                return Json(allScopesCombined);
             }
             catch (Exception ex)
             {
@@ -629,6 +642,38 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                 };
 
                 return Json(grantTypes);
+            }
+            catch (Exception ex)
+            {
+                return Json(new { error = ex.Message });
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetAvailableClaims()
+        {
+            try
+            {
+                // Get all claims first
+                var allClaims = await _garaContext.Claims
+                    .OrderBy(c => c.Category)
+                    .ThenBy(c => c.DisplayName)
+                    .Select(c => new { c.Name, c.DisplayName })
+                    .ToListAsync();
+
+                // Get soft deleted claim names
+                var deletedClaimNames = await _garaContext.SoftDeleteRecords
+                    .Where(s => s.EntityType == "Claim")
+                    .Select(s => s.EntityName)
+                    .ToListAsync();
+
+                // Filter out soft deleted claims
+                var activeClaims = allClaims
+                    .Where(c => !deletedClaimNames.Contains(c.Name))
+                    .Select(c => new { value = c.Name, text = c.DisplayName ?? c.Name })
+                    .ToList();
+
+                return Json(activeClaims);
             }
             catch (Exception ex)
             {
@@ -689,6 +734,7 @@ namespace GarageManagementSystem.IdentityServer.Controllers
         public bool AlwaysSendClientClaims { get; set; } = false;
         public string? ClientClaimsPrefix { get; set; }
         public List<ClientClaimViewModel> ClientClaims { get; set; } = new List<ClientClaimViewModel>();
+        public List<string> SelectedClaims { get; set; } = new List<string>(); // Claims from dropdown
 
         // Additional Client Properties
         public string ProtocolType { get; set; } = "oidc";

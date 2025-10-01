@@ -1,0 +1,86 @@
+@{
+    var claim = ViewBag.Claim ?? Model;
+}
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="form-group">
+            <label class="control-label font-weight-bold">Claim Name:</label>
+            <p class="form-control-plaintext">@claim.Name</p>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="form-group">
+            <label class="control-label font-weight-bold">Display Name:</label>
+            <p class="form-control-plaintext">@(claim.DisplayName ?? "N/A")</p>
+        </div>
+    </div>
+</div>
+
+<div class="form-group">
+    <label class="control-label font-weight-bold">Description:</label>
+    <p class="form-control-plaintext">@(claim.Description ?? "No description provided")</p>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="form-group">
+            <label class="control-label font-weight-bold">Category:</label>
+            <p class="form-control-plaintext">
+                @if (!string.IsNullOrEmpty(claim.Category))
+                {
+                    <span class="badge badge-info">@claim.Category</span>
+                }
+                else
+                {
+                    <span class="text-muted">N/A</span>
+                }
+            </p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="form-group">
+            <label class="control-label font-weight-bold">Type:</label>
+            <p class="form-control-plaintext">
+                @if (claim.IsStandard)
+                {
+                    <span class="badge badge-primary">Standard OIDC</span>
+                }
+                else
+                {
+                    <span class="badge badge-secondary">Custom</span>
+                }
+            </p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="form-group">
+            <label class="control-label font-weight-bold">Status:</label>
+            <p class="form-control-plaintext">
+                @if (claim.IsActive)
+                {
+                    <span class="badge badge-success">Active</span>
+                }
+                else
+                {
+                    <span class="badge badge-danger">Inactive</span>
+                }
+            </p>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="form-group">
+            <label class="control-label font-weight-bold">Created At:</label>
+            <p class="form-control-plaintext">@claim.CreatedAt</p>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="form-group">
+            <label class="control-label font-weight-bold">Updated At:</label>
+            <p class="form-control-plaintext">@(claim.UpdatedAt ?? "Never")</p>
+        </div>
+    </div>
+</div>

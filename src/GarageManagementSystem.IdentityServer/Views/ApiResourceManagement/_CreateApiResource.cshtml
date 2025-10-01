@@ -1,0 +1,119 @@
+<!-- Create API Resource Modal -->
+<div class="modal fade" id="createApiResourceModal" tabindex="-1" role="dialog" aria-labelledby="createApiResourceModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createApiResourceModalLabel">Create API Resource</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form id="createApiResourceForm">
+                @Html.AntiForgeryToken()
+                <div class="modal-body p-3">
+                    <div class="row">
+                        <!-- Basic Information -->
+                        <div class="col-md-6">
+                            <h6 class="font-weight-bold text-primary">Basic Information</h6>
+                            <div class="form-group">
+                                <label for="createName">API Resource Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control form-control-sm" id="createName" name="Name" required 
+                                       placeholder="garage-api" pattern="[a-zA-Z0-9._\-]+" 
+                                       title="Only letters, numbers, dots, underscores, and hyphens allowed">
+                            </div>
+                            <div class="form-group">
+                                <label for="createDisplayName">Display Name</label>
+                                <input type="text" class="form-control form-control-sm" id="createDisplayName" name="DisplayName" 
+                                       placeholder="Garage Management API">
+                            </div>
+                            <div class="form-group">
+                                <label for="createDescription">Description</label>
+                                <textarea class="form-control form-control-sm" id="createDescription" name="Description" rows="3" 
+                                          placeholder="Description of the API Resource"></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Settings -->
+                        <div class="col-md-6">
+                            <h6 class="font-weight-bold text-primary">Settings</h6>
+                            <div class="form-group">
+                                <div class="custom-control custom-switch">
+                                    <input type="checkbox" class="custom-control-input" id="createEnabled" name="Enabled" checked>
+                                    <label class="custom-control-label" for="createEnabled">Enabled</label>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <div class="custom-control custom-switch">
+                                    <input type="checkbox" class="custom-control-input" id="createShowInDiscoveryDocument" name="ShowInDiscoveryDocument" checked>
+                                    <label class="custom-control-label" for="createShowInDiscoveryDocument">Show in Discovery Document</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mt-3">
+                        <!-- User Claims -->
+                        <div class="col-md-6">
+                            <h6 class="font-weight-bold text-primary">User Claims</h6>
+                            <div class="form-group">
+                                <label for="createUserClaims">Available Claims</label>
+                                <select id="createUserClaims" name="UserClaims" class="form-control form-control-sm" multiple>
+                                    <option value="sub">Subject ID (sub)</option>
+                                    <option value="name">Name</option>
+                                    <option value="given_name">Given Name</option>
+                                    <option value="family_name">Family Name</option>
+                                    <option value="middle_name">Middle Name</option>
+                                    <option value="nickname">Nickname</option>
+                                    <option value="preferred_username">Preferred Username</option>
+                                    <option value="profile">Profile</option>
+                                    <option value="picture">Picture</option>
+                                    <option value="website">Website</option>
+                                    <option value="email">Email</option>
+                                    <option value="email_verified">Email Verified</option>
+                                    <option value="gender">Gender</option>
+                                    <option value="birthdate">Birthdate</option>
+                                    <option value="zoneinfo">Zone Info</option>
+                                    <option value="locale">Locale</option>
+                                    <option value="phone_number">Phone Number</option>
+                                    <option value="phone_number_verified">Phone Number Verified</option>
+                                    <option value="address">Address</option>
+                                    <option value="updated_at">Updated At</option>
+                                    <option value="role">Role</option>
+                                    <option value="permission">Permission</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Scopes -->
+                        <div class="col-md-6">
+                            <h6 class="font-weight-bold text-primary">API Scopes</h6>
+                            <div class="form-group">
+                                <label for="createScopes">Available Scopes</label>
+                                <select id="createScopes" name="Scopes" class="form-control form-control-sm" multiple>
+                                    <!-- Scopes will be loaded dynamically -->
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mt-3">
+                        <!-- Secrets -->
+                        <div class="col-12">
+                            <h6 class="font-weight-bold text-primary">Secrets</h6>
+                            <div class="form-group">
+                                <label for="createSecrets">Client Secrets (one per line)</label>
+                                <textarea class="form-control form-control-sm" id="createSecrets" name="Secrets" rows="3" 
+                                          placeholder="Enter secrets, one per line"></textarea>
+                                <small class="form-text text-muted">Secrets will be hashed before storage</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary btn-sm">Create API Resource</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

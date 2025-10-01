@@ -8,6 +8,7 @@ using Duende.IdentityServer.Models;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Cryptography;
 using System.Text;
+using Duende.IdentityServer.EntityFramework.Entities;
 
 namespace GarageManagementSystem.IdentityServer.Controllers
 {
@@ -224,7 +225,21 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                     AllowedAccessTokenSigningAlgorithms = null,
                     ShowInDiscoveryDocument = true,
                     Created = DateTime.UtcNow,
-                    NonEditable = false
+                    NonEditable = false,
+                    Scopes = new List<ApiResourceScope>
+                    {
+                        new ApiResourceScope { Scope = "garage.api" },
+                        new ApiResourceScope { Scope = "garage.api.read" },
+                        new ApiResourceScope { Scope = "garage.api.write" },
+                        new ApiResourceScope { Scope = "garage.api.admin" }
+                    },
+                    UserClaims = new List<ApiResourceClaim>
+                    {
+                        new ApiResourceClaim { Type = "sub" },
+                        new ApiResourceClaim { Type = "name" },
+                        new ApiResourceClaim { Type = "email" },
+                        new ApiResourceClaim { Type = "role" }
+                    }
                 },
                 new Duende.IdentityServer.EntityFramework.Entities.ApiResource
                 {
@@ -235,7 +250,19 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                     AllowedAccessTokenSigningAlgorithms = null,
                     ShowInDiscoveryDocument = true,
                     Created = DateTime.UtcNow,
-                    NonEditable = false
+                    NonEditable = false,
+                    Scopes = new List<ApiResourceScope>
+                    {
+                        new ApiResourceScope { Scope = "admin.api" }
+                    },
+                    UserClaims = new List<ApiResourceClaim>
+                    {
+                        new ApiResourceClaim { Type = "sub" },
+                        new ApiResourceClaim { Type = "name" },
+                        new ApiResourceClaim { Type = "email" },
+                        new ApiResourceClaim { Type = "role" },
+                        new ApiResourceClaim { Type = "admin_access" }
+                    }
                 }
             };
 
@@ -279,7 +306,16 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                     IncludeJwtId = false,
                     AlwaysSendClientClaims = false,
                     Created = DateTime.UtcNow,
-                    NonEditable = false
+                    NonEditable = false,
+                    AllowedScopes = new List<ClientScope>
+                    {
+                        new ClientScope { Scope = "openid" },
+                        new ClientScope { Scope = "profile" },
+                        new ClientScope { Scope = "email" },
+                        new ClientScope { Scope = "roles" },
+                        new ClientScope { Scope = "garage.api" },
+                        new ClientScope { Scope = "garage.api.read" }
+                    }
                 },
                 new Duende.IdentityServer.EntityFramework.Entities.Client
                 {
@@ -310,7 +346,14 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                     IncludeJwtId = false,
                     AlwaysSendClientClaims = false,
                     Created = DateTime.UtcNow,
-                    NonEditable = false
+                    NonEditable = false,
+                    AllowedScopes = new List<ClientScope>
+                    {
+                        new ClientScope { Scope = "garage.api" },
+                        new ClientScope { Scope = "garage.api.read" },
+                        new ClientScope { Scope = "garage.api.write" },
+                        new ClientScope { Scope = "garage.api.admin" }
+                    }
                 }
             };
 

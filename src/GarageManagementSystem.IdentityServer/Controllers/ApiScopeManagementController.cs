@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
+using GarageManagementSystem.IdentityServer.Data; // Added for GaraManagementContext
 using ApiScopeEntity = Duende.IdentityServer.EntityFramework.Entities.ApiScope;
 
 namespace GarageManagementSystem.IdentityServer.Controllers
@@ -13,10 +14,12 @@ namespace GarageManagementSystem.IdentityServer.Controllers
     public class ApiScopeManagementController : Controller
     {
         private readonly ConfigurationDbContext _context;
+        private readonly GaraManagementContext _garaContext; // Added
 
-        public ApiScopeManagementController(ConfigurationDbContext context)
+        public ApiScopeManagementController(ConfigurationDbContext context, GaraManagementContext garaContext)
         {
             _context = context;
+            _garaContext = garaContext; // Added
         }
 
         public IActionResult Index()
@@ -24,9 +27,10 @@ namespace GarageManagementSystem.IdentityServer.Controllers
             return View();
         }
 
+        [HttpGet]
         public IActionResult Create()
         {
-            return View(new CreateApiScopeViewModel());
+            return PartialView("_CreateApiScope", new CreateApiScopeViewModel());
         }
 
         [HttpPost]
@@ -55,6 +59,7 @@ namespace GarageManagementSystem.IdentityServer.Controllers
             return Json(new { success = false, message = "Invalid model", errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage) });
         }
 
+        [HttpGet]
         public async Task<IActionResult> Edit(int id)
         {
             var scope = await _context.ApiScopes
@@ -63,7 +68,7 @@ namespace GarageManagementSystem.IdentityServer.Controllers
 
             if (scope == null)
             {
-                return NotFound();
+                return NotFound($"API Scope with id '{id}' not found");
             }
 
             var model = new EditApiScopeViewModel
@@ -78,7 +83,7 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                 UserClaims = scope.UserClaims.Select(uc => uc.Type).ToList()
             };
 
-            return View(model);
+            return PartialView("_EditApiScope", model);
         }
 
         [HttpPost]
@@ -115,6 +120,32 @@ namespace GarageManagementSystem.IdentityServer.Controllers
             return Json(new { success = false, message = "Invalid model", errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage) });
         }
 
+        [HttpGet]
+        public async Task<IActionResult> Details(int id)
+        {
+            var scope = await _context.ApiScopes
+                .Include(s => s.UserClaims)
+                .FirstOrDefaultAsync(s => s.Id == id);
+
+            if (scope == null)
+            {
+                return NotFound($"API Scope with id '{id}' not found");
+            }
+
+            var viewModel = new
+            {
+                Name = scope.Name,
+                DisplayName = scope.DisplayName,
+                Description = scope.Description,
+                Required = scope.Required,
+                Emphasize = scope.Emphasize,
+                ShowInDiscoveryDocument = scope.ShowInDiscoveryDocument,
+                UserClaims = scope.UserClaims.Select(uc => uc.Type).ToList()
+            };
+
+            return PartialView("_ApiScopeDetails", viewModel);
+        }
+
         [HttpPost]
         public async Task<IActionResult> Delete(int id)
         {
@@ -124,15 +155,44 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                 return Json(new { success = false, message = "API Scope not found" });
             }
 
-            _context.ApiScopes.Remove(scope);
-            await _context.SaveChangesAsync();
+            // Insert into SoftDeleteRecords using raw SQL (Soft Delete)
+            var sql = @"INSERT INTO SoftDeleteRecords (EntityType, EntityName, DeletedAt, DeletedBy, Reason) 
+                       VALUES (@EntityType, @EntityName, @DeletedAt, @DeletedBy, @Reason)";
+            
+            await _context.Database.ExecuteSqlRawAsync(sql,
+                new Microsoft.Data.SqlClient.SqlParameter("@EntityType", "ApiScope"),
+                new Microsoft.Data.SqlClient.SqlParameter("@EntityName", scope.Name),
+                new Microsoft.Data.SqlClient.SqlParameter("@DeletedAt", DateTime.Now),
+                new Microsoft.Data.SqlClient.SqlParameter("@DeletedBy", User.Identity?.Name ?? "System"),
+                new Microsoft.Data.SqlClient.SqlParameter("@Reason", "User requested deletion"));
 
             return Json(new { success = true, message = "API Scope deleted successfully!" });
         }
 
+        [HttpPost]
+        public async Task<IActionResult> Restore(int id)
+        {
+            var scope = await _context.ApiScopes.FindAsync(id);
+            if (scope == null)
+            {
+                return Json(new { success = false, message = "API Scope not found" });
+            }
+
+            // Remove from SoftDeleteRecords (Restore)
+            var sql = @"DELETE FROM SoftDeleteRecords 
+                       WHERE EntityType = 'ApiScope' AND EntityName = @EntityName";
+            
+            await _context.Database.ExecuteSqlRawAsync(sql,
+                new Microsoft.Data.SqlClient.SqlParameter("@EntityName", scope.Name));
+
+            return Json(new { success = true, message = "API Scope restored successfully!" });
+        }
+
+        [HttpGet]
         public async Task<IActionResult> GetApiScopes()
         {
-            var scopes = await _context.ApiScopes
+            // Get all API Scopes first
+            var allScopes = await _context.ApiScopes
                 .Include(s => s.UserClaims)
                 .Select(s => new
                 {
@@ -146,7 +206,54 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                     userClaims = s.UserClaims.Select(uc => uc.Type).ToList()
                 }).ToListAsync();
 
-            return Json(scopes);
+            // Get soft deleted scope names
+            var deletedScopeNames = await _garaContext.SoftDeleteRecords
+                .Where(s => s.EntityType == "ApiScope")
+                .Select(s => s.EntityName)
+                .ToListAsync();
+
+            // Process in memory to add isActive flag
+            var processedScopes = allScopes.Select(s => new
+            {
+                id = s.id,
+                name = s.name,
+                displayName = s.displayName,
+                description = s.description,
+                required = s.required,
+                emphasize = s.emphasize,
+                showInDiscoveryDocument = s.showInDiscoveryDocument,
+                userClaims = s.userClaims,
+                isActive = !deletedScopeNames.Contains(s.name) // Active if not in deleted list
+            }).OrderByDescending(s => s.isActive) // Active scopes first
+              .ThenBy(s => s.name)
+              .ToList();
+
+            return Json(new { data = processedScopes });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetAvailableClaims()
+        {
+            // Get all claims first
+            var allClaims = await _garaContext.Claims
+                .OrderBy(c => c.Category)
+                .ThenBy(c => c.DisplayName)
+                .Select(c => new { c.Name, c.DisplayName })
+                .ToListAsync();
+
+            // Get soft deleted claim names
+            var deletedClaimNames = await _garaContext.SoftDeleteRecords
+                .Where(s => s.EntityType == "Claim")
+                .Select(s => s.EntityName)
+                .ToListAsync();
+
+            // Filter out soft deleted claims
+            var activeClaims = allClaims
+                .Where(c => !deletedClaimNames.Contains(c.Name))
+                .Select(c => new { value = c.Name, text = c.DisplayName ?? c.Name })
+                .ToList();
+
+            return Json(activeClaims);
         }
     }
 

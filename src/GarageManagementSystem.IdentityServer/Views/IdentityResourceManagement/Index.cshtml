@@ -1,0 +1,103 @@
+@{
+    ViewData["Title"] = "Identity Resource Management";
+}
+
+<section class="content">
+    <div class="container-fluid">
+        @Html.AntiForgeryToken()
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Identity Resources</h3>
+                        <div class="card-tools">
+                            <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#createIdentityResourceModal">
+                                <i class="fas fa-plus"></i> Add New Identity Resource
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body table-responsive">
+                        <table id="identityResourcesTable" class="table table-bordered table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Display Name</th>
+                                    <th>Description</th>
+                                    <th>Required</th>
+                                    <th>Emphasize</th>
+                                    <th>Show in Discovery</th>
+                                    <th>User Claims</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Data loaded via AJAX -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Create Identity Resource Modal -->
+<div class="modal fade" id="createIdentityResourceModal" tabindex="-1" role="dialog" aria-labelledby="createIdentityResourceModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-primary">
+                <h5 class="modal-title" id="createIdentityResourceModalLabel">Create New Identity Resource</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" id="createIdentityResourceModalBody">
+                @await Html.PartialAsync("_CreateIdentityResource")
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Identity Resource Modal -->
+<div class="modal fade" id="editIdentityResourceModal" tabindex="-1" role="dialog" aria-labelledby="editIdentityResourceModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title" id="editIdentityResourceModalLabel">Edit Identity Resource</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" id="editIdentityResourceModalBody">
+                <!-- Partial view will be loaded here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- View Identity Resource Modal -->
+<div class="modal fade" id="viewIdentityResourceModal" tabindex="-1" role="dialog" aria-labelledby="viewIdentityResourceModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-info">
+                <h5 class="modal-title" id="viewIdentityResourceModalLabel">Identity Resource Details</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" id="viewIdentityResourceModalBody">
+                <!-- Partial view will be loaded here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/identity-resource-management.js" asp-append-version="true"></script>
+    <script>
+        $(document).ready(function() {
+            // Initialize the module
+            IdentityResourceManagement.init();
+        });
+    </script>
+}

@@ -18,25 +18,19 @@ public class HomeController : Controller
 
         public async Task<IActionResult> Index()
         {
-            Console.WriteLine($"DEBUG: Home/Index - User.Identity.IsAuthenticated: {User.Identity.IsAuthenticated}");
-            Console.WriteLine($"DEBUG: Home/Index - User.Identity.Name: {User.Identity.Name}");
-            Console.WriteLine($"DEBUG: Home/Index - User.Identity.AuthenticationType: {User.Identity.AuthenticationType}");
             
             // Check if any users exist in the system
             var userCount = _userManager.Users.Count();
             if (userCount == 0)
             {
-                Console.WriteLine($"DEBUG: Home/Index - No users found, redirecting to setup");
                 return RedirectToAction("Index", "Setup");
             }
             
             if (!User.Identity.IsAuthenticated)
             {
-                Console.WriteLine($"DEBUG: Home/Index - User not authenticated, redirecting to login");
                 return RedirectToAction("Login", "Account");
             }
             
-            Console.WriteLine($"DEBUG: Home/Index - User authenticated, returning view");
             return View();
         }
 

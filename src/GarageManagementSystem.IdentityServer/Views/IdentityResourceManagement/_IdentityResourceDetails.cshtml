@@ -1,0 +1,36 @@
+@model dynamic
+
+<dl class="row">
+    <dt class="col-sm-4">Name:</dt>
+    <dd class="col-sm-8">@Model.Name</dd>
+
+    <dt class="col-sm-4">Display Name:</dt>
+    <dd class="col-sm-8">@Model.DisplayName</dd>
+
+    <dt class="col-sm-4">Description:</dt>
+    <dd class="col-sm-8">@Model.Description</dd>
+
+    <dt class="col-sm-4">Required:</dt>
+    <dd class="col-sm-8">@(Model.Required ? "Yes" : "No")</dd>
+
+    <dt class="col-sm-4">Emphasize:</dt>
+    <dd class="col-sm-8">@(Model.Emphasize ? "Yes" : "No")</dd>
+
+    <dt class="col-sm-4">Show in Discovery Document:</dt>
+    <dd class="col-sm-8">@(Model.ShowInDiscoveryDocument ? "Yes" : "No")</dd>
+
+    <dt class="col-sm-4">User Claims:</dt>
+    <dd class="col-sm-8">
+        @if (Model.UserClaims != null && Model.UserClaims.Count > 0)
+        {
+            foreach (var claim in Model.UserClaims)
+            {
+                <span class="badge badge-primary mr-1">@claim</span>
+            }
+        }
+        else
+        {
+            <span class="text-muted">None</span>
+        }
+    </dd>
+</dl>

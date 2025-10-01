@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
+using GarageManagementSystem.IdentityServer.Data;
 using ApiResourceEntity = Duende.IdentityServer.EntityFramework.Entities.ApiResource;
 
 namespace GarageManagementSystem.IdentityServer.Controllers
@@ -13,10 +14,12 @@ namespace GarageManagementSystem.IdentityServer.Controllers
     public class ApiResourceManagementController : Controller
     {
         private readonly ConfigurationDbContext _context;
+        private readonly GaraManagementContext _garaContext;
 
-        public ApiResourceManagementController(ConfigurationDbContext context)
+        public ApiResourceManagementController(ConfigurationDbContext context, GaraManagementContext garaContext)
         {
             _context = context;
+            _garaContext = garaContext;
         }
 
         public IActionResult Index()
@@ -81,7 +84,7 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                 Scopes = resource.Scopes.Select(s => s.Scope).ToList()
             };
 
-            return View(model);
+            return PartialView("_EditApiResource", model);
         }
 
         [HttpPost]
@@ -131,15 +134,120 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                 return Json(new { success = false, message = "API Resource not found" });
             }
 
-            _context.ApiResources.Remove(resource);
-            await _context.SaveChangesAsync();
+            // Insert into SoftDeleteRecords using raw SQL (Soft Delete)
+            var sql = @"INSERT INTO SoftDeleteRecords (EntityType, EntityName, DeletedAt, DeletedBy, Reason) 
+                       VALUES (@EntityType, @EntityName, @DeletedAt, @DeletedBy, @Reason)";
+            
+            await _context.Database.ExecuteSqlRawAsync(sql,
+                new Microsoft.Data.SqlClient.SqlParameter("@EntityType", "ApiResource"),
+                new Microsoft.Data.SqlClient.SqlParameter("@EntityName", resource.Name),
+                new Microsoft.Data.SqlClient.SqlParameter("@DeletedAt", DateTime.Now),
+                new Microsoft.Data.SqlClient.SqlParameter("@DeletedBy", User.Identity?.Name ?? "System"),
+                new Microsoft.Data.SqlClient.SqlParameter("@Reason", "User requested deletion"));
 
             return Json(new { success = true, message = "API Resource deleted successfully!" });
         }
 
+        [HttpPost]
+        public async Task<IActionResult> Restore(int id)
+        {
+            var resource = await _context.ApiResources.FindAsync(id);
+            if (resource == null)
+            {
+                return Json(new { success = false, message = "API Resource not found" });
+            }
+
+            // Remove from SoftDeleteRecords (Restore)
+            var sql = @"DELETE FROM SoftDeleteRecords 
+                       WHERE EntityType = 'ApiResource' AND EntityName = @EntityName";
+            
+            await _context.Database.ExecuteSqlRawAsync(sql,
+                new Microsoft.Data.SqlClient.SqlParameter("@EntityName", resource.Name));
+
+            return Json(new { success = true, message = "API Resource restored successfully!" });
+        }
+
+        public async Task<IActionResult> Details(int id)
+        {
+            var resource = await _context.ApiResources
+                .Include(r => r.UserClaims)
+                .Include(r => r.Scopes)
+                .Include(r => r.Secrets)
+                .FirstOrDefaultAsync(r => r.Id == id);
+
+            if (resource == null)
+            {
+                return NotFound($"API Resource with id '{id}' not found");
+            }
+
+            var viewModel = new
+            {
+                Name = resource.Name,
+                DisplayName = resource.DisplayName,
+                Description = resource.Description,
+                Enabled = resource.Enabled,
+                ShowInDiscoveryDocument = resource.ShowInDiscoveryDocument,
+                UserClaims = resource.UserClaims.Select(uc => uc.Type).ToList(),
+                Scopes = resource.Scopes.Select(s => s.Scope).ToList(),
+                Secrets = resource.Secrets.Select(s => new { s.Id, s.Description }).ToList()
+            };
+
+            return PartialView("_ApiResourceDetails", viewModel);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetAvailableScopes()
+        {
+            // Get all API Scopes first
+            var allScopes = await _context.ApiScopes
+                .Select(s => new { s.Name, s.DisplayName })
+                .ToListAsync();
+
+            // Get soft deleted scope names
+            var deletedScopeNames = await _garaContext.SoftDeleteRecords
+                .Where(s => s.EntityType == "ApiScope")
+                .Select(s => s.EntityName)
+                .ToListAsync();
+
+            // Filter out soft deleted scopes
+            var activeScopes = allScopes
+                .Where(s => !deletedScopeNames.Contains(s.Name))
+                .Select(s => new { value = s.Name, text = s.DisplayName ?? s.Name })
+                .ToList();
+
+            return Json(activeScopes);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetAvailableClaims()
+        {
+            // Get all claims first
+            var allClaims = await _garaContext.Claims
+                .OrderBy(c => c.Category)
+                .ThenBy(c => c.DisplayName)
+                .Select(c => new { c.Name, c.DisplayName })
+                .ToListAsync();
+
+            // Get soft deleted claim names
+            var deletedClaimNames = await _garaContext.SoftDeleteRecords
+                .Where(s => s.EntityType == "Claim")
+                .Select(s => s.EntityName)
+                .ToListAsync();
+
+            // Filter out soft deleted claims
+            var activeClaims = allClaims
+                .Where(c => !deletedClaimNames.Contains(c.Name))
+                .Select(c => new { value = c.Name, text = c.DisplayName ?? c.Name })
+                .ToList();
+
+            return Json(activeClaims);
+        }
+
+        [HttpGet]
         public async Task<IActionResult> GetApiResources()
         {
-            var resources = await _context.ApiResources
+            // Get all API Resources first
+            var allResources = await _context.ApiResources
                 .Include(r => r.UserClaims)
                 .Include(r => r.Scopes)
                 .Select(r => new
@@ -154,7 +262,29 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                     scopes = r.Scopes.Select(s => s.Scope).ToList()
                 }).ToListAsync();
 
-            return Json(resources);
+            // Get soft deleted resource names
+            var deletedResourceNames = await _garaContext.SoftDeleteRecords
+                .Where(s => s.EntityType == "ApiResource")
+                .Select(s => s.EntityName)
+                .ToListAsync();
+
+            // Process in memory to add isActive flag
+            var processedResources = allResources.Select(r => new
+            {
+                id = r.id,
+                name = r.name,
+                displayName = r.displayName,
+                description = r.description,
+                enabled = r.enabled,
+                showInDiscoveryDocument = r.showInDiscoveryDocument,
+                userClaims = r.userClaims,
+                scopes = r.scopes,
+                isActive = !deletedResourceNames.Contains(r.name) // Active if not in deleted list
+            }).OrderByDescending(r => r.isActive) // Active resources first
+              .ThenBy(r => r.name)
+              .ToList();
+
+            return Json(new { data = processedResources });
         }
     }
 

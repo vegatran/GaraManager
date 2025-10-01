@@ -1,0 +1,113 @@
+@{
+    ViewData["Title"] = "API Resource Management";
+}
+
+<section class="content">
+    <div class="container-fluid">
+        @Html.AntiForgeryToken()
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">API Resources</h3>
+                        <div class="card-tools">
+                            <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#createApiResourceModal">
+                                <i class="fas fa-plus"></i> Add New API Resource
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body table-responsive">
+                        <table id="apiResourcesTable" class="table table-bordered table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Display Name</th>
+                                    <th>Description</th>
+                                    <th>Enabled</th>
+                                    <th>Show in Discovery</th>
+                                    <th>User Claims</th>
+                                    <th>Scopes</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Data loaded via AJAX -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Create API Resource Modal -->
+<partial name="_CreateApiResource" />
+
+<!-- Edit API Resource Modal -->
+<partial name="_EditApiResourceModal" />
+
+<!-- View API Resource Modal -->
+<partial name="_ViewApiResource" />
+
+@section Scripts {
+    <script src="~/js/api-resource-management.js" asp-append-version="true"></script>
+    <script>
+        $(document).ready(function() {
+            // Initialize DataTable using utility function
+            DataTablesUtility.initializeTable('#apiResourcesTable', {
+                ajaxUrl: '/ApiResourceManagement/GetApiResources',
+                columns: [
+                    { data: 'name' },
+                    { data: 'displayName' },
+                    { data: 'description' },
+                    { 
+                        data: 'enabled',
+                        render: function(data) {
+                            return data ? '<span class="badge badge-success">Enabled</span>' : '<span class="badge badge-danger">Disabled</span>';
+                        }
+                    },
+                    { 
+                        data: 'showInDiscoveryDocument',
+                        render: function(data) {
+                            return data ? '<span class="badge badge-info">Yes</span>' : '<span class="badge badge-secondary">No</span>';
+                        }
+                    },
+                    { 
+                        data: 'userClaims',
+                        render: function(data) {
+                            if (data && data.length > 0) {
+                                return data.map(claim => `<span class="badge badge-primary mr-1">${claim}</span>`).join('');
+                            }
+                            return '<span class="text-muted">None</span>';
+                        }
+                    },
+                    { 
+                        data: 'scopes',
+                        render: function(data) {
+                            if (data && data.length > 0) {
+                                return data.map(scope => `<span class="badge badge-info mr-1">${scope}</span>`).join('');
+                            }
+                            return '<span class="text-muted">None</span>';
+                        }
+                    }
+                ],
+                actionCallbacks: {
+                    view: 'ApiResourceManagement.showApiResourceDetails',
+                    edit: 'ApiResourceManagement.showEditApiResource',
+                    delete: 'ApiResourceManagement.deleteApiResource',
+                    restore: 'ApiResourceManagement.restoreApiResource',
+                    useIdForActions: true,  // Use id instead of name for View/Edit/Delete
+                    conditionalActions: true  // Show different buttons based on row data
+                },
+                language: {
+                    processing: "Loading API Resources...",
+                    emptyTable: "No API Resources found",
+                    info: "Showing _START_ to _END_ of _TOTAL_ API Resources",
+                    infoEmpty: "Showing 0 to 0 of 0 API Resources",
+                    infoFiltered: "(filtered from _MAX_ total API Resources)"
+                }
+            });
+        });
+    </script>
+}
