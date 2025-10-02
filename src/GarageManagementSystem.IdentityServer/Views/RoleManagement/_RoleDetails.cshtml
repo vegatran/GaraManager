@@ -1,0 +1,29 @@
+@model GarageManagementSystem.IdentityServer.Controllers.RoleDetailsViewModel
+
+<div class="p-3">
+    <dl class="row">
+        <dt class="col-sm-4">Role ID:</dt>
+        <dd class="col-sm-8">@Model.Id</dd>
+
+        <dt class="col-sm-4">Name:</dt>
+        <dd class="col-sm-8">@Model.Name</dd>
+
+        <dt class="col-sm-4">Description:</dt>
+        <dd class="col-sm-8">@(string.IsNullOrEmpty(Model.Description) ? "No description" : Model.Description)</dd>
+
+        <dt class="col-sm-4">Status:</dt>
+        <dd class="col-sm-8">
+            @if (Model.IsActive)
+            {
+                <span class="badge badge-success">Active</span>
+            }
+            else
+            {
+                <span class="badge badge-danger">Inactive</span>
+            }
+        </dd>
+
+        <dt class="col-sm-4">Created At:</dt>
+        <dd class="col-sm-8">@Model.CreatedAt.ToString("yyyy-MM-dd HH:mm")</dd>
+    </dl>
+</div>

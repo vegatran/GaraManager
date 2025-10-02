@@ -105,6 +105,12 @@
                             </a>
                         </li>
                         <li class="nav-item">
+                            <a asp-controller="RoleManagement" asp-action="Index" class="nav-link">
+                                <i class="nav-icon fas fa-user-tag"></i>
+                                <p>Role Management</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a asp-controller="ClientManagement" asp-action="Index" class="nav-link">
                                 <i class="nav-icon fas fa-desktop"></i>
                                 <p>Client Management</p>
@@ -203,6 +209,28 @@
     <script src="~/js/datatables-utility.js" asp-append-version="true"></script>
     <!-- Site Utilities -->
     <script src="~/js/site.js" asp-append-version="true"></script>
+    
+    <!-- Menu Active Logic -->
+    <script>
+        $(document).ready(function() {
+            // Get current controller and action from URL
+            var path = window.location.pathname;
+            var controller = path.split('/')[1]; // Get controller name
+            
+            // Remove active class from all nav items
+            $('.nav-link').removeClass('active');
+            
+            // Add active class to current page
+            if (controller) {
+                $('a[href*="/' + controller + '"]').addClass('active');
+            }
+            
+            // Special handling for Home/Index
+            if (path === '/' || path === '/Home' || path === '/Home/Index') {
+                $('a[href*="/Home"]').addClass('active');
+            }
+        });
+    </script>
     
     @await RenderSectionAsync("Scripts", required: false)
 </body>

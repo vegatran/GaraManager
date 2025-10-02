@@ -1,0 +1,117 @@
+@{
+    ViewData["Title"] = "User Claims Test";
+}
+
+<div class="content-wrapper">
+    <div class="content-header">
+        <div class="container-fluid">
+            <div class="row mb-2">
+                <div class="col-sm-6">
+                    <h1 class="m-0">User Claims Test</h1>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <section class="content">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Current User Claims</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h5>Standard Claims</h5>
+                                    <div id="standardClaims" class="border p-3 mb-3" style="height: 300px; overflow-y: auto;">
+                                        <div class="text-center text-muted">
+                                            <i class="fas fa-spinner fa-spin"></i> Loading...
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <h5>Custom Claims</h5>
+                                    <div id="customClaims" class="border p-3 mb-3" style="height: 300px; overflow-y: auto;">
+                                        <div class="text-center text-muted">
+                                            <i class="fas fa-spinner fa-spin"></i> Loading...
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-12">
+                                    <h5>All Claims (JSON)</h5>
+                                    <pre id="allClaimsJson" class="border p-3" style="height: 400px; overflow-y: auto; background-color: #f8f9fa;">
+                                        <div class="text-center text-muted">
+                                            <i class="fas fa-spinner fa-spin"></i> Loading...
+                                        </div>
+                                    </pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+
+@section Scripts {
+<script>
+$(document).ready(function() {
+    loadClaimsData();
+});
+
+function loadClaimsData() {
+    $.get('/TestClaims/Api')
+        .done(function(data) {
+            displayStandardClaims(data.user);
+            displayCustomClaims(data.customClaims);
+            displayAllClaims(data.allClaims);
+        })
+        .fail(function(xhr, status, error) {
+            console.error('Error loading claims:', error);
+            $('#standardClaims').html('<div class="text-danger">Error loading claims: ' + error + '</div>');
+            $('#customClaims').html('<div class="text-danger">Error loading claims: ' + error + '</div>');
+            $('#allClaimsJson').html('<div class="text-danger">Error loading claims: ' + error + '</div>');
+        });
+}
+
+function displayStandardClaims(user) {
+    var html = '';
+    html += '<div class="claim-item mb-2">';
+    html += '<strong>User ID:</strong> ' + (user.id || 'N/A') + '<br>';
+    html += '<strong>Username:</strong> ' + (user.username || 'N/A') + '<br>';
+    html += '<strong>Email:</strong> ' + (user.email || 'N/A') + '<br>';
+    html += '<strong>Email Verified:</strong> ' + (user.emailVerified || 'N/A') + '<br>';
+    html += '<strong>Roles:</strong> ' + (user.roles && user.roles.length > 0 ? user.roles.join(', ') : 'None');
+    html += '</div>';
+    
+    $('#standardClaims').html(html);
+}
+
+function displayCustomClaims(customClaims) {
+    if (!customClaims || Object.keys(customClaims).length === 0) {
+        $('#customClaims').html('<div class="text-muted">No custom claims found</div>');
+        return;
+    }
+    
+    var html = '';
+    for (var claimType in customClaims) {
+        html += '<div class="claim-item mb-2 p-2 border-left border-primary">';
+        html += '<strong>' + claimType + ':</strong><br>';
+        html += '<span class="text-muted">' + customClaims[claimType] + '</span>';
+        html += '</div>';
+    }
+    
+    $('#customClaims').html(html);
+}
+
+function displayAllClaims(allClaims) {
+    $('#allClaimsJson').html(JSON.stringify(allClaims, null, 2));
+}
+</script>
+}

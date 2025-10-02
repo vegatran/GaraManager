@@ -315,6 +315,14 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                         new ClientScope { Scope = "roles" },
                         new ClientScope { Scope = "garage.api" },
                         new ClientScope { Scope = "garage.api.read" }
+                    },
+                    Claims = new List<IdentityServer4.EntityFramework.Entities.ClientClaim>
+                    {
+                        // Custom client claims
+                        new IdentityServer4.EntityFramework.Entities.ClientClaim { Type = "clientname", Value = "abc" },
+                        new IdentityServer4.EntityFramework.Entities.ClientClaim { Type = "client_type", Value = "web_mvc" },
+                        new IdentityServer4.EntityFramework.Entities.ClientClaim { Type = "version", Value = "1.0.0" },
+                        new IdentityServer4.EntityFramework.Entities.ClientClaim { Type = "environment", Value = "development" }
                     }
                 },
                         new IdentityServer4.EntityFramework.Entities.Client

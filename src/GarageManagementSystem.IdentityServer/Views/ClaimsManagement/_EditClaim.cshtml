@@ -30,6 +30,25 @@
     <div class="row">
         <div class="col-md-6">
             <div class="form-group">
+                <label asp-for="CustomValueSource" class="control-label">Custom Value Source</label>
+                <input asp-for="CustomValueSource" class="form-control" placeholder="e.g., users:department, system:timestamp" />
+                <small class="form-text text-muted">Format: Table:Column (e.g., users:department, system:timestamp, business:business_hours)</small>
+                <span asp-validation-for="CustomValueSource" class="text-danger"></span>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="form-group">
+                <label asp-for="DefaultValue" class="control-label">Default Value</label>
+                <input asp-for="DefaultValue" class="form-control" placeholder="e.g., Garage Management System" />
+                <small class="form-text text-muted">Static value if Custom Value Source is not used</small>
+                <span asp-validation-for="DefaultValue" class="text-danger"></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="form-group">
                 <label asp-for="Category" class="control-label">Category</label>
                 <select asp-for="Category" class="form-control">
                     <option value="">Select Category</option>
@@ -46,15 +65,15 @@
         <div class="col-md-6">
             <div class="form-group">
                 <label class="control-label">Settings</label>
-                <div class="form-check">
-                    <input asp-for="IsStandard" class="form-check-input" type="checkbox" value="true" />
+                <div class="custom-control custom-switch">
+                    <input asp-for="IsStandard" class="custom-control-input" type="checkbox" value="true" />
                     <input type="hidden" asp-for="IsStandard" value="false" />
-                    <label asp-for="IsStandard" class="form-check-label">Standard OIDC Claim</label>
+                    <label asp-for="IsStandard" class="custom-control-label">Standard OIDC Claim</label>
                 </div>
-                <div class="form-check">
-                    <input asp-for="IsActive" class="form-check-input" type="checkbox" value="true" />
+                <div class="custom-control custom-switch">
+                    <input asp-for="IsActive" class="custom-control-input" type="checkbox" value="true" />
                     <input type="hidden" asp-for="IsActive" value="false" />
-                    <label asp-for="IsActive" class="form-check-label">Active</label>
+                    <label asp-for="IsActive" class="custom-control-label">Active</label>
                 </div>
             </div>
         </div>

@@ -55,9 +55,14 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                         if (clientClaimsResponse || clientScopesResponse || clientListResponse) 
                             triggeredCaches.Add("Client Management");
 
-                        // Trigger User Management cache
-                        var userListResponse = await TriggerCacheEndpoint("/UserManagement/GetUsers");
-                        if (userListResponse) triggeredCaches.Add("User Management");
+                // Trigger User Management cache
+                var userListResponse = await TriggerCacheEndpoint("/UserManagement/GetUsers");
+                if (userListResponse) triggeredCaches.Add("User Management");
+
+                // Trigger Role Management cache
+                var roleListResponse = await TriggerCacheEndpoint("/RoleManagement/GetRoles");
+                var availableRolesResponse = await TriggerCacheEndpoint("/RoleManagement/GetAvailableRoles");
+                if (roleListResponse || availableRolesResponse) triggeredCaches.Add("Role Management");
 
                 return Json(new { 
                     success = true, 
@@ -140,6 +145,14 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                         _cache.Set("all_users", sampleUsers, cacheOptions);
                         preloadedItems.Add("all_users");
 
+                        var sampleRoles = new[] { new { value = "role1", text = "Sample Role" } };
+                        _cache.Set("all_roles", sampleRoles, cacheOptions);
+                        preloadedItems.Add("all_roles");
+
+                        var sampleAvailableRoles = new[] { new { value = "Admin", text = "Admin - Administrator Role" } };
+                        _cache.Set("available_roles", sampleAvailableRoles, cacheOptions);
+                        preloadedItems.Add("available_roles");
+
                 return Json(new { 
                     success = true, 
                     message = "Cache preloaded successfully!", 
@@ -184,6 +197,10 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                     
                     // Users Cache
                     usersCache = GetCacheStatus("all_users"),
+                    
+                    // Roles Cache
+                    rolesCache = GetCacheStatus("all_roles"),
+                    availableRolesCache = GetCacheStatus("available_roles"),
                     
                     // Cache Statistics
                     totalCachedItems = GetTotalCachedItems(),
@@ -322,6 +339,15 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                         }
                         break;
 
+                    case "roles":
+                        var roleKeys = new[] { "all_roles", "available_roles" };
+                        foreach (var key in roleKeys)
+                        {
+                            _cache.Remove(key);
+                            clearedItems.Add(key);
+                        }
+                        break;
+
                     default:
                         return Json(new { success = false, message = "Invalid cache type" });
                 }
@@ -397,6 +423,6 @@ namespace GarageManagementSystem.IdentityServer.Controllers
 
     public class ClearCacheByTypeRequest
     {
-        public string CacheType { get; set; } = string.Empty; // claims, api_scopes, identity_resources, api_resources, clients
+        public string CacheType { get; set; } = string.Empty; // claims, api_scopes, identity_resources, api_resources, clients, users, roles
     }
 }

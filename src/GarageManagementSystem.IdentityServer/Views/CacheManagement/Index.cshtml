@@ -2,6 +2,8 @@
     ViewData["Title"] = "Cache Management";
 }
 
+@Html.AntiForgeryToken()
+
 <div class="content-header">
     <div class="container-fluid">
         <div class="row mb-2">
@@ -272,7 +274,13 @@
                     confirmButtonText: 'Yes, clear all!'
                 }).then((result) => {
                     if (result.isConfirmed) {
-                        $.post('/CacheManagement/ClearAllCache')
+                        $.ajax({
+                            url: '/CacheManagement/ClearAllCache',
+                            type: 'POST',
+                            headers: {
+                                'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                            }
+                        })
                             .done(function(response) {
                                 if (response.success) {
                                     Swal.fire({
@@ -314,7 +322,15 @@
                     confirmButtonText: 'Yes, clear it!'
                 }).then((result) => {
                     if (result.isConfirmed) {
-                        $.post('/CacheManagement/ClearCacheByType', JSON.stringify({ cacheType: cacheType }), 'application/json')
+                        $.ajax({
+                            url: '/CacheManagement/ClearCacheByType',
+                            type: 'POST',
+                            contentType: 'application/json',
+                            data: JSON.stringify({ cacheType: cacheType }),
+                            headers: {
+                                'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                            }
+                        })
                             .done(function(response) {
                                 if (response.success) {
                                     Swal.fire({
@@ -371,7 +387,15 @@
                     confirmButtonText: 'Yes, clear it!'
                 }).then((result) => {
                     if (result.isConfirmed) {
-                        $.post('/CacheManagement/ClearSpecificCache', JSON.stringify({ cacheKey: cacheKey }), 'application/json')
+                        $.ajax({
+                            url: '/CacheManagement/ClearSpecificCache',
+                            type: 'POST',
+                            contentType: 'application/json',
+                            data: JSON.stringify({ cacheKey: cacheKey }),
+                            headers: {
+                                'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                            }
+                        })
                             .done(function(response) {
                                 if (response.success) {
                                     Swal.fire({
@@ -422,7 +446,13 @@
                             }
                         });
 
-                        $.post('/CacheManagement/TriggerAllCaches')
+                        $.ajax({
+                            url: '/CacheManagement/TriggerAllCaches',
+                            type: 'POST',
+                            headers: {
+                                'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                            }
+                        })
                             .done(function(response) {
                                 if (response.success) {
                                     Swal.fire({
@@ -464,7 +494,13 @@
                     confirmButtonText: 'Yes, preload!'
                 }).then((result) => {
                     if (result.isConfirmed) {
-                        $.post('/CacheManagement/PreloadCache')
+                        $.ajax({
+                            url: '/CacheManagement/PreloadCache',
+                            type: 'POST',
+                            headers: {
+                                'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                            }
+                        })
                             .done(function(response) {
                                 if (response.success) {
                                     Swal.fire({

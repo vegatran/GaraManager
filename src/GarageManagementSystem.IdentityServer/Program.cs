@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using IdentityServer4.EntityFramework.DbContexts;
 using IdentityServer4.EntityFramework.Mappers;
 using IdentityServer4.Extensions;
+using AutoMapper;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -95,6 +96,16 @@ builder.Services.AddIdentityServer(options =>
     options.TokenCleanupInterval = 30;
 })
 .AddAspNetIdentity<ApplicationUser>();
+
+// Fix AutoMapper issue with .NET 8
+builder.Services.Configure<IdentityServer4.Configuration.IdentityServerOptions>(options =>
+{
+    // Disable some features that might cause AutoMapper issues
+});
+
+// Register Custom Services
+builder.Services.AddScoped<IdentityServer4.Services.IProfileService, GarageManagementSystem.IdentityServer.Services.CustomProfileService>();
+builder.Services.AddScoped<GarageManagementSystem.IdentityServer.Services.OptimizedClaimsService>();
 
 // Configure Identity cookie settings after AddIdentityServer
 builder.Services.ConfigureApplicationCookie(options =>

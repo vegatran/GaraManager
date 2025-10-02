@@ -100,46 +100,46 @@
                 <label class="font-weight-bold">Security Options</label>
                 <div class="row">
                     <div class="col-md-3">
-                        <div class="form-check">
-                            <input type="checkbox" class="form-check-input" id="editEnabled" name="Enabled" value="true" @(Model.Enabled ? "checked" : "")>
+                        <div class="custom-control custom-switch">
+                            <input type="checkbox" class="custom-control-input" id="editEnabled" name="Enabled" value="true" @(Model.Enabled ? "checked" : "")>
                             <input type="hidden" name="Enabled" value="false" />
-                            <label class="form-check-label" for="editEnabled">Enabled</label>
+                            <label class="custom-control-label" for="editEnabled">Enabled</label>
                         </div>
-                        <div class="form-check">
-                            <input type="checkbox" class="form-check-input" id="editRequireClientSecret" name="RequireClientSecret" value="true" @(Model.RequireClientSecret ? "checked" : "")>
+                        <div class="custom-control custom-switch">
+                            <input type="checkbox" class="custom-control-input" id="editRequireClientSecret" name="RequireClientSecret" value="true" @(Model.RequireClientSecret ? "checked" : "")>
                             <input type="hidden" name="RequireClientSecret" value="false" />
-                            <label class="form-check-label" for="editRequireClientSecret">Require Client Secret</label>
+                            <label class="custom-control-label" for="editRequireClientSecret">Require Client Secret</label>
                         </div>
                     </div>
                     <div class="col-md-3">
-                        <div class="form-check">
-                            <input type="checkbox" class="form-check-input" id="editRequirePkce" name="RequirePkce" value="true" @(Model.RequirePkce ? "checked" : "")>
+                        <div class="custom-control custom-switch">
+                            <input type="checkbox" class="custom-control-input" id="editRequirePkce" name="RequirePkce" value="true" @(Model.RequirePkce ? "checked" : "")>
                             <input type="hidden" name="RequirePkce" value="false" />
-                            <label class="form-check-label" for="editRequirePkce">Require PKCE</label>
+                            <label class="custom-control-label" for="editRequirePkce">Require PKCE</label>
                         </div>
-                        <div class="form-check">
-                            <input type="checkbox" class="form-check-input" id="editAllowOfflineAccess" name="AllowOfflineAccess" value="true" @(Model.AllowOfflineAccess ? "checked" : "")>
+                        <div class="custom-control custom-switch">
+                            <input type="checkbox" class="custom-control-input" id="editAllowOfflineAccess" name="AllowOfflineAccess" value="true" @(Model.AllowOfflineAccess ? "checked" : "")>
                             <input type="hidden" name="AllowOfflineAccess" value="false" />
-                            <label class="form-check-label" for="editAllowOfflineAccess">Allow Offline Access</label>
+                            <label class="custom-control-label" for="editAllowOfflineAccess">Allow Offline Access</label>
                         </div>
                     </div>
                     <div class="col-md-3">
-                        <div class="form-check">
-                            <input type="checkbox" class="form-check-input" id="editIncludeJwtId" name="IncludeJwtId" value="true" @(Model.IncludeJwtId ? "checked" : "")>
+                        <div class="custom-control custom-switch">
+                            <input type="checkbox" class="custom-control-input" id="editIncludeJwtId" name="IncludeJwtId" value="true" @(Model.IncludeJwtId ? "checked" : "")>
                             <input type="hidden" name="IncludeJwtId" value="false" />
-                            <label class="form-check-label" for="editIncludeJwtId">Include JWT ID</label>
+                            <label class="custom-control-label" for="editIncludeJwtId">Include JWT ID</label>
                         </div>
-                        <div class="form-check">
-                            <input type="checkbox" class="form-check-input" id="editRequireConsent" name="RequireConsent" value="true" @(Model.RequireConsent ? "checked" : "")>
+                        <div class="custom-control custom-switch">
+                            <input type="checkbox" class="custom-control-input" id="editRequireConsent" name="RequireConsent" value="true" @(Model.RequireConsent ? "checked" : "")>
                             <input type="hidden" name="RequireConsent" value="false" />
-                            <label class="form-check-label" for="editRequireConsent">Require Consent</label>
+                            <label class="custom-control-label" for="editRequireConsent">Require Consent</label>
                         </div>
                     </div>
                     <div class="col-md-3">
-                        <div class="form-check">
-                            <input type="checkbox" class="form-check-input" id="editAllowRememberConsent" name="AllowRememberConsent" value="true" @(Model.AllowRememberConsent ? "checked" : "")>
+                        <div class="custom-control custom-switch">
+                            <input type="checkbox" class="custom-control-input" id="editAllowRememberConsent" name="AllowRememberConsent" value="true" @(Model.AllowRememberConsent ? "checked" : "")>
                             <input type="hidden" name="AllowRememberConsent" value="false" />
-                            <label class="form-check-label" for="editAllowRememberConsent">Allow Remember Consent</label>
+                            <label class="custom-control-label" for="editAllowRememberConsent">Allow Remember Consent</label>
                         </div>
                     </div>
                 </div>
@@ -238,35 +238,35 @@
     <div class="row">
         <div class="col-md-6">
             <div class="form-group">
-                <div class="form-check">
-                    <input type="checkbox" class="form-check-input" id="editRequireRequestObject" name="RequireRequestObject" value="true" @(Model.RequireRequestObject ? "checked" : "")>
+                <div class="custom-control custom-switch">
+                    <input type="checkbox" class="custom-control-input" id="editRequireRequestObject" name="RequireRequestObject" value="true" @(Model.RequireRequestObject ? "checked" : "")>
                     <input type="hidden" name="RequireRequestObject" value="false" />
-                    <label class="form-check-label" for="editRequireRequestObject">Require Request Object</label>
+                    <label class="custom-control-label" for="editRequireRequestObject">Require Request Object</label>
                 </div>
-                <div class="form-check">
-                    <input type="checkbox" class="form-check-input" id="editFrontChannelLogoutSessionRequired" name="FrontChannelLogoutSessionRequired" value="true" @(Model.FrontChannelLogoutSessionRequired ? "checked" : "")>
+                <div class="custom-control custom-switch">
+                    <input type="checkbox" class="custom-control-input" id="editFrontChannelLogoutSessionRequired" name="FrontChannelLogoutSessionRequired" value="true" @(Model.FrontChannelLogoutSessionRequired ? "checked" : "")>
                     <input type="hidden" name="FrontChannelLogoutSessionRequired" value="false" />
-                    <label class="form-check-label" for="editFrontChannelLogoutSessionRequired">Front Channel Logout Session Required</label>
+                    <label class="custom-control-label" for="editFrontChannelLogoutSessionRequired">Front Channel Logout Session Required</label>
                 </div>
-                <div class="form-check">
-                    <input type="checkbox" class="form-check-input" id="editBackChannelLogoutSessionRequired" name="BackChannelLogoutSessionRequired" value="true" @(Model.BackChannelLogoutSessionRequired ? "checked" : "")>
+                <div class="custom-control custom-switch">
+                    <input type="checkbox" class="custom-control-input" id="editBackChannelLogoutSessionRequired" name="BackChannelLogoutSessionRequired" value="true" @(Model.BackChannelLogoutSessionRequired ? "checked" : "")>
                     <input type="hidden" name="BackChannelLogoutSessionRequired" value="false" />
-                    <label class="form-check-label" for="editBackChannelLogoutSessionRequired">Back Channel Logout Session Required</label>
+                    <label class="custom-control-label" for="editBackChannelLogoutSessionRequired">Back Channel Logout Session Required</label>
                 </div>
-                <div class="form-check">
-                    <input type="checkbox" class="form-check-input" id="editAllowAccessTokensViaBrowser" name="AllowAccessTokensViaBrowser" value="true" @(Model.AllowAccessTokensViaBrowser ? "checked" : "")>
+                <div class="custom-control custom-switch">
+                    <input type="checkbox" class="custom-control-input" id="editAllowAccessTokensViaBrowser" name="AllowAccessTokensViaBrowser" value="true" @(Model.AllowAccessTokensViaBrowser ? "checked" : "")>
                     <input type="hidden" name="AllowAccessTokensViaBrowser" value="false" />
-                    <label class="form-check-label" for="editAllowAccessTokensViaBrowser">Allow Access Tokens via Browser</label>
+                    <label class="custom-control-label" for="editAllowAccessTokensViaBrowser">Allow Access Tokens via Browser</label>
                 </div>
-                <div class="form-check">
-                    <input type="checkbox" class="form-check-input" id="editUpdateAccessTokenClaimsOnRefresh" name="UpdateAccessTokenClaimsOnRefresh" value="true" @(Model.UpdateAccessTokenClaimsOnRefresh ? "checked" : "")>
+                <div class="custom-control custom-switch">
+                    <input type="checkbox" class="custom-control-input" id="editUpdateAccessTokenClaimsOnRefresh" name="UpdateAccessTokenClaimsOnRefresh" value="true" @(Model.UpdateAccessTokenClaimsOnRefresh ? "checked" : "")>
                     <input type="hidden" name="UpdateAccessTokenClaimsOnRefresh" value="false" />
-                    <label class="form-check-label" for="editUpdateAccessTokenClaimsOnRefresh">Update Access Token Claims on Refresh</label>
+                    <label class="custom-control-label" for="editUpdateAccessTokenClaimsOnRefresh">Update Access Token Claims on Refresh</label>
                 </div>
-                <div class="form-check">
-                    <input type="checkbox" class="form-check-input" id="editAlwaysSendClientClaims" name="AlwaysSendClientClaims" value="true" @(Model.AlwaysSendClientClaims ? "checked" : "")>
+                <div class="custom-control custom-switch">
+                    <input type="checkbox" class="custom-control-input" id="editAlwaysSendClientClaims" name="AlwaysSendClientClaims" value="true" @(Model.AlwaysSendClientClaims ? "checked" : "")>
                     <input type="hidden" name="AlwaysSendClientClaims" value="false" />
-                    <label class="form-check-label" for="editAlwaysSendClientClaims">Always Send Client Claims</label>
+                    <label class="custom-control-label" for="editAlwaysSendClientClaims">Always Send Client Claims</label>
                 </div>
             </div>
         </div>

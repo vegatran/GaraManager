@@ -49,6 +49,8 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                     description = c.Description,
                     isStandard = c.IsStandard,
                     category = c.Category,
+                    customValueSource = c.CustomValueSource,
+                    defaultValue = c.DefaultValue,
                     createdAt = c.CreatedAt.ToString("yyyy-MM-dd HH:mm")
                 }).ToListAsync();
 
@@ -132,6 +134,8 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                     IsStandard = model.IsStandard,
                     IsActive = model.IsActive,
                     Category = model.Category,
+                    CustomValueSource = model.CustomValueSource,
+                    DefaultValue = model.DefaultValue,
                     CreatedAt = DateTime.Now
                 };
 
@@ -167,6 +171,8 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                 IsStandard = claim.IsStandard,
                 IsActive = claim.IsActive,
                 Category = claim.Category,
+                CustomValueSource = claim.CustomValueSource,
+                DefaultValue = claim.DefaultValue,
                 OriginalName = claim.Name // Track original name
             };
 
@@ -203,6 +209,8 @@ namespace GarageManagementSystem.IdentityServer.Controllers
             claim.IsStandard = model.IsStandard;
             claim.IsActive = model.IsActive;
             claim.Category = model.Category;
+            claim.CustomValueSource = model.CustomValueSource;
+            claim.DefaultValue = model.DefaultValue;
             claim.UpdatedAt = DateTime.Now;
 
             await _context.SaveChangesAsync();
@@ -318,6 +326,12 @@ namespace GarageManagementSystem.IdentityServer.Controllers
 
         [StringLength(100)]
         public string? Category { get; set; }
+
+        [StringLength(200)]
+        public string? CustomValueSource { get; set; }
+
+        [StringLength(500)]
+        public string? DefaultValue { get; set; }
     }
 
     public class EditClaimViewModel : CreateClaimViewModel

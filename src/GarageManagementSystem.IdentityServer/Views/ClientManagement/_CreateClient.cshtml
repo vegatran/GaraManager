@@ -76,39 +76,46 @@
                                 <label class="font-weight-bold">Security Options</label>
                                 <div class="row">
                                     <div class="col-md-3">
-                                        <div class="form-check">
-                                            <input type="checkbox" class="form-check-input" id="createEnabled" name="Enabled" checked>
-                                            <label class="form-check-label" for="createEnabled">Enabled</label>
+                                        <div class="custom-control custom-switch">
+                                            <input type="checkbox" class="custom-control-input" id="createEnabled" name="Enabled" value="true" checked>
+                                            <input type="hidden" name="Enabled" value="false" />
+                                            <label class="custom-control-label" for="createEnabled">Enabled</label>
                                         </div>
-                                        <div class="form-check">
-                                            <input type="checkbox" class="form-check-input" id="createRequireClientSecret" name="RequireClientSecret">
-                                            <label class="form-check-label" for="createRequireClientSecret">Require Client Secret</label>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <div class="form-check">
-                                            <input type="checkbox" class="form-check-input" id="createRequirePkce" name="RequirePkce" checked>
-                                            <label class="form-check-label" for="createRequirePkce">Require PKCE</label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input type="checkbox" class="form-check-input" id="createAllowOfflineAccess" name="AllowOfflineAccess">
-                                            <label class="form-check-label" for="createAllowOfflineAccess">Allow Offline Access</label>
+                                        <div class="custom-control custom-switch">
+                                            <input type="checkbox" class="custom-control-input" id="createRequireClientSecret" name="RequireClientSecret" value="true">
+                                            <input type="hidden" name="RequireClientSecret" value="false" />
+                                            <label class="custom-control-label" for="createRequireClientSecret">Require Client Secret</label>
                                         </div>
                                     </div>
                                     <div class="col-md-3">
-                                        <div class="form-check">
-                                            <input type="checkbox" class="form-check-input" id="createIncludeJwtId" name="IncludeJwtId">
-                                            <label class="form-check-label" for="createIncludeJwtId">Include JWT ID</label>
+                                        <div class="custom-control custom-switch">
+                                            <input type="checkbox" class="custom-control-input" id="createRequirePkce" name="RequirePkce" value="true" checked>
+                                            <input type="hidden" name="RequirePkce" value="false" />
+                                            <label class="custom-control-label" for="createRequirePkce">Require PKCE</label>
                                         </div>
-                                        <div class="form-check">
-                                            <input type="checkbox" class="form-check-input" id="createRequireConsent" name="RequireConsent">
-                                            <label class="form-check-label" for="createRequireConsent">Require Consent</label>
+                                        <div class="custom-control custom-switch">
+                                            <input type="checkbox" class="custom-control-input" id="createAllowOfflineAccess" name="AllowOfflineAccess" value="true">
+                                            <input type="hidden" name="AllowOfflineAccess" value="false" />
+                                            <label class="custom-control-label" for="createAllowOfflineAccess">Allow Offline Access</label>
                                         </div>
                                     </div>
                                     <div class="col-md-3">
-                                        <div class="form-check">
-                                            <input type="checkbox" class="form-check-input" id="createAllowRememberConsent" name="AllowRememberConsent" checked>
-                                            <label class="form-check-label" for="createAllowRememberConsent">Allow Remember Consent</label>
+                                        <div class="custom-control custom-switch">
+                                            <input type="checkbox" class="custom-control-input" id="createIncludeJwtId" name="IncludeJwtId" value="true">
+                                            <input type="hidden" name="IncludeJwtId" value="false" />
+                                            <label class="custom-control-label" for="createIncludeJwtId">Include JWT ID</label>
+                                        </div>
+                                        <div class="custom-control custom-switch">
+                                            <input type="checkbox" class="custom-control-input" id="createRequireConsent" name="RequireConsent" value="true">
+                                            <input type="hidden" name="RequireConsent" value="false" />
+                                            <label class="custom-control-label" for="createRequireConsent">Require Consent</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="custom-control custom-switch">
+                                            <input type="checkbox" class="custom-control-input" id="createAllowRememberConsent" name="AllowRememberConsent" value="true" checked>
+                                            <input type="hidden" name="AllowRememberConsent" value="false" />
+                                            <label class="custom-control-label" for="createAllowRememberConsent">Allow Remember Consent</label>
                                         </div>
                                     </div>
                                 </div>
@@ -202,33 +209,39 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="form-group">
-                                <div class="form-check">
-                                    <input type="checkbox" class="form-check-input" id="createRequireRequestObject" name="RequireRequestObject">
-                                    <label class="form-check-label" for="createRequireRequestObject">Require Request Object</label>
+                                <div class="custom-control custom-switch">
+                                    <input type="checkbox" class="custom-control-input" id="createRequireRequestObject" name="RequireRequestObject" value="true">
+                                    <input type="hidden" name="RequireRequestObject" value="false" />
+                                    <label class="custom-control-label" for="createRequireRequestObject">Require Request Object</label>
                                 </div>
-                                <div class="form-check">
-                                    <input type="checkbox" class="form-check-input" id="createFrontChannelLogoutSessionRequired" name="FrontChannelLogoutSessionRequired" checked>
-                                    <label class="form-check-label" for="createFrontChannelLogoutSessionRequired">Front Channel Logout Session Required</label>
+                                <div class="custom-control custom-switch">
+                                    <input type="checkbox" class="custom-control-input" id="createFrontChannelLogoutSessionRequired" name="FrontChannelLogoutSessionRequired" value="true" checked>
+                                    <input type="hidden" name="FrontChannelLogoutSessionRequired" value="false" />
+                                    <label class="custom-control-label" for="createFrontChannelLogoutSessionRequired">Front Channel Logout Session Required</label>
                                 </div>
-                                <div class="form-check">
-                                    <input type="checkbox" class="form-check-input" id="createBackChannelLogoutSessionRequired" name="BackChannelLogoutSessionRequired" checked>
-                                    <label class="form-check-label" for="createBackChannelLogoutSessionRequired">Back Channel Logout Session Required</label>
+                                <div class="custom-control custom-switch">
+                                    <input type="checkbox" class="custom-control-input" id="createBackChannelLogoutSessionRequired" name="BackChannelLogoutSessionRequired" value="true" checked>
+                                    <input type="hidden" name="BackChannelLogoutSessionRequired" value="false" />
+                                    <label class="custom-control-label" for="createBackChannelLogoutSessionRequired">Back Channel Logout Session Required</label>
                                 </div>
-                                <div class="form-check">
-                                    <input type="checkbox" class="form-check-input" id="createAllowAccessTokensViaBrowser" name="AllowAccessTokensViaBrowser">
-                                    <label class="form-check-label" for="createAllowAccessTokensViaBrowser">Allow Access Tokens via Browser</label>
+                                <div class="custom-control custom-switch">
+                                    <input type="checkbox" class="custom-control-input" id="createAllowAccessTokensViaBrowser" name="AllowAccessTokensViaBrowser" value="true">
+                                    <input type="hidden" name="AllowAccessTokensViaBrowser" value="false" />
+                                    <label class="custom-control-label" for="createAllowAccessTokensViaBrowser">Allow Access Tokens via Browser</label>
                                 </div>
-                                <div class="form-check">
-                                    <input type="checkbox" class="form-check-input" id="createUpdateAccessTokenClaimsOnRefresh" name="UpdateAccessTokenClaimsOnRefresh">
-                                    <label class="form-check-label" for="createUpdateAccessTokenClaimsOnRefresh">Update Access Token Claims on Refresh</label>
+                                <div class="custom-control custom-switch">
+                                    <input type="checkbox" class="custom-control-input" id="createUpdateAccessTokenClaimsOnRefresh" name="UpdateAccessTokenClaimsOnRefresh" value="true">
+                                    <input type="hidden" name="UpdateAccessTokenClaimsOnRefresh" value="false" />
+                                    <label class="custom-control-label" for="createUpdateAccessTokenClaimsOnRefresh">Update Access Token Claims on Refresh</label>
                                 </div>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
-                                <div class="form-check">
-                                    <input type="checkbox" class="form-check-input" id="createAlwaysSendClientClaims" name="AlwaysSendClientClaims">
-                                    <label class="form-check-label" for="createAlwaysSendClientClaims">Always Send Client Claims</label>
+                                <div class="custom-control custom-switch">
+                                    <input type="checkbox" class="custom-control-input" id="createAlwaysSendClientClaims" name="AlwaysSendClientClaims" value="true">
+                                    <input type="hidden" name="AlwaysSendClientClaims" value="false" />
+                                    <label class="custom-control-label" for="createAlwaysSendClientClaims">Always Send Client Claims</label>
                                 </div>
                             </div>
                             <div class="form-group">

@@ -29,5 +29,11 @@ namespace GarageManagementSystem.IdentityServer.Models
 
         [StringLength(100)]
         public string? Category { get; set; } // e.g., "Profile", "Contact", "Custom"
+
+        [StringLength(200)]
+        public string? CustomValueSource { get; set; } // Format: "Table:Column" for dynamic lookup
+
+        [StringLength(500)]
+        public string? DefaultValue { get; set; } // Static default value if CustomValueSource is not used
     }
 }
