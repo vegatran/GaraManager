@@ -9,7 +9,7 @@ namespace GarageManagementSystem.Core.Entities
         public string Name { get; set; } = string.Empty;
 
         [StringLength(20)]
-        public string? PhoneNumber { get; set; }
+        public string? Phone { get; set; }
 
         [StringLength(200)]
         public string? Email { get; set; }

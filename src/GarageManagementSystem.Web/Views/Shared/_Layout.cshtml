@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>@ViewData["Title"] - Garage Management System</title>
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="~/lib/font-awesome/css/all.min.css">
+    <!-- AdminLTE -->
+    <link rel="stylesheet" href="~/lib/adminlte/css/adminlte.min.css">
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="~/lib/bootstrap/css/bootstrap.min.css">
+    <!-- DataTables -->
+    <link rel="stylesheet" href="~/lib/datatables/css/dataTables.bootstrap4.min.css">
+    <!-- Select2 -->
+    <link rel="stylesheet" href="~/lib/select2/dist/css/select2.min.css">
+    <!-- SweetAlert2 -->
+    <link rel="stylesheet" href="~/lib/sweetalert2/sweetalert2.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true">
+</head>
+<body class="hold-transition sidebar-mini">
+    <div class="wrapper">
+
+        <!-- Navbar -->
+        <nav class="main-header navbar navbar-expand navbar-white navbar-light">
+            <!-- Left navbar links -->
+            <ul class="navbar-nav">
+                <li class="nav-item">
+                    <a class="nav-link" data-widget="pushmenu" href="#" role="button"><i class="fas fa-bars"></i></a>
+                </li>
+            </ul>
+
+            <!-- Right navbar links -->
+            <ul class="navbar-nav ml-auto">
+                <li class="nav-item dropdown">
+                    <a class="nav-link" data-toggle="dropdown" href="#">
+                        <i class="far fa-user"></i>
+                    </a>
+                    <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right">
+                        @if (User.Identity.IsAuthenticated)
+                        {
+                            <a href="@Url.Action("Profile", "Home")" class="dropdown-item">
+                                <i class="fas fa-user mr-2"></i> Profile
+                            </a>
+                            <div class="dropdown-divider"></div>
+                            <a href="@Url.Action("Logout", "Home")" class="dropdown-item">
+                                <i class="fas fa-sign-out-alt mr-2"></i> Logout
+                            </a>
+                        }
+                        else
+                        {
+                            <a href="@Url.Action("Login", "Account")" class="dropdown-item">
+                                <i class="fas fa-sign-in-alt mr-2"></i> Login
+                            </a>
+                        }
+                    </div>
+                </li>
+            </ul>
+        </nav>
+
+        <!-- Main Sidebar Container -->
+        <aside class="main-sidebar sidebar-dark-primary elevation-4">
+            <!-- Brand Logo -->
+            <a href="@Url.Action("Index", "Home")" class="brand-link">
+                <img src="~/lib/adminlte/img/AdminLTELogo.png" alt="Garage Management" class="brand-image img-circle elevation-3" style="opacity: .8">
+                <span class="brand-text font-weight-light">Garage Management</span>
+            </a>
+
+            <!-- Sidebar -->
+            <div class="sidebar">
+                <!-- Sidebar user panel -->
+                <div class="user-panel mt-3 pb-3 mb-3 d-flex">
+                    <div class="image">
+                        <img src="~/lib/adminlte/img/user2-160x160.jpg" class="img-circle elevation-2" alt="User Image">
+                    </div>
+                    <div class="info">
+                        <a href="#" class="d-block">
+                            @if (User.Identity.IsAuthenticated)
+                            {
+                                @(User.FindFirst("name")?.Value ?? User.Identity.Name)
+                            }
+                            else
+                            {
+                                <text>Guest User</text>
+                            }
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Sidebar Menu -->
+                <nav class="mt-2">
+                    <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+                        <!-- Dashboard -->
+                        <li class="nav-item">
+                            <a href="@Url.Action("Index", "Home")" class="nav-link">
+                                <i class="nav-icon fas fa-tachometer-alt"></i>
+                                <p>Dashboard</p>
+                            </a>
+                        </li>
+
+                        <!-- Customer Management -->
+                        <li class="nav-item">
+                            <a href="@Url.Action("Index", "CustomerManagement")" class="nav-link">
+                                <i class="nav-icon fas fa-users"></i>
+                                <p>Customer Management</p>
+                            </a>
+                        </li>
+
+                        <!-- Vehicle Management -->
+                        <li class="nav-item">
+                            <a href="@Url.Action("Index", "VehicleManagement")" class="nav-link">
+                                <i class="nav-icon fas fa-car"></i>
+                                <p>Vehicle Management</p>
+                            </a>
+                        </li>
+
+                        <!-- Service Management -->
+                        <li class="nav-item">
+                            <a href="@Url.Action("Index", "ServiceManagement")" class="nav-link">
+                                <i class="nav-icon fas fa-tools"></i>
+                                <p>Service Management</p>
+                            </a>
+                        </li>
+
+                        <!-- Order Management -->
+                        <li class="nav-item">
+                            <a href="@Url.Action("Index", "OrderManagement")" class="nav-link">
+                                <i class="nav-icon fas fa-clipboard-list"></i>
+                                <p>Order Management</p>
+                            </a>
+                        </li>
+
+                        <!-- Reports -->
+                        <li class="nav-item">
+                            <a href="#" class="nav-link">
+                                <i class="nav-icon fas fa-chart-bar"></i>
+                                <p>
+                                    Reports
+                                    <i class="right fas fa-angle-left"></i>
+                                </p>
+                            </a>
+                            <ul class="nav nav-treeview">
+                                <li class="nav-item">
+                                    <a href="#" class="nav-link">
+                                        <i class="far fa-circle nav-icon"></i>
+                                        <p>Sales Report</p>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a href="#" class="nav-link">
+                                        <i class="far fa-circle nav-icon"></i>
+                                        <p>Service Report</p>
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+
+                        <!-- Settings -->
+                        <li class="nav-item">
+                            <a href="#" class="nav-link">
+                                <i class="nav-icon fas fa-cog"></i>
+                                <p>
+                                    Settings
+                                    <i class="right fas fa-angle-left"></i>
+                                </p>
+                            </a>
+                            <ul class="nav nav-treeview">
+                                <li class="nav-item">
+                                    <a href="@Url.Action("Profile", "Home")" class="nav-link">
+                                        <i class="far fa-circle nav-icon"></i>
+                                        <p>Profile</p>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a href="@Url.Action("TestApi", "Home")" class="nav-link">
+                                        <i class="far fa-circle nav-icon"></i>
+                                        <p>Test API</p>
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </aside>
+
+        <!-- Content Wrapper -->
+        <div class="content-wrapper">
+            @RenderBody()
+        </div>
+
+        <!-- Footer -->
+        <footer class="main-footer">
+            <strong>Copyright &copy; 2024 <a href="#">Garage Management System</a>.</strong>
+            All rights reserved.
+            <div class="float-right d-none d-sm-inline-block">
+                <b>Version</b> 1.0.0
+            </div>
+        </footer>
+    </div>
+
+    <!-- jQuery -->
+    <script src="~/lib/jquery/jquery.min.js"></script>
+    <!-- Bootstrap -->
+    <script src="~/lib/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <!-- AdminLTE -->
+    <script src="~/lib/adminlte/js/adminlte.min.js"></script>
+    <!-- DataTables -->
+    <script src="~/lib/datatables/js/jquery.dataTables.min.js"></script>
+    <script src="~/lib/datatables/js/dataTables.bootstrap4.min.js"></script>
+    <!-- Select2 -->
+    <script src="~/lib/select2/dist/js/select2.min.js"></script>
+    <!-- SweetAlert2 -->
+    <script src="~/lib/sweetalert2/sweetalert2.min.js"></script>
+    <!-- Chart.js -->
+    <script src="~/lib/chart.js/dist/chart.umd.min.js"></script>
+    <!-- Custom JS -->
+    <script src="~/js/site.js" asp-append-version="true"></script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+
+    <!-- Dynamic menu activation script -->
+    <script>
+        $(document).ready(function() {
+            // Get current path
+            var path = window.location.pathname;
+            
+            // Remove active class from all nav links
+            $('.nav-link').removeClass('active');
+            
+            // Add active class to current nav link
+            $('.nav-link').each(function() {
+                var href = $(this).attr('href');
+                if (href && path.includes(href.replace('@Url.Action("', '').replace('", "Home")', ''))) {
+                    $(this).addClass('active');
+                    $(this).closest('.nav-item').addClass('menu-open');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

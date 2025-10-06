@@ -6,7 +6,7 @@ namespace GarageManagementSystem.Shared.DTOs
     {
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
-        public string? PhoneNumber { get; set; }
+        public string? Phone { get; set; }
         public string? Email { get; set; }
         public string? Address { get; set; }
         public DateTime? DateOfBirth { get; set; }
@@ -23,7 +23,7 @@ namespace GarageManagementSystem.Shared.DTOs
         public string Name { get; set; } = string.Empty;
 
         [StringLength(20, ErrorMessage = "Số điện thoại không được vượt quá 20 ký tự")]
-        public string? PhoneNumber { get; set; }
+        public string? Phone { get; set; }
 
         [EmailAddress(ErrorMessage = "Email không hợp lệ")]
         [StringLength(200, ErrorMessage = "Email không được vượt quá 200 ký tự")]

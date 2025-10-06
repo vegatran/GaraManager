@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Security.Cryptography;
 using System.Text;
 using IdentityServer4.EntityFramework.Entities;
+using IdentityServer4.Extensions;
 
 namespace GarageManagementSystem.IdentityServer.Controllers
 {
@@ -288,7 +289,7 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                     RequireConsent = false,
                     AllowRememberConsent = true,
                     AlwaysIncludeUserClaimsInIdToken = true,
-                    RequirePkce = true,
+                    RequirePkce = false,
                     AllowPlainTextPkce = false,
                     RequireRequestObject = false,
                     AllowAccessTokensViaBrowser = false,
@@ -307,6 +308,31 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                     AlwaysSendClientClaims = false,
                     Created = DateTime.UtcNow,
                     NonEditable = false,
+                    AllowedGrantTypes = new List<ClientGrantType>
+                    {
+                        new ClientGrantType { GrantType = "authorization_code" },
+                        new ClientGrantType { GrantType = "refresh_token" }
+                    },
+                    ClientSecrets = new List<ClientSecret>
+                    {
+                        new ClientSecret
+                        {
+                            Value = "garage.web.secret".Sha256(),
+                            Type = "SharedSecret",
+                            Description = "Garage Web Client Secret",
+                            Created = DateTime.UtcNow
+                        }
+                    },
+                    RedirectUris = new List<ClientRedirectUri>
+                    {
+                        new ClientRedirectUri { RedirectUri = "https://localhost:7000/signin-oidc" },
+                        new ClientRedirectUri { RedirectUri = "http://localhost:7000/signin-oidc" }
+                    },
+                    PostLogoutRedirectUris = new List<ClientPostLogoutRedirectUri>
+                    {
+                        new ClientPostLogoutRedirectUri { PostLogoutRedirectUri = "https://localhost:7000/signout-callback-oidc" },
+                        new ClientPostLogoutRedirectUri { PostLogoutRedirectUri = "http://localhost:7000/signout-callback-oidc" }
+                    },
                     AllowedScopes = new List<ClientScope>
                     {
                         new ClientScope { Scope = "openid" },
@@ -355,6 +381,20 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                     AlwaysSendClientClaims = false,
                     Created = DateTime.UtcNow,
                     NonEditable = false,
+                    AllowedGrantTypes = new List<ClientGrantType>
+                    {
+                        new ClientGrantType { GrantType = "client_credentials" }
+                    },
+                    ClientSecrets = new List<ClientSecret>
+                    {
+                        new ClientSecret
+                        {
+                            Value = "garage.api.client.secret".Sha256(),
+                            Type = "SharedSecret",
+                            Description = "Garage API Client Secret",
+                            Created = DateTime.UtcNow
+                        }
+                    },
                     AllowedScopes = new List<ClientScope>
                     {
                         new ClientScope { Scope = "garage.api" },

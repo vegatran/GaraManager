@@ -5,7 +5,6 @@ using Microsoft.EntityFrameworkCore;
 using IdentityServer4.EntityFramework.DbContexts;
 using IdentityServer4.EntityFramework.Mappers;
 using IdentityServer4.Extensions;
-using AutoMapper;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -61,27 +60,26 @@ builder.Services.AddIdentityServer(options =>
     options.Events.RaiseFailureEvents = true;
     options.Events.RaiseSuccessEvents = true;
     
-    // Emit static audience claim
-    options.EmitStaticAudienceClaim = true;
-    
     // User interaction configuration
     options.UserInteraction.LoginUrl = "/Account/Login";
     options.UserInteraction.LogoutUrl = "/Account/Logout";
     options.UserInteraction.ErrorUrl = "/Home/Error";
-    
+
     // Endpoints configuration
     options.Endpoints.EnableAuthorizeEndpoint = true;
     options.Endpoints.EnableTokenEndpoint = true;
     options.Endpoints.EnableUserInfoEndpoint = true;
     options.Endpoints.EnableDiscoveryEndpoint = true;
 })
+.AddDeveloperSigningCredential() // Thêm signing credential cho development
+// Temporarily disable Entity Framework stores to avoid AutoMapper conflicts
 .AddConfigurationStore<ConfigurationDbContext>(options =>
 {
     options.ConfigureDbContext = b => b.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"),
         sql => 
         {
             sql.MigrationsAssembly(typeof(Program).Assembly.GetName().Name);
-            sql.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery); // Split queries for better performance
+            sql.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
         });
 })
 .AddOperationalStore(options =>
@@ -90,17 +88,18 @@ builder.Services.AddIdentityServer(options =>
         sql => 
         {
             sql.MigrationsAssembly(typeof(Program).Assembly.GetName().Name);
-            sql.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery); // Split queries for better performance
+            sql.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
         });
     options.EnableTokenCleanup = true;
     options.TokenCleanupInterval = 30;
 })
 .AddAspNetIdentity<ApplicationUser>();
 
-// Fix AutoMapper issue with .NET 8
+// Configure IdentityServer options
 builder.Services.Configure<IdentityServer4.Configuration.IdentityServerOptions>(options =>
 {
-    // Disable some features that might cause AutoMapper issues
+    var identityConfig = builder.Configuration.GetSection("IdentityServer");
+    options.IssuerUri = identityConfig["IssuerUri"] ?? "https://localhost:44333";
 });
 
 // Register Custom Services

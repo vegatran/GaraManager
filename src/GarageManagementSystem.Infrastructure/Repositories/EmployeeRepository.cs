@@ -40,7 +40,7 @@ namespace GarageManagementSystem.Infrastructure.Repositories
             return await _dbSet
                 .Where(e => !e.IsDeleted && 
                     (e.Name.Contains(searchTerm) || 
-                     e.PhoneNumber!.Contains(searchTerm) || 
+                     e.Phone!.Contains(searchTerm) || 
                      e.Email!.Contains(searchTerm) ||
                      e.Position!.Contains(searchTerm) ||
                      e.Department!.Contains(searchTerm)))

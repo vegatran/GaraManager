@@ -7,7 +7,7 @@ namespace GarageManagementSystem.Core.Interfaces
         Task<Customer?> GetCustomerWithVehiclesAsync(int id);
         Task<Customer?> GetCustomerWithServiceOrdersAsync(int id);
         Task<IEnumerable<Customer>> SearchCustomersAsync(string searchTerm);
-        Task<bool> IsPhoneNumberExistsAsync(string phoneNumber, int? excludeId = null);
+        Task<bool> IsPhoneExistsAsync(string phoneNumber, int? excludeId = null);
         Task<bool> IsEmailExistsAsync(string email, int? excludeId = null);
     }
 }

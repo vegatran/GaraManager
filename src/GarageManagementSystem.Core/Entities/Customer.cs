@@ -9,7 +9,7 @@ namespace GarageManagementSystem.Core.Entities
         public string Name { get; set; } = string.Empty;
 
         [StringLength(20)]
-        public string? PhoneNumber { get; set; }
+        public string? Phone { get; set; }
 
         [StringLength(200)]
         public string? Email { get; set; }
@@ -21,6 +21,10 @@ namespace GarageManagementSystem.Core.Entities
 
         [StringLength(20)]
         public string? Gender { get; set; }
+
+        public DateTime CreatedDate { get; set; } = DateTime.Now;
+        public DateTime? UpdatedDate { get; set; }
+        public bool IsActive { get; set; } = true;
 
         // Navigation properties
         public virtual ICollection<Vehicle> Vehicles { get; set; } = new List<Vehicle>();

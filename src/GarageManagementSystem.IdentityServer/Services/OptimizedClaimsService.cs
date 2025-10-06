@@ -75,6 +75,13 @@ namespace GarageManagementSystem.IdentityServer.Services
 
             foreach (var dbClaim in dbClaims)
             {
+                // ✅ KHÔNG ĐƯỢC OVERRIDE CÁC CLAIMS MẶC ĐỊNH CỦA IDENTITYSERVER
+                if (IsReservedClaim(dbClaim.Name))
+                {
+                    Console.WriteLine($"⚠️ Skipping reserved claim: {dbClaim.Name}");
+                    continue;
+                }
+
                 var value = await GetUserClaimValue(dbClaim, userId);
                 claims.Add(new System.Security.Claims.Claim(dbClaim.Name, value));
             }
@@ -174,6 +181,24 @@ namespace GarageManagementSystem.IdentityServer.Services
 
             // ✅ Fallback: trả về claim name
             return claimEntity.Name;
+        }
+
+        /// <summary>
+        /// Kiểm tra xem claim có phải là reserved claim của IdentityServer không
+        /// </summary>
+        private bool IsReservedClaim(string claimName)
+        {
+            var reservedClaims = new[]
+            {
+                "sub", "iss", "aud", "exp", "iat", "nbf", "jti", "at_hash", "c_hash",
+                "name", "given_name", "family_name", "middle_name", "nickname", 
+                "preferred_username", "profile", "picture", "website", "gender", 
+                "birthdate", "zoneinfo", "locale", "updated_at",
+                "email", "email_verified", "phone_number", "phone_number_verified",
+                "address", "role", "scope"
+            };
+            
+            return reservedClaims.Contains(claimName, StringComparer.OrdinalIgnoreCase);
         }
 
         /// <summary>

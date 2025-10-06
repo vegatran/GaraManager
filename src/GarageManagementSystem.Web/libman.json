@@ -1,0 +1,88 @@
+{
+  "version": "1.0",
+  "defaultProvider": "cdnjs",
+  "libraries": [
+    {
+      "library": "admin-lte@3.2.0",
+      "destination": "wwwroot/lib/adminlte/",
+      "files": [
+        "css/adminlte.min.css",
+        "css/adminlte.min.css.map",
+        "js/adminlte.min.js",
+        "js/adminlte.min.js.map",
+        "img/AdminLTELogo.png",
+        "img/user2-160x160.jpg"
+      ]
+    },
+    {
+      "library": "bootstrap@4.6.2",
+      "destination": "wwwroot/lib/bootstrap/",
+      "files": [
+        "css/bootstrap.min.css",
+        "css/bootstrap.min.css.map",
+        "js/bootstrap.bundle.min.js",
+        "js/bootstrap.bundle.min.js.map"
+      ]
+    },
+    {
+      "library": "jquery@3.7.1",
+      "destination": "wwwroot/lib/jquery/",
+      "files": [
+        "jquery.min.js",
+        "jquery.min.map"
+      ]
+    },
+    {
+      "library": "font-awesome@6.6.0",
+      "destination": "wwwroot/lib/font-awesome/",
+      "files": [
+        "css/all.min.css",
+        "webfonts/fa-brands-400.woff2",
+        "webfonts/fa-regular-400.woff2",
+        "webfonts/fa-solid-900.woff2"
+      ]
+    },
+    {
+      "library": "sweetalert2@11.14.5",
+      "destination": "wwwroot/lib/sweetalert2/",
+      "files": [
+        "sweetalert2.min.css",
+        "sweetalert2.min.js"
+      ]
+    },
+    {
+      "provider": "unpkg",
+      "library": "chart.js@4.5.0",
+      "destination": "wwwroot/lib/chart.js/",
+      "files": [
+        "dist/chart.umd.min.js"
+      ]
+    },
+    {
+      "provider": "unpkg",
+      "library": "select2@4.0.13",
+      "destination": "wwwroot/lib/select2/",
+      "files": [
+        "dist/css/select2.min.css",
+        "dist/js/select2.min.js"
+      ]
+    },
+    {
+      "provider": "unpkg",
+      "library": "datatables.net@1.13.7",
+      "destination": "wwwroot/lib/datatables/",
+      "files": [
+        "js/jquery.dataTables.min.js"
+      ]
+    },
+    {
+      "provider": "unpkg",
+      "library": "datatables.net-bs4@1.13.7",
+      "destination": "wwwroot/lib/datatables/",
+      "files": [
+        "css/dataTables.bootstrap4.min.css",
+        "js/dataTables.bootstrap4.min.js"
+      ]
+    }
+  ]
+}

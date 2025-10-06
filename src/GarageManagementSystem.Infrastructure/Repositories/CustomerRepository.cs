@@ -31,14 +31,14 @@ namespace GarageManagementSystem.Infrastructure.Repositories
             return await _dbSet
                 .Where(c => !c.IsDeleted && 
                     (c.Name.Contains(searchTerm) || 
-                     c.PhoneNumber!.Contains(searchTerm) || 
+                     c.Phone!.Contains(searchTerm) || 
                      c.Email!.Contains(searchTerm)))
                 .ToListAsync();
         }
 
-        public async Task<bool> IsPhoneNumberExistsAsync(string phoneNumber, int? excludeId = null)
+        public async Task<bool> IsPhoneExistsAsync(string phoneNumber, int? excludeId = null)
         {
-            var query = _dbSet.Where(c => !c.IsDeleted && c.PhoneNumber == phoneNumber);
+            var query = _dbSet.Where(c => !c.IsDeleted && c.Phone == phoneNumber);
             
             if (excludeId.HasValue)
             {

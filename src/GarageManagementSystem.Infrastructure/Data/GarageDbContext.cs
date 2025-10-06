@@ -25,11 +25,11 @@ namespace GarageManagementSystem.Infrastructure.Data
             {
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
-                entity.Property(e => e.PhoneNumber).HasMaxLength(20);
+                entity.Property(e => e.Phone).HasMaxLength(20);
                 entity.Property(e => e.Email).HasMaxLength(200);
                 entity.Property(e => e.Address).HasMaxLength(500);
                 entity.Property(e => e.Gender).HasMaxLength(20);
-                entity.HasIndex(e => e.PhoneNumber).IsUnique();
+                entity.HasIndex(e => e.Phone).IsUnique();
                 entity.HasIndex(e => e.Email).IsUnique();
             });
 
@@ -111,7 +111,7 @@ namespace GarageManagementSystem.Infrastructure.Data
             {
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
-                entity.Property(e => e.PhoneNumber).HasMaxLength(20);
+                entity.Property(e => e.Phone).HasMaxLength(20);
                 entity.Property(e => e.Email).HasMaxLength(200);
                 entity.Property(e => e.Address).HasMaxLength(500);
                 entity.Property(e => e.Position).HasMaxLength(50);
@@ -181,7 +181,7 @@ namespace GarageManagementSystem.Infrastructure.Data
                 {
                     Id = 1,
                     Name = "Nguyễn Văn A",
-                    PhoneNumber = "0123456789",
+                    Phone = "0123456789",
                     Email = "nguyenvana@garage.com",
                     Position = "Thợ sửa chữa",
                     Department = "Kỹ thuật",
@@ -195,7 +195,7 @@ namespace GarageManagementSystem.Infrastructure.Data
                 {
                     Id = 2,
                     Name = "Trần Thị B",
-                    PhoneNumber = "0987654321",
+                    Phone = "0987654321",
                     Email = "tranthib@garage.com",
                     Position = "Thợ lốp",
                     Department = "Kỹ thuật",
