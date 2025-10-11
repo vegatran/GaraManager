@@ -93,5 +93,38 @@ namespace GarageManagementSystem.Infrastructure.Repositories
 
             return $"{prefix}{sequence:D4}";
         }
+
+        // Additional implementations for API
+        public async Task<IEnumerable<ServiceOrder>> GetAllWithDetailsAsync()
+        {
+            return await _dbSet
+                .Where(so => !so.IsDeleted)
+                .Include(so => so.Customer)
+                .Include(so => so.Vehicle)
+                .Include(so => so.ServiceOrderItems.Where(soi => !soi.IsDeleted))
+                .ThenInclude(soi => soi.Service)
+                .OrderByDescending(so => so.OrderDate)
+                .ToListAsync();
+        }
+
+        public async Task<ServiceOrder?> GetByIdWithDetailsAsync(int id)
+        {
+            return await GetServiceOrderWithDetailsAsync(id);
+        }
+
+        public async Task<IEnumerable<ServiceOrder>> GetByCustomerIdAsync(int customerId)
+        {
+            return await GetServiceOrdersByCustomerIdAsync(customerId);
+        }
+
+        public async Task<IEnumerable<ServiceOrder>> GetByVehicleIdAsync(int vehicleId)
+        {
+            return await GetServiceOrdersByVehicleIdAsync(vehicleId);
+        }
+
+        public async Task<IEnumerable<ServiceOrder>> GetByStatusAsync(string status)
+        {
+            return await GetServiceOrdersByStatusAsync(status);
+        }
     }
 }

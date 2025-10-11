@@ -17,6 +17,11 @@ namespace GarageManagementSystem.Core.Entities
         [StringLength(500)]
         public string? Address { get; set; }
 
+        // Foreign keys for Department and Position
+        public int? PositionId { get; set; }
+        public int? DepartmentId { get; set; }
+
+        // Legacy string fields (tạm thời giữ để không break existing data)
         [StringLength(50)]
         public string? Position { get; set; }
 
@@ -34,6 +39,13 @@ namespace GarageManagementSystem.Core.Entities
         public string? Skills { get; set; }
 
         // Navigation properties
+        public virtual Position? PositionNavigation { get; set; }
+        public virtual Department? DepartmentNavigation { get; set; }
         public virtual ICollection<ServiceOrder> AssignedServiceOrders { get; set; } = new List<ServiceOrder>();
+        public virtual ICollection<VehicleInspection> PerformedInspections { get; set; } = new List<VehicleInspection>();
+        public virtual ICollection<ServiceQuotation> PreparedQuotations { get; set; } = new List<ServiceQuotation>();
+        public virtual ICollection<PaymentTransaction> ReceivedPayments { get; set; } = new List<PaymentTransaction>();
+        public virtual ICollection<StockTransaction> ProcessedStockTransactions { get; set; } = new List<StockTransaction>();
+        public virtual ICollection<Appointment> AssignedAppointments { get; set; } = new List<Appointment>();
     }
 }

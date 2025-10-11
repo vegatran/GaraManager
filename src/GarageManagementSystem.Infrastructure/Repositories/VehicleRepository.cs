@@ -67,5 +67,37 @@ namespace GarageManagementSystem.Infrastructure.Repositories
 
             return await query.AnyAsync();
         }
+
+        // Additional implementations for API
+        public async Task<IEnumerable<Vehicle>> GetAllWithCustomerAsync()
+        {
+            return await _dbSet
+                .Where(v => !v.IsDeleted)
+                .Include(v => v.Customer)
+                .OrderByDescending(v => v.CreatedAt)
+                .ToListAsync();
+        }
+
+        public async Task<Vehicle?> GetByIdWithCustomerAsync(int id)
+        {
+            return await GetVehicleWithCustomerAsync(id);
+        }
+
+        public async Task<IEnumerable<Vehicle>> GetByCustomerIdAsync(int customerId)
+        {
+            return await GetVehiclesByCustomerIdAsync(customerId);
+        }
+
+        public async Task<IEnumerable<Vehicle>> SearchAsync(string searchTerm)
+        {
+            return await _dbSet
+                .Where(v => !v.IsDeleted &&
+                    (v.LicensePlate.Contains(searchTerm) ||
+                     v.Brand.Contains(searchTerm) ||
+                     v.Model.Contains(searchTerm) ||
+                     (v.VIN != null && v.VIN.Contains(searchTerm))))
+                .Include(v => v.Customer)
+                .ToListAsync();
+        }
     }
 }

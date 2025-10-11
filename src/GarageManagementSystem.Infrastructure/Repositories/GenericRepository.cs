@@ -19,7 +19,7 @@ namespace GarageManagementSystem.Infrastructure.Repositories
 
         public virtual async Task<T?> GetByIdAsync(int id)
         {
-            return await _dbSet.FindAsync(id);
+            return await _dbSet.FirstOrDefaultAsync(e => e.Id == id && !e.IsDeleted);
         }
 
         public virtual async Task<IEnumerable<T>> GetAllAsync()
@@ -39,31 +39,28 @@ namespace GarageManagementSystem.Infrastructure.Repositories
 
         public virtual async Task<T> AddAsync(T entity)
         {
-            entity.CreatedAt = DateTime.Now;
+            // AuditInterceptor sẽ tự động set CreatedAt và CreatedBy
             await _dbSet.AddAsync(entity);
             return entity;
         }
 
         public virtual async Task<IEnumerable<T>> AddRangeAsync(IEnumerable<T> entities)
         {
-            foreach (var entity in entities)
-            {
-                entity.CreatedAt = DateTime.Now;
-            }
+            // AuditInterceptor sẽ tự động set CreatedAt và CreatedBy cho từng entity
             await _dbSet.AddRangeAsync(entities);
             return entities;
         }
 
         public virtual async Task UpdateAsync(T entity)
         {
-            entity.UpdatedAt = DateTime.Now;
+            // AuditInterceptor sẽ tự động set UpdatedAt và UpdatedBy
             _dbSet.Update(entity);
         }
 
         public virtual async Task DeleteAsync(T entity)
         {
+            // AuditInterceptor sẽ tự động set DeletedAt, DeletedBy, UpdatedAt, UpdatedBy
             entity.IsDeleted = true;
-            entity.UpdatedAt = DateTime.Now;
             _dbSet.Update(entity);
         }
 
@@ -89,6 +86,40 @@ namespace GarageManagementSystem.Infrastructure.Repositories
         public virtual async Task<bool> ExistsAsync(Expression<Func<T, bool>> predicate)
         {
             return await _dbSet.Where(e => !e.IsDeleted).AnyAsync(predicate);
+        }
+
+        // Methods for managing soft deleted records (for admin use)
+        public virtual async Task<IEnumerable<T>> GetDeletedAsync()
+        {
+            return await _dbSet.Where(e => e.IsDeleted).ToListAsync();
+        }
+
+        public virtual async Task<T?> GetDeletedByIdAsync(int id)
+        {
+            return await _dbSet.FirstOrDefaultAsync(e => e.Id == id && e.IsDeleted);
+        }
+
+        public virtual async Task RestoreAsync(T entity)
+        {
+            entity.IsDeleted = false;
+            entity.DeletedAt = null;
+            entity.DeletedBy = null;
+            // AuditInterceptor sẽ tự động set UpdatedAt và UpdatedBy
+            _dbSet.Update(entity);
+        }
+
+        public virtual async Task RestoreByIdAsync(int id)
+        {
+            var entity = await GetDeletedByIdAsync(id);
+            if (entity != null)
+            {
+                await RestoreAsync(entity);
+            }
+        }
+
+        public virtual async Task<int> CountDeletedAsync()
+        {
+            return await _dbSet.Where(e => e.IsDeleted).CountAsync();
         }
     }
 }

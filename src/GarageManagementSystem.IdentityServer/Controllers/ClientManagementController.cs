@@ -1,14 +1,14 @@
-using IdentityServer4.EntityFramework.DbContexts;
+using Duende.IdentityServer.EntityFramework.DbContexts;
 using GarageManagementSystem.IdentityServer.Models;
 using GarageManagementSystem.IdentityServer.Data;
-using IdentityServer4.EntityFramework.Entities;
-using IdentityServer4.Models;
+using Duende.IdentityServer.EntityFramework.Entities;
+using Duende.IdentityServer.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using System.ComponentModel.DataAnnotations;
-using ClientEntity = IdentityServer4.EntityFramework.Entities.Client;
+using ClientEntity = Duende.IdentityServer.EntityFramework.Entities.Client;
 
 namespace GarageManagementSystem.IdentityServer.Controllers
 {
@@ -185,17 +185,20 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                         .Select(s => new ClientScope { Scope = s }).ToList() ?? new List<ClientScope>(),
                     RedirectUris = model.RedirectUris?.Where(ru => !string.IsNullOrWhiteSpace(ru))
                         .Select(ru => new ClientRedirectUri { RedirectUri = ru }).ToList() ?? new List<ClientRedirectUri>(),
-                    PostLogoutRedirectUris = model.PostLogoutRedirectUris?.Where(pru => !string.IsNullOrWhiteSpace(pru))
-                        .Select(pru => new ClientPostLogoutRedirectUri { PostLogoutRedirectUri = pru }).ToList() ?? new List<ClientPostLogoutRedirectUri>(),
+                    PostLogoutRedirectUris = model.PostLogoutRedirectUris?
+                        .SelectMany(pru => pru.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
+                        .Where(pru => !string.IsNullOrWhiteSpace(pru.Trim()))
+                        .Select(pru => new ClientPostLogoutRedirectUri { PostLogoutRedirectUri = pru.Trim() })
+                        .ToList() ?? new List<ClientPostLogoutRedirectUri>(),
                     AllowedCorsOrigins = model.AllowedCorsOrigins?.Where(co => !string.IsNullOrWhiteSpace(co))
                         .Select(co => new ClientCorsOrigin { Origin = co }).ToList() ?? new List<ClientCorsOrigin>(),
-                    Claims = new List<IdentityServer4.EntityFramework.Entities.ClientClaim>()
+                    Claims = new List<Duende.IdentityServer.EntityFramework.Entities.ClientClaim>()
                     {
                         // Manual client claims
                     }.Concat(model.ClientClaims?.Where(cc => !string.IsNullOrWhiteSpace(cc.Type) && !string.IsNullOrWhiteSpace(cc.Value))
-                            .Select(cc => new IdentityServer4.EntityFramework.Entities.ClientClaim { Type = cc.Type, Value = cc.Value }) ?? new List<IdentityServer4.EntityFramework.Entities.ClientClaim>())
+                            .Select(cc => new Duende.IdentityServer.EntityFramework.Entities.ClientClaim { Type = cc.Type, Value = cc.Value }) ?? new List<Duende.IdentityServer.EntityFramework.Entities.ClientClaim>())
                      .Concat(model.SelectedClaims?.Where(sc => !string.IsNullOrWhiteSpace(sc))
-                            .Select(sc => new IdentityServer4.EntityFramework.Entities.ClientClaim { Type = sc, Value = "true" }) ?? new List<IdentityServer4.EntityFramework.Entities.ClientClaim>())
+                            .Select(sc => new Duende.IdentityServer.EntityFramework.Entities.ClientClaim { Type = sc, Value = "true" }) ?? new List<Duende.IdentityServer.EntityFramework.Entities.ClientClaim>())
                      .ToList()
                 };
 
@@ -406,14 +409,14 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                 var existingRedirectUris = _context.Set<ClientRedirectUri>().Where(cru => cru.ClientId == client.Id).ToList();
                 var existingPostLogoutUris = _context.Set<ClientPostLogoutRedirectUri>().Where(cpru => cpru.ClientId == client.Id).ToList();
                 var existingCorsOrigins = _context.Set<ClientCorsOrigin>().Where(cco => cco.ClientId == client.Id).ToList();
-                var existingClaims = _context.Set<IdentityServer4.EntityFramework.Entities.ClientClaim>().Where(cc => cc.ClientId == client.Id).ToList();
+                var existingClaims = _context.Set<Duende.IdentityServer.EntityFramework.Entities.ClientClaim>().Where(cc => cc.ClientId == client.Id).ToList();
                 
                 _context.Set<ClientGrantType>().RemoveRange(existingGrantTypes);
                 _context.Set<ClientScope>().RemoveRange(existingScopes);
                 _context.Set<ClientRedirectUri>().RemoveRange(existingRedirectUris);
                 _context.Set<ClientPostLogoutRedirectUri>().RemoveRange(existingPostLogoutUris);
                 _context.Set<ClientCorsOrigin>().RemoveRange(existingCorsOrigins);
-                _context.Set<IdentityServer4.EntityFramework.Entities.ClientClaim>().RemoveRange(existingClaims);
+                _context.Set<Duende.IdentityServer.EntityFramework.Entities.ClientClaim>().RemoveRange(existingClaims);
 
                 // Use backward compatibility properties if new ones are empty
                 client.AllowedGrantTypes = (model.AllowedGrantTypes?.Any() == true ? model.AllowedGrantTypes : model.GrantTypes)
@@ -424,28 +427,26 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                     .Where(s => !string.IsNullOrWhiteSpace(s))
                     .Select(s => new ClientScope { Scope = s })
                     .ToList();
-                client.RedirectUris = model.RedirectUris
-                    .Where(ru => !string.IsNullOrWhiteSpace(ru))
+                // Split string từ textarea thành array
+                var redirectUris = model.RedirectUris?
+                    .SelectMany(ru => ru.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
+                    .Where(ru => !string.IsNullOrWhiteSpace(ru.Trim()))
+                    .Select(ru => ru.Trim())
+                    .ToList() ?? new List<string>();
+                
+                client.RedirectUris = redirectUris
                     .Select(ru => new ClientRedirectUri { RedirectUri = ru })
                     .ToList();
-                client.PostLogoutRedirectUris = model.PostLogoutRedirectUris
-                    .Where(pru => !string.IsNullOrWhiteSpace(pru))
+                // Split string từ textarea thành array
+                var postLogoutUris = model.PostLogoutRedirectUris?
+                    .SelectMany(pru => pru.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
+                    .Where(pru => !string.IsNullOrWhiteSpace(pru.Trim()))
+                    .Select(pru => pru.Trim())
+                    .ToList() ?? new List<string>();
+                
+                client.PostLogoutRedirectUris = postLogoutUris
                     .Select(pru => new ClientPostLogoutRedirectUri { PostLogoutRedirectUri = pru })
                     .ToList();
-                client.AllowedCorsOrigins = model.AllowedCorsOrigins
-                    .Where(co => !string.IsNullOrWhiteSpace(co))
-                    .Select(co => new ClientCorsOrigin { Origin = co })
-                    .ToList();
-                
-                // Update Client Claims (merge manual and selected claims)
-                client.Claims = new List<IdentityServer4.EntityFramework.Entities.ClientClaim>()
-                {
-                    // Manual client claims
-                }.Concat(model.ClientClaims?.Where(cc => !string.IsNullOrWhiteSpace(cc.Type) && !string.IsNullOrWhiteSpace(cc.Value))
-                        .Select(cc => new IdentityServer4.EntityFramework.Entities.ClientClaim { Type = cc.Type, Value = cc.Value }) ?? new List<IdentityServer4.EntityFramework.Entities.ClientClaim>())
-                 .Concat(model.SelectedClaims?.Where(sc => !string.IsNullOrWhiteSpace(sc))
-                        .Select(sc => new IdentityServer4.EntityFramework.Entities.ClientClaim { Type = sc, Value = "true" }) ?? new List<IdentityServer4.EntityFramework.Entities.ClientClaim>())
-                 .ToList();
 
                 await _context.SaveChangesAsync();
 

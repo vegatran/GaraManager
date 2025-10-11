@@ -75,15 +75,28 @@ namespace GarageManagementSystem.IdentityServer.Services
 
             foreach (var dbClaim in dbClaims)
             {
-                // ✅ KHÔNG ĐƯỢC OVERRIDE CÁC CLAIMS MẶC ĐỊNH CỦA IDENTITYSERVER
-                if (IsReservedClaim(dbClaim.Name))
+                // ✅ SELECTIVE OVERRIDE: Cho phép override claims mặc định nếu có trong database
+                // Claims mặc định của IdentityServer sẽ được override bởi custom claims từ database
+                
+                if (IsCriticalClaim(dbClaim.Name))
                 {
-                    Console.WriteLine($"⚠️ Skipping reserved claim: {dbClaim.Name}");
+                    // ⚠️ CHỈ BLOACK CÁC CLAIMS CRITICAL (sub, iss, aud, exp, iat, nbf, jti)
+                    Console.WriteLine($"🚫 BLOCKED critical claim: {dbClaim.Name}");
                     continue;
                 }
 
                 var value = await GetUserClaimValue(dbClaim, userId);
                 claims.Add(new System.Security.Claims.Claim(dbClaim.Name, value));
+                
+                // Log để biết claim nào sẽ override
+                if (IsDefaultIdentityServerClaim(dbClaim.Name))
+                {
+                    Console.WriteLine($"🔄 WILL OVERRIDE default claim: {dbClaim.Name} = {value}");
+                }
+                else
+                {
+                    Console.WriteLine($"➕ WILL ADD custom claim: {dbClaim.Name} = {value}");
+                }
             }
 
             // Cache 15 phút cho user-specific claims
@@ -184,13 +197,25 @@ namespace GarageManagementSystem.IdentityServer.Services
         }
 
         /// <summary>
-        /// Kiểm tra xem claim có phải là reserved claim của IdentityServer không
+        /// Claims CRITICAL - KHÔNG BAO GIỜ ĐƯỢC OVERRIDE (JWT security)
         /// </summary>
-        private bool IsReservedClaim(string claimName)
+        private bool IsCriticalClaim(string claimName)
         {
-            var reservedClaims = new[]
+            var criticalClaims = new[]
             {
-                "sub", "iss", "aud", "exp", "iat", "nbf", "jti", "at_hash", "c_hash",
+                "sub", "iss", "aud", "exp", "iat", "nbf", "jti", "at_hash", "c_hash"
+            };
+            
+            return criticalClaims.Contains(claimName, StringComparer.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
+        /// Claims mặc định của IdentityServer - CÓ THỂ OVERRIDE
+        /// </summary>
+        private bool IsDefaultIdentityServerClaim(string claimName)
+        {
+            var defaultClaims = new[]
+            {
                 "name", "given_name", "family_name", "middle_name", "nickname", 
                 "preferred_username", "profile", "picture", "website", "gender", 
                 "birthdate", "zoneinfo", "locale", "updated_at",
@@ -198,7 +223,16 @@ namespace GarageManagementSystem.IdentityServer.Services
                 "address", "role", "scope"
             };
             
-            return reservedClaims.Contains(claimName, StringComparer.OrdinalIgnoreCase);
+            return defaultClaims.Contains(claimName, StringComparer.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
+        /// DEPRECATED: Thay bằng IsCriticalClaim() và IsDefaultIdentityServerClaim()
+        /// </summary>
+        [Obsolete("Use IsCriticalClaim() and IsDefaultIdentityServerClaim() instead")]
+        private bool IsReservedClaim(string claimName)
+        {
+            return IsCriticalClaim(claimName) || IsDefaultIdentityServerClaim(claimName);
         }
 
         /// <summary>

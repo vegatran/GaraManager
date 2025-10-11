@@ -1,10 +1,12 @@
-using System.Diagnostics;
+using GarageManagementSystem.IdentityServer.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using GarageManagementSystem.IdentityServer.Models;
+using System.Diagnostics;
 
 namespace GarageManagementSystem.IdentityServer.Controllers;
 
+[Authorize]
 public class HomeController : Controller
 {
     private readonly ILogger<HomeController> _logger;

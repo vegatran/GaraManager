@@ -2,9 +2,8 @@ using System.ComponentModel.DataAnnotations;
 
 namespace GarageManagementSystem.Shared.DTOs
 {
-    public class VehicleDto
+    public class VehicleDto : BaseDto
     {
-        public int Id { get; set; }
         public string LicensePlate { get; set; } = string.Empty;
         public string Brand { get; set; } = string.Empty;
         public string Model { get; set; } = string.Empty;
@@ -13,9 +12,27 @@ namespace GarageManagementSystem.Shared.DTOs
         public string? VIN { get; set; }
         public string? EngineNumber { get; set; }
         public int CustomerId { get; set; }
+
+        // Vehicle Type Classification
+        public string VehicleType { get; set; } = "Personal";
+
+        // Insurance Information (nullable)
+        public string? InsuranceCompany { get; set; }
+        public string? PolicyNumber { get; set; }
+        public string? CoverageType { get; set; }
+        public string? ClaimNumber { get; set; }
+        public string? AdjusterName { get; set; }
+        public string? AdjusterPhone { get; set; }
+
+        // Company Information (nullable)
+        public string? CompanyName { get; set; }
+        public string? TaxCode { get; set; }
+        public string? ContactPerson { get; set; }
+        public string? ContactPhone { get; set; }
+        public string? Department { get; set; }
+        public string? CostCenter { get; set; }
+
         public CustomerDto? Customer { get; set; }
-        public DateTime CreatedAt { get; set; }
-        public DateTime? UpdatedAt { get; set; }
     }
 
     public class CreateVehicleDto
@@ -46,6 +63,25 @@ namespace GarageManagementSystem.Shared.DTOs
 
         [Required(ErrorMessage = "Khách hàng là bắt buộc")]
         public int CustomerId { get; set; }
+
+        // Vehicle Type Classification
+        public string VehicleType { get; set; } = "Personal";
+
+        // Insurance Information (nullable)
+        public string? InsuranceCompany { get; set; }
+        public string? PolicyNumber { get; set; }
+        public string? CoverageType { get; set; }
+        public string? ClaimNumber { get; set; }
+        public string? AdjusterName { get; set; }
+        public string? AdjusterPhone { get; set; }
+
+        // Company Information (nullable)
+        public string? CompanyName { get; set; }
+        public string? TaxCode { get; set; }
+        public string? ContactPerson { get; set; }
+        public string? ContactPhone { get; set; }
+        public string? Department { get; set; }
+        public string? CostCenter { get; set; }
     }
 
     public class UpdateVehicleDto : CreateVehicleDto

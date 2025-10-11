@@ -10,5 +10,11 @@ namespace GarageManagementSystem.Core.Interfaces
         Task<Vehicle?> GetByLicensePlateAsync(string licensePlate);
         Task<bool> IsLicensePlateExistsAsync(string licensePlate, int? excludeId = null);
         Task<bool> IsVINExistsAsync(string vin, int? excludeId = null);
+        
+        // Additional methods for API
+        Task<IEnumerable<Vehicle>> GetAllWithCustomerAsync();
+        Task<Vehicle?> GetByIdWithCustomerAsync(int id);
+        Task<IEnumerable<Vehicle>> GetByCustomerIdAsync(int customerId);
+        Task<IEnumerable<Vehicle>> SearchAsync(string searchTerm);
     }
 }

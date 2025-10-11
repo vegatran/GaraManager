@@ -71,10 +71,154 @@ namespace GarageManagementSystem.Web.Configuration
         public static class Employees
         {
             public const string GetAll = "employees";
+            public const string GetActive = "employees/active";
             public const string GetById = "employees/{0}"; // employees/{id}
+            public const string GetByDepartment = "employees/department/{0}"; // employees/department/{dept}
             public const string Create = "employees";
             public const string Update = "employees/{0}"; // employees/{id}
             public const string Delete = "employees/{0}"; // employees/{id}
+        }
+
+        /// <summary>
+        /// Department management endpoints
+        /// </summary>
+        public static class Departments
+        {
+            public const string GetAll = "departments";
+            public const string GetById = "departments/{0}"; // departments/{id}
+        }
+
+        /// <summary>
+        /// Position management endpoints
+        /// </summary>
+        public static class Positions
+        {
+            public const string GetAll = "positions";
+            public const string GetById = "positions/{0}"; // positions/{id}
+        }
+
+        /// <summary>
+        /// Vehicle Inspection endpoints
+        /// </summary>
+        public static class VehicleInspections
+        {
+            public const string GetAll = "vehicleinspections";
+            public const string GetById = "vehicleinspections/{0}";
+            public const string GetByVehicle = "vehicleinspections/vehicle/{0}";
+            public const string GetByCustomer = "vehicleinspections/customer/{0}";
+            public const string GetByStatus = "vehicleinspections/status/{0}";
+            public const string GetLatestByVehicle = "vehicleinspections/latest/vehicle/{0}";
+            public const string Create = "vehicleinspections";
+            public const string Update = "vehicleinspections/{0}";
+            public const string Delete = "vehicleinspections/{0}";
+            public const string Complete = "vehicleinspections/{0}/complete";
+        }
+
+        /// <summary>
+        /// Service Quotation endpoints
+        /// </summary>
+        public static class ServiceQuotations
+        {
+            public const string GetAll = "servicequotations";
+            public const string GetById = "servicequotations/{0}";
+            public const string GetByVehicle = "servicequotations/vehicle/{0}";
+            public const string GetByCustomer = "servicequotations/customer/{0}";
+            public const string GetByInspection = "servicequotations/inspection/{0}";
+            public const string GetByStatus = "servicequotations/status/{0}";
+            public const string Create = "servicequotations";
+            public const string Update = "servicequotations/{0}";
+            public const string Delete = "servicequotations/{0}";
+            public const string Approve = "servicequotations/{0}/approve";
+            public const string Reject = "servicequotations/{0}/reject";
+            public const string Send = "servicequotations/{0}/send";
+        }
+
+        /// <summary>
+        /// Parts Management endpoints
+        /// </summary>
+        public static class Parts
+        {
+            public const string GetAll = "parts";
+            public const string GetById = "parts/{0}";
+            public const string GetLowStock = "parts/low-stock";
+            public const string GetByCategory = "parts/category/{0}";
+            public const string Search = "parts/search";
+            public const string Create = "parts";
+            public const string Update = "parts/{0}";
+            public const string Delete = "parts/{0}";
+        }
+
+        /// <summary>
+        /// Suppliers endpoints
+        /// </summary>
+        public static class Suppliers
+        {
+            public const string GetAll = "suppliers";
+            public const string GetActive = "suppliers/active";
+            public const string GetById = "suppliers/{0}";
+            public const string Create = "suppliers";
+            public const string Update = "suppliers/{0}";
+            public const string Delete = "suppliers/{0}";
+        }
+
+        /// <summary>
+        /// Payment Transactions endpoints
+        /// </summary>
+        public static class PaymentTransactions
+        {
+            public const string GetAll = "paymenttransactions";
+            public const string GetById = "paymenttransactions/{0}";
+            public const string GetByServiceOrder = "paymenttransactions/serviceorder/{0}";
+            public const string Create = "paymenttransactions";
+            public const string Update = "paymenttransactions/{0}";
+            public const string Delete = "paymenttransactions/{0}";
+        }
+
+        /// <summary>
+        /// Stock Transactions endpoints
+        /// </summary>
+        public static class StockTransactions
+        {
+            public const string GetAll = "stocktransactions";
+            public const string GetByPart = "stocktransactions/part/{0}";
+            public const string GetById = "stocktransactions/{0}";
+            public const string Create = "stocktransactions";
+            public const string Update = "stocktransactions/{0}";
+            public const string Delete = "stocktransactions/{0}";
+            public const string ImportOpeningBalance = "stocktransactions/opening-balance";
+            public const string ValidateOpeningBalance = "stocktransactions/opening-balance/validate";
+            public const string ImportExcel = "stocktransactions/import-excel";
+            public const string ValidateExcel = "stocktransactions/validate-excel";
+            public const string DownloadTemplate = "stocktransactions/download-template";
+        }
+
+        /// <summary>
+        /// Insurance Invoices endpoints
+        /// </summary>
+        public static class InsuranceInvoices
+        {
+            public const string GetAll = "insuranceinvoices";
+            public const string GetById = "insuranceinvoices/{0}";
+            public const string Create = "insuranceinvoices";
+            public const string Update = "insuranceinvoices/{0}";
+            public const string Delete = "insuranceinvoices/{0}";
+            public const string ExportPdf = "insuranceinvoices/{0}/export/pdf";
+            public const string ExportExcel = "insuranceinvoices/{0}/export/excel";
+        }
+
+        /// <summary>
+        /// Appointments endpoints
+        /// </summary>
+        public static class Appointments
+        {
+            public const string GetAll = "appointments";
+            public const string GetToday = "appointments/today";
+            public const string GetUpcoming = "appointments/upcoming";
+            public const string GetById = "appointments/{0}";
+            public const string GetTypes = "appointments/types";
+            public const string Create = "appointments";
+            public const string Update = "appointments/{0}";
+            public const string Delete = "appointments/{0}";
         }
 
         /// <summary>
@@ -86,6 +230,16 @@ namespace GarageManagementSystem.Web.Configuration
             public const string ServiceReport = "reports/services";
             public const string CustomerReport = "reports/customers";
             public const string RevenueReport = "reports/revenue";
+        }
+
+        /// <summary>
+        /// Setup endpoints
+        /// </summary>
+        public static class Setup
+        {
+            public const string GetCounts = "setup/counts";
+            public const string CreateDemoData = "setup/create/{0}"; // setup/create/{module}
+            public const string ClearAllData = "setup/clear-all";
         }
 
         /// <summary>

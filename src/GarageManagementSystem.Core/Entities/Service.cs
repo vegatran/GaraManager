@@ -24,5 +24,7 @@ namespace GarageManagementSystem.Core.Entities
 
         // Navigation properties
         public virtual ICollection<ServiceOrderItem> ServiceOrderItems { get; set; } = new List<ServiceOrderItem>();
+        public virtual ICollection<InspectionIssue> RelatedInspectionIssues { get; set; } = new List<InspectionIssue>();
+        public virtual ICollection<QuotationItem> QuotationItems { get; set; } = new List<QuotationItem>();
     }
 }

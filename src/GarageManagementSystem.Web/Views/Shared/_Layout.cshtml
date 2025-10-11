@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>@ViewData["Title"] - Garage Management System</title>
+    <title>@ViewData["Title"] - Hệ Thống Quản Lý Gara</title>
 
     <!-- Font Awesome -->
     <link rel="stylesheet" href="~/lib/font-awesome/css/all.min.css">
@@ -42,17 +42,17 @@
                         @if (User.Identity.IsAuthenticated)
                         {
                             <a href="@Url.Action("Profile", "Home")" class="dropdown-item">
-                                <i class="fas fa-user mr-2"></i> Profile
+                                <i class="fas fa-user mr-2"></i> Hồ Sơ
                             </a>
                             <div class="dropdown-divider"></div>
                             <a href="@Url.Action("Logout", "Home")" class="dropdown-item">
-                                <i class="fas fa-sign-out-alt mr-2"></i> Logout
+                                <i class="fas fa-sign-out-alt mr-2"></i> Đăng Xuất
                             </a>
                         }
                         else
                         {
                             <a href="@Url.Action("Login", "Account")" class="dropdown-item">
-                                <i class="fas fa-sign-in-alt mr-2"></i> Login
+                                <i class="fas fa-sign-in-alt mr-2"></i> Đăng Nhập
                             </a>
                         }
                     </div>
@@ -64,8 +64,8 @@
         <aside class="main-sidebar sidebar-dark-primary elevation-4">
             <!-- Brand Logo -->
             <a href="@Url.Action("Index", "Home")" class="brand-link">
-                <img src="~/lib/adminlte/img/AdminLTELogo.png" alt="Garage Management" class="brand-image img-circle elevation-3" style="opacity: .8">
-                <span class="brand-text font-weight-light">Garage Management</span>
+                <img src="~/lib/adminlte/img/AdminLTELogo.png" alt="Quản Lý Gara" class="brand-image img-circle elevation-3" style="opacity: .8">
+                <span class="brand-text font-weight-light">Quản Lý Gara</span>
             </a>
 
             <!-- Sidebar -->
@@ -83,7 +83,7 @@
                             }
                             else
                             {
-                                <text>Guest User</text>
+                                <text>Khách</text>
                             }
                         </a>
                     </div>
@@ -92,52 +92,143 @@
                 <!-- Sidebar Menu -->
                 <nav class="mt-2">
                     <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+                        
                         <!-- Dashboard -->
                         <li class="nav-item">
                             <a href="@Url.Action("Index", "Home")" class="nav-link">
-                                <i class="nav-icon fas fa-tachometer-alt"></i>
-                                <p>Dashboard</p>
+                                <i class="nav-icon fas fa-tachometer-alt text-info"></i>
+                                <p>Tổng Quan</p>
                             </a>
                         </li>
 
-                        <!-- Customer Management -->
+                        <!-- OPERATIONS -->
+                        <li class="nav-header">VẬN HÀNH</li>
+
+                        <!-- Appointments -->
                         <li class="nav-item">
-                            <a href="@Url.Action("Index", "CustomerManagement")" class="nav-link">
-                                <i class="nav-icon fas fa-users"></i>
-                                <p>Customer Management</p>
+                            <a href="@Url.Action("Index", "AppointmentManagement")" class="nav-link">
+                                <i class="nav-icon far fa-calendar-check text-primary"></i>
+                                <p>Lịch Hẹn</p>
                             </a>
                         </li>
 
-                        <!-- Vehicle Management -->
+                        <!-- Vehicle Inspections -->
                         <li class="nav-item">
-                            <a href="@Url.Action("Index", "VehicleManagement")" class="nav-link">
-                                <i class="nav-icon fas fa-car"></i>
-                                <p>Vehicle Management</p>
+                            <a href="@Url.Action("Index", "InspectionManagement")" class="nav-link">
+                                <i class="nav-icon fas fa-clipboard-check text-warning"></i>
+                                <p>Kiểm Tra Xe</p>
                             </a>
                         </li>
 
-                        <!-- Service Management -->
+                        <!-- Service Quotations -->
                         <li class="nav-item">
-                            <a href="@Url.Action("Index", "ServiceManagement")" class="nav-link">
-                                <i class="nav-icon fas fa-tools"></i>
-                                <p>Service Management</p>
+                            <a href="@Url.Action("Index", "QuotationManagement")" class="nav-link">
+                                <i class="nav-icon fas fa-file-invoice-dollar text-success"></i>
+                                <p>Báo Giá</p>
                             </a>
                         </li>
 
-                        <!-- Order Management -->
+                        <!-- Service Orders -->
                         <li class="nav-item">
                             <a href="@Url.Action("Index", "OrderManagement")" class="nav-link">
-                                <i class="nav-icon fas fa-clipboard-list"></i>
-                                <p>Order Management</p>
+                                <i class="nav-icon fas fa-clipboard-list text-primary"></i>
+                                <p>Phiếu Sửa Chữa</p>
                             </a>
                         </li>
 
-                        <!-- Reports -->
+                        <!-- BUSINESS -->
+                        <li class="nav-header">KINH DOANH</li>
+
+                        <!-- Customers -->
+                        <li class="nav-item">
+                            <a href="@Url.Action("Index", "CustomerManagement")" class="nav-link">
+                                <i class="nav-icon fas fa-users text-info"></i>
+                                <p>Khách Hàng</p>
+                            </a>
+                        </li>
+
+                        <!-- Vehicles -->
+                        <li class="nav-item">
+                            <a href="@Url.Action("Index", "VehicleManagement")" class="nav-link">
+                                <i class="nav-icon fas fa-car text-secondary"></i>
+                                <p>Xe</p>
+                            </a>
+                        </li>
+
+                        <!-- Employees -->
+                        <li class="nav-item">
+                            <a href="@Url.Action("Index", "EmployeeManagement")" class="nav-link">
+                                <i class="nav-icon fas fa-user-tie text-primary"></i>
+                                <p>Nhân Viên</p>
+                            </a>
+                        </li>
+
+                        <!-- INVENTORY -->
+                        <li class="nav-header">KHO</li>
+
+                        <!-- Parts Management -->
+                        <li class="nav-item">
+                            <a href="@Url.Action("Index", "PartsManagement")" class="nav-link">
+                                <i class="nav-icon fas fa-boxes text-warning"></i>
+                                <p>Phụ Tùng</p>
+                            </a>
+                        </li>
+
+                        <!-- Suppliers -->
+                        <li class="nav-item">
+                            <a href="@Url.Action("Index", "SupplierManagement")" class="nav-link">
+                                <i class="nav-icon fas fa-truck text-info"></i>
+                                <p>Nhà Cung Cấp</p>
+                            </a>
+                        </li>
+
+                        <!-- Stock Transactions -->
+                        <li class="nav-item">
+                            <a href="@Url.Action("Index", "StockManagement")" class="nav-link">
+                                <i class="nav-icon fas fa-exchange-alt text-secondary"></i>
+                                <p>Nhập Xuất Kho</p>
+                            </a>
+                        </li>
+
+                        <!-- FINANCE -->
+                        <li class="nav-header">TÀI CHÍNH</li>
+
+                        <!-- Insurance Invoices -->
+                        <li class="nav-item">
+                            <a href="@Url.Action("Index", "InsuranceInvoice")" class="nav-link">
+                                <i class="nav-icon fas fa-file-invoice text-info"></i>
+                                <p>Hóa Đơn Bảo Hiểm</p>
+                            </a>
+                        </li>
+
+                        <!-- Payments -->
+                        <li class="nav-item">
+                            <a href="@Url.Action("Index", "PaymentManagement")" class="nav-link">
+                                <i class="nav-icon fas fa-money-bill-wave text-success"></i>
+                                <p>Thanh Toán</p>
+                            </a>
+                        </li>
+
+                        <!-- MASTER DATA -->
+                        <li class="nav-header">DANH MỤC</li>
+
+                        <!-- Services -->
+                        <li class="nav-item">
+                            <a href="@Url.Action("Index", "ServiceManagement")" class="nav-link">
+                                <i class="nav-icon fas fa-tools text-danger"></i>
+                                <p>Dịch Vụ</p>
+                            </a>
+                        </li>
+
+                        <!-- REPORTS -->
+                        <li class="nav-header">BÁO CÁO</li>
+
+                        <!-- Reports Menu -->
                         <li class="nav-item">
                             <a href="#" class="nav-link">
-                                <i class="nav-icon fas fa-chart-bar"></i>
+                                <i class="nav-icon fas fa-chart-bar text-success"></i>
                                 <p>
-                                    Reports
+                                    Báo Cáo
                                     <i class="right fas fa-angle-left"></i>
                                 </p>
                             </a>
@@ -145,24 +236,47 @@
                                 <li class="nav-item">
                                     <a href="#" class="nav-link">
                                         <i class="far fa-circle nav-icon"></i>
-                                        <p>Sales Report</p>
+                                        <p>Báo Cáo Doanh Thu</p>
                                     </a>
                                 </li>
                                 <li class="nav-item">
                                     <a href="#" class="nav-link">
                                         <i class="far fa-circle nav-icon"></i>
-                                        <p>Service Report</p>
+                                        <p>Báo Cáo Dịch Vụ</p>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a href="#" class="nav-link">
+                                        <i class="far fa-circle nav-icon"></i>
+                                        <p>Báo Cáo Tồn Kho</p>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a href="#" class="nav-link">
+                                        <i class="far fa-circle nav-icon"></i>
+                                        <p>Báo Cáo Khách Hàng</p>
                                     </a>
                                 </li>
                             </ul>
                         </li>
 
+                        <!-- SYSTEM -->
+                        <li class="nav-header">HỆ THỐNG</li>
+
+                        <!-- Setup -->
+                        <li class="nav-item">
+                            <a href="@Url.Action("Index", "Setup")" class="nav-link">
+                                <i class="nav-icon fas fa-database text-warning"></i>
+                                <p>Setup Dữ Liệu</p>
+                            </a>
+                        </li>
+
                         <!-- Settings -->
                         <li class="nav-item">
                             <a href="#" class="nav-link">
-                                <i class="nav-icon fas fa-cog"></i>
+                                <i class="nav-icon fas fa-cog text-secondary"></i>
                                 <p>
-                                    Settings
+                                    Cài Đặt
                                     <i class="right fas fa-angle-left"></i>
                                 </p>
                             </a>
@@ -170,13 +284,13 @@
                                 <li class="nav-item">
                                     <a href="@Url.Action("Profile", "Home")" class="nav-link">
                                         <i class="far fa-circle nav-icon"></i>
-                                        <p>Profile</p>
+                                        <p>Hồ Sơ</p>
                                     </a>
                                 </li>
                                 <li class="nav-item">
                                     <a href="@Url.Action("TestApi", "Home")" class="nav-link">
                                         <i class="far fa-circle nav-icon"></i>
-                                        <p>Test API</p>
+                                        <p>Kiểm Tra API</p>
                                     </a>
                                 </li>
                             </ul>
@@ -193,10 +307,10 @@
 
         <!-- Footer -->
         <footer class="main-footer">
-            <strong>Copyright &copy; 2024 <a href="#">Garage Management System</a>.</strong>
-            All rights reserved.
+            <strong>Bản Quyền &copy; 2024 <a href="#">Hệ Thống Quản Lý Gara</a>.</strong>
+            Đã đăng ký bản quyền.
             <div class="float-right d-none d-sm-inline-block">
-                <b>Version</b> 1.0.0
+                <b>Phiên Bản</b> 1.0.0
             </div>
         </footer>
     </div>
@@ -210,14 +324,22 @@
     <!-- DataTables -->
     <script src="~/lib/datatables/js/jquery.dataTables.min.js"></script>
     <script src="~/lib/datatables/js/dataTables.bootstrap4.min.js"></script>
+    <!-- DataTables Vietnamese Language -->
+    <script src="~/js/datatables-vietnamese.js" asp-append-version="true"></script>
     <!-- Select2 -->
     <script src="~/lib/select2/dist/js/select2.min.js"></script>
     <!-- SweetAlert2 -->
     <script src="~/lib/sweetalert2/sweetalert2.min.js"></script>
     <!-- Chart.js -->
     <script src="~/lib/chart.js/dist/chart.umd.min.js"></script>
-    <!-- Custom JS -->
+    <!-- Custom JS - Load utilities first -->
     <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="~/js/auth-handler.js" asp-append-version="true"></script>
+    <script src="~/js/ajax-utility.js" asp-append-version="true"></script>
+    <script src="~/js/datatables-utility.js" asp-append-version="true"></script>
+    <script src="~/js/modal-select2.js" asp-append-version="true"></script>
+    <script src="~/js/setup.js" asp-append-version="true"></script>
+    <script src="~/js/excel-import.js" asp-append-version="true"></script>
 
     @await RenderSectionAsync("Scripts", required: false)
 

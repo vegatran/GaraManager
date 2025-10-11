@@ -1,15 +1,15 @@
 using GarageManagementSystem.IdentityServer.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using IdentityServer4.EntityFramework.DbContexts;
+using Duende.IdentityServer.EntityFramework.DbContexts;
 using GarageManagementSystem.IdentityServer.Data;
-using IdentityServer4.EntityFramework.Mappers;
-using IdentityServer4.Models;
+using Duende.IdentityServer.EntityFramework.Mappers;
+using Duende.IdentityServer.Models;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Cryptography;
 using System.Text;
-using IdentityServer4.EntityFramework.Entities;
-using IdentityServer4.Extensions;
+using Duende.IdentityServer.EntityFramework.Entities;
+using Duende.IdentityServer.Extensions;
 
 namespace GarageManagementSystem.IdentityServer.Controllers
 {
@@ -103,7 +103,7 @@ namespace GarageManagementSystem.IdentityServer.Controllers
             // Create Identity Resources directly as entities
             var identityResources = new[]
             {
-                new IdentityServer4.EntityFramework.Entities.IdentityResource
+                        new Duende.IdentityServer.EntityFramework.Entities.IdentityResource
                 {
                     Enabled = true,
                     Name = "openid",
@@ -115,7 +115,7 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                     Created = DateTime.UtcNow,
                     NonEditable = false
                 },
-                new IdentityServer4.EntityFramework.Entities.IdentityResource
+                        new Duende.IdentityServer.EntityFramework.Entities.IdentityResource
                 {
                     Enabled = true,
                     Name = "profile",
@@ -127,7 +127,7 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                     Created = DateTime.UtcNow,
                     NonEditable = false
                 },
-                new IdentityServer4.EntityFramework.Entities.IdentityResource
+                        new Duende.IdentityServer.EntityFramework.Entities.IdentityResource
                 {
                     Enabled = true,
                     Name = "email",
@@ -139,7 +139,7 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                     Created = DateTime.UtcNow,
                     NonEditable = false
                 },
-                new IdentityServer4.EntityFramework.Entities.IdentityResource
+                        new Duende.IdentityServer.EntityFramework.Entities.IdentityResource
                 {
                     Enabled = true,
                     Name = "roles",
@@ -164,7 +164,7 @@ namespace GarageManagementSystem.IdentityServer.Controllers
         {
             var apiScopes = new[]
             {
-                new IdentityServer4.EntityFramework.Entities.ApiScope
+                        new Duende.IdentityServer.EntityFramework.Entities.ApiScope
                 {
                     Enabled = true,
                     Name = "garage.api",
@@ -174,7 +174,7 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                     Emphasize = false,
                     ShowInDiscoveryDocument = true
                 },
-                new IdentityServer4.EntityFramework.Entities.ApiScope
+                        new Duende.IdentityServer.EntityFramework.Entities.ApiScope
                 {
                     Enabled = true,
                     Name = "garage.api.read",
@@ -184,7 +184,7 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                     Emphasize = false,
                     ShowInDiscoveryDocument = true
                 },
-                new IdentityServer4.EntityFramework.Entities.ApiScope
+                        new Duende.IdentityServer.EntityFramework.Entities.ApiScope
                 {
                     Enabled = true,
                     Name = "garage.api.write",
@@ -194,7 +194,7 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                     Emphasize = false,
                     ShowInDiscoveryDocument = true
                 },
-                new IdentityServer4.EntityFramework.Entities.ApiScope
+                        new Duende.IdentityServer.EntityFramework.Entities.ApiScope
                 {
                     Enabled = true,
                     Name = "admin.api",
@@ -217,7 +217,7 @@ namespace GarageManagementSystem.IdentityServer.Controllers
         {
                     var apiResources = new[]
                     {
-                        new IdentityServer4.EntityFramework.Entities.ApiResource
+                        new Duende.IdentityServer.EntityFramework.Entities.ApiResource
                 {
                     Enabled = true,
                     Name = "garage.api",
@@ -242,7 +242,7 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                         new ApiResourceClaim { Type = "role" }
                     }
                 },
-                        new IdentityServer4.EntityFramework.Entities.ApiResource
+                        new Duende.IdentityServer.EntityFramework.Entities.ApiResource
                 {
                     Enabled = true,
                     Name = "admin.api",
@@ -278,7 +278,7 @@ namespace GarageManagementSystem.IdentityServer.Controllers
         {
                     var clients = new[]
                     {
-                        new IdentityServer4.EntityFramework.Entities.Client
+                        new Duende.IdentityServer.EntityFramework.Entities.Client
                 {
                     Enabled = true,
                     ClientId = "garage.web",
@@ -289,7 +289,7 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                     RequireConsent = false,
                     AllowRememberConsent = true,
                     AlwaysIncludeUserClaimsInIdToken = true,
-                    RequirePkce = false,
+                    RequirePkce = false, // Tạm thời tắt PKCE để test
                     AllowPlainTextPkce = false,
                     RequireRequestObject = false,
                     AllowAccessTokensViaBrowser = false,
@@ -325,33 +325,29 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                     },
                     RedirectUris = new List<ClientRedirectUri>
                     {
-                        new ClientRedirectUri { RedirectUri = "https://localhost:7000/signin-oidc" },
-                        new ClientRedirectUri { RedirectUri = "http://localhost:7000/signin-oidc" }
+                        new ClientRedirectUri { RedirectUri = "https://localhost:44352/signin-oidc" },
+                        new ClientRedirectUri { RedirectUri = "http://localhost:50107/signin-oidc" }
                     },
                     PostLogoutRedirectUris = new List<ClientPostLogoutRedirectUri>
                     {
-                        new ClientPostLogoutRedirectUri { PostLogoutRedirectUri = "https://localhost:7000/signout-callback-oidc" },
-                        new ClientPostLogoutRedirectUri { PostLogoutRedirectUri = "http://localhost:7000/signout-callback-oidc" }
+                        new ClientPostLogoutRedirectUri { PostLogoutRedirectUri = "https://localhost:44352/signout-callback-oidc" },
+                        new ClientPostLogoutRedirectUri { PostLogoutRedirectUri = "http://localhost:50107/signout-callback-oidc" }
                     },
                     AllowedScopes = new List<ClientScope>
                     {
                         new ClientScope { Scope = "openid" },
-                        new ClientScope { Scope = "profile" },
-                        new ClientScope { Scope = "email" },
-                        new ClientScope { Scope = "roles" },
-                        new ClientScope { Scope = "garage.api" },
-                        new ClientScope { Scope = "garage.api.read" }
+                        new ClientScope { Scope = "profile" }
                     },
-                    Claims = new List<IdentityServer4.EntityFramework.Entities.ClientClaim>
-                    {
-                        // Custom client claims
-                        new IdentityServer4.EntityFramework.Entities.ClientClaim { Type = "clientname", Value = "abc" },
-                        new IdentityServer4.EntityFramework.Entities.ClientClaim { Type = "client_type", Value = "web_mvc" },
-                        new IdentityServer4.EntityFramework.Entities.ClientClaim { Type = "version", Value = "1.0.0" },
-                        new IdentityServer4.EntityFramework.Entities.ClientClaim { Type = "environment", Value = "development" }
-                    }
+                    // Claims = new List<Duende.IdentityServer.EntityFramework.Entities.ClientClaim>
+                    // {
+                    //     // Custom client claims
+                    //     new Duende.IdentityServer.EntityFramework.Entities.ClientClaim { Type = "clientname", Value = "abc" },
+                    //     new Duende.IdentityServer.EntityFramework.Entities.ClientClaim { Type = "client_type", Value = "web_mvc" },
+                    //     new Duende.IdentityServer.EntityFramework.Entities.ClientClaim { Type = "version", Value = "1.0.0" },
+                    //     new Duende.IdentityServer.EntityFramework.Entities.ClientClaim { Type = "environment", Value = "development" }
+                    // }
                 },
-                        new IdentityServer4.EntityFramework.Entities.Client
+                        new Duende.IdentityServer.EntityFramework.Entities.Client
                 {
                     Enabled = true,
                     ClientId = "garage.api.client",

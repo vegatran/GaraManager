@@ -1,0 +1,329 @@
+using GarageManagementSystem.Core.Interfaces;
+using GarageManagementSystem.Shared.DTOs;
+using GarageManagementSystem.Shared.Models;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+
+namespace GarageManagementSystem.API.Controllers
+{
+    [ApiController]
+    [Route("api/[controller]")]
+    [Authorize] // Bật lại authentication
+    public class CustomersController : ControllerBase
+    {
+        private readonly IUnitOfWork _unitOfWork;
+
+        public CustomersController(IUnitOfWork unitOfWork)
+        {
+            _unitOfWork = unitOfWork;
+        }
+
+        [HttpGet]
+        public async Task<ActionResult<ApiResponse<List<CustomerDto>>>> GetCustomers()
+        {
+            try
+            {
+                var customers = await _unitOfWork.Customers.GetAllAsync();
+                var customerDtos = customers.Select(MapToDto).ToList();
+                
+                return Ok(ApiResponse<List<CustomerDto>>.SuccessResult(customerDtos));
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Error retrieving customers: {ex}");
+                return StatusCode(500, ApiResponse<List<CustomerDto>>.ErrorResult("Error retrieving customers", ex, includeStackTrace: true));
+            }
+        }
+
+        [HttpGet("{id}")]
+        public async Task<ActionResult<ApiResponse<CustomerDto>>> GetCustomer(int id)
+        {
+            try
+            {
+                var customer = await _unitOfWork.Customers.GetByIdAsync(id);
+                if (customer == null)
+                {
+                    return NotFound(ApiResponse<CustomerDto>.ErrorResult("Customer not found"));
+                }
+
+                var customerDto = MapToDto(customer);
+                return Ok(ApiResponse<CustomerDto>.SuccessResult(customerDto));
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Error retrieving customer {id}: {ex}");
+                return StatusCode(500, ApiResponse<CustomerDto>.ErrorResult("Error retrieving customer", ex, includeStackTrace: true));
+            }
+        }
+
+        [HttpPost]
+        public async Task<ActionResult<ApiResponse<CustomerDto>>> CreateCustomer(CreateCustomerDto createDto)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    var errors = ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage)).ToList();
+                    return BadRequest(ApiResponse<CustomerDto>.ErrorResult("Invalid data", errors));
+                }
+
+                // ✅ Kiểm tra xem có khách hàng đã bị xóa với cùng email/phone không
+                var existingDeletedCustomer = await _unitOfWork.Customers.FindAsync(c => 
+                    c.IsDeleted && 
+                    ((!string.IsNullOrEmpty(createDto.Email) && c.Email == createDto.Email) || 
+                     (!string.IsNullOrEmpty(createDto.Phone) && c.Phone == createDto.Phone)));
+                
+                if (existingDeletedCustomer.Any())
+                {
+                    var deletedCustomer = existingDeletedCustomer.First();
+                    
+                    // Trả về thông báo có khách hàng cũ đã bị xóa
+                    return BadRequest(ApiResponse<CustomerDto>.ErrorResult(
+                        $"Đã tồn tại khách hàng '{deletedCustomer.Name}' (đã xóa) với email/phone này. " +
+                        $"Vui lòng sử dụng API /customers/reactivate/{deletedCustomer.Id} để khôi phục hoặc dùng thông tin liên lạc khác.",
+                        new List<string> 
+                        { 
+                            $"Deleted Customer ID: {deletedCustomer.Id}",
+                            $"Deleted Customer Name: {deletedCustomer.Name}",
+                            $"Deleted At: {deletedCustomer.DeletedAt}",
+                            $"Use POST /api/customers/reactivate/{deletedCustomer.Id} to restore"
+                        }));
+                }
+
+                var customer = new Core.Entities.Customer
+                {
+                    Name = createDto.Name,
+                    Email = createDto.Email,
+                    Phone = createDto.Phone,
+                    AlternativePhone = createDto.AlternativePhone,
+                    Address = createDto.Address,
+                    ContactPersonName = createDto.ContactPersonName
+                };
+
+                // Bắt đầu transaction để đảm bảo tính toàn vẹn dữ liệu
+                await _unitOfWork.BeginTransactionAsync();
+
+                try
+                {
+                    await _unitOfWork.Customers.AddAsync(customer);
+                    await _unitOfWork.SaveChangesAsync();
+
+                    // Commit transaction nếu thành công
+                    await _unitOfWork.CommitTransactionAsync();
+                }
+                catch
+                {
+                    // Rollback transaction nếu có lỗi
+                    await _unitOfWork.RollbackTransactionAsync();
+                    throw;
+                }
+
+                var customerDto = MapToDto(customer);
+                return CreatedAtAction(nameof(GetCustomer), new { id = customer.Id }, 
+                    ApiResponse<CustomerDto>.SuccessResult(customerDto, "Customer created successfully"));
+            }
+            catch (Exception ex)
+            {
+                // Log chi tiết lỗi ra console
+                Console.WriteLine($"❌ Error creating customer: {ex.Message}");
+                Console.WriteLine($"Stack Trace: {ex.StackTrace}");
+                if (ex.InnerException != null)
+                {
+                    Console.WriteLine($"Inner Exception: {ex.InnerException.Message}");
+                }
+                
+                return StatusCode(500, ApiResponse<CustomerDto>.ErrorResult("Error creating customer", ex, includeStackTrace: true));
+            }
+        }
+
+        /// <summary>
+        /// Khôi phục khách hàng đã bị xóa (soft delete)
+        /// </summary>
+        [HttpPost("reactivate/{id}")]
+        public async Task<ActionResult<ApiResponse<CustomerDto>>> ReactivateCustomer(int id, [FromBody] UpdateCustomerDto? updateDto = null)
+        {
+            try
+            {
+                // Lấy customer kể cả đã bị xóa
+                var customer = await _unitOfWork.Customers.GetDeletedByIdAsync(id);
+                
+                // Nếu không tìm thấy trong deleted, kiểm tra active
+                if (customer == null)
+                {
+                    customer = await _unitOfWork.Customers.GetByIdAsync(id);
+                }
+                
+                if (customer == null)
+                {
+                    return NotFound(ApiResponse<CustomerDto>.ErrorResult("Customer not found"));
+                }
+
+                if (!customer.IsDeleted)
+                {
+                    return BadRequest(ApiResponse<CustomerDto>.ErrorResult("Customer is already active"));
+                }
+
+                // Khôi phục khách hàng
+                customer.IsDeleted = false;
+                customer.DeletedAt = null;
+                customer.DeletedBy = null;
+
+                // Cập nhật thông tin mới nếu có
+                if (updateDto != null)
+                {
+                    customer.Name = updateDto.Name;
+                    customer.Email = updateDto.Email;
+                    customer.Phone = updateDto.Phone;
+                    customer.AlternativePhone = updateDto.AlternativePhone;
+                    customer.Address = updateDto.Address;
+                    customer.ContactPersonName = updateDto.ContactPersonName;
+                }
+
+                // Bắt đầu transaction để đảm bảo tính toàn vẹn dữ liệu
+                await _unitOfWork.BeginTransactionAsync();
+
+                try
+                {
+                    await _unitOfWork.Customers.UpdateAsync(customer);
+                    await _unitOfWork.SaveChangesAsync();
+
+                    // Commit transaction nếu thành công
+                    await _unitOfWork.CommitTransactionAsync();
+                }
+                catch
+                {
+                    // Rollback transaction nếu có lỗi
+                    await _unitOfWork.RollbackTransactionAsync();
+                    throw;
+                }
+
+                return Ok(ApiResponse<CustomerDto>.SuccessResult(MapToDto(customer), "Customer reactivated successfully"));
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Error reactivating customer {id}: {ex}");
+                return StatusCode(500, ApiResponse<CustomerDto>.ErrorResult("Error reactivating customer", ex, includeStackTrace: true));
+            }
+        }
+
+        [HttpPut("{id}")]
+        public async Task<ActionResult<ApiResponse<CustomerDto>>> UpdateCustomer(int id, UpdateCustomerDto updateDto)
+        {
+            try
+            {
+                if (id != updateDto.Id)
+                {
+                    return BadRequest(ApiResponse<CustomerDto>.ErrorResult("ID mismatch"));
+                }
+
+                if (!ModelState.IsValid)
+                {
+                    var errors = ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage)).ToList();
+                    return BadRequest(ApiResponse<CustomerDto>.ErrorResult("Invalid data", errors));
+                }
+
+                var customer = await _unitOfWork.Customers.GetByIdAsync(id);
+                if (customer == null)
+                {
+                    return NotFound(ApiResponse<CustomerDto>.ErrorResult("Customer not found"));
+                }
+
+                customer.Name = updateDto.Name;
+                customer.Email = updateDto.Email;
+                customer.Phone = updateDto.Phone;
+                customer.AlternativePhone = updateDto.AlternativePhone;
+                customer.Address = updateDto.Address;
+                customer.ContactPersonName = updateDto.ContactPersonName;
+
+                // Bắt đầu transaction để đảm bảo tính toàn vẹn dữ liệu
+                await _unitOfWork.BeginTransactionAsync();
+
+                try
+                {
+                    await _unitOfWork.Customers.UpdateAsync(customer);
+                    await _unitOfWork.SaveChangesAsync();
+
+                    // Commit transaction nếu thành công
+                    await _unitOfWork.CommitTransactionAsync();
+                }
+                catch
+                {
+                    // Rollback transaction nếu có lỗi
+                    await _unitOfWork.RollbackTransactionAsync();
+                    throw;
+                }
+
+                var customerDto = MapToDto(customer);
+                return Ok(ApiResponse<CustomerDto>.SuccessResult(customerDto, "Customer updated successfully"));
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Error updating customer {id}: {ex}");
+                return StatusCode(500, ApiResponse<CustomerDto>.ErrorResult("Error updating customer", ex, includeStackTrace: true));
+            }
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<ActionResult<ApiResponse>> DeleteCustomer(int id)
+        {
+            try
+            {
+                var customer = await _unitOfWork.Customers.GetByIdAsync(id);
+                if (customer == null)
+                {
+                    return NotFound(ApiResponse.ErrorResult("Customer not found"));
+                }
+
+                await _unitOfWork.Customers.DeleteAsync(customer);
+                await _unitOfWork.SaveChangesAsync();
+
+                return Ok(ApiResponse.SuccessResult("Customer deleted successfully"));
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Error deleting customer {id}: {ex}");
+                return StatusCode(500, ApiResponse.ErrorResult("Error deleting customer", ex, includeStackTrace: true));
+            }
+        }
+
+        [HttpGet("search")]
+        public async Task<ActionResult<ApiResponse<List<CustomerDto>>>> SearchCustomers([FromQuery] string searchTerm)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(searchTerm))
+                {
+                    return BadRequest(ApiResponse<List<CustomerDto>>.ErrorResult("Search term cannot be empty"));
+                }
+
+                var customers = await _unitOfWork.Customers.SearchAsync(searchTerm);
+                var customerDtos = customers.Select(MapToDto).ToList();
+
+                return Ok(ApiResponse<List<CustomerDto>>.SuccessResult(customerDtos));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<List<CustomerDto>>.ErrorResult("Error searching customers", ex.Message));
+            }
+        }
+
+        private static CustomerDto MapToDto(Core.Entities.Customer customer)
+        {
+            return new CustomerDto
+            {
+                Id = customer.Id,
+                Name = customer.Name,
+                Email = customer.Email,
+                Phone = customer.Phone,
+                AlternativePhone = customer.AlternativePhone,
+                Address = customer.Address,
+                ContactPersonName = customer.ContactPersonName,
+                CreatedAt = customer.CreatedAt,
+                CreatedBy = customer.CreatedBy,
+                UpdatedAt = customer.UpdatedAt,
+                UpdatedBy = customer.UpdatedBy
+            };
+        }
+    }
+}
+

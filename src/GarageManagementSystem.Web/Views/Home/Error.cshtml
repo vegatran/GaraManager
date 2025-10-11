@@ -1,13 +1,13 @@
 @{
-    ViewData["Title"] = "Error";
+    ViewData["Title"] = "Lỗi";
 }
 
-<h1 class="text-danger">Error.</h1>
-<h2 class="text-danger">An error occurred while processing your request.</h2>
+<h1 class="text-danger">Lỗi.</h1>
+<h2 class="text-danger">Đã xảy ra lỗi khi xử lý yêu cầu của bạn.</h2>
 
 @if (Model?.ShowRequestId ?? false)
 {
     <p>
-        <strong>Request ID:</strong> <code>@Model?.RequestId</code>
+        <strong>Mã Yêu Cầu:</strong> <code>@Model?.RequestId</code>
     </p>
 }

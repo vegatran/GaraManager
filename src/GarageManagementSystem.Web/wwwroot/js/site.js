@@ -1,213 +1,177 @@
-// Site-wide JavaScript functionality
+/**
+ * Site-wide JavaScript
+ * 
+ * Global functions and utilities
+ */
 
-// Initialize tooltips
-document.addEventListener('DOMContentLoaded', function() {
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
-    });
-});
+// Global GarageApp object
+window.GarageApp = {
+    // Show success message
+    showSuccess: function(message, title) {
+        Swal.fire({
+            icon: 'success',
+            title: title || 'Success',
+            text: message,
+            timer: 3000,
+            timerProgressBar: true
+        });
+    },
 
-// Auto-hide alerts after 5 seconds
-document.addEventListener('DOMContentLoaded', function() {
-    const alerts = document.querySelectorAll('.alert');
-    alerts.forEach(function(alert) {
-        setTimeout(function() {
-            const bsAlert = new bootstrap.Alert(alert);
-            bsAlert.close();
-        }, 5000);
-    });
-});
+    // Show error message
+    showError: function(message, title) {
+        Swal.fire({
+            icon: 'error',
+            title: title || 'Error',
+            text: message
+        });
+    },
 
-// Confirm delete with SweetAlert2
-function confirmDelete(message = 'Bạn có chắc chắn muốn xóa mục này không?') {
-    return Swal.fire({
-        title: 'Xác nhận xóa',
-        text: message,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#d33',
-        cancelButtonColor: '#3085d6',
-        confirmButtonText: 'Xóa',
-        cancelButtonText: 'Hủy',
-        reverseButtons: true
-    });
-}
+    // Show warning message
+    showWarning: function(message, title) {
+        Swal.fire({
+            icon: 'warning',
+            title: title || 'Warning',
+            text: message
+        });
+    },
 
-// Show success message
-function showSuccess(message) {
-    Swal.fire({
-        icon: 'success',
-        title: 'Thành công!',
-        text: message,
-        timer: 3000,
-        showConfirmButton: false
-    });
-}
+    // Show info message
+    showInfo: function(message, title) {
+        Swal.fire({
+            icon: 'info',
+            title: title || 'Information',
+            text: message
+        });
+    },
 
-// Show error message
-function showError(message) {
-    Swal.fire({
-        icon: 'error',
-        title: 'Lỗi!',
-        text: message
-    });
-}
-
-// Show info message
-function showInfo(message) {
-    Swal.fire({
-        icon: 'info',
-        title: 'Thông tin',
-        text: message
-    });
-}
-
-// Format currency
-function formatCurrency(amount) {
-    return new Intl.NumberFormat('vi-VN', {
-        style: 'currency',
-        currency: 'VND'
-    }).format(amount);
-}
-
-// Format date
-function formatDate(dateString) {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('vi-VN');
-}
-
-// Format datetime
-function formatDateTime(dateString) {
-    const date = new Date(dateString);
-    return date.toLocaleString('vi-VN');
-}
-
-// Search functionality
-function initializeSearch() {
-    const searchInputs = document.querySelectorAll('.search-input');
-    searchInputs.forEach(function(input) {
-        input.addEventListener('input', function() {
-            const searchTerm = this.value.toLowerCase();
-            const table = this.closest('.card').querySelector('table');
-            if (table) {
-                const rows = table.querySelectorAll('tbody tr');
-                rows.forEach(function(row) {
-                    const text = row.textContent.toLowerCase();
-                    if (text.includes(searchTerm)) {
-                        row.style.display = '';
-                    } else {
-                        row.style.display = 'none';
-                    }
-                });
+    // Confirm dialog
+    confirm: function(message, title, callback) {
+        Swal.fire({
+            title: title || 'Are you sure?',
+            text: message,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Yes',
+            cancelButtonText: 'No'
+        }).then((result) => {
+            if (result.isConfirmed && callback) {
+                callback();
             }
         });
-    });
-}
+    },
 
-// Initialize search on page load
-document.addEventListener('DOMContentLoaded', function() {
-    initializeSearch();
-});
+    // Format currency
+    formatCurrency: function(amount, currency) {
+        currency = currency || '$';
+        return currency + parseFloat(amount).toFixed(2);
+    },
 
-// Form validation
-function validateForm(formId) {
-    const form = document.getElementById(formId);
-    if (form) {
-        form.addEventListener('submit', function(event) {
-            if (!form.checkValidity()) {
-                event.preventDefault();
-                event.stopPropagation();
-            }
-            form.classList.add('was-validated');
-        });
-    }
-}
+    // Format date
+    formatDate: function(date, format) {
+        format = format || 'YYYY-MM-DD';
+        return moment(date).format(format);
+    },
 
-// Loading state for buttons
-function setButtonLoading(button, loading = true) {
-    if (loading) {
-        button.disabled = true;
-        button.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Đang xử lý...';
-    } else {
-        button.disabled = false;
-        button.innerHTML = button.getAttribute('data-original-text') || 'Lưu';
-    }
-}
-
-// Copy to clipboard
-function copyToClipboard(text) {
-    navigator.clipboard.writeText(text).then(function() {
-        showSuccess('Đã sao chép vào clipboard');
-    }, function() {
-        showError('Không thể sao chép vào clipboard');
-    });
-}
-
-// Print functionality
-function printPage() {
-    window.print();
-}
-
-// Export to CSV (basic implementation)
-function exportToCSV(tableId, filename = 'export.csv') {
-    const table = document.getElementById(tableId);
-    if (!table) return;
-    
-    let csv = [];
-    const rows = table.querySelectorAll('tr');
-    
-    for (let i = 0; i < rows.length; i++) {
-        const row = [];
-        const cols = rows[i].querySelectorAll('td, th');
+    // Validate form
+    validateForm: function(formId) {
+        var form = $(formId);
+        if (form.length === 0) return false;
         
-        for (let j = 0; j < cols.length; j++) {
-            let cellText = cols[j].innerText.replace(/"/g, '""');
-            row.push('"' + cellText + '"');
+        var isValid = true;
+        form.find('[required]').each(function() {
+            if (!$(this).val()) {
+                isValid = false;
+                $(this).addClass('is-invalid');
+            } else {
+                $(this).removeClass('is-invalid');
+            }
+        });
+        
+        return isValid;
+    },
+
+    // Clear form
+    clearForm: function(formId) {
+        var form = $(formId);
+        if (form.length > 0) {
+            form[0].reset();
+            form.find('.is-invalid').removeClass('is-invalid');
         }
-        
-        csv.push(row.join(','));
-    }
-    
-    const csvContent = csv.join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    
-    if (link.download !== undefined) {
-        const url = URL.createObjectURL(blob);
-        link.setAttribute('href', url);
-        link.setAttribute('download', filename);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    }
-}
+    },
 
-// Initialize all functionality when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
+    // Show loading spinner
+    showLoading: function() {
+        Swal.fire({
+            title: 'Please wait...',
+            html: 'Loading data',
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            showConfirmButton: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+    },
+
+    // Hide loading spinner
+    hideLoading: function() {
+        Swal.close();
+    }
+};
+
+// Document ready handlers
+$(document).ready(function() {
     // Initialize tooltips
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
+    $('[data-toggle="tooltip"]').tooltip();
+
+    // Initialize popovers
+    $('[data-toggle="popover"]').popover();
+
+    // Auto-hide alerts after 5 seconds
+    $('.alert').delay(5000).slideUp(300);
+
+    // Form validation on submit
+    $('form').on('submit', function(e) {
+        var form = $(this);
+        if (form.hasClass('needs-validation')) {
+            if (!form[0].checkValidity()) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            form.addClass('was-validated');
+        }
     });
-    
-    // Auto-hide alerts
-    const alerts = document.querySelectorAll('.alert');
-    alerts.forEach(function(alert) {
+
+    // Remove invalid class on input change
+    $('input, select, textarea').on('change', function() {
+        if ($(this).hasClass('is-invalid')) {
+            $(this).removeClass('is-invalid');
+        }
+    });
+
+    // Sidebar toggle
+    $('#sidebarToggle').on('click', function() {
+        $('body').toggleClass('sidebar-toggled');
+        $('.sidebar').toggleClass('toggled');
+    });
+
+    // Prevent double submission
+    $('form').on('submit', function() {
+        var submitBtn = $(this).find('button[type="submit"]');
+        submitBtn.prop('disabled', true);
         setTimeout(function() {
-            const bsAlert = new bootstrap.Alert(alert);
-            bsAlert.close();
-        }, 5000);
+            submitBtn.prop('disabled', false);
+        }, 3000);
     });
-    
-    // Initialize search
-    initializeSearch();
-    
-    // Add fade-in animation to cards
-    const cards = document.querySelectorAll('.card');
-    cards.forEach(function(card, index) {
-        card.style.animationDelay = (index * 0.1) + 's';
-        card.classList.add('fade-in');
-    });
+});
+
+// Window resize handler
+$(window).on('resize', function() {
+    // Auto-hide sidebar on small screens
+    if ($(window).width() < 768) {
+        $('.sidebar').addClass('toggled');
+        $('body').addClass('sidebar-toggled');
+    }
 });

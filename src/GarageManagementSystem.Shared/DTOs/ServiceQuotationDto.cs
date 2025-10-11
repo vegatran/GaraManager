@@ -1,0 +1,163 @@
+using System.ComponentModel.DataAnnotations;
+
+namespace GarageManagementSystem.Shared.DTOs
+{
+    public class ServiceQuotationDto : BaseDto
+    {
+        public string QuotationNumber { get; set; } = string.Empty;
+        public int? VehicleInspectionId { get; set; }
+        public int CustomerId { get; set; }
+        public int VehicleId { get; set; }
+        public int? PreparedById { get; set; }
+        public DateTime QuotationDate { get; set; }
+        public DateTime? ValidUntil { get; set; }
+        public string? Description { get; set; }
+        public string? Terms { get; set; }
+        
+        // Quotation Type
+        public string QuotationType { get; set; } = "Personal";
+        
+        public decimal SubTotal { get; set; }
+        public decimal TaxAmount { get; set; }
+        public decimal TaxRate { get; set; }
+        public decimal DiscountAmount { get; set; }
+        public decimal TotalAmount { get; set; }
+
+        // Insurance specific fields (nullable)
+        public decimal? MaxInsuranceAmount { get; set; }
+        public decimal? Deductible { get; set; }
+        public DateTime? InsuranceApprovalDate { get; set; }
+        public decimal? InsuranceApprovedAmount { get; set; }
+        public string? InsuranceApprovalNotes { get; set; }
+        public string? InsuranceAdjusterContact { get; set; }
+
+        // Company specific fields (nullable)
+        public string? PONumber { get; set; }
+        public string? PaymentTerms { get; set; } = "Cash";
+        public bool IsTaxExempt { get; set; } = false;
+        public DateTime? CompanyApprovalDate { get; set; }
+        public string? CompanyApprovedBy { get; set; }
+        public string? CompanyApprovalNotes { get; set; }
+        public string? CompanyContactPerson { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public DateTime? SentDate { get; set; }
+        public DateTime? ApprovedDate { get; set; }
+        public DateTime? RejectedDate { get; set; }
+        public string? CustomerNotes { get; set; }
+        public string? RejectionReason { get; set; }
+        public int? ServiceOrderId { get; set; }
+
+        // Navigation properties
+        public VehicleInspectionDto? VehicleInspection { get; set; }
+        public CustomerDto? Customer { get; set; }
+        public VehicleDto? Vehicle { get; set; }
+        public EmployeeDto? PreparedBy { get; set; }
+        public List<QuotationItemDto> Items { get; set; } = new();
+    }
+
+    public class CreateServiceQuotationDto
+    {
+        public int? VehicleInspectionId { get; set; }
+
+        [Required(ErrorMessage = "Customer is required")]
+        public int CustomerId { get; set; }
+
+        [Required(ErrorMessage = "Vehicle is required")]
+        public int VehicleId { get; set; }
+
+        public int? PreparedById { get; set; }
+
+        public DateTime? ValidUntil { get; set; }
+
+        [StringLength(2000)]
+        public string? Description { get; set; }
+
+        [StringLength(2000)]
+        public string? Terms { get; set; }
+
+        [Range(0, 100)]
+        public decimal TaxRate { get; set; } = 0;
+
+        [Range(0, double.MaxValue)]
+        public decimal DiscountAmount { get; set; } = 0;
+
+        [Required(ErrorMessage = "At least one item is required")]
+        [MinLength(1, ErrorMessage = "At least one item is required")]
+        public List<CreateQuotationItemDto> Items { get; set; } = new();
+    }
+
+    public class UpdateServiceQuotationDto
+    {
+        [Required]
+        public int Id { get; set; }
+
+        public DateTime? ValidUntil { get; set; }
+
+        [StringLength(2000)]
+        public string? Description { get; set; }
+
+        [StringLength(2000)]
+        public string? Terms { get; set; }
+
+        [Range(0, 100)]
+        public decimal TaxRate { get; set; }
+
+        [Range(0, double.MaxValue)]
+        public decimal DiscountAmount { get; set; }
+
+        [StringLength(20)]
+        public string? Status { get; set; }
+
+        [StringLength(5000)]
+        public string? CustomerNotes { get; set; }
+
+        [StringLength(5000)]
+        public string? RejectionReason { get; set; }
+    }
+
+
+    public class QuotationItemDto
+    {
+        public int Id { get; set; }
+        public int ServiceQuotationId { get; set; }
+        public int? ServiceId { get; set; }
+        public int? InspectionIssueId { get; set; }
+        public string ItemName { get; set; } = string.Empty;
+        public string? Description { get; set; }
+        public int Quantity { get; set; }
+        public decimal UnitPrice { get; set; }
+        public decimal TotalPrice { get; set; }
+        public bool IsOptional { get; set; }
+        public bool IsApproved { get; set; }
+        public string? Notes { get; set; }
+        public ServiceDto? Service { get; set; }
+        public InspectionIssueDto? InspectionIssue { get; set; }
+    }
+
+    public class CreateQuotationItemDto
+    {
+        public int? ServiceId { get; set; }
+        public int? InspectionIssueId { get; set; }
+
+        [Required]
+        [StringLength(200)]
+        public string ItemName { get; set; } = string.Empty;
+
+        [StringLength(1000)]
+        public string? Description { get; set; }
+
+        [Required]
+        [Range(1, int.MaxValue)]
+        public int Quantity { get; set; } = 1;
+
+        [Required]
+        [Range(0, double.MaxValue)]
+        public decimal UnitPrice { get; set; }
+
+        public bool IsOptional { get; set; } = false;
+
+        [StringLength(500)]
+        public string? Notes { get; set; }
+    }
+}
+

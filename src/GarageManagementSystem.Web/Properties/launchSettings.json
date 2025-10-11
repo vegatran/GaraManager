@@ -6,7 +6,7 @@
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       },
-      "applicationUrl": "https://localhost:7000"
+      "applicationUrl": "https://localhost:7000;http://localhost:7003"
     },
     "IIS Express": {
       "commandName": "IISExpress",
@@ -21,7 +21,18 @@
     "anonymousAuthentication": true,
     "iisExpress": {
       "applicationUrl": "http://localhost:50107/",
-      "sslPort": 44352
+      "sslPort": 44352,
+      "maxRequestHeadersTotalSize": 262144,
+      "maxRequestLineSize": 65536,
+      "maxQueryString": 65536,
+      "maxUrl": 65536
     }
+  },
+  "iisExpress": {
+    "commandName": "IISExpress",
+    "environmentVariables": {
+      "ASPNETCORE_ENVIRONMENT": "Development"
+    },
+    "launchUrl": "https://localhost:44352"
   }
 }

@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using System.ComponentModel.DataAnnotations;
 using System.Threading.Tasks;
+using Duende.IdentityServer.Services;
+using Microsoft.AspNetCore.Http.Extensions;
 
 namespace GarageManagementSystem.IdentityServer.Controllers
 {
@@ -10,13 +12,16 @@ namespace GarageManagementSystem.IdentityServer.Controllers
     {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
+        private readonly IIdentityServerInteractionService _interaction;
 
         public AccountController(
             UserManager<ApplicationUser> userManager,
-            SignInManager<ApplicationUser> signInManager)
+            SignInManager<ApplicationUser> signInManager,
+            IIdentityServerInteractionService interaction)
         {
             _userManager = userManager;
             _signInManager = signInManager;
+            _interaction = interaction;
         }
 
         [HttpGet]
@@ -89,9 +94,42 @@ namespace GarageManagementSystem.IdentityServer.Controllers
             return View(model);
         }
 
+        // Handle GET logout - IdentityServer4 sẽ redirect về đây
+        [HttpGet]
+        public async Task<IActionResult> Logout(string? logoutId = null)
+        {
+            // Sign out user
+            await _signInManager.SignOutAsync();
+            // Nếu có logoutId, sử dụng IIdentityServerInteractionService.GetLogoutContextAsync để lấy thông tin
+            if (!string.IsNullOrEmpty(logoutId))
+            {
+                // Lấy thông tin về yêu cầu logout từ logoutId
+                var logoutContext = await _interaction.GetLogoutContextAsync(logoutId);
+                if (logoutContext != null)
+                {   
+                    var postLogoutRedirectUri = logoutContext.PostLogoutRedirectUri;
+                    if (!string.IsNullOrEmpty(postLogoutRedirectUri))
+                    {
+                        // Redirect về Web App
+                        return Redirect(postLogoutRedirectUri);
+                    }
+                    else
+                    {
+                        Console.WriteLine($"❌ PostLogoutRedirectUri is null or empty");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"❌ LogoutContext is null");
+                }
+            }
+            // Fallback: redirect về Home/Index của IdentityServer
+            return RedirectToAction("Index", "Home");
+        }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Logout()
+        public async Task<IActionResult> LogoutPost()
         {
             await _signInManager.SignOutAsync();
             return RedirectToAction("Index", "Home");

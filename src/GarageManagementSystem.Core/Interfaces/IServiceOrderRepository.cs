@@ -11,5 +11,12 @@ namespace GarageManagementSystem.Core.Interfaces
         Task<IEnumerable<ServiceOrder>> GetServiceOrdersByStatusAsync(string status);
         Task<IEnumerable<ServiceOrder>> GetServiceOrdersByDateRangeAsync(DateTime startDate, DateTime endDate);
         Task<string> GenerateOrderNumberAsync();
+        
+        // Additional methods for API
+        Task<IEnumerable<ServiceOrder>> GetAllWithDetailsAsync();
+        Task<ServiceOrder?> GetByIdWithDetailsAsync(int id);
+        Task<IEnumerable<ServiceOrder>> GetByCustomerIdAsync(int customerId);
+        Task<IEnumerable<ServiceOrder>> GetByVehicleIdAsync(int vehicleId);
+        Task<IEnumerable<ServiceOrder>> GetByStatusAsync(string status);
     }
 }

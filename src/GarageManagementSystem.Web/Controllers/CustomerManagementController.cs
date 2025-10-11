@@ -7,7 +7,7 @@ using GarageManagementSystem.Web.Configuration;
 namespace GarageManagementSystem.Web.Controllers
 {
     /// <summary>
-    /// Controller for managing customers with full CRUD operations via API
+    /// Controller quản lý khách hàng với đầy đủ các thao tác CRUD thông qua API
     /// </summary>
     [Authorize]
     public class CustomerManagementController : Controller
@@ -20,15 +20,43 @@ namespace GarageManagementSystem.Web.Controllers
         }
 
         /// <summary>
-        /// Display customer management dashboard
+        /// Hiển thị trang quản lý khách hàng
         /// </summary>
         public IActionResult Index()
         {
+            // Debug: Log authentication status
+            Console.WriteLine($"CustomerManagement Index - User authenticated: {User.Identity?.IsAuthenticated}");
+            Console.WriteLine($"CustomerManagement Index - User name: {User.Identity?.Name}");
             return View();
         }
 
         /// <summary>
-        /// Get all customers for DataTable via API
+        /// Debug endpoint - test redirect
+        /// </summary>
+        public IActionResult Test()
+        {
+            return Content("CustomerManagement Test - No redirect!");
+        }
+
+        /// <summary>
+        /// Lấy danh sách khách hàng đang hoạt động
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> GetActiveCustomers()
+        {
+            var response = await _apiService.GetAsync<List<CustomerDto>>(ApiEndpoints.Customers.GetAll);
+            
+            if (response.Success && response.Data != null)
+            {
+                // Return all customers (no IsActive filter for now)
+                return Json(response.Data);
+            }
+            
+            return Json(new List<CustomerDto>());
+        }
+
+        /// <summary>
+        /// Lấy danh sách tất cả khách hàng cho DataTable thông qua API
         /// </summary>
         [HttpGet]
         public async Task<IActionResult> GetCustomers()
@@ -62,7 +90,7 @@ namespace GarageManagementSystem.Web.Controllers
         }
 
         /// <summary>
-        /// Get customer details by ID via API
+        /// Lấy thông tin chi tiết khách hàng theo ID thông qua API
         /// </summary>
         [HttpGet]
         public async Task<IActionResult> Details(int id)
@@ -80,7 +108,7 @@ namespace GarageManagementSystem.Web.Controllers
         }
 
         /// <summary>
-        /// Create new customer via API
+        /// Tạo khách hàng mới thông qua API
         /// </summary>
         [HttpPost]
         public async Task<IActionResult> Create(CreateCustomerDto model)
@@ -99,7 +127,7 @@ namespace GarageManagementSystem.Web.Controllers
         }
 
         /// <summary>
-        /// Update customer via API
+        /// Cập nhật thông tin khách hàng thông qua API
         /// </summary>
         [HttpPost]
         public async Task<IActionResult> Edit(UpdateCustomerDto model)
@@ -118,7 +146,7 @@ namespace GarageManagementSystem.Web.Controllers
         }
 
         /// <summary>
-        /// Delete customer via API
+        /// Xóa khách hàng thông qua API
         /// </summary>
         [HttpPost]
         public async Task<IActionResult> Delete(int id)

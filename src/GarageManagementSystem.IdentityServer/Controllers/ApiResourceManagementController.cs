@@ -1,6 +1,6 @@
-using IdentityServer4.EntityFramework.DbContexts;
-using IdentityServer4.EntityFramework.Entities;
-using IdentityServer4.Models;
+using Duende.IdentityServer.EntityFramework.DbContexts;
+using Duende.IdentityServer.EntityFramework.Entities;
+using Duende.IdentityServer.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -8,7 +8,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Data.SqlClient;
 using System.ComponentModel.DataAnnotations;
 using GarageManagementSystem.IdentityServer.Data;
-using ApiResourceEntity = IdentityServer4.EntityFramework.Entities.ApiResource;
+using ApiResourceEntity = Duende.IdentityServer.EntityFramework.Entities.ApiResource;
 
 namespace GarageManagementSystem.IdentityServer.Controllers
 {

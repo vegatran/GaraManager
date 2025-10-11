@@ -4,8 +4,12 @@ namespace GarageManagementSystem.Shared.Models
     {
         public bool Success { get; set; }
         public string Message { get; set; } = string.Empty;
+        public string? ErrorMessage { get; set; }
         public T? Data { get; set; }
         public List<string> Errors { get; set; } = new();
+        public string? StackTrace { get; set; } // For debugging
+        public System.Net.HttpStatusCode StatusCode { get; set; } = System.Net.HttpStatusCode.OK;
+        public bool RequiresLogin { get; set; } = false;
 
         public static ApiResponse<T> SuccessResult(T data, string message = "Thành công")
         {
@@ -34,6 +38,30 @@ namespace GarageManagementSystem.Shared.Models
                 Success = false,
                 Message = message,
                 Errors = new List<string> { error }
+            };
+        }
+
+        /// <summary>
+        /// Tạo error response từ Exception với đầy đủ thông tin để debug
+        /// </summary>
+        public static ApiResponse<T> ErrorResult(string message, Exception ex, bool includeStackTrace = true)
+        {
+            var errors = new List<string> { ex.Message };
+            
+            // Thêm inner exceptions
+            var innerEx = ex.InnerException;
+            while (innerEx != null)
+            {
+                errors.Add($"Inner: {innerEx.Message}");
+                innerEx = innerEx.InnerException;
+            }
+            
+            return new ApiResponse<T>
+            {
+                Success = false,
+                Message = message,
+                Errors = errors,
+                StackTrace = includeStackTrace ? ex.StackTrace : null
             };
         }
     }
@@ -66,6 +94,30 @@ namespace GarageManagementSystem.Shared.Models
                 Success = false,
                 Message = message,
                 Errors = new List<string> { error }
+            };
+        }
+
+        /// <summary>
+        /// Tạo error response từ Exception với đầy đủ thông tin để debug
+        /// </summary>
+        public static ApiResponse ErrorResult(string message, Exception ex, bool includeStackTrace = true)
+        {
+            var errors = new List<string> { ex.Message };
+            
+            // Thêm inner exceptions
+            var innerEx = ex.InnerException;
+            while (innerEx != null)
+            {
+                errors.Add($"Inner: {innerEx.Message}");
+                innerEx = innerEx.InnerException;
+            }
+            
+            return new ApiResponse
+            {
+                Success = false,
+                Message = message,
+                Errors = errors,
+                StackTrace = includeStackTrace ? ex.StackTrace : null
             };
         }
     }

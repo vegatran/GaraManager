@@ -59,5 +59,11 @@ namespace GarageManagementSystem.Infrastructure.Repositories
 
             return await query.AnyAsync();
         }
+
+        // Additional implementation for API
+        public async Task<IEnumerable<Customer>> SearchAsync(string searchTerm)
+        {
+            return await SearchCustomersAsync(searchTerm);
+        }
     }
 }

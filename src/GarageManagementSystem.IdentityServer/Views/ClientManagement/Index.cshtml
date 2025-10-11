@@ -2,41 +2,41 @@
     ViewData["Title"] = "Client Management";
 }
 <section class="content">
-        <div class="container-fluid">
-            @Html.AntiForgeryToken()
-            <div class="row">
-                <div class="col-12">
-                    <div class="card">
-                        <div class="card-header">
-                            <h3 class="card-title">Clients</h3>
-                            <div class="card-tools">
-                                <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#createClientModal">
-                                    <i class="fas fa-plus"></i> Add New Client
-                                </button>
-                            </div>
+    <div class="container-fluid">
+        @Html.AntiForgeryToken()
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Clients</h3>
+                        <div class="card-tools">
+                            <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#createClientModal">
+                                <i class="fas fa-plus"></i> Add New Client
+                            </button>
                         </div>
-                        <div class="card-body table-responsive">
-                            <table id="clientsTable" class="table table-bordered table-striped table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Client ID</th>
-                                        <th>Client Name</th>
-                                        <th>Protocol Type</th>
-                                        <th>Grant Types</th>
-                                        <th>Scopes</th>
-                                        <th>Enabled</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                </tbody>
-                            </table>
-                        </div>
+                    </div>
+                    <div class="card-body table-responsive">
+                        <table id="clientsTable" class="table table-bordered table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Client ID</th>
+                                    <th>Client Name</th>
+                                    <th>Protocol Type</th>
+                                    <th>Grant Types</th>
+                                    <th>Scopes</th>
+                                    <th>Enabled</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
         </div>
-    </section>
+    </div>
+</section>
 
 <!-- Include Modal Partials -->
 <partial name="_CreateClient" />
@@ -44,16 +44,16 @@
 <partial name="_ViewClient" />
 
 @section Scripts {
-<!-- Client Management JavaScript -->
-<script src="~/js/client-management.js" asp-append-version="true"></script>
-<script>
-    // Initialize Client Management when page loads
-    $(document).ready(function() {
-        if (typeof ClientManagement !== 'undefined') {
-            ClientManagement.init();
-        } else {
-            console.error('Client Management module not loaded!');
-        }
-    });
-</script>
+    <!-- Client Management JavaScript -->
+    <script src="~/js/client-management.js" asp-append-version="true"></script>
+    <script>
+        // Initialize Client Management when page loads
+        $(document).ready(function() {
+            if (typeof ClientManagement !== 'undefined') {
+                ClientManagement.init();
+            } else {
+                console.error('Client Management module not loaded!');
+            }
+        });
+    </script>
 }

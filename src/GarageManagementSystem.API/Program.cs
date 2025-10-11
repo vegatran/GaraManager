@@ -6,15 +6,27 @@ using Microsoft.EntityFrameworkCore;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddControllers();
-
-// IdentityServer4 Authentication
-builder.Services.AddAuthentication("Bearer")
-    .AddIdentityServerAuthentication("Bearer", options =>
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
     {
-        options.Authority = "https://localhost:5001";
-        options.ApiName = "garage.api";
+        options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+        options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+    });
+
+// JWT Bearer Authentication for Duende IdentityServer
+builder.Services.AddAuthentication("Bearer")
+    .AddJwtBearer("Bearer", options =>
+    {
+        options.Authority = "https://localhost:44333";
         options.RequireHttpsMetadata = false; // For development only
+        options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
+        {
+            ValidateAudience = true,
+            ValidAudience = "garage.api",
+            ValidateIssuer = true,
+            ValidIssuer = "https://localhost:44333",
+            ValidateLifetime = true
+        };
     });
 
 builder.Services.AddAuthorization(options =>
@@ -57,9 +69,19 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// Database
-builder.Services.AddDbContext<GarageDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+// Add HttpContextAccessor for AuditInterceptor
+builder.Services.AddHttpContextAccessor();
+
+// Add AuditInterceptor
+builder.Services.AddScoped<GarageManagementSystem.Infrastructure.Interceptors.AuditInterceptor>();
+
+// Database with AuditInterceptor
+builder.Services.AddDbContext<GarageDbContext>((serviceProvider, options) =>
+{
+    var auditInterceptor = serviceProvider.GetRequiredService<GarageManagementSystem.Infrastructure.Interceptors.AuditInterceptor>();
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"))
+           .AddInterceptors(auditInterceptor);
+});
 
 // Repositories
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
@@ -68,10 +90,36 @@ builder.Services.AddScoped<IVehicleRepository, VehicleRepository>();
 builder.Services.AddScoped<IServiceRepository, ServiceRepository>();
 builder.Services.AddScoped<IServiceOrderRepository, ServiceOrderRepository>();
 builder.Services.AddScoped<IEmployeeRepository, EmployeeRepository>();
+builder.Services.AddScoped<IVehicleInspectionRepository, VehicleInspectionRepository>();
+builder.Services.AddScoped<IServiceQuotationRepository, ServiceQuotationRepository>();
+builder.Services.AddScoped<IPartRepository, PartRepository>();
+builder.Services.AddScoped<ISupplierRepository, SupplierRepository>();
+builder.Services.AddScoped<IStockTransactionRepository, StockTransactionRepository>();
+builder.Services.AddScoped<IPaymentTransactionRepository, PaymentTransactionRepository>();
+builder.Services.AddScoped<IAppointmentRepository, AppointmentRepository>();
+
+// Excel Import Service
+builder.Services.AddScoped<GarageManagementSystem.Core.Services.IExcelImportService, GarageManagementSystem.Infrastructure.Services.ExcelImportService>();
+
+// Invoice Service
+builder.Services.AddScoped<GarageManagementSystem.Shared.Services.IInvoiceService, GarageManagementSystem.Infrastructure.Services.InvoiceService>();
 
 // CORS
 builder.Services.AddCors(options =>
 {
+    options.AddPolicy("AllowWebApp", policy =>
+    {
+        policy.WithOrigins(
+                "https://localhost:7000",   // Web app HTTPS
+                "http://localhost:7003",    // Web app HTTP
+                "https://localhost:7001",   // Alternative Web app port
+                "http://localhost:7002"     // Alternative Web app port
+              )
+              .AllowAnyMethod()
+              .AllowAnyHeader()
+              .AllowCredentials();
+    });
+    
     options.AddPolicy("AllowAll", policy =>
     {
         policy.AllowAnyOrigin()
@@ -90,16 +138,16 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseCors("AllowAll");
+app.UseCors("AllowWebApp");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
 // Ensure database is created
-using (var scope = app.Services.CreateScope())
-{
-    var context = scope.ServiceProvider.GetRequiredService<GarageDbContext>();
-    context.Database.EnsureCreated();
-}
+//using (var scope = app.Services.CreateScope())
+//{
+//    var context = scope.ServiceProvider.GetRequiredService<GarageDbContext>();
+//    context.Database.EnsureCreated();
+//}
 
 app.Run();

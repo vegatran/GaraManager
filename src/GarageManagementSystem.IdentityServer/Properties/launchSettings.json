@@ -5,7 +5,11 @@
     "anonymousAuthentication": true,
     "iisExpress": {
       "applicationUrl": "http://localhost:7294",
-      "sslPort": 44333
+      "sslPort": 44333,
+      "maxRequestHeadersTotalSize": 524288,
+      "maxRequestLineSize": 131072,
+      "maxQueryString": 131072,
+      "maxUrl": 131072
     }
   },
   "profiles": {
@@ -22,7 +26,7 @@
       "commandName": "Project",
       "dotnetRunMessages": true,
       "launchBrowser": true,
-      "applicationUrl": "https://localhost:7125;https://localhost:44333",
+      "applicationUrl": "https://localhost:44333",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }

@@ -1,18 +1,47 @@
 // Removed direct database dependencies - Web App calls API instead
 using GarageManagementSystem.Web.Configuration;
+using GarageManagementSystem.Web.Middleware;
+using System.Security.Claims;
+using System.IdentityModel.Tokens.Jwt;
+using Microsoft.AspNetCore.Authentication;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Configure Kestrel to handle larger headers
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.Limits.MaxRequestHeadersTotalSize = 262144; // 256KB - tăng gấp đôi
+    options.Limits.MaxRequestLineSize = 65536; // 64KB - tăng gấp đôi
+});
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
-// Authentication
+// Authentication - IdentityServer4 best practices
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultScheme = "Cookies";
     options.DefaultChallengeScheme = "oidc";
+    options.DefaultSignInScheme = "Cookies";
+    options.DefaultSignOutScheme = "oidc";
 })
-.AddCookie("Cookies")
+.AddCookie("Cookies", options =>
+{
+    // Cookie configuration based on IdentityServer4 best practices
+    options.ExpireTimeSpan = TimeSpan.FromHours(8); // Cookie expires after 8 hours
+    options.SlidingExpiration = true; // Reset expiry on activity
+    options.LoginPath = "/Home/Login"; // Redirect to login if not authenticated
+    options.LogoutPath = "/Home/Logout";
+    options.AccessDeniedPath = "/Home/AccessDenied";
+    options.ReturnUrlParameter = "returnUrl";
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SecurePolicy = Microsoft.AspNetCore.Http.CookieSecurePolicy.SameAsRequest;
+    options.Cookie.Name = "GarageManagement.Auth";
+    options.Cookie.IsEssential = true; // Essential for authentication
+    
+    // Limit cookie size to prevent "Request Too Long" errors
+    options.Cookie.MaxAge = TimeSpan.FromHours(8);
+})
 .AddOpenIdConnect("oidc", options =>
 {
     // Load configuration from appsettings.json
@@ -23,30 +52,34 @@ builder.Services.AddAuthentication(options =>
     options.ClientSecret = identityConfig["ClientSecret"];
     options.ResponseType = identityConfig["ResponseType"];
     
-    // Add scopes from configuration
+    // Add scopes from configuration - IdentityServer4 official pattern
     var scopes = identityConfig.GetSection("Scopes").Get<string[]>();
     foreach (var scope in scopes ?? new[] { "openid", "profile" })
     {
         options.Scope.Add(scope);
     }
     
+    // IdentityServer4 official configuration - Get from appsettings
     options.SaveTokens = identityConfig.GetValue<bool>("SaveTokens");
     options.GetClaimsFromUserInfoEndpoint = identityConfig.GetValue<bool>("GetClaimsFromUserInfoEndpoint");
     options.RequireHttpsMetadata = identityConfig.GetValue<bool>("RequireHttpsMetadata");
-    
-    // Configure logout
-    options.SignedOutRedirectUri = identityConfig["SignedOutRedirectUri"] ?? "/Home/Index";
     
     // Configure to handle network issues
     options.BackchannelHttpHandler = new HttpClientHandler()
     {
         ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
     };
-    options.BackchannelTimeout = TimeSpan.FromSeconds(identityConfig.GetValue<int>("BackchannelTimeout"));
     
-    // Map claims to user properties
-    // options.ClaimActions.MapUniqueJsonKey("role", "role");
-    // options.ClaimActions.MapUniqueJsonKey("address", "address");
+    // Events
+    options.Events = new Microsoft.AspNetCore.Authentication.OpenIdConnect.OpenIdConnectEvents
+    {
+        OnRemoteFailure = context =>
+        {
+            context.HandleResponse();
+            context.Response.Redirect("/Home/Error");
+            return Task.CompletedTask;
+        }
+    };
 });
 
 // Configure API settings from appsettings.json
@@ -84,11 +117,18 @@ app.UseStaticFiles();
 app.UseRouting();
 
 app.UseAuthentication();
+
+// Add token validation middleware BEFORE authorization
+// app.UseTokenValidation(); // Temporarily disabled to fix redirect loop
+
 app.UseAuthorization();
 
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
+
+// Add token timeout handling middleware
+// app.UseTokenTimeoutHandling(); // Temporarily disabled to fix redirect issues
 
 // No direct database operations - Web App calls API instead
 

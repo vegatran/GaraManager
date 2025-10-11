@@ -73,8 +73,23 @@ namespace GarageManagementSystem.API.Controllers
                     IsActive = createDto.IsActive
                 };
 
-                await _unitOfWork.Services.AddAsync(service);
-                await _unitOfWork.SaveChangesAsync();
+                // Bắt đầu transaction để đảm bảo tính toàn vẹn dữ liệu
+                await _unitOfWork.BeginTransactionAsync();
+
+                try
+                {
+                    await _unitOfWork.Services.AddAsync(service);
+                    await _unitOfWork.SaveChangesAsync();
+
+                    // Commit transaction nếu thành công
+                    await _unitOfWork.CommitTransactionAsync();
+                }
+                catch
+                {
+                    // Rollback transaction nếu có lỗi
+                    await _unitOfWork.RollbackTransactionAsync();
+                    throw;
+                }
 
                 var serviceDto = MapToDto(service);
                 return CreatedAtAction(nameof(GetService), new { id = service.Id }, 
@@ -115,8 +130,23 @@ namespace GarageManagementSystem.API.Controllers
                 service.Category = updateDto.Category;
                 service.IsActive = updateDto.IsActive;
 
-                await _unitOfWork.Services.UpdateAsync(service);
-                await _unitOfWork.SaveChangesAsync();
+                // Bắt đầu transaction để đảm bảo tính toàn vẹn dữ liệu
+                await _unitOfWork.BeginTransactionAsync();
+
+                try
+                {
+                    await _unitOfWork.Services.UpdateAsync(service);
+                    await _unitOfWork.SaveChangesAsync();
+
+                    // Commit transaction nếu thành công
+                    await _unitOfWork.CommitTransactionAsync();
+                }
+                catch
+                {
+                    // Rollback transaction nếu có lỗi
+                    await _unitOfWork.RollbackTransactionAsync();
+                    throw;
+                }
 
                 var serviceDto = MapToDto(service);
                 return Ok(ApiResponse<ServiceDto>.SuccessResult(serviceDto, "Cập nhật dịch vụ thành công"));

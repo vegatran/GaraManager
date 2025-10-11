@@ -18,6 +18,15 @@ namespace GarageManagementSystem.Infrastructure.Repositories
             Services = new ServiceRepository(_context);
             ServiceOrders = new ServiceOrderRepository(_context);
             Employees = new EmployeeRepository(_context);
+            Departments = new GenericRepository<Department>(_context);
+            Positions = new GenericRepository<Position>(_context);
+            VehicleInspections = new VehicleInspectionRepository(_context);
+            ServiceQuotations = new ServiceQuotationRepository(_context);
+            Parts = new PartRepository(_context);
+            StockTransactions = new StockTransactionRepository(_context);
+            Suppliers = new SupplierRepository(_context);
+            PaymentTransactions = new PaymentTransactionRepository(_context);
+            Appointments = new AppointmentRepository(_context);
         }
 
         public ICustomerRepository Customers { get; private set; }
@@ -25,6 +34,15 @@ namespace GarageManagementSystem.Infrastructure.Repositories
         public IServiceRepository Services { get; private set; }
         public IServiceOrderRepository ServiceOrders { get; private set; }
         public IEmployeeRepository Employees { get; private set; }
+        public IGenericRepository<Department> Departments { get; private set; }
+        public IGenericRepository<Position> Positions { get; private set; }
+        public IVehicleInspectionRepository VehicleInspections { get; private set; }
+        public IServiceQuotationRepository ServiceQuotations { get; private set; }
+        public IPartRepository Parts { get; private set; }
+        public IStockTransactionRepository StockTransactions { get; private set; }
+        public ISupplierRepository Suppliers { get; private set; }
+        public IPaymentTransactionRepository PaymentTransactions { get; private set; }
+        public IAppointmentRepository Appointments { get; private set; }
 
         public IGenericRepository<T> Repository<T>() where T : BaseEntity
         {

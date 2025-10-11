@@ -2,11 +2,18 @@ using GarageManagementSystem.IdentityServer.Data;
 using GarageManagementSystem.IdentityServer.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using IdentityServer4.EntityFramework.DbContexts;
-using IdentityServer4.EntityFramework.Mappers;
-using IdentityServer4.Extensions;
+using Duende.IdentityServer.EntityFramework.DbContexts;
+using Duende.IdentityServer.EntityFramework.Mappers;
+using Duende.IdentityServer.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Configure Kestrel to handle larger URLs - Tăng cao hơn nữa
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.Limits.MaxRequestLineSize = 131072; // 128KB - tăng gấp 4
+    options.Limits.MaxRequestHeadersTotalSize = 524288; // 512KB - tăng gấp 4
+});
 
 // Configure logging for IdentityServer4
 builder.Logging.AddConsole();
@@ -62,8 +69,9 @@ builder.Services.AddIdentityServer(options =>
     
     // User interaction configuration
     options.UserInteraction.LoginUrl = "/Account/Login";
-    options.UserInteraction.LogoutUrl = "/Account/Logout";
     options.UserInteraction.ErrorUrl = "/Home/Error";
+    // Không set LogoutUrl để IdentityServer4 dùng flow chuẩn /connect/endsession
+    // options.UserInteraction.ShowLogoutPrompt = false; // Không có property này trong IdentityServer4
 
     // Endpoints configuration
     options.Endpoints.EnableAuthorizeEndpoint = true;
@@ -94,23 +102,17 @@ builder.Services.AddIdentityServer(options =>
     options.TokenCleanupInterval = 30;
 })
 .AddAspNetIdentity<ApplicationUser>();
-
-// Configure IdentityServer options
-builder.Services.Configure<IdentityServer4.Configuration.IdentityServerOptions>(options =>
-{
-    var identityConfig = builder.Configuration.GetSection("IdentityServer");
-    options.IssuerUri = identityConfig["IssuerUri"] ?? "https://localhost:44333";
-});
+// .AddProfileService<GarageManagementSystem.IdentityServer.Services.CustomProfileService>(); // Temporarily disabled
 
 // Register Custom Services
-builder.Services.AddScoped<IdentityServer4.Services.IProfileService, GarageManagementSystem.IdentityServer.Services.CustomProfileService>();
 builder.Services.AddScoped<GarageManagementSystem.IdentityServer.Services.OptimizedClaimsService>();
 
 // Configure Identity cookie settings after AddIdentityServer
+// Comment out to avoid IIS Express conflict
+/*
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.LoginPath = "/Account/Login";
-    options.LogoutPath = "/Account/Logout";
     options.AccessDeniedPath = "/Account/AccessDenied";
     options.ExpireTimeSpan = TimeSpan.FromDays(30);
     options.SlidingExpiration = true;
@@ -118,6 +120,7 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.Cookie.SecurePolicy = Microsoft.AspNetCore.Http.CookieSecurePolicy.None; // For HTTP development
     options.Cookie.HttpOnly = true;
 });
+*/
 
 builder.Services.AddAuthorization();
 builder.Services.AddControllersWithViews();
@@ -156,45 +159,6 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseIdentityServer(); // Thêm IdentityServer4 sau authentication
 app.UseAuthorization();
-
-// Seed user data và IdentityServer4 data
-using (var scope = app.Services.CreateScope())
-{
-    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-    
-    // Check if admin user exists
-    var adminUser = await userManager.FindByEmailAsync("admin@test.com");
-    if (adminUser == null)
-    {
-        adminUser = new ApplicationUser
-        {
-            UserName = "admin@test.com",
-            Email = "admin@test.com",
-            EmailConfirmed = true,
-            FirstName = "Admin",
-            LastName = "User"
-        };
-        
-        var result = await userManager.CreateAsync(adminUser, "123456");
-        if (result.Succeeded)
-        {
-            Console.WriteLine("Admin user created successfully!");
-        }
-        else
-        {
-            Console.WriteLine("Failed to create admin user: " + string.Join(", ", result.Errors.Select(e => e.Description)));
-        }
-    }
-    else
-    {
-        Console.WriteLine("Admin user already exists!");
-    }
-
-        // Seed IdentityServer4 data
-        var configContext = scope.ServiceProvider.GetRequiredService<ConfigurationDbContext>();
-    await GarageManagementSystem.IdentityServer.Data.ConfigurationDbContextSeedData.SeedAsync(scope.ServiceProvider);
-    Console.WriteLine("IdentityServer4 configuration store ready!");
-}
 
 app.MapControllerRoute(
     name: "default",

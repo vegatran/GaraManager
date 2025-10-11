@@ -2,21 +2,26 @@ using System.ComponentModel.DataAnnotations;
 
 namespace GarageManagementSystem.Shared.DTOs
 {
-    public class EmployeeDto
+    public class EmployeeDto : BaseDto
     {
-        public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
-        public string? PhoneNumber { get; set; }
+        public string? Phone { get; set; }
         public string? Email { get; set; }
         public string? Address { get; set; }
         public string? Position { get; set; }
         public string? Department { get; set; }
+        
+        // Foreign key IDs
+        public int? PositionId { get; set; }
+        public int? DepartmentId { get; set; }
+        
+        // Navigation properties for display
+        public string? PositionName { get; set; }
+        public string? DepartmentName { get; set; }
         public DateTime? HireDate { get; set; }
         public decimal? Salary { get; set; }
         public string? Status { get; set; }
         public string? Skills { get; set; }
-        public DateTime CreatedAt { get; set; }
-        public DateTime? UpdatedAt { get; set; }
     }
 
     public class CreateEmployeeDto
@@ -26,7 +31,7 @@ namespace GarageManagementSystem.Shared.DTOs
         public string Name { get; set; } = string.Empty;
 
         [StringLength(20, ErrorMessage = "Số điện thoại không được vượt quá 20 ký tự")]
-        public string? PhoneNumber { get; set; }
+        public string? Phone { get; set; }
 
         [EmailAddress(ErrorMessage = "Email không hợp lệ")]
         [StringLength(200, ErrorMessage = "Email không được vượt quá 200 ký tự")]
@@ -40,6 +45,10 @@ namespace GarageManagementSystem.Shared.DTOs
 
         [StringLength(50, ErrorMessage = "Phòng ban không được vượt quá 50 ký tự")]
         public string? Department { get; set; }
+        
+        // Foreign key IDs
+        public int? PositionId { get; set; }
+        public int? DepartmentId { get; set; }
 
         public DateTime? HireDate { get; set; }
 

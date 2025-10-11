@@ -2,9 +2,8 @@ using System.ComponentModel.DataAnnotations;
 
 namespace GarageManagementSystem.Shared.DTOs
 {
-    public class ServiceOrderDto
+    public class ServiceOrderDto : BaseDto
     {
-        public int Id { get; set; }
         public string OrderNumber { get; set; } = string.Empty;
         public int CustomerId { get; set; }
         public int VehicleId { get; set; }
@@ -20,8 +19,6 @@ namespace GarageManagementSystem.Shared.DTOs
         public decimal FinalAmount { get; set; }
         public string? PaymentStatus { get; set; }
         public List<ServiceOrderItemDto> ServiceOrderItems { get; set; } = new();
-        public DateTime CreatedAt { get; set; }
-        public DateTime? UpdatedAt { get; set; }
     }
 
     public class CreateServiceOrderDto
@@ -34,7 +31,7 @@ namespace GarageManagementSystem.Shared.DTOs
 
         public DateTime? ScheduledDate { get; set; }
 
-        [StringLength(1000, ErrorMessage = "Ghi chú không được vượt quá 1000 ký tự")]
+        [StringLength(5000, ErrorMessage = "Ghi chú không được vượt quá 5000 ký tự")]
         public string? Notes { get; set; }
 
         [Range(0, double.MaxValue, ErrorMessage = "Số tiền giảm giá phải lớn hơn hoặc bằng 0")]
@@ -56,7 +53,7 @@ namespace GarageManagementSystem.Shared.DTOs
         [StringLength(20, ErrorMessage = "Trạng thái không được vượt quá 20 ký tự")]
         public string? Status { get; set; }
 
-        [StringLength(1000, ErrorMessage = "Ghi chú không được vượt quá 1000 ký tự")]
+        [StringLength(5000, ErrorMessage = "Ghi chú không được vượt quá 5000 ký tự")]
         public string? Notes { get; set; }
 
         [Range(0, double.MaxValue, ErrorMessage = "Số tiền giảm giá phải lớn hơn hoặc bằng 0")]

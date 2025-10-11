@@ -1,12 +1,12 @@
-using IdentityServer4.EntityFramework.DbContexts;
-using IdentityServer4.EntityFramework.Entities;
+using Duende.IdentityServer.EntityFramework.DbContexts;
+using Duende.IdentityServer.EntityFramework.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using System.ComponentModel.DataAnnotations;
 using GarageManagementSystem.IdentityServer.Data;
-using IdentityResourceEntity = IdentityServer4.EntityFramework.Entities.IdentityResource;
+using IdentityResourceEntity = Duende.IdentityServer.EntityFramework.Entities.IdentityResource;
 
 namespace GarageManagementSystem.IdentityServer.Controllers
 {

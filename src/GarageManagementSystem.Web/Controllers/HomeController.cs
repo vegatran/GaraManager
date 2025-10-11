@@ -6,6 +6,8 @@ using GarageManagementSystem.Web.Configuration;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.AspNetCore.Http.Extensions;
+using Microsoft.Extensions.Configuration;
 
 namespace GarageManagementSystem.Web.Controllers
 {
@@ -13,24 +15,26 @@ namespace GarageManagementSystem.Web.Controllers
     public class HomeController : Controller
     {
         private readonly ApiService _apiService;
+        private readonly IConfiguration _configuration;
 
-        public HomeController(ApiService apiService)
+        public HomeController(ApiService apiService, IConfiguration configuration)
         {
             _apiService = apiService;
+            _configuration = configuration;
         }
 
         public async Task<IActionResult> Index()
         {
             try
             {
-                // Call API to get dashboard statistics
+                // Gọi API để lấy thống kê tổng quan
                 var response = await _apiService.GetAsync<dynamic>(ApiEndpoints.Dashboard.Statistics);
                 
                 if (response.Success)
                 {
                     var stats = response.Data;
                     
-                    // Set viewbag values from API response
+                    // Thiết lập giá trị viewbag từ phản hồi API
                     ViewBag.CustomerCount = stats?.GetProperty("customerCount").GetInt32() ?? 0;
                     ViewBag.VehicleCount = stats?.GetProperty("vehicleCount").GetInt32() ?? 0;
                     ViewBag.ServiceCount = stats?.GetProperty("serviceCount").GetInt32() ?? 0;
@@ -38,10 +42,10 @@ namespace GarageManagementSystem.Web.Controllers
                 }
                 else
                 {
-                    ViewBag.Error = response.ErrorMessage ?? "Failed to load dashboard statistics from API";
+                    ViewBag.Error = response.ErrorMessage ?? "Không thể tải thống kê tổng quan từ API";
                 }
 
-                // Get user information from claims
+                // Lấy thông tin người dùng từ claims
                 ViewBag.UserName = User.FindFirst("name")?.Value ?? User.FindFirst("preferred_username")?.Value;
                 ViewBag.UserEmail = User.FindFirst("email")?.Value;
                 ViewBag.UserAddress = User.FindFirst("address")?.Value;
@@ -80,19 +84,88 @@ namespace GarageManagementSystem.Web.Controllers
         }
 
         /// <summary>
+        /// Kiểm tra xử lý token timeout
+        /// </summary>
+        public IActionResult TestTokenTimeout()
+        {
+            return View();
+        }
+
+        /// <summary>
+        /// Gỡ lỗi thông tin token
+        /// </summary>
+        public async Task<IActionResult> DebugToken()
+        {
+            var debugInfo = new
+            {
+                UserIsAuthenticated = User.Identity?.IsAuthenticated ?? false,
+                UserName = User.Identity?.Name ?? "Unknown",
+                Claims = User.Claims.Select(c => new { c.Type, c.Value }).ToList(),
+                AccessTokenFromClaim = User.FindFirst("access_token")?.Value,
+                AccessTokenFromContext = await HttpContext.GetTokenAsync("access_token"),
+                AllTokens = await HttpContext.GetTokenAsync("access_token"),
+                IdToken = await HttpContext.GetTokenAsync("id_token"),
+                RefreshToken = await HttpContext.GetTokenAsync("refresh_token")
+            };
+
+            return Json(debugInfo);
+        }
+
+        /// <summary>
+        /// Test routing - simple text response
+        /// </summary>
+        public IActionResult TestRouting()
+        {
+            return Content("Routing works! No redirects!");
+        }
+
+        /// <summary>
+        /// Lấy cấu hình client cho JavaScript
+        /// </summary>
+        public IActionResult GetConfig()
+        {
+            var identityServerAuthority = _configuration["IdentityServer:Authority"] ?? "https://localhost:44333";
+            var apiBaseUrl = _configuration["ApiConfiguration:BaseUrl"] ?? "https://localhost:44303/api/";
+            
+            var config = new
+            {
+                IdentityServerAuthority = identityServerAuthority,
+                ApiBaseUrl = apiBaseUrl
+            };
+
+            Console.WriteLine($"🔧 GetConfig returning: {System.Text.Json.JsonSerializer.Serialize(config)}");
+            return Json(config);
+        }
+
+        /// <summary>
+        /// Login page - redirect to IdentityServer
+        /// </summary>
+        public IActionResult Login()
+        {
+            return Challenge("oidc");
+        }
+
+        /// <summary>
+        /// Access denied page
+        /// </summary>
+        public IActionResult AccessDenied()
+        {
+            return View();
+        }
+
+        /// <summary>
         /// Logout user from both local app and IdentityServer
         /// </summary>
-        public async Task<IActionResult> Logout()
+        public IActionResult Logout()
         {
-            // Sign out from local cookie authentication
-            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            Console.WriteLine($"🔍 Web App Logout - HomeController.Logout() called");
+            Console.WriteLine($"🔍 Web App Logout - Request URL: {Request.GetDisplayUrl()}");
             
-            // Sign out from OpenID Connect and redirect to IdentityServer logout
-            await HttpContext.SignOutAsync(OpenIdConnectDefaults.AuthenticationScheme);
-            
-            // Redirect to IdentityServer logout endpoint
-            return RedirectToAction("Index", "Home");
+            // Đăng xuất cả Cookies và OIDC
+            // post_logout_redirect_uri sẽ được set trong Program.cs event handler
+            return SignOut(CookieAuthenticationDefaults.AuthenticationScheme, "oidc");
         }
+
 
         public IActionResult Privacy()
         {

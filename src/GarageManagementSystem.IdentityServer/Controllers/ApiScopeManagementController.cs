@@ -1,13 +1,13 @@
-using IdentityServer4.EntityFramework.DbContexts;
-using IdentityServer4.EntityFramework.Entities;
-using IdentityServer4.Models;
+using Duende.IdentityServer.EntityFramework.DbContexts;
+using Duende.IdentityServer.EntityFramework.Entities;
+using Duende.IdentityServer.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using System.ComponentModel.DataAnnotations;
 using GarageManagementSystem.IdentityServer.Data; // Added for GaraManagementContext
-using ApiScopeEntity = IdentityServer4.EntityFramework.Entities.ApiScope;
+using ApiScopeEntity = Duende.IdentityServer.EntityFramework.Entities.ApiScope;
 
 namespace GarageManagementSystem.IdentityServer.Controllers
 {

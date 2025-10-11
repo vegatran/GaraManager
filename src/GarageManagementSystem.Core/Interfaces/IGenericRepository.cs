@@ -16,5 +16,12 @@ namespace GarageManagementSystem.Core.Interfaces
         Task<int> CountAsync();
         Task<int> CountAsync(Expression<Func<T, bool>> predicate);
         Task<bool> ExistsAsync(Expression<Func<T, bool>> predicate);
+        
+        // Methods for managing soft deleted records (for admin use)
+        Task<IEnumerable<T>> GetDeletedAsync();
+        Task<T?> GetDeletedByIdAsync(int id);
+        Task RestoreAsync(T entity);
+        Task RestoreByIdAsync(int id);
+        Task<int> CountDeletedAsync();
     }
 }

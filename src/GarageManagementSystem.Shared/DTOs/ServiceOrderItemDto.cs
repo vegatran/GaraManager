@@ -2,9 +2,8 @@ using System.ComponentModel.DataAnnotations;
 
 namespace GarageManagementSystem.Shared.DTOs
 {
-    public class ServiceOrderItemDto
+    public class ServiceOrderItemDto : BaseDto
     {
-        public int Id { get; set; }
         public int ServiceOrderId { get; set; }
         public int ServiceId { get; set; }
         public ServiceDto? Service { get; set; }
@@ -12,8 +11,6 @@ namespace GarageManagementSystem.Shared.DTOs
         public decimal UnitPrice { get; set; }
         public decimal TotalPrice { get; set; }
         public string? Notes { get; set; }
-        public DateTime CreatedAt { get; set; }
-        public DateTime? UpdatedAt { get; set; }
     }
 
     public class CreateServiceOrderItemDto
