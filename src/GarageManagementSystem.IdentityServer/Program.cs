@@ -22,15 +22,16 @@ builder.Logging.AddDebug();
 // Add detailed logging for authentication
 builder.Logging.SetMinimumLevel(LogLevel.Debug);
 
+    // MySQL Server Version
+    var serverVersion = new MySqlServerVersion(new Version(8, 0, 21));
+
     // Add services to the container.
     builder.Services.AddDbContext<IdentityDbContext>(options =>
-        options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"), 
-            sqlOptions => sqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)));
+        options.UseMySql(builder.Configuration.GetConnectionString("DefaultConnection"), serverVersion));
 
     // Add GaraManagementContext for Claims Management
     builder.Services.AddDbContext<GaraManagementContext>(options =>
-        options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"),
-            sqlOptions => sqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)));
+        options.UseMySql(builder.Configuration.GetConnectionString("DefaultConnection"), serverVersion));
 
 builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
 {
@@ -83,21 +84,13 @@ builder.Services.AddIdentityServer(options =>
 // Temporarily disable Entity Framework stores to avoid AutoMapper conflicts
 .AddConfigurationStore<ConfigurationDbContext>(options =>
 {
-    options.ConfigureDbContext = b => b.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"),
-        sql => 
-        {
-            sql.MigrationsAssembly(typeof(Program).Assembly.GetName().Name);
-            sql.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
-        });
+    options.ConfigureDbContext = b => b.UseMySql(builder.Configuration.GetConnectionString("DefaultConnection"), serverVersion,
+        mySql => mySql.MigrationsAssembly(typeof(Program).Assembly.GetName().Name));
 })
 .AddOperationalStore(options =>
 {
-    options.ConfigureDbContext = b => b.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"),
-        sql => 
-        {
-            sql.MigrationsAssembly(typeof(Program).Assembly.GetName().Name);
-            sql.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
-        });
+    options.ConfigureDbContext = b => b.UseMySql(builder.Configuration.GetConnectionString("DefaultConnection"), serverVersion,
+        mySql => mySql.MigrationsAssembly(typeof(Program).Assembly.GetName().Name));
     options.EnableTokenCleanup = true;
     options.TokenCleanupInterval = 30;
 })

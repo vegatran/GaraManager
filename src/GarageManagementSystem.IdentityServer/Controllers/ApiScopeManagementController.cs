@@ -1,6 +1,7 @@
 using Duende.IdentityServer.EntityFramework.DbContexts;
 using Duende.IdentityServer.EntityFramework.Entities;
 using Duende.IdentityServer.Models;
+using GarageManagementSystem.IdentityServer.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -171,16 +172,18 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                 return Json(new { success = false, message = "API Scope not found" });
             }
 
-            // Insert into SoftDeleteRecords using raw SQL (Soft Delete)
-            var sql = @"INSERT INTO SoftDeleteRecords (EntityType, EntityName, DeletedAt, DeletedBy, Reason) 
-                       VALUES (@EntityType, @EntityName, @DeletedAt, @DeletedBy, @Reason)";
-            
-            await _context.Database.ExecuteSqlRawAsync(sql,
-                new Microsoft.Data.SqlClient.SqlParameter("@EntityType", "ApiScope"),
-                new Microsoft.Data.SqlClient.SqlParameter("@EntityName", scope.Name),
-                new Microsoft.Data.SqlClient.SqlParameter("@DeletedAt", DateTime.Now),
-                new Microsoft.Data.SqlClient.SqlParameter("@DeletedBy", User.Identity?.Name ?? "System"),
-                new Microsoft.Data.SqlClient.SqlParameter("@Reason", "User requested deletion"));
+            // Insert into SoftDeleteRecords using Entity Framework (Soft Delete)
+            var softDeleteRecord = new SoftDeleteRecord
+            {
+                EntityType = "ApiScope",
+                EntityName = scope.Name,
+                DeletedAt = DateTime.Now,
+                DeletedBy = User.Identity?.Name ?? "System",
+                Reason = "User requested deletion"
+            };
+
+            _garaContext.SoftDeleteRecords.Add(softDeleteRecord);
+            await _garaContext.SaveChangesAsync();
 
             // Invalidate cache after deleting API scope
             InvalidateApiScopeCache();
@@ -197,12 +200,15 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                 return Json(new { success = false, message = "API Scope not found" });
             }
 
-            // Remove from SoftDeleteRecords (Restore)
-            var sql = @"DELETE FROM SoftDeleteRecords 
-                       WHERE EntityType = 'ApiScope' AND EntityName = @EntityName";
+            // Remove from SoftDeleteRecords using Entity Framework (Restore)
+            var softDeleteRecord = await _garaContext.SoftDeleteRecords
+                .FirstOrDefaultAsync(s => s.EntityType == "ApiScope" && s.EntityName == scope.Name);
             
-            await _context.Database.ExecuteSqlRawAsync(sql,
-                new Microsoft.Data.SqlClient.SqlParameter("@EntityName", scope.Name));
+            if (softDeleteRecord != null)
+            {
+                _garaContext.SoftDeleteRecords.Remove(softDeleteRecord);
+                await _garaContext.SaveChangesAsync();
+            }
 
             // Invalidate cache after restoring API scope
             InvalidateApiScopeCache();

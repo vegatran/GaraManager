@@ -87,6 +87,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// Tạo nhân viên mới thông qua API
         /// </summary>
         [HttpPost]
+        [Route("CreateEmployee")]
         public async Task<IActionResult> CreateEmployee([FromBody] CreateEmployeeDto employeeDto)
         {
             if (!ModelState.IsValid)

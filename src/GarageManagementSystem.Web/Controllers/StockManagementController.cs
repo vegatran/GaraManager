@@ -10,6 +10,7 @@ namespace GarageManagementSystem.Web.Controllers
     /// Controller quản lý nhập xuất kho với đầy đủ các thao tác CRUD thông qua API
     /// </summary>
     [Authorize]
+    [Route("StockManagement")]
     public class StockManagementController : Controller
     {
         private readonly ApiService _apiService;
@@ -22,6 +23,8 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Hiển thị trang quản lý nhập xuất kho
         /// </summary>
+        [Route("")]
+        [Route("Index")]
         public IActionResult Index()
         {
             return View();
@@ -31,6 +34,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// Lấy danh sách tất cả giao dịch kho cho DataTable thông qua API
         /// </summary>
         [HttpGet]
+        [Route("GetStockTransactions")]
         public async Task<IActionResult> GetStockTransactions()
         {
             try
@@ -78,6 +82,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// Lấy thông tin chi tiết giao dịch kho theo ID thông qua API
         /// </summary>
         [HttpGet]
+        [Route("GetStockTransaction/{id}")]
         public async Task<IActionResult> GetStockTransaction(int id)
         {
             try
@@ -103,6 +108,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// Lấy danh sách phụ tùng để hiển thị trong dropdown
         /// </summary>
         [HttpGet]
+        [Route("GetAvailableParts")]
         public async Task<IActionResult> GetAvailableParts()
         {
             try
@@ -134,6 +140,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// Lấy danh sách nhà cung cấp để hiển thị trong dropdown
         /// </summary>
         [HttpGet]
+        [Route("GetAvailableSuppliers")]
         public async Task<IActionResult> GetAvailableSuppliers()
         {
             try
@@ -165,6 +172,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// Tạo giao dịch kho mới
         /// </summary>
         [HttpPost]
+        [Route("CreateStockTransaction")]
         public async Task<IActionResult> CreateStockTransaction([FromBody] CreateStockTransactionDto dto)
         {
             try
@@ -197,6 +205,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// Lấy danh sách loại giao dịch kho
         /// </summary>
         [HttpGet]
+        [Route("GetTransactionTypes")]
         public IActionResult GetTransactionTypes()
         {
             var transactionTypes = new[]
@@ -214,6 +223,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// Import dữ liệu tồn đầu kỳ từ Excel
         /// </summary>
         [HttpPost]
+        [Route("ImportOpeningBalance")]
         public async Task<IActionResult> ImportOpeningBalance([FromBody] OpeningBalanceImportRequest request)
         {
             try
@@ -244,6 +254,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// Import dữ liệu từ Excel file
         /// </summary>
         [HttpPost]
+        [Route("ImportExcel")]
         public async Task<IActionResult> ImportExcel(IFormFile file)
         {
             try
@@ -275,6 +286,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// Validate Excel file trước khi import
         /// </summary>
         [HttpPost]
+        [Route("ValidateExcel")]
         public async Task<IActionResult> ValidateExcel(IFormFile file)
         {
             try
@@ -306,6 +318,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// Tải template Excel mẫu
         /// </summary>
         [HttpGet]
+        [Route("DownloadTemplate")]
         public async Task<IActionResult> DownloadTemplate()
         {
             try

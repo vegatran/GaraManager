@@ -3,6 +3,7 @@ using GarageManagementSystem.IdentityServer.Models;
 using GarageManagementSystem.IdentityServer.Data;
 using Duende.IdentityServer.EntityFramework.Entities;
 using Duende.IdentityServer.Models;
+using GarageManagementSystem.IdentityServer.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -318,6 +319,15 @@ namespace GarageManagementSystem.IdentityServer.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(string id, CreateClientViewModel model)
         {
+            // Debug logging
+            Console.WriteLine($"DEBUG: SelectedClaims received: {model.SelectedClaims?.Count ?? 0}");
+            if (model.SelectedClaims != null)
+            {
+                foreach (var claim in model.SelectedClaims)
+                {
+                    Console.WriteLine($"DEBUG: Claim: {claim}");
+                }
+            }
             if (!ModelState.IsValid)
             {
                 var errors = ModelState
@@ -448,6 +458,23 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                     .Select(pru => new ClientPostLogoutRedirectUri { PostLogoutRedirectUri = pru })
                     .ToList();
 
+                // Add new Client Claims from SelectedClaims
+                if (model.SelectedClaims != null && model.SelectedClaims.Any())
+                {
+                    var newClaims = model.SelectedClaims
+                        .Where(sc => !string.IsNullOrWhiteSpace(sc))
+                        .Select(sc => new Duende.IdentityServer.EntityFramework.Entities.ClientClaim 
+                        { 
+                            ClientId = client.Id,
+                            Type = sc, 
+                            Value = "true" 
+                        })
+                        .ToList();
+                    
+                    _context.Set<Duende.IdentityServer.EntityFramework.Entities.ClientClaim>().AddRange(newClaims);
+                    Console.WriteLine($"DEBUG: Added {newClaims.Count} claims to client");
+                }
+
                 await _context.SaveChangesAsync();
 
                 // Invalidate cache after updating client
@@ -509,16 +536,18 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                     Claims = client.Claims?.Select(c => new { Type = c.Type, Value = c.Value })
                 });
 
-                // Insert into SoftDeleteRecords using raw SQL (Soft Delete)
-                var sql = @"INSERT INTO SoftDeleteRecords (EntityType, EntityName, DeletedAt, DeletedBy, Reason) 
-                           VALUES (@EntityType, @EntityName, @DeletedAt, @DeletedBy, @Reason)";
-                
-                await _context.Database.ExecuteSqlRawAsync(sql,
-                    new Microsoft.Data.SqlClient.SqlParameter("@EntityType", "Client"),
-                    new Microsoft.Data.SqlClient.SqlParameter("@EntityName", client.ClientId),
-                    new Microsoft.Data.SqlClient.SqlParameter("@DeletedAt", DateTime.Now),
-                    new Microsoft.Data.SqlClient.SqlParameter("@DeletedBy", User.Identity?.Name ?? "System"),
-                    new Microsoft.Data.SqlClient.SqlParameter("@Reason", "User requested deletion"));
+                // Insert into SoftDeleteRecords using Entity Framework (Soft Delete)
+                var softDeleteRecord = new SoftDeleteRecord
+                {
+                    EntityType = "Client",
+                    EntityName = client.ClientId,
+                    DeletedAt = DateTime.Now,
+                    DeletedBy = User.Identity?.Name ?? "System",
+                    Reason = "User requested deletion"
+                };
+
+                _garaContext.SoftDeleteRecords.Add(softDeleteRecord);
+                await _garaContext.SaveChangesAsync();
 
                 // Invalidate cache after deleting client
                 InvalidateClientCache();

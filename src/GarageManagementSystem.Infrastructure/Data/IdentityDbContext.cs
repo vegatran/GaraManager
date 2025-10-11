@@ -22,7 +22,7 @@ namespace GarageManagementSystem.Infrastructure.Data
                 entity.Property(e => e.LastName).HasMaxLength(100);
                 entity.Property(e => e.Address).HasMaxLength(500);
                 entity.Property(e => e.Avatar).HasMaxLength(500);
-                entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETDATE()");
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
                 entity.Property(e => e.IsDeleted).HasDefaultValue(false);
                 entity.HasIndex(e => e.IsDeleted);
             });
@@ -31,7 +31,7 @@ namespace GarageManagementSystem.Infrastructure.Data
             builder.Entity<ApplicationRole>(entity =>
             {
                 entity.Property(e => e.Description).HasMaxLength(500);
-                entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETDATE()");
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
                 entity.Property(e => e.IsDeleted).HasDefaultValue(false);
                 entity.HasIndex(e => e.IsDeleted);
             });

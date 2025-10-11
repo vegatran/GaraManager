@@ -47,12 +47,10 @@ namespace GarageManagementSystem.Infrastructure.Data
                 
                 // Unique index chỉ áp dụng cho bản ghi chưa xóa (IsDeleted = false)
                 entity.HasIndex(e => e.Phone)
-                    .IsUnique()
-                    .HasFilter("[Phone] IS NOT NULL AND [IsDeleted] = 0");
+                    .IsUnique();
                     
                 entity.HasIndex(e => e.Email)
-                    .IsUnique()
-                    .HasFilter("[Email] IS NOT NULL AND [IsDeleted] = 0");
+                    .IsUnique();
             });
 
             // Vehicle configuration
@@ -88,12 +86,10 @@ namespace GarageManagementSystem.Infrastructure.Data
                 
                 // Unique index chỉ áp dụng cho bản ghi chưa xóa
                 entity.HasIndex(e => e.LicensePlate)
-                    .IsUnique()
-                    .HasFilter("[LicensePlate] IS NOT NULL AND [IsDeleted] = 0");
+                    .IsUnique();
                     
                 entity.HasIndex(e => e.VIN)
-                    .IsUnique()
-                    .HasFilter("[VIN] IS NOT NULL AND [IsDeleted] = 0");
+                    .IsUnique();
 
                 entity.HasOne(e => e.Customer)
                     .WithMany(c => c.Vehicles)
@@ -125,8 +121,7 @@ namespace GarageManagementSystem.Infrastructure.Data
                 
                 // Unique index cho OrderNumber (chỉ áp dụng cho bản ghi chưa xóa)
                 entity.HasIndex(e => e.OrderNumber)
-                    .IsUnique()
-                    .HasFilter("[OrderNumber] IS NOT NULL AND [IsDeleted] = 0");
+                    .IsUnique();
 
                 entity.HasOne(e => e.Customer)
                     .WithMany(c => c.ServiceOrders)
@@ -209,8 +204,7 @@ namespace GarageManagementSystem.Infrastructure.Data
                 
                 // Unique index cho InspectionNumber (chỉ áp dụng cho bản ghi chưa xóa)
                 entity.HasIndex(e => e.InspectionNumber)
-                    .IsUnique()
-                    .HasFilter("[InspectionNumber] IS NOT NULL AND [IsDeleted] = 0");
+                    .IsUnique();
                 entity.Property(e => e.InspectionType).HasMaxLength(50);
                 entity.Property(e => e.FuelLevel).HasMaxLength(20);
                 entity.Property(e => e.Status).HasMaxLength(20);
@@ -279,8 +273,7 @@ namespace GarageManagementSystem.Infrastructure.Data
                 
                 // Unique index cho QuotationNumber (chỉ áp dụng cho bản ghi chưa xóa)
                 entity.HasIndex(e => e.QuotationNumber)
-                    .IsUnique()
-                    .HasFilter("[QuotationNumber] IS NOT NULL AND [IsDeleted] = 0");
+                    .IsUnique();
                 entity.Property(e => e.Status).HasMaxLength(20);
                 entity.Property(e => e.SubTotal).HasColumnType("decimal(18,2)");
                 entity.Property(e => e.TaxAmount).HasColumnType("decimal(18,2)");
@@ -385,8 +378,8 @@ namespace GarageManagementSystem.Infrastructure.Data
                 
                 // Unique index cho PartNumber (chỉ áp dụng cho bản ghi chưa xóa)
                 entity.HasIndex(e => e.PartNumber)
-                    .IsUnique()
-                    .HasFilter("[PartNumber] IS NOT NULL AND [IsDeleted] = 0");
+                    .IsUnique();
+                    // Note: MySQL filtered index syntax is different, handled at database level
             });
 
             // Supplier configuration
@@ -398,8 +391,8 @@ namespace GarageManagementSystem.Infrastructure.Data
                 
                 // Unique index cho SupplierCode (chỉ áp dụng cho bản ghi chưa xóa)
                 entity.HasIndex(e => e.SupplierCode)
-                    .IsUnique()
-                    .HasFilter("[SupplierCode] IS NOT NULL AND [IsDeleted] = 0");
+                    .IsUnique();
+                    // Note: MySQL filtered index syntax is different, handled at database level
             });
 
             // StockTransaction configuration
@@ -412,8 +405,7 @@ namespace GarageManagementSystem.Infrastructure.Data
                 
                 // Unique index cho TransactionNumber (chỉ áp dụng cho bản ghi chưa xóa)
                 entity.HasIndex(e => e.TransactionNumber)
-                    .IsUnique()
-                    .HasFilter("[TransactionNumber] IS NOT NULL AND [IsDeleted] = 0");
+                    .IsUnique();
 
                 entity.HasOne(e => e.Part)
                     .WithMany(p => p.StockTransactions)
@@ -464,8 +456,7 @@ namespace GarageManagementSystem.Infrastructure.Data
                 
                 // Unique index cho ReceiptNumber (chỉ áp dụng cho bản ghi chưa xóa)
                 entity.HasIndex(e => e.ReceiptNumber)
-                    .IsUnique()
-                    .HasFilter("[ReceiptNumber] IS NOT NULL AND [IsDeleted] = 0");
+                    .IsUnique();
 
                 entity.HasOne(e => e.ServiceOrder)
                     .WithMany(so => so.PaymentTransactions)
@@ -486,8 +477,7 @@ namespace GarageManagementSystem.Infrastructure.Data
                 
                 // Unique index cho AppointmentNumber (chỉ áp dụng cho bản ghi chưa xóa)
                 entity.HasIndex(e => e.AppointmentNumber)
-                    .IsUnique()
-                    .HasFilter("[AppointmentNumber] IS NOT NULL AND [IsDeleted] = 0");
+                    .IsUnique();
 
                 entity.HasOne(e => e.Customer)
                     .WithMany(c => c.Appointments)

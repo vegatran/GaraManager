@@ -75,11 +75,14 @@ builder.Services.AddHttpContextAccessor();
 // Add AuditInterceptor
 builder.Services.AddScoped<GarageManagementSystem.Infrastructure.Interceptors.AuditInterceptor>();
 
+// MySQL Server Version
+var serverVersion = new MySqlServerVersion(new Version(8, 0, 21));
+
 // Database with AuditInterceptor
 builder.Services.AddDbContext<GarageDbContext>((serviceProvider, options) =>
 {
     var auditInterceptor = serviceProvider.GetRequiredService<GarageManagementSystem.Infrastructure.Interceptors.AuditInterceptor>();
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"))
+    options.UseMySql(builder.Configuration.GetConnectionString("DefaultConnection"), serverVersion)
            .AddInterceptors(auditInterceptor);
 });
 

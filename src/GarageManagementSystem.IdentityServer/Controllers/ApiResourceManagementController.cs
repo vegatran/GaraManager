@@ -1,11 +1,11 @@
 using Duende.IdentityServer.EntityFramework.DbContexts;
 using Duende.IdentityServer.EntityFramework.Entities;
 using Duende.IdentityServer.Models;
+using GarageManagementSystem.IdentityServer.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Data.SqlClient;
 using System.ComponentModel.DataAnnotations;
 using GarageManagementSystem.IdentityServer.Data;
 using ApiResourceEntity = Duende.IdentityServer.EntityFramework.Entities.ApiResource;
@@ -71,40 +71,14 @@ namespace GarageManagementSystem.IdentityServer.Controllers
 
                     return Json(new { success = true, message = "API Resource created successfully!" });
                 }
-                catch (DbUpdateException ex) when (ex.InnerException is SqlException sqlEx)
+                catch (DbUpdateException ex)
                 {
-                    // Handle specific SQL errors
-                    var errorMessage = "Database error occurred.";
-                    var fieldErrors = new List<string>();
-
-                    if (sqlEx.Message.Contains("RequireResourceIndicator"))
-                    {
-                        fieldErrors.Add("RequireResourceIndicator: This field cannot be null");
-                    }
-                    else if (sqlEx.Message.Contains("Name"))
-                    {
-                        fieldErrors.Add("Name: Database constraint violation");
-                    }
-                    else if (sqlEx.Message.Contains("Cannot insert"))
-                    {
-                        // Extract field name from error message
-                        var match = System.Text.RegularExpressions.Regex.Match(sqlEx.Message, @"column '([^']+)'");
-                        if (match.Success)
-                        {
-                            fieldErrors.Add($"{match.Groups[1].Value}: This field cannot be null");
-                        }
-                    }
-
-                    if (fieldErrors.Any())
-                    {
-                        errorMessage = $"Database validation failed: {string.Join(", ", fieldErrors)}";
-                    }
-
+                    // Handle database errors
+                    var errorMessage = $"Database error: {ex.InnerException?.Message ?? ex.Message}";
+                    
                     return Json(new { 
                         success = false, 
-                        message = errorMessage,
-                        fieldErrors = fieldErrors,
-                        sqlError = sqlEx.Message
+                        message = errorMessage
                     });
                 }
                 catch (Exception ex)
@@ -240,16 +214,18 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                 return Json(new { success = false, message = "API Resource not found" });
             }
 
-            // Insert into SoftDeleteRecords using raw SQL (Soft Delete)
-            var sql = @"INSERT INTO SoftDeleteRecords (EntityType, EntityName, DeletedAt, DeletedBy, Reason) 
-                       VALUES (@EntityType, @EntityName, @DeletedAt, @DeletedBy, @Reason)";
-            
-            await _context.Database.ExecuteSqlRawAsync(sql,
-                new Microsoft.Data.SqlClient.SqlParameter("@EntityType", "ApiResource"),
-                new Microsoft.Data.SqlClient.SqlParameter("@EntityName", resource.Name),
-                new Microsoft.Data.SqlClient.SqlParameter("@DeletedAt", DateTime.Now),
-                new Microsoft.Data.SqlClient.SqlParameter("@DeletedBy", User.Identity?.Name ?? "System"),
-                new Microsoft.Data.SqlClient.SqlParameter("@Reason", "User requested deletion"));
+            // Insert into SoftDeleteRecords using Entity Framework (Soft Delete)
+            var softDeleteRecord = new SoftDeleteRecord
+            {
+                EntityType = "ApiResource",
+                EntityName = resource.Name,
+                DeletedAt = DateTime.Now,
+                DeletedBy = User.Identity?.Name ?? "System",
+                Reason = "User requested deletion"
+            };
+
+            _garaContext.SoftDeleteRecords.Add(softDeleteRecord);
+            await _garaContext.SaveChangesAsync();
 
             // Invalidate cache after deleting API Resource
             InvalidateApiResourceCache();
@@ -266,12 +242,15 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                 return Json(new { success = false, message = "API Resource not found" });
             }
 
-            // Remove from SoftDeleteRecords (Restore)
-            var sql = @"DELETE FROM SoftDeleteRecords 
-                       WHERE EntityType = 'ApiResource' AND EntityName = @EntityName";
+            // Remove from SoftDeleteRecords using Entity Framework (Restore)
+            var softDeleteRecord = await _garaContext.SoftDeleteRecords
+                .FirstOrDefaultAsync(s => s.EntityType == "ApiResource" && s.EntityName == resource.Name);
             
-            await _context.Database.ExecuteSqlRawAsync(sql,
-                new Microsoft.Data.SqlClient.SqlParameter("@EntityName", resource.Name));
+            if (softDeleteRecord != null)
+            {
+                _garaContext.SoftDeleteRecords.Remove(softDeleteRecord);
+                await _garaContext.SaveChangesAsync();
+            }
 
             // Invalidate cache after restoring API Resource
             InvalidateApiResourceCache();

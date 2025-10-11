@@ -10,6 +10,7 @@ namespace GarageManagementSystem.Web.Controllers
     /// Controller for managing service orders with full CRUD operations via API
     /// </summary>
     [Authorize]
+    [Route("OrderManagement")]
     public class OrderManagementController : Controller
     {
         private readonly ApiService _apiService;
@@ -22,6 +23,8 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Hiển thị trang quản lý đơn hàng
         /// </summary>
+        [Route("")]
+        [Route("Index")]
         public IActionResult Index()
         {
             return View();
@@ -31,6 +34,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// Get all service orders for DataTable via API
         /// </summary>
         [HttpGet]
+        [Route("GetOrders")]
         public async Task<IActionResult> GetOrders()
         {
             var response = await _apiService.GetAsync<List<ServiceOrderDto>>(ApiEndpoints.ServiceOrders.GetAll);
@@ -69,6 +73,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// Lấy thông tin chi tiết đơn hàng theo ID thông qua API
         /// </summary>
         [HttpGet]
+        [Route("Details/{id}")]
         public async Task<IActionResult> Details(int id)
         {
             var response = await _apiService.GetAsync<ServiceOrderDto>(ApiEndpoints.Builder.WithId(ApiEndpoints.ServiceOrders.GetById, id));
@@ -87,6 +92,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// Get all customers for dropdown
         /// </summary>
         [HttpGet]
+        [Route("GetCustomers")]
         public async Task<IActionResult> GetCustomers()
         {
             var response = await _apiService.GetAsync<List<CustomerDto>>(ApiEndpoints.Customers.GetAll);
@@ -112,6 +118,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// Get vehicles by customer ID
         /// </summary>
         [HttpGet]
+        [Route("GetVehiclesByCustomer/{customerId}")]
         public async Task<IActionResult> GetVehiclesByCustomer(int customerId)
         {
             var response = await _apiService.GetAsync<List<VehicleDto>>(ApiEndpoints.Builder.WithId(ApiEndpoints.Vehicles.GetByCustomerId, customerId));
@@ -139,6 +146,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// Get all available services
         /// </summary>
         [HttpGet]
+        [Route("GetServices")]
         public async Task<IActionResult> GetServices()
         {
             var response = await _apiService.GetAsync<List<ServiceDto>>(ApiEndpoints.Services.GetAll);
@@ -168,6 +176,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// Create new service order via API
         /// </summary>
         [HttpPost]
+        [Route("Create")]
         public async Task<IActionResult> Create([FromBody] CreateServiceOrderDto model)
         {
             if (!ModelState.IsValid)
@@ -187,6 +196,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// Update service order via API
         /// </summary>
         [HttpPost]
+        [Route("Edit")]
         public async Task<IActionResult> Edit([FromBody] UpdateServiceOrderDto model)
         {
             if (!ModelState.IsValid)
@@ -206,6 +216,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// Delete service order via API
         /// </summary>
         [HttpPost]
+        [Route("Delete/{id}")]
         public async Task<IActionResult> Delete(int id)
         {
             var response = await _apiService.DeleteAsync<object>(ApiEndpoints.Builder.WithId(ApiEndpoints.ServiceOrders.Delete, id));

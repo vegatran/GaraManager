@@ -21,6 +21,8 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Trang chính Setup
         /// </summary>
+        [Route("")]
+        [Route("Index")]
         public IActionResult Index()
         {
             return View();
@@ -322,6 +324,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Lấy số lượng entity
         /// </summary>
+        [Route("GetEntityCount")]
         private async Task<int> GetEntityCount(string entityName)
         {
             try

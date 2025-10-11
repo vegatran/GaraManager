@@ -10,6 +10,7 @@ namespace GarageManagementSystem.Web.Controllers
     /// Controller quản lý hóa đơn bảo hiểm
     /// </summary>
     [Authorize]
+    [Route("InsuranceInvoice")]
     public class InsuranceInvoiceController : Controller
     {
         private readonly ApiService _apiService;
@@ -23,6 +24,8 @@ namespace GarageManagementSystem.Web.Controllers
         /// Danh sách hóa đơn bảo hiểm
         /// </summary>
         [HttpGet]
+        [Route("")]
+        [Route("Index")]
         public async Task<IActionResult> Index(int? serviceOrderId = null, string? insuranceCompany = null)
         {
             try

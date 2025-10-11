@@ -19,17 +19,20 @@ namespace GarageManagementSystem.IdentityServer.Controllers
         private readonly RoleManager<ApplicationRole> _roleManager;
         private readonly ConfigurationDbContext _configContext;
         private readonly PersistedGrantDbContext _persistedGrantContext;
+        private readonly GaraManagementContext _garaContext;
 
         public SetupController(
             UserManager<ApplicationUser> userManager,
             RoleManager<ApplicationRole> roleManager,
             ConfigurationDbContext configContext,
-            PersistedGrantDbContext persistedGrantContext)
+            PersistedGrantDbContext persistedGrantContext,
+            GaraManagementContext garaContext)
         {
             _userManager = userManager;
             _roleManager = roleManager;
             _configContext = configContext;
             _persistedGrantContext = persistedGrantContext;
+            _garaContext = garaContext;
         }
 
         public IActionResult Index()
@@ -59,6 +62,9 @@ namespace GarageManagementSystem.IdentityServer.Controllers
 
                 // 6. Seed Demo Users and Roles
                 await SeedDemoUsersAndRoles();
+
+                // 7. Seed Custom Claims
+                await SeedCustomClaims();
 
                 TempData["SuccessMessage"] = "System initialized successfully! Demo data created. You can now login with any demo account.";
                 return RedirectToAction("Index");
@@ -112,7 +118,7 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                     Required = true,
                     Emphasize = false,
                     ShowInDiscoveryDocument = true,
-                    Created = DateTime.UtcNow,
+                    Created = DateTime.Now,
                     NonEditable = false
                 },
                         new Duende.IdentityServer.EntityFramework.Entities.IdentityResource
@@ -124,7 +130,7 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                     Required = false,
                     Emphasize = true,
                     ShowInDiscoveryDocument = true,
-                    Created = DateTime.UtcNow,
+                    Created = DateTime.Now,
                     NonEditable = false
                 },
                         new Duende.IdentityServer.EntityFramework.Entities.IdentityResource
@@ -136,7 +142,7 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                     Required = false,
                     Emphasize = true,
                     ShowInDiscoveryDocument = true,
-                    Created = DateTime.UtcNow,
+                    Created = DateTime.Now,
                     NonEditable = false
                 },
                         new Duende.IdentityServer.EntityFramework.Entities.IdentityResource
@@ -148,7 +154,7 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                     Required = false,
                     Emphasize = false,
                     ShowInDiscoveryDocument = true,
-                    Created = DateTime.UtcNow,
+                    Created = DateTime.Now,
                     NonEditable = false
                 }
             };
@@ -225,7 +231,7 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                     Description = "Garage Management API",
                     AllowedAccessTokenSigningAlgorithms = null,
                     ShowInDiscoveryDocument = true,
-                    Created = DateTime.UtcNow,
+                    Created = DateTime.Now,
                     NonEditable = false,
                     Scopes = new List<ApiResourceScope>
                     {
@@ -250,7 +256,7 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                     Description = "Admin API for system management",
                     AllowedAccessTokenSigningAlgorithms = null,
                     ShowInDiscoveryDocument = true,
-                    Created = DateTime.UtcNow,
+                    Created = DateTime.Now,
                     NonEditable = false,
                     Scopes = new List<ApiResourceScope>
                     {
@@ -306,7 +312,7 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                     EnableLocalLogin = true,
                     IncludeJwtId = false,
                     AlwaysSendClientClaims = false,
-                    Created = DateTime.UtcNow,
+                    Created = DateTime.Now,
                     NonEditable = false,
                     AllowedGrantTypes = new List<ClientGrantType>
                     {
@@ -320,7 +326,7 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                             Value = "garage.web.secret".Sha256(),
                             Type = "SharedSecret",
                             Description = "Garage Web Client Secret",
-                            Created = DateTime.UtcNow
+                            Created = DateTime.Now
                         }
                     },
                     RedirectUris = new List<ClientRedirectUri>
@@ -336,7 +342,8 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                     AllowedScopes = new List<ClientScope>
                     {
                         new ClientScope { Scope = "openid" },
-                        new ClientScope { Scope = "profile" }
+                        new ClientScope { Scope = "profile" },
+                        new ClientScope { Scope = "garage.api" }
                     },
                     // Claims = new List<Duende.IdentityServer.EntityFramework.Entities.ClientClaim>
                     // {
@@ -375,7 +382,7 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                     EnableLocalLogin = true,
                     IncludeJwtId = false,
                     AlwaysSendClientClaims = false,
-                    Created = DateTime.UtcNow,
+                    Created = DateTime.Now,
                     NonEditable = false,
                     AllowedGrantTypes = new List<ClientGrantType>
                     {
@@ -388,7 +395,7 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                             Value = "garage.api.client.secret".Sha256(),
                             Type = "SharedSecret",
                             Description = "Garage API Client Secret",
-                            Created = DateTime.UtcNow
+                            Created = DateTime.Now
                         }
                     },
                     AllowedScopes = new List<ClientScope>
@@ -540,6 +547,33 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                     });
                 }
             }
+        }
+
+        private async Task SeedCustomClaims()
+        {
+            var existingClaims = await _garaContext.Claims.Select(c => c.Name).ToListAsync();
+            
+            var customClaims = new[]
+            {
+                new Claim { Name = "role", DisplayName = "Role", Description = "User role", Category = "identity", IsStandard = true, IsActive = true, CreatedAt = DateTime.Now },
+                new Claim { Name = "email", DisplayName = "Email", Description = "Email address", Category = "identity", IsStandard = true, IsActive = true, CreatedAt = DateTime.Now },
+                new Claim { Name = "given_name", DisplayName = "Given Name", Description = "First name", Category = "identity", IsStandard = true, IsActive = true, CreatedAt = DateTime.Now },
+                new Claim { Name = "family_name", DisplayName = "Family Name", Description = "Last name", Category = "identity", IsStandard = true, IsActive = true, CreatedAt = DateTime.Now },
+                new Claim { Name = "garage.employee_id", DisplayName = "Employee ID", Description = "Employee identifier", Category = "garage", IsStandard = false, IsActive = true, CreatedAt = DateTime.Now },
+                new Claim { Name = "garage.department", DisplayName = "Department", Description = "Employee department", Category = "garage", IsStandard = false, IsActive = true, CreatedAt = DateTime.Now },
+                new Claim { Name = "garage.position", DisplayName = "Position", Description = "Employee position", Category = "garage", IsStandard = false, IsActive = true, CreatedAt = DateTime.Now },
+                new Claim { Name = "garage.permissions", DisplayName = "Permissions", Description = "User permissions", Category = "garage", IsStandard = false, IsActive = true, CreatedAt = DateTime.Now }
+            };
+
+            foreach (var claim in customClaims)
+            {
+                if (!existingClaims.Contains(claim.Name))
+                {
+                    _garaContext.Claims.Add(claim);
+                }
+            }
+
+            await _garaContext.SaveChangesAsync();
         }
 
         private string HashSecret(string secret)

@@ -12,6 +12,8 @@ using Microsoft.Extensions.Configuration;
 namespace GarageManagementSystem.Web.Controllers
 {
     [Authorize]
+    [Route("")]
+    [Route("Home")]
     public class HomeController : Controller
     {
         private readonly ApiService _apiService;
@@ -23,6 +25,8 @@ namespace GarageManagementSystem.Web.Controllers
             _configuration = configuration;
         }
 
+        [Route("")]
+        [Route("Index")]
         public async Task<IActionResult> Index()
         {
             try
@@ -63,6 +67,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Display user profile and claims information
         /// </summary>
+        [Route("Profile")]
         public IActionResult Profile()
         {
             // ✅ TỰ ĐỘNG LẤY TẤT CẢ CLAIMS - KHÔNG CẦN CHỈ ĐỊNH TỪNG CÁI
@@ -78,6 +83,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Test API endpoint that requires authentication
         /// </summary>
+        [Route("TestApi")]
         public IActionResult TestApi()
         {
             return View();
@@ -86,6 +92,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Kiểm tra xử lý token timeout
         /// </summary>
+        [Route("TestTokenTimeout")]
         public IActionResult TestTokenTimeout()
         {
             return View();
@@ -94,6 +101,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Gỡ lỗi thông tin token
         /// </summary>
+        [Route("DebugToken")]
         public async Task<IActionResult> DebugToken()
         {
             var debugInfo = new
@@ -114,6 +122,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Test routing - simple text response
         /// </summary>
+        [Route("TestRouting")]
         public IActionResult TestRouting()
         {
             return Content("Routing works! No redirects!");
@@ -122,6 +131,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Lấy cấu hình client cho JavaScript
         /// </summary>
+        [Route("GetConfig")]
         public IActionResult GetConfig()
         {
             var identityServerAuthority = _configuration["IdentityServer:Authority"] ?? "https://localhost:44333";
@@ -140,6 +150,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Login page - redirect to IdentityServer
         /// </summary>
+        [Route("Login")]
         public IActionResult Login()
         {
             return Challenge("oidc");
@@ -148,6 +159,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Access denied page
         /// </summary>
+        [Route("AccessDenied")]
         public IActionResult AccessDenied()
         {
             return View();
@@ -156,6 +168,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Logout user from both local app and IdentityServer
         /// </summary>
+        [Route("Logout")]
         public IActionResult Logout()
         {
             Console.WriteLine($"🔍 Web App Logout - HomeController.Logout() called");
@@ -167,11 +180,13 @@ namespace GarageManagementSystem.Web.Controllers
         }
 
 
+        [Route("Privacy")]
         public IActionResult Privacy()
         {
             return View();
         }
 
+        [Route("Error")]
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Error()
         {

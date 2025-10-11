@@ -439,9 +439,11 @@ window.ClientManagement = {
         }
         // Add SelectedClaims manually
         var selectedClaims = $('#editClientClaims').val() || [];
+        console.log('DEBUG: Selected Claims from UI:', selectedClaims);
         // Remove any existing SelectedClaims entries
         formData.delete('SelectedClaims');
         selectedClaims.forEach(function(claim) {
+            console.log('DEBUG: Adding claim to FormData:', claim);
             formData.append('SelectedClaims', claim);
         });
         

@@ -10,6 +10,7 @@ namespace GarageManagementSystem.Web.Controllers
     /// Controller quản lý lịch hẹn with full CRUD operations via API
     /// </summary>
     [Authorize]
+    [Route("AppointmentManagement")]
     public class AppointmentManagementController : Controller
     {
         private readonly ApiService _apiService;
@@ -22,6 +23,8 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Hiển thị trang quản lý lịch hẹn
         /// </summary>
+        [Route("")]
+        [Route("Index")]
         public IActionResult Index()
         {
             return View();
@@ -31,6 +34,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// Get today's appointments for DataTable via API
         /// </summary>
         [HttpGet]
+        [Route("GetTodayAppointments")]
         public async Task<IActionResult> GetTodayAppointments()
         {
             var response = await _apiService.GetAsync<List<AppointmentDto>>(ApiEndpoints.Appointments.GetToday);
@@ -66,6 +70,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// Get upcoming appointments for DataTable via API
         /// </summary>
         [HttpGet]
+        [Route("GetUpcomingAppointments")]
         public async Task<IActionResult> GetUpcomingAppointments()
         {
             var response = await _apiService.GetAsync<List<AppointmentDto>>(ApiEndpoints.Appointments.GetUpcoming);
@@ -101,6 +106,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// Lấy thông tin chi tiết lịch hẹn theo ID thông qua API
         /// </summary>
         [HttpGet]
+        [Route("GetAppointment/{id}")]
         public async Task<IActionResult> GetAppointment(int id)
         {
             var response = await _apiService.GetAsync<AppointmentDto>(
@@ -114,6 +120,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// Tạo lịch hẹn mới thông qua API
         /// </summary>
         [HttpPost]
+        [Route("CreateAppointment")]
         public async Task<IActionResult> CreateAppointment([FromBody] CreateAppointmentDto appointmentDto)
         {
             if (!ModelState.IsValid)
@@ -133,6 +140,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// Cập nhật thông tin lịch hẹn thông qua API
         /// </summary>
         [HttpPut]
+        [Route("UpdateAppointment/{id}")]
         public async Task<IActionResult> UpdateAppointment(int id, [FromBody] UpdateAppointmentDto appointmentDto)
         {
             if (!ModelState.IsValid)
@@ -157,6 +165,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// Xóa lịch hẹn thông qua API
         /// </summary>
         [HttpDelete]
+        [Route("DeleteAppointment/{id}")]
         public async Task<IActionResult> DeleteAppointment(int id)
         {
             var response = await _apiService.DeleteAsync<AppointmentDto>(
@@ -170,6 +179,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// Get customers for dropdown via API
         /// </summary>
         [HttpGet]
+        [Route("GetCustomers")]
         public async Task<IActionResult> GetCustomers()
         {
             var response = await _apiService.GetAsync<List<CustomerDto>>(ApiEndpoints.Customers.GetAll);
@@ -192,6 +202,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// Get vehicles by customer for dropdown via API
         /// </summary>
         [HttpGet]
+        [Route("GetVehiclesByCustomer/{customerId}")]
         public async Task<IActionResult> GetVehiclesByCustomer(int customerId)
         {
             var response = await _apiService.GetAsync<List<VehicleDto>>(
@@ -216,6 +227,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// Get appointment types for dropdown via API
         /// </summary>
         [HttpGet]
+        [Route("GetAppointmentTypes")]
         public async Task<IActionResult> GetAppointmentTypes()
         {
             var response = await _apiService.GetAsync<List<object>>(ApiEndpoints.Appointments.GetTypes);

@@ -232,16 +232,18 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                 return Json(new { success = false, message = "Claim not found" });
             }
 
-            // Insert into SoftDeleteRecords using raw SQL (Soft Delete)
-            var sql = @"INSERT INTO SoftDeleteRecords (EntityType, EntityName, DeletedAt, DeletedBy, Reason) 
-                       VALUES (@EntityType, @EntityName, @DeletedAt, @DeletedBy, @Reason)";
-            
-            await _context.Database.ExecuteSqlRawAsync(sql,
-                new Microsoft.Data.SqlClient.SqlParameter("@EntityType", "Claim"),
-                new Microsoft.Data.SqlClient.SqlParameter("@EntityName", claim.Name),
-                new Microsoft.Data.SqlClient.SqlParameter("@DeletedAt", DateTime.Now),
-                new Microsoft.Data.SqlClient.SqlParameter("@DeletedBy", User.Identity?.Name ?? "System"),
-                new Microsoft.Data.SqlClient.SqlParameter("@Reason", "User requested deletion"));
+            // Insert into SoftDeleteRecords using Entity Framework (Soft Delete)
+            var softDeleteRecord = new SoftDeleteRecord
+            {
+                EntityType = "Claim",
+                EntityName = claim.Name,
+                DeletedAt = DateTime.Now,
+                DeletedBy = User.Identity?.Name ?? "System",
+                Reason = "User requested deletion"
+            };
+
+            _context.SoftDeleteRecords.Add(softDeleteRecord);
+            await _context.SaveChangesAsync();
 
             // Invalidate cache after deleting claim
             InvalidateClaimsCache();
@@ -260,12 +262,15 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                 return Json(new { success = false, message = "Claim not found" });
             }
 
-            // Remove from SoftDeleteRecords (Restore)
-            var sql = @"DELETE FROM SoftDeleteRecords 
-                       WHERE EntityType = 'Claim' AND EntityName = @EntityName";
+            // Remove from SoftDeleteRecords using Entity Framework (Restore)
+            var softDeleteRecord = await _context.SoftDeleteRecords
+                .FirstOrDefaultAsync(s => s.EntityType == "Claim" && s.EntityName == claim.Name);
             
-            await _context.Database.ExecuteSqlRawAsync(sql,
-                new Microsoft.Data.SqlClient.SqlParameter("@EntityName", claim.Name));
+            if (softDeleteRecord != null)
+            {
+                _context.SoftDeleteRecords.Remove(softDeleteRecord);
+                await _context.SaveChangesAsync();
+            }
 
             // Invalidate cache after restoring claim
             InvalidateClaimsCache();

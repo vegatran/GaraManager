@@ -10,6 +10,7 @@ namespace GarageManagementSystem.Web.Controllers
     /// Controller quản lý khách hàng với đầy đủ các thao tác CRUD thông qua API
     /// </summary>
     [Authorize]
+    [Route("CustomerManagement")]
     public class CustomerManagementController : Controller
     {
         private readonly ApiService _apiService;
@@ -22,6 +23,8 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Hiển thị trang quản lý khách hàng
         /// </summary>
+        [Route("")]
+        [Route("Index")]
         public IActionResult Index()
         {
             // Debug: Log authentication status
@@ -33,6 +36,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Debug endpoint - test redirect
         /// </summary>
+        [Route("Test")]
         public IActionResult Test()
         {
             return Content("CustomerManagement Test - No redirect!");
@@ -42,6 +46,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// Lấy danh sách khách hàng đang hoạt động
         /// </summary>
         [HttpGet]
+        [Route("GetActiveCustomers")]
         public async Task<IActionResult> GetActiveCustomers()
         {
             var response = await _apiService.GetAsync<List<CustomerDto>>(ApiEndpoints.Customers.GetAll);
@@ -59,6 +64,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// Lấy danh sách tất cả khách hàng cho DataTable thông qua API
         /// </summary>
         [HttpGet]
+        [Route("GetCustomers")]
         public async Task<IActionResult> GetCustomers()
         {
             var response = await _apiService.GetAsync<List<CustomerDto>>(ApiEndpoints.Customers.GetAll);
@@ -93,6 +99,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// Lấy thông tin chi tiết khách hàng theo ID thông qua API
         /// </summary>
         [HttpGet]
+        [Route("Details/{id}")]
         public async Task<IActionResult> Details(int id)
         {
             var response = await _apiService.GetAsync<CustomerDto>(ApiEndpoints.Builder.WithId(ApiEndpoints.Customers.GetById, id));
@@ -111,6 +118,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// Tạo khách hàng mới thông qua API
         /// </summary>
         [HttpPost]
+        [Route("Create")]
         public async Task<IActionResult> Create(CreateCustomerDto model)
         {
             if (!ModelState.IsValid)
@@ -130,6 +138,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// Cập nhật thông tin khách hàng thông qua API
         /// </summary>
         [HttpPost]
+        [Route("Edit")]
         public async Task<IActionResult> Edit(UpdateCustomerDto model)
         {
             if (!ModelState.IsValid)
@@ -149,6 +158,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// Xóa khách hàng thông qua API
         /// </summary>
         [HttpPost]
+        [Route("Delete/{id}")]
         public async Task<IActionResult> Delete(int id)
         {
             var response = await _apiService.DeleteAsync<object>(ApiEndpoints.Builder.WithId(ApiEndpoints.Customers.Delete, id));
