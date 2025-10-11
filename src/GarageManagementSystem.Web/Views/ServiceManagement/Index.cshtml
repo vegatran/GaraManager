@@ -1,0 +1,215 @@
+@{
+    ViewData["Title"] = "Quản Lý Dịch Vụ";
+}
+
+@Html.AntiForgeryToken()
+
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1 class="m-0">Service Management</h1>
+            </div>
+            <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-right">
+                    <li class="breadcrumb-item"><a href="@Url.Action("Index", "Home")">Home</a></li>
+                    <li class="breadcrumb-item active">Services</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+
+<section class="content">
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Service List</h3>
+                        <div class="card-tools">
+                            <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#createServiceModal">
+                                <i class="fas fa-plus"></i> Add New Service
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <table id="serviceTable" class="table table-bordered table-striped">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Tên Dịch Vụ</th>
+                                    <th>Mã Dịch Vụ</th>
+                                    <th>Mô Tả</th>
+                                    <th>Giá</th>
+                                    <th>Thời Gian</th>
+                                    <th>Thao Tác</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Create Service Modal -->
+<div class="modal fade" id="createServiceModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-primary">
+                <h4 class="modal-title">Add New Service</h4>
+                <button type="button" class="close text-white" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <form id="createServiceForm">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createServiceName">Service Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control form-control-sm" id="createServiceName" name="ServiceName" required maxlength="200">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createServiceCode">Service Code <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control form-control-sm" id="createServiceCode" name="ServiceCode" required maxlength="50">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createPrice">Price (VND) <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control form-control-sm" id="createPrice" name="Price" required min="0" step="1000">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createDuration">Duration (minutes)</label>
+                                <input type="number" class="form-control form-control-sm" id="createDuration" name="Duration" min="0">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createCategory">Category</label>
+                                <select class="form-control form-control-sm" id="createCategory" name="Category">
+                                    <option value="">-- Select Category --</option>
+                                    <option value="Maintenance">Maintenance</option>
+                                    <option value="Repair">Repair</option>
+                                    <option value="Inspection">Inspection</option>
+                                    <option value="Body Work">Body Work</option>
+                                    <option value="Parts">Parts</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="createDescription">Description</label>
+                        <textarea class="form-control form-control-sm" id="createDescription" name="Description" rows="3" maxlength="1000"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">
+                        <i class="fas fa-times"></i> Close
+                    </button>
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <i class="fas fa-save"></i> Save
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Service Modal -->
+<div class="modal fade" id="editServiceModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h4 class="modal-title">Edit Service Information</h4>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <form id="editServiceForm">
+                <div class="modal-body">
+                    <input type="hidden" id="editId" name="Id">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="editServiceName">Service Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control form-control-sm" id="editServiceName" name="ServiceName" required maxlength="200">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="editServiceCode">Service Code <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control form-control-sm" id="editServiceCode" name="ServiceCode" required maxlength="50">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="editPrice">Price (VND) <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control form-control-sm" id="editPrice" name="Price" required min="0" step="1000">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="editDuration">Duration (minutes)</label>
+                                <input type="number" class="form-control form-control-sm" id="editDuration" name="Duration" min="0">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="editCategory">Category</label>
+                                <select class="form-control form-control-sm" id="editCategory" name="Category">
+                                    <option value="">-- Select Category --</option>
+                                    <option value="Maintenance">Maintenance</option>
+                                    <option value="Repair">Repair</option>
+                                    <option value="Inspection">Inspection</option>
+                                    <option value="Body Work">Body Work</option>
+                                    <option value="Parts">Parts</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="editDescription">Description</label>
+                        <textarea class="form-control form-control-sm" id="editDescription" name="Description" rows="3" maxlength="1000"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">
+                        <i class="fas fa-times"></i> Close
+                    </button>
+                    <button type="submit" class="btn btn-warning btn-sm">
+                        <i class="fas fa-save"></i> Update
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/service-management.js"></script>
+    <script>
+        $(document).ready(function() {
+            ServiceManagement.init();
+        });
+    </script>
+}

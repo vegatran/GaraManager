@@ -1,0 +1,251 @@
+@{
+    ViewData["Title"] = "Quản Lý Xe";
+}
+
+@Html.AntiForgeryToken()
+
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1 class="m-0">Quản Lý Xe</h1>
+            </div>
+            <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-right">
+                    <li class="breadcrumb-item"><a href="@Url.Action("Index", "Home")">Trang chủ</a></li>
+                    <li class="breadcrumb-item active">Xe</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+
+<section class="content">
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Danh Sách Xe</h3>
+                        <div class="card-tools">
+                            <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#createVehicleModal">
+                                <i class="fas fa-plus"></i> Thêm Xe Mới
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <table id="vehicleTable" class="table table-bordered table-striped">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Biển Số Xe</th>
+                                    <th>Hãng Xe</th>
+                                    <th>Mẫu Xe</th>
+                                    <th>Năm SX</th>
+                                    <th>Khách Hàng</th>
+                                    <th>Thao Tác</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Create Vehicle Modal -->
+<div class="modal fade modal-with-select2" id="createVehicleModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-primary">
+                <h4 class="modal-title">Thêm Xe Mới</h4>
+                <button type="button" class="close text-white" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <form id="createVehicleForm">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createCustomerId">Khách Hàng <span class="text-danger">*</span></label>
+                                <select class="form-control form-control-sm select2" id="createCustomerId" name="CustomerId" required style="width: 100%;">
+                                    <option value="">-- Chọn Khách Hàng --</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createLicensePlate">Biển Số Xe <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control form-control-sm" id="createLicensePlate" name="LicensePlate" required maxlength="20">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createMake">Hãng Xe <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control form-control-sm" id="createMake" name="Make" required maxlength="100">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createModel">Mẫu Xe <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control form-control-sm" id="createModel" name="Model" required maxlength="100">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createYear">Năm Sản Xuất</label>
+                                <input type="number" class="form-control form-control-sm" id="createYear" name="Year" min="1900" max="2100">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createColor">Màu Sắc</label>
+                                <input type="text" class="form-control form-control-sm" id="createColor" name="Color" maxlength="50">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createVIN">Số VIN</label>
+                                <input type="text" class="form-control form-control-sm" id="createVIN" name="VIN" maxlength="50">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createEngineNumber">Số Máy</label>
+                                <input type="text" class="form-control form-control-sm" id="createEngineNumber" name="EngineNumber" maxlength="50">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createMileage">Mileage (km)</label>
+                                <input type="number" class="form-control form-control-sm" id="createMileage" name="Mileage" min="0">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">
+                        <i class="fas fa-times"></i> Đóng
+                    </button>
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <i class="fas fa-save"></i> Lưu
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Vehicle Modal -->
+<div class="modal fade modal-with-select2" id="editVehicleModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h4 class="modal-title">Edit Vehicle Information</h4>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <form id="editVehicleForm">
+                <div class="modal-body">
+                    <input type="hidden" id="editId" name="Id">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="editCustomerId">Customer <span class="text-danger">*</span></label>
+                                <select class="form-control form-control-sm select2" id="editCustomerId" name="CustomerId" required style="width: 100%;">
+                                    <option value="">-- Select Customer --</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="editLicensePlate">License Plate <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control form-control-sm" id="editLicensePlate" name="LicensePlate" required maxlength="20">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="editMake">Make <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control form-control-sm" id="editMake" name="Make" required maxlength="100">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="editModel">Model <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control form-control-sm" id="editModel" name="Model" required maxlength="100">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="editYear">Year</label>
+                                <input type="number" class="form-control form-control-sm" id="editYear" name="Year" min="1900" max="2100">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="editColor">Color</label>
+                                <input type="text" class="form-control form-control-sm" id="editColor" name="Color" maxlength="50">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="editVIN">VIN Number</label>
+                                <input type="text" class="form-control form-control-sm" id="editVIN" name="VIN" maxlength="50">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="editEngineNumber">Engine Number</label>
+                                <input type="text" class="form-control form-control-sm" id="editEngineNumber" name="EngineNumber" maxlength="50">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="editMileage">Mileage (km)</label>
+                                <input type="number" class="form-control form-control-sm" id="editMileage" name="Mileage" min="0">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">
+                        <i class="fas fa-times"></i> Đóng
+                    </button>
+                    <button type="submit" class="btn btn-warning btn-sm">
+                        <i class="fas fa-save"></i> Cập Nhật
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/vehicle-management.js"></script>
+    <script>
+        $(document).ready(function() {
+            VehicleManagement.init();
+        });
+    </script>
+}

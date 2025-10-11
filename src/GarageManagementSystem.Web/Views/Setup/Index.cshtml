@@ -1,0 +1,186 @@
+@{
+    ViewData["Title"] = "Setup - Khởi tạo Dữ liệu Demo";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<!-- Content Header -->
+    <div class="content-header">
+        <div class="container-fluid">
+            <div class="row mb-2">
+                <div class="col-sm-6">
+                    <h1 class="m-0">
+                        <i class="fas fa-database"></i>
+                        Setup - Khởi tạo Dữ liệu Demo
+                    </h1>
+                </div>
+                <div class="col-sm-6">
+                    <ol class="breadcrumb float-sm-right">
+                        <li class="breadcrumb-item"><a href="@Url.Action("Index", "Home")">Trang chủ</a></li>
+                        <li class="breadcrumb-item active">Cài đặt</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main content -->
+    <section class="content">
+        <div class="container-fluid">
+            <!-- Status Cards -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-chart-bar"></i>
+                                Trạng thái Dữ liệu Hiện tại
+                            </h3>
+                            <div class="card-tools">
+                                <button type="button" class="btn btn-sm btn-primary" id="refreshStatus">
+                                    <i class="fas fa-sync-alt"></i>
+                                    Làm mới
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="row" id="statusCards">
+                                <!-- Status cards will be loaded here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Setup Modules -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-cogs"></i>
+                                Modules Khởi tạo Dữ liệu
+                            </h3>
+                            <div class="card-tools">
+                                <button type="button" class="btn btn-sm btn-success" id="setupAll">
+                                    <i class="fas fa-database"></i>
+                                    Setup Tất cả
+                                </button>
+                                <button type="button" class="btn btn-sm btn-danger" id="clearAll">
+                                    <i class="fas fa-trash"></i>
+                                    Xóa Tất cả
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="row" id="setupModules">
+                                <!-- Setup modules will be loaded here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Progress Modal -->
+            <div class="modal fade" id="progressModal" tabindex="-1" role="dialog">
+                <div class="modal-dialog modal-lg" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h4 class="modal-title">
+                                <i class="fas fa-spinner fa-spin"></i>
+                                Đang khởi tạo dữ liệu...
+                            </h4>
+                        </div>
+                        <div class="modal-body">
+                            <div class="progress mb-3">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                     role="progressbar" style="width: 0%" id="progressBar">
+                                    0%
+                                </div>
+                            </div>
+                            <div id="progressText">
+                                Bắt đầu khởi tạo dữ liệu...
+                            </div>
+                            <div id="progressDetails" class="mt-3">
+                                <!-- Progress details will be shown here -->
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal" id="cancelSetup">
+                                Hủy bỏ
+                            </button>
+                        </div>
+                    </div>
+                </div>
+    </section>
+
+<!-- Setup Script -->
+
+<style>
+    .setup-module {
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    
+    .setup-module:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+    
+    .setup-module.setup-success {
+        border-left: 4px solid #28a745;
+        background-color: #d4edda;
+    }
+    
+    .setup-module.setup-error {
+        border-left: 4px solid #dc3545;
+        background-color: #f8d7da;
+    }
+    
+    .setup-module.setup-progress {
+        border-left: 4px solid #007bff;
+        background-color: #cce7ff;
+    }
+    
+    .status-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 15px;
+        text-align: center;
+        transition: transform 0.3s ease;
+    }
+    
+    .status-card:hover {
+        transform: scale(1.05);
+    }
+    
+    .status-number {
+        font-size: 2em;
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+    
+    .status-label {
+        font-size: 0.9em;
+        opacity: 0.9;
+    }
+    
+    .progress-step {
+        padding: 10px;
+        margin: 5px 0;
+        border-radius: 5px;
+        background: #f8f9fa;
+        border-left: 3px solid #007bff;
+    }
+    
+    .progress-step.success {
+        border-left-color: #28a745;
+        background: #d4edda;
+    }
+    
+    .progress-step.error {
+        border-left-color: #dc3545;
+        background: #f8d7da;
+    }
+</style>

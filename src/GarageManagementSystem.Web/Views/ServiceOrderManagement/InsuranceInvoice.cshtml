@@ -1,0 +1,179 @@
+@model InsuranceInvoiceDto
+
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">
+            <i class="fas fa-file-invoice-dollar"></i> 
+            Hóa Đơn Bảo Hiểm - @Model.InsuranceCompany
+        </h3>
+        <div class="card-tools">
+            <button type="button" class="btn btn-primary btn-sm" id="exportPdfBtn">
+                <i class="fas fa-file-pdf"></i> Xuất PDF
+            </button>
+            <button type="button" class="btn btn-success btn-sm" id="exportExcelBtn">
+                <i class="fas fa-file-excel"></i> Xuất Excel
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="window.print()">
+                <i class="fas fa-print"></i> In
+            </button>
+        </div>
+    </div>
+    
+    <div class="card-body">
+        <!-- Thông tin công ty -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <h5><strong>Đơn vị sửa chữa:</strong></h5>
+                <p>GARAGE MANAGEMENT SYSTEM<br>
+                Địa chỉ: [Địa chỉ gara]<br>
+                Điện thoại: [Số điện thoại]<br>
+                Email: [Email gara]</p>
+            </div>
+            <div class="col-md-6">
+                <h5><strong>Công ty bảo hiểm:</strong></h5>
+                <p>@Model.InsuranceCompany<br>
+                Số hợp đồng: @Model.PolicyNumber<br>
+                Số yêu cầu bồi thường: @Model.ClaimNumber</p>
+            </div>
+        </div>
+
+        <!-- Thông tin tai nạn -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h5><strong>Thông tin tai nạn:</strong></h5>
+                <table class="table table-bordered table-sm">
+                    <tr>
+                        <td width="20%"><strong>Biển số xe:</strong></td>
+                        <td width="30%">@Model.LicensePlate</td>
+                        <td width="20%"><strong>Loại xe:</strong></td>
+                        <td width="30%">@Model.VehicleModel</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Ngày xảy ra tai nạn:</strong></td>
+                        <td>@Model.AccidentDate.ToString("dd/MM/yyyy HH:mm")</td>
+                        <td><strong>Địa điểm:</strong></td>
+                        <td>@Model.AccidentLocation</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- Bảng chi tiết hạng mục -->
+        <div class="table-responsive">
+            <table class="table table-bordered table-striped">
+                <thead class="thead-dark">
+                    <tr>
+                        <th width="5%">TT</th>
+                        <th width="40%">Hạng mục tổn thất</th>
+                        <th width="15%">Loại</th>
+                        <th width="15%">Giá duyệt</th>
+                        <th width="15%">Trách nhiệm KH</th>
+                        <th width="10%">Ghi chú</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{
+                        int index = 1;
+                        decimal totalApproved = 0;
+                        decimal totalCustomer = 0;
+                    }
+                    @foreach (var item in Model.Items)
+                    {
+                        totalApproved += item.ApprovedPrice;
+                        totalCustomer += item.CustomerPrice;
+                        <tr>
+                            <td>@index</td>
+                            <td>@item.ItemName</td>
+                            <td>
+                                <span class="badge badge-@(item.ItemType == "Thay thế" ? "danger" : item.ItemType == "Sửa chữa" ? "warning" : "info")">
+                                    @item.ItemType
+                                </span>
+                            </td>
+                            <td class="text-right">@item.ApprovedPrice.ToString("N0") VND</td>
+                            <td class="text-right">@item.CustomerPrice.ToString("N0") VND</td>
+                            <td>@item.Notes</td>
+                        </tr>
+                        index++;
+                    }
+                </tbody>
+                <tfoot class="table-dark">
+                    <tr>
+                        <th colspan="3"><strong>TỔNG CỘNG</strong></th>
+                        <th class="text-right"><strong>@totalApproved.ToString("N0") VND</strong></th>
+                        <th class="text-right"><strong>@totalCustomer.ToString("N0") VND</strong></th>
+                        <th></th>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <!-- Tổng kết tài chính -->
+        <div class="row mt-4">
+            <div class="col-md-8">
+                <h5><strong>I. Tính toán số tiền thuộc trách nhiệm bảo hiểm:</strong></h5>
+                <table class="table table-bordered table-sm">
+                    <tr>
+                        <td width="60%"><strong>A. Tổng tiền duyệt công nhận giá:</strong></td>
+                        <td width="40%" class="text-right"><strong>@Model.TotalApprovedAmount.ToString("N0") VND</strong> (Chưa VAT)</td>
+                    </tr>
+                    <tr>
+                        <td colspan="2"><strong>Các khoản điều chỉnh:</strong></td>
+                    </tr>
+                    <tr>
+                        <td class="pl-4">1. Giảm giá sửa chữa:</td>
+                        <td class="text-right">@((Model.TotalApprovedAmount - Model.InsuranceResponsibility).ToString("N0")) VND</td>
+                    </tr>
+                    <tr>
+                        <td class="pl-4">2. Khấu trừ theo vụ tổn thất:</td>
+                        <td class="text-right">0 VND</td>
+                    </tr>
+                    <tr>
+                        <td class="pl-4">3. Giảm trừ bồi thường:</td>
+                        <td class="text-right">@Model.CustomerResponsibility.ToString("N0") VND</td>
+                    </tr>
+                    <tr class="table-success">
+                        <td><strong>B. Tổng tiền thuộc trách nhiệm bảo hiểm:</strong></td>
+                        <td class="text-right"><strong>@Model.InsuranceResponsibility.ToString("N0") VND</strong> (Chưa VAT)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Thuế VAT (10%):</strong></td>
+                        <td class="text-right"><strong>@Model.VatAmount.ToString("N0") VND</strong></td>
+                    </tr>
+                    <tr class="table-primary">
+                        <td><strong>TỔNG TIỀN THANH TOÁN:</strong></td>
+                        <td class="text-right"><strong>@Model.FinalAmount.ToString("N0") VND</strong></td>
+                    </tr>
+                </table>
+                <p><em>Bằng chữ: <strong>@Model.FinalAmount.ToString("N0") VND</strong> (Chưa VAT)</em></p>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="card-title">Thông tin xuất hóa đơn</h6>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Ngày tạo:</strong> @Model.CreatedAt.ToString("dd/MM/yyyy HH:mm")</p>
+                        <p><strong>Người tạo:</strong> @Model.CreatedBy</p>
+                        <p><strong>Trạng thái:</strong> <span class="badge badge-success">Đã duyệt</span></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Xuất PDF
+            $('#exportPdfBtn').on('click', function() {
+                window.open('/ServiceOrderManagement/ExportInsuranceInvoicePdf/@Model.Id', '_blank');
+            });
+
+            // Xuất Excel
+            $('#exportExcelBtn').on('click', function() {
+                window.open('/ServiceOrderManagement/ExportInsuranceInvoiceExcel/@Model.Id', '_blank');
+            });
+        });
+    </script>
+}

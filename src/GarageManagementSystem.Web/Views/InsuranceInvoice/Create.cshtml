@@ -1,0 +1,314 @@
+@model InsuranceInvoiceDto
+
+@{
+    ViewData["Title"] = "Tạo Hóa Đơn Bảo Hiểm";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="content-wrapper">
+    <div class="content-header">
+        <div class="container-fluid">
+            <div class="row mb-2">
+                <div class="col-sm-6">
+                    <h1 class="m-0">Tạo Hóa Đơn Bảo Hiểm</h1>
+                </div>
+                <div class="col-sm-6">
+                    <ol class="breadcrumb float-sm-right">
+                        <li class="breadcrumb-item"><a href="#">Trang chủ</a></li>
+                        <li class="breadcrumb-item"><a href="@Url.Action("Index")">Hóa Đơn Bảo Hiểm</a></li>
+                        <li class="breadcrumb-item active">Tạo mới</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <section class="content">
+        <div class="container-fluid">
+            <form asp-action="Create" method="post">
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">Thông Tin Hóa Đơn</h3>
+                            </div>
+                            <div class="card-body">
+                                <input type="hidden" asp-for="ServiceOrderId" />
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label asp-for="InsuranceCompany">Công ty bảo hiểm <span class="text-danger">*</span></label>
+                                            <input asp-for="InsuranceCompany" class="form-control" placeholder="Nhập tên công ty bảo hiểm" />
+                                            <span asp-validation-for="InsuranceCompany" class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label asp-for="PolicyNumber">Số hợp đồng <span class="text-danger">*</span></label>
+                                            <input asp-for="PolicyNumber" class="form-control" placeholder="Nhập số hợp đồng" />
+                                            <span asp-validation-for="PolicyNumber" class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label asp-for="ClaimNumber">Số yêu cầu bồi thường <span class="text-danger">*</span></label>
+                                            <input asp-for="ClaimNumber" class="form-control" placeholder="Nhập số yêu cầu bồi thường" />
+                                            <span asp-validation-for="ClaimNumber" class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label asp-for="AccidentDate">Ngày xảy ra tai nạn <span class="text-danger">*</span></label>
+                                            <input asp-for="AccidentDate" type="datetime-local" class="form-control" />
+                                            <span asp-validation-for="AccidentDate" class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label asp-for="LicensePlate">Biển số xe <span class="text-danger">*</span></label>
+                                            <input asp-for="LicensePlate" class="form-control" placeholder="Nhập biển số xe" />
+                                            <span asp-validation-for="LicensePlate" class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label asp-for="VehicleModel">Loại xe <span class="text-danger">*</span></label>
+                                            <input asp-for="VehicleModel" class="form-control" placeholder="Nhập loại xe" />
+                                            <span asp-validation-for="VehicleModel" class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label asp-for="AccidentLocation">Địa điểm xảy ra tai nạn <span class="text-danger">*</span></label>
+                                    <input asp-for="AccidentLocation" class="form-control" placeholder="Nhập địa điểm xảy ra tai nạn" />
+                                    <span asp-validation-for="AccidentLocation" class="text-danger"></span>
+                                </div>
+
+                                <div class="form-group">
+                                    <label asp-for="Notes">Ghi chú</label>
+                                    <textarea asp-for="Notes" class="form-control" rows="3" placeholder="Nhập ghi chú (nếu có)"></textarea>
+                                    <span asp-validation-for="Notes" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Chi tiết hạng mục -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">Chi Tiết Hạng Mục Sửa Chữa</h3>
+                                <div class="card-tools">
+                                    <button type="button" class="btn btn-success btn-sm" onclick="addInvoiceItem()">
+                                        <i class="fas fa-plus"></i> Thêm hạng mục
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div id="invoiceItems">
+                                    @for (int i = 0; i < Model.Items.Count; i++)
+                                    {
+                                        <div class="invoice-item" data-index="@i">
+                                            <div class="row">
+                                                <div class="col-md-4">
+                                                    <div class="form-group">
+                                                        <label>Tên hạng mục <span class="text-danger">*</span></label>
+                                                        <input name="Items[@i].ItemName" value="@Model.Items[i].ItemName" class="form-control" placeholder="Nhập tên hạng mục" />
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-2">
+                                                    <div class="form-group">
+                                                        <label>Loại <span class="text-danger">*</span></label>
+                                                        <select name="Items[@i].ItemType" class="form-control">
+                                                            <option value="Thay thế" selected="@(Model.Items[i].ItemType == "Thay thế")">Thay thế</option>
+                                                            <option value="Sửa chữa" selected="@(Model.Items[i].ItemType == "Sửa chữa")">Sửa chữa</option>
+                                                            <option value="Sơn" selected="@(Model.Items[i].ItemType == "Sơn")">Sơn</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-2">
+                                                    <div class="form-group">
+                                                        <label>Giá duyệt <span class="text-danger">*</span></label>
+                                                        <input name="Items[@i].ApprovedPrice" type="number" value="@Model.Items[i].ApprovedPrice" class="form-control approved-price" placeholder="0" />
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-2">
+                                                    <div class="form-group">
+                                                        <label>Trách nhiệm KH</label>
+                                                        <input name="Items[@i].CustomerPrice" type="number" value="@Model.Items[i].CustomerPrice" class="form-control customer-price" placeholder="0" />
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-2">
+                                                    <div class="form-group">
+                                                        <label>Ghi chú</label>
+                                                        <div class="input-group">
+                                                            <input name="Items[@i].Notes" value="@Model.Items[i].Notes" class="form-control" placeholder="Ghi chú" />
+                                                            <div class="input-group-append">
+                                                                <button type="button" class="btn btn-danger btn-sm" onclick="removeInvoiceItem(this)">
+                                                                    <i class="fas fa-trash"></i>
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <!-- Tổng kết tài chính -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">Tổng Kết Tài Chính</h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-group">
+                                    <label asp-for="TotalApprovedAmount">Tổng tiền duyệt công nhận giá</label>
+                                    <input asp-for="TotalApprovedAmount" type="number" class="form-control" readonly />
+                                </div>
+
+                                <div class="form-group">
+                                    <label asp-for="CustomerResponsibility">Trách nhiệm khách hàng</label>
+                                    <input asp-for="CustomerResponsibility" type="number" class="form-control" readonly />
+                                </div>
+
+                                <div class="form-group">
+                                    <label asp-for="InsuranceResponsibility">Trách nhiệm bảo hiểm</label>
+                                    <input asp-for="InsuranceResponsibility" type="number" class="form-control" readonly />
+                                </div>
+
+                                <div class="form-group">
+                                    <label asp-for="VatAmount">Thuế VAT (10%)</label>
+                                    <input asp-for="VatAmount" type="number" class="form-control" readonly />
+                                </div>
+
+                                <div class="form-group">
+                                    <label asp-for="FinalAmount">Tổng tiền thanh toán</label>
+                                    <input asp-for="FinalAmount" type="number" class="form-control" readonly />
+                                </div>
+
+                                <div class="form-group">
+                                    <button type="submit" class="btn btn-primary btn-block">
+                                        <i class="fas fa-save"></i> Tạo Hóa Đơn
+                                    </button>
+                                    <a href="@Url.Action("Index")" class="btn btn-secondary btn-block">
+                                        <i class="fas fa-arrow-left"></i> Quay lại
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </section>
+</div>
+
+@section Scripts {
+    <script>
+        let itemIndex = @Model.Items.Count;
+
+        function addInvoiceItem() {
+            const itemHtml = `
+                <div class="invoice-item" data-index="${itemIndex}">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label>Tên hạng mục <span class="text-danger">*</span></label>
+                                <input name="Items[${itemIndex}].ItemName" class="form-control" placeholder="Nhập tên hạng mục" required />
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="form-group">
+                                <label>Loại <span class="text-danger">*</span></label>
+                                <select name="Items[${itemIndex}].ItemType" class="form-control">
+                                    <option value="Thay thế">Thay thế</option>
+                                    <option value="Sửa chữa">Sửa chữa</option>
+                                    <option value="Sơn">Sơn</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="form-group">
+                                <label>Giá duyệt <span class="text-danger">*</span></label>
+                                <input name="Items[${itemIndex}].ApprovedPrice" type="number" class="form-control approved-price" placeholder="0" required />
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="form-group">
+                                <label>Trách nhiệm KH</label>
+                                <input name="Items[${itemIndex}].CustomerPrice" type="number" class="form-control customer-price" placeholder="0" />
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="form-group">
+                                <label>Ghi chú</label>
+                                <div class="input-group">
+                                    <input name="Items[${itemIndex}].Notes" class="form-control" placeholder="Ghi chú" />
+                                    <div class="input-group-append">
+                                        <button type="button" class="btn btn-danger btn-sm" onclick="removeInvoiceItem(this)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            $('#invoiceItems').append(itemHtml);
+            itemIndex++;
+            
+            // Bind events for new item
+            bindItemEvents();
+        }
+
+        function removeInvoiceItem(button) {
+            $(button).closest('.invoice-item').remove();
+            calculateTotals();
+        }
+
+        function bindItemEvents() {
+            $('.approved-price, .customer-price').off('input').on('input', calculateTotals);
+        }
+
+        function calculateTotals() {
+            let totalApproved = 0;
+            let totalCustomer = 0;
+
+            $('.invoice-item').each(function() {
+                const approvedPrice = parseFloat($(this).find('.approved-price').val()) || 0;
+                const customerPrice = parseFloat($(this).find('.customer-price').val()) || 0;
+                
+                totalApproved += approvedPrice;
+                totalCustomer += customerPrice;
+            });
+
+            const insuranceResponsibility = totalApproved - totalCustomer;
+            const vatAmount = insuranceResponsibility * 0.1;
+            const finalAmount = insuranceResponsibility + vatAmount;
+
+            $('#TotalApprovedAmount').val(totalApproved);
+            $('#CustomerResponsibility').val(totalCustomer);
+            $('#InsuranceResponsibility').val(insuranceResponsibility);
+            $('#VatAmount').val(vatAmount);
+            $('#FinalAmount').val(finalAmount);
+        }
+
+        $(document).ready(function() {
+            bindItemEvents();
+            calculateTotals();
+        });
+    </script>
+}

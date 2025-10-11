@@ -1,0 +1,155 @@
+@model List<InsuranceInvoiceDto>
+
+@{
+    ViewData["Title"] = "Danh Sách Hóa Đơn Bảo Hiểm";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="content-wrapper">
+    <div class="content-header">
+        <div class="container-fluid">
+            <div class="row mb-2">
+                <div class="col-sm-6">
+                    <h1 class="m-0">Hóa Đơn Bảo Hiểm</h1>
+                </div>
+                <div class="col-sm-6">
+                    <ol class="breadcrumb float-sm-right">
+                        <li class="breadcrumb-item"><a href="#">Trang chủ</a></li>
+                        <li class="breadcrumb-item active">Hóa Đơn Bảo Hiểm</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <section class="content">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Danh Sách Hóa Đơn Bảo Hiểm</h3>
+                            <div class="card-tools">
+                                <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#filterModal">
+                                    <i class="fas fa-filter"></i> Lọc
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table id="insuranceInvoiceTable" class="table table-bordered table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Đơn sửa chữa</th>
+                                            <th>Công ty bảo hiểm</th>
+                                            <th>Số hợp đồng</th>
+                                            <th>Biển số xe</th>
+                                            <th>Tổng tiền</th>
+                                            <th>Ngày tạo</th>
+                                            <th>Thao tác</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var invoice in Model)
+                                        {
+                                            <tr>
+                                                <td>@invoice.Id</td>
+                                                <td>SO-@invoice.ServiceOrderId.ToString("D4")</td>
+                                                <td>@invoice.InsuranceCompany</td>
+                                                <td>@invoice.PolicyNumber</td>
+                                                <td>@invoice.LicensePlate</td>
+                                                <td class="text-right">@invoice.FinalAmount.ToString("N0") VND</td>
+                                                <td>@invoice.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
+                                                <td>
+                                                    <div class="btn-group" role="group">
+                                                        <a href="@Url.Action("Details", new { id = invoice.Id })" class="btn btn-info btn-sm" title="Xem chi tiết">
+                                                            <i class="fas fa-eye"></i>
+                                                        </a>
+                                                        <a href="@Url.Action("Edit", new { id = invoice.Id })" class="btn btn-warning btn-sm" title="Chỉnh sửa">
+                                                            <i class="fas fa-edit"></i>
+                                                        </a>
+                                                        <a href="@Url.Action("ExportPdf", new { id = invoice.Id })" class="btn btn-danger btn-sm" title="Xuất PDF" target="_blank">
+                                                            <i class="fas fa-file-pdf"></i>
+                                                        </a>
+                                                        <a href="@Url.Action("ExportExcel", new { id = invoice.Id })" class="btn btn-success btn-sm" title="Xuất Excel" target="_blank">
+                                                            <i class="fas fa-file-excel"></i>
+                                                        </a>
+                                                        <button type="button" class="btn btn-danger btn-sm" onclick="deleteInvoice(@invoice.Id)" title="Xóa">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+
+<!-- Filter Modal -->
+<div class="modal fade" id="filterModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">Lọc Hóa Đơn Bảo Hiểm</h4>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <form method="get" action="@Url.Action("Index")">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="serviceOrderId">Đơn sửa chữa ID:</label>
+                        <input type="number" class="form-control" id="serviceOrderId" name="serviceOrderId" value="@ViewBag.ServiceOrderId">
+                    </div>
+                    <div class="form-group">
+                        <label for="insuranceCompany">Công ty bảo hiểm:</label>
+                        <input type="text" class="form-control" id="insuranceCompany" name="insuranceCompany" value="@ViewBag.InsuranceCompany" placeholder="Nhập tên công ty bảo hiểm">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Lọc</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Initialize DataTable
+            if ($.fn.DataTable.isDataTable('#insuranceInvoiceTable')) {
+                $('#insuranceInvoiceTable').DataTable().destroy();
+            }
+            
+            $('#insuranceInvoiceTable').DataTable({
+                "responsive": true,
+                "lengthChange": false,
+                "autoWidth": false,
+                "language": {
+                    "url": "//cdn.datatables.net/plug-ins/1.10.24/i18n/Vietnamese.json"
+                },
+                "order": [[0, "desc"]]
+            });
+        });
+
+        function deleteInvoice(invoiceId) {
+            if (confirm('Bạn có chắc chắn muốn xóa hóa đơn bảo hiểm này không?')) {
+                var form = $('<form method="post" action="@Url.Action("Delete", "InsuranceInvoice")">');
+                form.append('<input type="hidden" name="id" value="' + invoiceId + '">');
+                form.append('<input type="hidden" name="__RequestVerificationToken" value="@Html.AntiForgeryToken()">');
+                $('body').append(form);
+                form.submit();
+            }
+        }
+    </script>
+}
