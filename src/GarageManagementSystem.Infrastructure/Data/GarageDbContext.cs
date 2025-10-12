@@ -1,12 +1,22 @@
 using GarageManagementSystem.Core.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Http;
+using System.Security.Claims;
 
 namespace GarageManagementSystem.Infrastructure.Data
 {
     public class GarageDbContext : DbContext
     {
+        private readonly IHttpContextAccessor? _httpContextAccessor;
+
         public GarageDbContext(DbContextOptions<GarageDbContext> options) : base(options)
         {
+        }
+
+        public GarageDbContext(DbContextOptions<GarageDbContext> options, IHttpContextAccessor httpContextAccessor) 
+            : base(options)
+        {
+            _httpContextAccessor = httpContextAccessor;
         }
 
         public DbSet<Customer> Customers { get; set; }
@@ -30,6 +40,34 @@ namespace GarageManagementSystem.Infrastructure.Data
         public DbSet<Appointment> Appointments { get; set; }
         public DbSet<InsuranceInvoice> InsuranceInvoices { get; set; }
         public DbSet<InsuranceInvoiceItem> InsuranceInvoiceItems { get; set; }
+        
+        // Phase 1 - New entities
+        public DbSet<SystemConfiguration> SystemConfigurations { get; set; }
+        public DbSet<AuditLog> AuditLogs { get; set; }
+        public DbSet<InsuranceClaim> InsuranceClaims { get; set; }
+        public DbSet<InsuranceClaimDocument> InsuranceClaimDocuments { get; set; }
+        public DbSet<Invoice> Invoices { get; set; }
+        public DbSet<InvoiceItem> InvoiceItems { get; set; }
+        public DbSet<Payment> Payments { get; set; }
+        
+        // Advanced features
+        public DbSet<PartGroup> PartGroups { get; set; }
+        public DbSet<PartGroupCompatibility> PartGroupCompatibilities { get; set; }
+        public DbSet<ServiceType> ServiceTypes { get; set; }
+        public DbSet<LaborCategory> LaborCategories { get; set; }
+        public DbSet<LaborItem> LaborItems { get; set; }
+        public DbSet<ServiceOrderLabor> ServiceOrderLabors { get; set; }
+        public DbSet<PurchaseOrder> PurchaseOrders { get; set; }
+        public DbSet<PurchaseOrderItem> PurchaseOrderItems { get; set; }
+        public DbSet<PartInventoryBatch> PartInventoryBatches { get; set; }
+        public DbSet<PartBatchUsage> PartBatchUsages { get; set; }
+        public DbSet<VehicleBrand> VehicleBrands { get; set; }
+        public DbSet<VehicleModel> VehicleModels { get; set; }
+        public DbSet<EngineSpecification> EngineSpecifications { get; set; }
+        public DbSet<VehicleInsurance> VehicleInsurances { get; set; }
+        public DbSet<FinancialTransaction> FinancialTransactions { get; set; }
+        public DbSet<FinancialTransactionAttachment> FinancialTransactionAttachments { get; set; }
+        public DbSet<PartSupplier> PartSuppliers { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -749,6 +787,163 @@ namespace GarageManagementSystem.Infrastructure.Data
                     .HasForeignKey(e => e.InsuranceInvoiceId)
                     .OnDelete(DeleteBehavior.Cascade);
             });
+
+            // Invoice Configuration - Self-referencing relationships
+            modelBuilder.Entity<Invoice>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                
+                // ReplacesInvoice relationship
+                entity.HasOne(e => e.ReplacesInvoice)
+                    .WithMany(i => i.ReplacedByInvoices)
+                    .HasForeignKey(e => e.ReplacesInvoiceId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                
+                // AdjustmentForInvoice relationship
+                entity.HasOne(e => e.AdjustmentForInvoice)
+                    .WithMany(i => i.AdjustmentInvoices)
+                    .HasForeignKey(e => e.AdjustmentForInvoiceId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // InsuranceClaim Configuration
+            modelBuilder.Entity<InsuranceClaim>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                
+                // InsuranceClaim -> Invoice relationship (many-to-one)
+                entity.HasOne(e => e.Invoice)
+                    .WithMany()
+                    .HasForeignKey(e => e.InvoiceId)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            // VehicleInspection Configuration - Use TEXT for long string fields
+            modelBuilder.Entity<VehicleInspection>(entity =>
+            {
+                entity.Property(e => e.GeneralCondition).HasColumnType("TEXT");
+                entity.Property(e => e.ExteriorCondition).HasColumnType("TEXT");
+                entity.Property(e => e.InteriorCondition).HasColumnType("TEXT");
+                entity.Property(e => e.EngineCondition).HasColumnType("TEXT");
+                entity.Property(e => e.BrakeCondition).HasColumnType("TEXT");
+                entity.Property(e => e.SuspensionCondition).HasColumnType("TEXT");
+                entity.Property(e => e.TireCondition).HasColumnType("TEXT");
+                entity.Property(e => e.Findings).HasColumnType("TEXT");
+                entity.Property(e => e.CustomerComplaints).HasColumnType("TEXT");
+                entity.Property(e => e.Recommendations).HasColumnType("TEXT");
+                entity.Property(e => e.TechnicianNotes).HasColumnType("TEXT");
+                entity.Property(e => e.Notes).HasColumnType("TEXT");
+            });
+
+            // ServiceQuotation Configuration - Use TEXT for long fields
+            modelBuilder.Entity<ServiceQuotation>(entity =>
+            {
+                entity.Property(e => e.Description).HasColumnType("TEXT");
+                entity.Property(e => e.Terms).HasColumnType("TEXT");
+                entity.Property(e => e.CustomerNotes).HasColumnType("TEXT");
+                entity.Property(e => e.RejectionReason).HasColumnType("TEXT");
+                entity.Property(e => e.Notes).HasColumnType("TEXT");
+            });
+
+            // ServiceOrder Configuration - Use TEXT for long fields
+            modelBuilder.Entity<ServiceOrder>(entity =>
+            {
+                entity.Property(e => e.Notes).HasColumnType("TEXT");
+                entity.Property(e => e.Description).HasColumnType("TEXT");
+            });
+
+            // InvoiceItem Configuration - Use TEXT for long fields
+            modelBuilder.Entity<InvoiceItem>(entity =>
+            {
+                entity.Property(e => e.Description).HasColumnType("TEXT");
+            });
+        }
+
+        /// <summary>
+        /// Override SaveChanges to automatically set audit fields (synchronous version)
+        /// </summary>
+        public override int SaveChanges()
+        {
+            ApplyAuditInformation();
+            return base.SaveChanges();
+        }
+
+        /// <summary>
+        /// Override SaveChangesAsync to automatically set audit fields (asynchronous version)
+        /// </summary>
+        public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        {
+            ApplyAuditInformation();
+            return await base.SaveChangesAsync(cancellationToken);
+        }
+
+        /// <summary>
+        /// Apply audit information to all tracked entities
+        /// </summary>
+        private void ApplyAuditInformation()
+        {
+            var entries = ChangeTracker.Entries()
+                .Where(e => e.Entity is BaseEntity && (
+                    e.State == EntityState.Added ||
+                    e.State == EntityState.Modified ||
+                    e.State == EntityState.Deleted));
+
+            var currentUser = GetCurrentUser();
+            var currentTime = DateTime.Now;
+
+            foreach (var entry in entries)
+            {
+                var entity = (BaseEntity)entry.Entity;
+
+                switch (entry.State)
+                {
+                    case EntityState.Added:
+                        entity.CreatedAt = currentTime;
+                        entity.CreatedBy = currentUser;
+                        entity.UpdatedAt = currentTime;
+                        entity.UpdatedBy = currentUser;
+                        entity.IsDeleted = false;
+                        break;
+
+                    case EntityState.Modified:
+                        // Don't update CreatedAt and CreatedBy
+                        entity.UpdatedAt = currentTime;
+                        entity.UpdatedBy = currentUser;
+                        break;
+
+                    case EntityState.Deleted:
+                        // Soft delete
+                        entry.State = EntityState.Modified;
+                        entity.IsDeleted = true;
+                        entity.DeletedAt = currentTime;
+                        entity.DeletedBy = currentUser;
+                        entity.UpdatedAt = currentTime;
+                        entity.UpdatedBy = currentUser;
+                        break;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Get current user from HttpContext
+        /// </summary>
+        private string? GetCurrentUser()
+        {
+            if (_httpContextAccessor?.HttpContext == null)
+                return "System";
+
+            var user = _httpContextAccessor.HttpContext.User;
+            
+            if (user?.Identity?.IsAuthenticated == true)
+            {
+                // Try to get user ID or name from claims
+                return user.FindFirst(ClaimTypes.NameIdentifier)?.Value 
+                    ?? user.FindFirst(ClaimTypes.Name)?.Value 
+                    ?? user.FindFirst("sub")?.Value 
+                    ?? "Anonymous";
+            }
+
+            return "Anonymous";
         }
     }
 }

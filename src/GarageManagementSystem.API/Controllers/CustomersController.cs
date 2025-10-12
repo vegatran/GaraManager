@@ -307,6 +307,114 @@ namespace GarageManagementSystem.API.Controllers
             }
         }
 
+        /// <summary>
+        /// Get customer history including vehicles, orders, appointments, quotations, invoices, and payments
+        /// </summary>
+        [HttpGet("{id}/history")]
+        public async Task<ActionResult<ApiResponse<object>>> GetCustomerHistory(int id)
+        {
+            try
+            {
+                var customer = await _unitOfWork.Customers.GetByIdAsync(id);
+                if (customer == null)
+                {
+                    return NotFound(ApiResponse<object>.ErrorResult("Customer not found"));
+                }
+
+                // Get all related data
+                var vehicles = await _unitOfWork.Vehicles.FindAsync(v => v.CustomerId == id && !v.IsDeleted);
+                var serviceOrders = await _unitOfWork.ServiceOrders.FindAsync(so => so.CustomerId == id && !so.IsDeleted);
+                var appointments = await _unitOfWork.Appointments.FindAsync(a => a.CustomerId == id && !a.IsDeleted);
+                var quotations = await _unitOfWork.ServiceQuotations.FindAsync(q => q.CustomerId == id && !q.IsDeleted);
+                var inspections = await _unitOfWork.VehicleInspections.FindAsync(vi => vi.CustomerId == id && !vi.IsDeleted);
+
+                // Get invoices and payments through service orders
+                var serviceOrderIds = serviceOrders.Select(so => so.Id).ToList();
+                var invoices = await _unitOfWork.Invoices.FindAsync(inv => inv.ServiceOrderId.HasValue && serviceOrderIds.Contains(inv.ServiceOrderId.Value) && !inv.IsDeleted);
+                var invoiceIds = invoices.Select(inv => inv.Id).ToList();
+                var payments = await _unitOfWork.Payments.FindAsync(p => p.InvoiceId.HasValue && invoiceIds.Contains(p.InvoiceId.Value) && !p.IsDeleted);
+
+                // Calculate statistics
+                var totalSpent = invoices.Sum(i => i.TotalAmount);
+                var totalPaid = payments.Sum(p => p.Amount);
+                var outstanding = totalSpent - totalPaid;
+
+                var history = new
+                {
+                    Customer = MapToDto(customer),
+                    Statistics = new
+                    {
+                        TotalVehicles = vehicles.Count(),
+                        TotalServiceOrders = serviceOrders.Count(),
+                        TotalAppointments = appointments.Count(),
+                        TotalQuotations = quotations.Count(),
+                        TotalInspections = inspections.Count(),
+                        TotalInvoices = invoices.Count(),
+                        TotalSpent = totalSpent,
+                        TotalPaid = totalPaid,
+                        OutstandingBalance = outstanding
+                    },
+                    Vehicles = vehicles.Select(v => new
+                    {
+                        v.Id,
+                        v.LicensePlate,
+                        v.Brand,
+                        v.Model,
+                        v.Year,
+                        v.VIN,
+                        v.CreatedAt
+                    }).OrderByDescending(v => v.CreatedAt).ToList(),
+                    RecentServiceOrders = serviceOrders.OrderByDescending(so => so.OrderDate).Take(10).Select(so => new
+                    {
+                        so.Id,
+                        so.OrderNumber,
+                        so.OrderDate,
+                        so.Status,
+                        so.TotalAmount,
+                        so.CompletedDate
+                    }).ToList(),
+                    RecentAppointments = appointments.OrderByDescending(a => a.ScheduledDateTime).Take(10).Select(a => new
+                    {
+                        a.Id,
+                        a.ScheduledDateTime,
+                        a.AppointmentType,
+                        a.Status,
+                        a.CustomerNotes
+                    }).ToList(),
+                    RecentQuotations = quotations.OrderByDescending(q => q.QuotationDate).Take(10).Select(q => new
+                    {
+                        q.Id,
+                        q.QuotationNumber,
+                        q.QuotationDate,
+                        q.Status,
+                        q.TotalAmount
+                    }).ToList(),
+                    RecentInvoices = invoices.OrderByDescending(i => i.InvoiceDate).Take(10).Select(i => new
+                    {
+                        i.Id,
+                        i.InvoiceNumber,
+                        i.InvoiceDate,
+                        i.TotalAmount,
+                        i.Status // Using Status instead of PaymentStatus
+                    }).ToList(),
+                    RecentPayments = payments.OrderByDescending(p => p.PaymentDate).Take(10).Select(p => new
+                    {
+                        p.Id,
+                        p.PaymentDate,
+                        p.Amount,
+                        p.PaymentMethod,
+                        p.Status
+                    }).ToList()
+                };
+
+                return Ok(ApiResponse<object>.SuccessResult(history));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<object>.ErrorResult("Error retrieving customer history", ex.Message));
+            }
+        }
+
         private static CustomerDto MapToDto(Core.Entities.Customer customer)
         {
             return new CustomerDto

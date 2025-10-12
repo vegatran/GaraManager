@@ -110,7 +110,7 @@ window.CustomerManagement = {
         });
 
         // Update customer form
-        $(document).on('submit', '#updateCustomerForm', function(e) {
+        $(document).on('submit', '#editCustomerForm', function(e) {
             e.preventDefault();
             self.updateCustomer();
         });
@@ -130,8 +130,10 @@ window.CustomerManagement = {
             url: '/CustomerManagement/GetCustomer/' + id,
             type: 'GET',
             success: function(response) {
+                console.log('🔍 View Customer API Response:', response);
                 if (AuthHandler.validateApiResponse(response)) {
                     if (response.success) {
+                        console.log('🔍 Customer Data:', response.data);
                         self.populateViewModal(response.data);
                         $('#viewCustomerModal').modal('show');
                     } else {
@@ -157,8 +159,10 @@ window.CustomerManagement = {
             url: '/CustomerManagement/GetCustomer/' + id,
             type: 'GET',
             success: function(response) {
+                console.log('🔍 Edit Customer API Response:', response);
                 if (AuthHandler.validateApiResponse(response)) {
                     if (response.success) {
+                        console.log('🔍 Customer Data:', response.data);
                         self.populateEditModal(response.data);
                         $('#editCustomerModal').modal('show');
                     } else {
@@ -256,15 +260,15 @@ window.CustomerManagement = {
     // Update customer
     updateCustomer: function() {
         var self = this;
-        var customerId = $('#updateCustomerId').val();
+        var customerId = $('#editId').val();
         var formData = {
             Id: parseInt(customerId),
-            Name: $('#updateName').val(),
-            Email: $('#updateEmail').val(),
-            Phone: $('#updatePhone').val(),
-            Address: $('#updateAddress').val(),
-            AlternativePhone: $('#updateAlternativePhone').val(),
-            ContactPersonName: $('#updateContactPersonName').val()
+            Name: $('#editName').val(),
+            Email: $('#editEmail').val(),
+            Phone: $('#editPhone').val(),
+            Address: $('#editAddress').val(),
+            AlternativePhone: $('#editAlternativePhone').val(),
+            ContactPersonName: $('#editContactPersonName').val()
         };
 
         $.ajax({
@@ -305,13 +309,13 @@ window.CustomerManagement = {
 
     // Populate edit modal
     populateEditModal: function(customer) {
-        $('#updateCustomerId').val(customer.id);
-        $('#updateName').val(customer.name);
-        $('#updateEmail').val(customer.email);
-        $('#updatePhone').val(customer.phone);
-        $('#updateAddress').val(customer.address);
-        $('#updateAlternativePhone').val(customer.alternativePhone);
-        $('#updateContactPersonName').val(customer.contactPersonName);
+        $('#editId').val(customer.id);
+        $('#editName').val(customer.name);
+        $('#editEmail').val(customer.email);
+        $('#editPhone').val(customer.phone);
+        $('#editAddress').val(customer.address);
+        $('#editAlternativePhone').val(customer.alternativePhone);
+        $('#editContactPersonName').val(customer.contactPersonName);
     }
 };
 

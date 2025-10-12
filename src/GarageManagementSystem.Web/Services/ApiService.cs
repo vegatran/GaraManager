@@ -42,23 +42,18 @@ namespace GarageManagementSystem.Web.Services
             {
                 _httpClient.DefaultRequestHeaders.Authorization = 
                     new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
-                Console.WriteLine($"✅ Token da duoc thiet lap cho cuoc goi API: {accessToken.Substring(0, Math.Min(20, accessToken.Length))}...");
             }
             else
             {
-                Console.WriteLine("❌ Khong tim thay access token! Cac claims co san:");
-                foreach (var claim in _user.Claims)
-                {
-                    Console.WriteLine($"  {claim.Type}: {claim.Value}");
-                }
+                //foreach (var claim in _user.Claims)
+                //{
+                //    Console.WriteLine($"  {claim.Type}: {claim.Value}");
+                //}
                 
                 // Log token store info
                 var idToken = await _httpContextAccessor.HttpContext?.GetTokenAsync("id_token");
                 var refreshToken = await _httpContextAccessor.HttpContext?.GetTokenAsync("refresh_token");
-                
-                Console.WriteLine($"🔍 Thong tin Token Store:");
-                Console.WriteLine($"  ID Token: {(string.IsNullOrEmpty(idToken) ? "null" : "EXISTS")}");
-                Console.WriteLine($"  Refresh Token: {(string.IsNullOrEmpty(refreshToken) ? "null" : "EXISTS")}");
+               
             }
         }
 

@@ -184,3 +184,280 @@
         background: #f8d7da;
     }
 </style>
+
+@section Scripts {
+<script>
+$(document).ready(function() {
+    // Check if required libraries are loaded
+    if (typeof Swal === 'undefined') {
+        console.error('SweetAlert2 not loaded');
+        return;
+    }
+    
+    console.log('Setup page initialized');
+    
+    // Load setup modules and status on page load
+    loadSetupModules();
+    loadDataStatus();
+    
+    // Bind events
+    $('#refreshStatus').click(function() {
+        loadDataStatus();
+    });
+    
+    $('#setupAll').click(function() {
+        setupAllModules();
+    });
+    
+    $('#clearAll').click(function() {
+        clearAllData();
+    });
+    
+    // Load setup modules
+    function loadSetupModules() {
+        $.ajax({
+            url: '/Setup/GetSetupModules',
+            type: 'GET',
+            success: function(response) {
+                if (response && response.length > 0) {
+                    displaySetupModules(response);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error loading setup modules:', error);
+                $('#setupModules').html('<div class="col-12"><div class="alert alert-danger">Lỗi khi tải danh sách modules: ' + error + '</div></div>');
+            }
+        });
+    }
+    
+    // Display setup modules
+    function displaySetupModules(modules) {
+        var html = '';
+        var currentPhase = '';
+        
+        modules.forEach(function(module) {
+            if (module.phase !== currentPhase) {
+                if (currentPhase !== '') {
+                    html += '</div></div>'; // Close previous phase
+                }
+                html += '<div class="col-12 mb-4">';
+                html += '<h5 class="text-primary"><i class="fas fa-layer-group"></i> ' + module.phase + '</h5>';
+                html += '<p class="text-muted small">' + module.phaseDescription + '</p>';
+                html += '<div class="row">';
+                currentPhase = module.phase;
+            }
+            
+            html += '<div class="col-md-4 col-lg-3 mb-3">';
+            html += '<div class="card setup-module" data-module="' + module.id + '">';
+            html += '<div class="card-body text-center">';
+            html += '<i class="' + module.icon + ' fa-2x text-primary mb-2"></i>';
+            html += '<h6 class="card-title">' + module.name + '</h6>';
+            html += '<p class="card-text small text-muted">' + module.description + '</p>';
+            html += '<button class="btn btn-sm btn-outline-primary setup-module-btn" data-module="' + module.id + '">';
+            html += '<i class="fas fa-play"></i> Tạo dữ liệu';
+            html += '</button>';
+            html += '</div></div></div>';
+        });
+        
+        if (currentPhase !== '') {
+            html += '</div></div>'; // Close last phase
+        }
+        
+        $('#setupModules').html(html);
+        
+        // Bind module setup events
+        $('.setup-module-btn').click(function() {
+            var moduleId = $(this).data('module');
+            setupModule(moduleId);
+        });
+    }
+    
+    // Load data status
+    function loadDataStatus() {
+        $.ajax({
+            url: '/Setup/CheckDataStatus',
+            type: 'GET',
+            success: function(response) {
+                if (response.success && response.data) {
+                    displayDataStatus(response.data);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error loading data status:', error);
+                $('#statusCards').html('<div class="col-12"><div class="alert alert-danger">Lỗi khi tải trạng thái dữ liệu</div></div>');
+            }
+        });
+    }
+    
+    // Display data status
+    function displayDataStatus(status) {
+        var html = '';
+        var statusItems = [
+            { key: 'customers', label: 'Khách hàng', icon: 'fas fa-users' },
+            { key: 'vehicles', label: 'Xe', icon: 'fas fa-car' },
+            { key: 'employees', label: 'Nhân viên', icon: 'fas fa-user-tie' },
+            { key: 'services', label: 'Dịch vụ', icon: 'fas fa-tools' },
+            { key: 'parts', label: 'Phụ tùng', icon: 'fas fa-cogs' },
+            { key: 'suppliers', label: 'Nhà cung cấp', icon: 'fas fa-truck' },
+            { key: 'inspections', label: 'Kiểm tra xe', icon: 'fas fa-search' },
+            { key: 'quotations', label: 'Báo giá', icon: 'fas fa-file-invoice-dollar' },
+            { key: 'orders', label: 'Đơn hàng', icon: 'fas fa-clipboard-list' },
+            { key: 'payments', label: 'Thanh toán', icon: 'fas fa-credit-card' },
+            { key: 'appointments', label: 'Lịch hẹn', icon: 'fas fa-calendar-alt' }
+        ];
+        
+        statusItems.forEach(function(item) {
+            var count = status[item.key] || 0;
+            html += '<div class="col-md-3 col-sm-6 mb-3">';
+            html += '<div class="status-card">';
+            html += '<div class="status-number">' + count + '</div>';
+            html += '<div class="status-label">';
+            html += '<i class="' + item.icon + '"></i> ' + item.label;
+            html += '</div></div></div>';
+        });
+        
+        $('#statusCards').html(html);
+    }
+    
+    // Setup single module
+    function setupModule(moduleId) {
+        // Call API through Web Application's SetupController which will proxy to API
+        $.ajax({
+            url: '@Url.Action("CreateModule", "Setup")?moduleId=' + moduleId,
+            type: 'POST',
+            beforeSend: function() {
+                $('.setup-module[data-module="' + moduleId + '"]').addClass('setup-progress');
+                $('.setup-module-btn[data-module="' + moduleId + '"]').prop('disabled', true);
+            },
+            success: function(response) {
+                if (response.success) {
+                    $('.setup-module[data-module="' + moduleId + '"]').removeClass('setup-progress').addClass('setup-success');
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Thành công!',
+                        text: 'Tạo dữ liệu ' + moduleId + ' thành công: ' + response.message,
+                        timer: 3000,
+                        showConfirmButton: false
+                    });
+                    loadDataStatus(); // Refresh status
+                } else {
+                    $('.setup-module[data-module="' + moduleId + '"]').removeClass('setup-progress').addClass('setup-error');
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Lỗi!',
+                        text: 'Lỗi tạo dữ liệu ' + moduleId + ': ' + response.message
+                    });
+                }
+            },
+            error: function(xhr, status, error) {
+                $('.setup-module[data-module="' + moduleId + '"]').removeClass('setup-progress').addClass('setup-error');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Lỗi!',
+                    text: 'Lỗi tạo dữ liệu ' + moduleId
+                });
+            },
+            complete: function() {
+                $('.setup-module-btn[data-module="' + moduleId + '"]').prop('disabled', false);
+            }
+        });
+    }
+    
+    // Setup all modules
+    function setupAllModules() {
+        if (!confirm('Bạn có chắc muốn tạo tất cả dữ liệu demo?')) {
+            return;
+        }
+        
+        $('#progressModal').modal('show');
+        var modules = ['customers', 'employees', 'suppliers', 'vehicles', 'parts', 'services', 'inspections', 'quotations', 'orders', 'payments', 'appointments'];
+        var currentIndex = 0;
+        
+        function setupNextModule() {
+            if (currentIndex >= modules.length) {
+                $('#progressModal').modal('hide');
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Hoàn thành!',
+                    text: 'Đã tạo tất cả dữ liệu demo thành công!',
+                    timer: 3000,
+                    showConfirmButton: false
+                });
+                loadDataStatus();
+                loadSetupModules();
+                return;
+            }
+            
+            var moduleId = modules[currentIndex];
+            var progress = Math.round((currentIndex / modules.length) * 100);
+            
+            $('#progressBar').css('width', progress + '%').text(progress + '%');
+            $('#progressText').text('Đang tạo dữ liệu: ' + moduleId);
+            
+            $.ajax({
+                url: '@Url.Action("CreateModule", "Setup")?moduleId=' + moduleId,
+                type: 'POST',
+                success: function(response) {
+                    var statusClass = response.success ? 'success' : 'error';
+                    var statusText = response.success ? 'Thành công' : 'Lỗi: ' + response.message;
+                    $('#progressDetails').append('<div class="progress-step ' + statusClass + '">' + moduleId + ': ' + statusText + '</div>');
+                    currentIndex++;
+                    setTimeout(setupNextModule, 1000);
+                },
+                error: function() {
+                    $('#progressDetails').append('<div class="progress-step error">' + moduleId + ': Lỗi kết nối</div>');
+                    currentIndex++;
+                    setTimeout(setupNextModule, 1000);
+                }
+            });
+        }
+        
+        setupNextModule();
+    }
+    
+    // Clear all data
+    function clearAllData() {
+        if (!confirm('Bạn có chắc muốn XÓA TẤT CẢ dữ liệu? Hành động này không thể hoàn tác!')) {
+            return;
+        }
+        
+        $.ajax({
+            url: '/Setup/ClearAllData',
+            type: 'POST',
+            beforeSend: function() {
+                $('#clearAll').prop('disabled', true);
+            },
+            success: function(response) {
+                if (response.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Thành công!',
+                        text: 'Đã xóa tất cả dữ liệu thành công!',
+                        timer: 3000,
+                        showConfirmButton: false
+                    });
+                    loadDataStatus();
+                    loadSetupModules();
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Lỗi!',
+                        text: 'Lỗi xóa dữ liệu: ' + response.message
+                    });
+                }
+            },
+            error: function(xhr, status, error) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Lỗi!',
+                    text: 'Lỗi xóa dữ liệu'
+                });
+            },
+            complete: function() {
+                $('#clearAll').prop('disabled', false);
+            }
+        });
+    }
+});
+</script>
+}

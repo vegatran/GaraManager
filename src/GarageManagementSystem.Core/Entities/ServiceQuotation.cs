@@ -12,6 +12,7 @@ namespace GarageManagementSystem.Core.Entities
         public string QuotationNumber { get; set; } = string.Empty;
 
         public int? VehicleInspectionId { get; set; }
+        public int? InspectionId { get; set; } // Alias for VehicleInspectionId
         public int CustomerId { get; set; }
         public int VehicleId { get; set; }
         public int? PreparedById { get; set; } // Employee who prepared quotation
@@ -20,6 +21,7 @@ namespace GarageManagementSystem.Core.Entities
         public DateTime QuotationDate { get; set; } = DateTime.Now;
 
         public DateTime? ValidUntil { get; set; }
+        public DateTime? ExpiryDate { get; set; } // Alias for ValidUntil
 
         [StringLength(2000)]
         public string? Description { get; set; }
@@ -34,8 +36,10 @@ namespace GarageManagementSystem.Core.Entities
         // Pricing
         public decimal SubTotal { get; set; }
         public decimal TaxAmount { get; set; } = 0;
+        public decimal VATAmount { get; set; } = 0; // Alias for TaxAmount
         public decimal TaxRate { get; set; } = 0; // Tax percentage
         public decimal DiscountAmount { get; set; } = 0;
+        public decimal DiscountPercent { get; set; } = 0; // Discount percentage
         public decimal TotalAmount { get; set; }
 
         // Insurance specific fields (nullable)
@@ -69,6 +73,28 @@ namespace GarageManagementSystem.Core.Entities
 
         [StringLength(1000)]
         public string? RejectionReason { get; set; }
+        
+        [StringLength(1000)]
+        public string? Notes { get; set; } // Alias for CustomerNotes
+        
+        // Cached customer/vehicle info for API
+        [StringLength(200)]
+        public string? CustomerName { get; set; }
+        
+        [StringLength(20)]
+        public string? CustomerPhone { get; set; }
+        
+        [StringLength(100)]
+        public string? CustomerEmail { get; set; }
+        
+        [StringLength(20)]
+        public string? VehiclePlate { get; set; }
+        
+        [StringLength(50)]
+        public string? VehicleMake { get; set; }
+        
+        [StringLength(50)]
+        public string? VehicleModel { get; set; }
 
         // If approved, reference to created ServiceOrder
         public int? ServiceOrderId { get; set; }

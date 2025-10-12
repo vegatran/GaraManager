@@ -42,7 +42,7 @@ namespace GarageManagementSystem.Api.Controllers
                     vehicleCount,
                     serviceCount,
                     orderCount,
-                    timestamp = DateTime.UtcNow
+                    timestamp = DateTime.Now
                 };
 
                 return Ok(statistics);

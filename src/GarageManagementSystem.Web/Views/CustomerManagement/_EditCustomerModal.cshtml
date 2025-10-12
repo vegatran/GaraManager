@@ -1,0 +1,66 @@
+<!-- Edit Customer Modal -->
+<div class="modal fade" id="editCustomerModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h4 class="modal-title">Sửa Thông Tin Khách Hàng</h4>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <form id="editCustomerForm">
+                <div class="modal-body">
+                    <input type="hidden" id="editId" name="Id">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="editName">Tên Khách Hàng <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control form-control-sm" id="editName" name="Name" required maxlength="200">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="editPhone">Số Điện Thoại <span class="text-danger">*</span></label>
+                                <input type="tel" class="form-control form-control-sm" id="editPhone" name="Phone" required maxlength="20">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="editEmail">Email</label>
+                                <input type="email" class="form-control form-control-sm" id="editEmail" name="Email" maxlength="200">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="editAlternativePhone">Số Điện Thoại Phụ</label>
+                                <input type="tel" class="form-control form-control-sm" id="editAlternativePhone" name="AlternativePhone" maxlength="20">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="editContactPersonName">Tên Người Liên Hệ</label>
+                                <input type="text" class="form-control form-control-sm" id="editContactPersonName" name="ContactPersonName" maxlength="200">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="editAddress">Địa Chỉ</label>
+                        <textarea class="form-control form-control-sm" id="editAddress" name="Address" rows="3" maxlength="500"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">
+                        <i class="fas fa-times"></i> Đóng
+                    </button>
+                    <button type="submit" class="btn btn-warning btn-sm">
+                        <i class="fas fa-save"></i> Cập Nhật
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

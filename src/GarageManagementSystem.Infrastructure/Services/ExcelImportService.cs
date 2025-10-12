@@ -196,7 +196,7 @@ namespace GarageManagementSystem.Infrastructure.Services
                                 part.PartName = item.PartName;
                                 part.Unit = item.Unit;
                                 part.AverageCostPrice = item.CalculatedUnitPrice;
-                                part.UpdatedAt = DateTime.UtcNow;
+                                part.UpdatedAt = DateTime.Now;
                                 
                                 _context.Parts.Update(part);
                             }
@@ -209,8 +209,8 @@ namespace GarageManagementSystem.Infrastructure.Services
                                     PartName = item.PartName,
                                     Unit = item.Unit,
                                     AverageCostPrice = item.CalculatedUnitPrice,
-                                    CreatedAt = DateTime.UtcNow,
-                                    UpdatedAt = DateTime.UtcNow
+                                    CreatedAt = DateTime.Now,
+                                    UpdatedAt = DateTime.Now
                                 };
                                 
                                 _context.Parts.Add(part);
@@ -229,7 +229,7 @@ namespace GarageManagementSystem.Infrastructure.Services
                                     UnitPrice = item.CalculatedUnitPrice,
                                     TotalAmount = item.OpeningValue,
                                     Notes = $"Nhập tồn đầu kỳ từ Excel - Dòng {item.ExcelRowNumber}",
-                                    CreatedAt = DateTime.UtcNow
+                                    CreatedAt = DateTime.Now
                                 };
 
                                 _context.StockTransactions.Add(openingTransaction);
@@ -247,7 +247,7 @@ namespace GarageManagementSystem.Infrastructure.Services
                                     UnitPrice = item.CalculatedUnitPrice,
                                     TotalAmount = item.InValue,
                                     Notes = $"Nhập trong kỳ từ Excel - Dòng {item.ExcelRowNumber}",
-                                    CreatedAt = DateTime.UtcNow
+                                    CreatedAt = DateTime.Now
                                 };
 
                                 _context.StockTransactions.Add(inTransaction);
@@ -265,7 +265,7 @@ namespace GarageManagementSystem.Infrastructure.Services
                                     UnitPrice = item.CalculatedUnitPrice,
                                     TotalAmount = item.OutValue,
                                     Notes = $"Xuất trong kỳ từ Excel - Dòng {item.ExcelRowNumber}",
-                                    CreatedAt = DateTime.UtcNow
+                                    CreatedAt = DateTime.Now
                                 };
 
                                 _context.StockTransactions.Add(outTransaction);
@@ -392,7 +392,7 @@ namespace GarageManagementSystem.Infrastructure.Services
         private string GenerateTransactionNumber(StockTransactionType transactionType)
         {
             var prefix = transactionType.GetTransactionPrefix();
-            var timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
+            var timestamp = DateTime.Now.ToString("yyyyMMddHHmmss");
             return $"{prefix}{timestamp}";
         }
     }

@@ -139,58 +139,11 @@
     </div>
 </div>
 
-<!-- Edit Order Modal -->
-<div class="modal fade" id="editOrderModal" tabindex="-1" role="dialog">
-    <div class="modal-dialog modal-lg" role="document">
-        <div class="modal-content">
-            <div class="modal-header bg-warning">
-                <h4 class="modal-title">Edit Order</h4>
-                <button type="button" class="close" data-dismiss="modal">
-                    <span>&times;</span>
-                </button>
-            </div>
-            <form id="editOrderForm">
-                <div class="modal-body">
-                    <input type="hidden" id="updateOrderId" name="Id">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="updateOrderNumber">Order Number</label>
-                                <input type="text" class="form-control form-control-sm" id="updateOrderNumber" name="OrderNumber" readonly>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="updateStatus">Status <span class="text-danger">*</span></label>
-                                <select class="form-control form-control-sm" id="updateStatus" name="Status" required>
-                                    <option value="Pending">Pending</option>
-                                    <option value="In Progress">In Progress</option>
-                                    <option value="Completed">Completed</option>
-                                    <option value="Cancelled">Cancelled</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="updateDescription">Description</label>
-                        <textarea class="form-control form-control-sm" id="updateDescription" name="Description" rows="3" maxlength="1000"></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">
-                        <i class="fas fa-times"></i> Close
-                    </button>
-                    <button type="submit" class="btn btn-warning btn-sm">
-                        <i class="fas fa-save"></i> Update
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
+<!-- Include Modal Partial Views -->
+@await Html.PartialAsync("_EditOrderModal")
 
 @section Scripts {
-    <script src="~/js/order-management.js"></script>
+    <script src="~/js/order-management.js" asp-append-version="true"></script>
     <script>
         $(document).ready(function() {
             OrderManagement.init();

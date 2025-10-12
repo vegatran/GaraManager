@@ -105,7 +105,7 @@ window.ServiceManagement = {
         });
 
         // Update service form
-        $(document).on('submit', '#updateServiceForm', function(e) {
+        $(document).on('submit', '#editServiceForm', function(e) {
             e.preventDefault();
             self.updateService();
         });
@@ -251,15 +251,15 @@ window.ServiceManagement = {
     // Update service
     updateService: function() {
         var self = this;
-        var serviceId = $('#updateServiceId').val();
+        var serviceId = $('#editId').val();
         var formData = {
             Id: parseInt(serviceId),
-            ServiceName: $('#updateServiceName').val(),
-            ServiceCode: $('#updateServiceCode').val(),
-            Description: $('#updateDescription').val(),
-            Price: parseFloat($('#updatePrice').val()) || 0,
-            Duration: parseInt($('#updateDuration').val()) || 0,
-            Category: $('#updateCategory').val()
+            ServiceName: $('#editServiceName').val(),
+            ServiceCode: $('#editServiceCode').val(),
+            Description: $('#editDescription').val(),
+            Price: parseFloat($('#editPrice').val()) || 0,
+            Duration: parseInt($('#editDuration').val()) || 0,
+            Category: $('#editCategory').val()
         };
 
         $.ajax({
@@ -300,13 +300,13 @@ window.ServiceManagement = {
 
     // Populate edit modal
     populateEditModal: function(service) {
-        $('#updateServiceId').val(service.id);
-        $('#updateServiceName').val(service.serviceName);
-        $('#updateServiceCode').val(service.serviceCode);
-        $('#updateDescription').val(service.description);
-        $('#updatePrice').val(service.price);
-        $('#updateDuration').val(service.duration);
-        $('#updateCategory').val(service.category);
+        $('#editId').val(service.id);
+        $('#editServiceName').val(service.serviceName);
+        $('#editServiceCode').val(service.serviceCode);
+        $('#editDescription').val(service.description);
+        $('#editPrice').val(service.price);
+        $('#editDuration').val(service.duration);
+        $('#editCategory').val(service.category);
     }
 };
 

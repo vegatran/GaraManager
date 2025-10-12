@@ -1,0 +1,49 @@
+<!-- Edit Order Modal -->
+<div class="modal fade" id="editOrderModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h4 class="modal-title">Sửa Đơn Hàng</h4>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <form id="editOrderForm">
+                <div class="modal-body">
+                    <input type="hidden" id="editOrderId" name="Id">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="editOrderNumber">Số Đơn Hàng</label>
+                                <input type="text" class="form-control form-control-sm" id="editOrderNumber" name="OrderNumber" readonly>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="editStatus">Trạng Thái <span class="text-danger">*</span></label>
+                                <select class="form-control form-control-sm" id="editStatus" name="Status" required>
+                                    <option value="Pending">Đang Chờ</option>
+                                    <option value="In Progress">Đang Xử Lý</option>
+                                    <option value="Completed">Hoàn Thành</option>
+                                    <option value="Cancelled">Đã Hủy</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="editDescription">Mô Tả</label>
+                        <textarea class="form-control form-control-sm" id="editDescription" name="Description" rows="3" maxlength="1000"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">
+                        <i class="fas fa-times"></i> Đóng
+                    </button>
+                    <button type="submit" class="btn btn-warning btn-sm">
+                        <i class="fas fa-save"></i> Cập Nhật
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

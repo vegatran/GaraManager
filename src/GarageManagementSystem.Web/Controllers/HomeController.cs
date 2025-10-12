@@ -25,6 +25,7 @@ namespace GarageManagementSystem.Web.Controllers
             _configuration = configuration;
         }
 
+        [Authorize]
         [Route("")]
         [Route("Index")]
         public async Task<IActionResult> Index()
@@ -150,6 +151,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Login page - redirect to IdentityServer
         /// </summary>
+        [AllowAnonymous]
         [Route("Login")]
         public IActionResult Login()
         {
@@ -159,6 +161,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Access denied page
         /// </summary>
+        [AllowAnonymous]
         [Route("AccessDenied")]
         public IActionResult AccessDenied()
         {
@@ -168,6 +171,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Logout user from both local app and IdentityServer
         /// </summary>
+        [AllowAnonymous]
         [Route("Logout")]
         public IActionResult Logout()
         {
@@ -180,12 +184,14 @@ namespace GarageManagementSystem.Web.Controllers
         }
 
 
+        [AllowAnonymous]
         [Route("Privacy")]
         public IActionResult Privacy()
         {
             return View();
         }
 
+        [AllowAnonymous]
         [Route("Error")]
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Error()

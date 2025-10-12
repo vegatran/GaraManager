@@ -319,13 +319,33 @@ namespace GarageManagementSystem.Web.Controllers
             }
         }
 
-        #endregion
+            #endregion
 
-        /// <summary>
-        /// Lấy số lượng entity
-        /// </summary>
-        [Route("GetEntityCount")]
-        private async Task<int> GetEntityCount(string entityName)
+            /// <summary>
+            /// Tạo dữ liệu demo cho một module cụ thể
+            /// </summary>
+            [HttpPost("CreateModule")]
+            public async Task<IActionResult> CreateModule(string moduleId)
+            {
+                try
+                {
+                    var result = await _apiService.PostAsync<object>(
+                        string.Format(ApiEndpoints.Setup.CreateDemoData, moduleId), 
+                        null);
+                    
+                    return Json(new { success = result.Success, message = result.Message, data = result.Data });
+                }
+                catch (Exception ex)
+                {
+                    return Json(new { success = false, message = ex.Message });
+                }
+            }
+
+            /// <summary>
+            /// Lấy số lượng entity
+            /// </summary>
+            [Route("GetEntityCount")]
+            private async Task<int> GetEntityCount(string entityName)
         {
             try
             {

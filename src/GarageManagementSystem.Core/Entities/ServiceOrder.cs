@@ -23,6 +23,8 @@ namespace GarageManagementSystem.Core.Entities
         [StringLength(1000)]
         public string? Notes { get; set; }
 
+        public decimal SubTotal { get; set; } = 0; // Tổng trước thuế
+        public decimal VATAmount { get; set; } = 0; // Tiền thuế VAT
         public decimal TotalAmount { get; set; }
         public decimal DiscountAmount { get; set; } = 0;
         public decimal FinalAmount { get; set; }
@@ -33,6 +35,16 @@ namespace GarageManagementSystem.Core.Entities
         // Reference to inspection and quotation
         public int? VehicleInspectionId { get; set; }
         public int? ServiceQuotationId { get; set; }
+        public int? QuotationId { get; set; } // Alias for ServiceQuotationId (API compatibility)
+        public int? InsuranceClaimId { get; set; } // Link to insurance claim
+        
+        [StringLength(1000)]
+        public string? Description { get; set; } // Description of work
+        
+        public decimal EstimatedAmount { get; set; } = 0; // Estimated cost
+        public decimal ActualAmount { get; set; } = 0; // Actual cost
+        
+        public DateTime? StartDate { get; set; } // When work started
 
         // Assigned employees
         public int? PrimaryTechnicianId { get; set; }

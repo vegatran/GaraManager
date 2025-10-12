@@ -6,18 +6,31 @@ namespace GarageManagementSystem.Core.Entities
     {
         public int ServiceOrderId { get; set; }
         public int ServiceId { get; set; }
+        
+        [StringLength(200)]
+        public string ServiceName { get; set; } = string.Empty; // Cached service name
+        
+        [StringLength(500)]
+        public string? Description { get; set; } // Mô tả chi tiết
 
         [Required]
         public int Quantity { get; set; } = 1;
 
         [Required]
         public decimal UnitPrice { get; set; }
+        
+        public decimal Discount { get; set; } = 0; // Giảm giá
+        
+        public decimal FinalPrice { get; set; } = 0; // Giá sau giảm giá
 
         [Required]
         public decimal TotalPrice { get; set; }
 
         [StringLength(500)]
         public string? Notes { get; set; }
+
+        [StringLength(20)]
+        public string? Status { get; set; } = "Pending"; // "Pending", "InProgress", "Completed", "Cancelled"
 
         // Navigation properties
         public virtual ServiceOrder ServiceOrder { get; set; } = null!;

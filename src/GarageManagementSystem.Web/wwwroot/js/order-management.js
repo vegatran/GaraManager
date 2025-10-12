@@ -263,10 +263,10 @@ window.OrderManagement = {
 
     // Populate edit modal
     populateEditModal: function(order) {
-        $('#updateOrderId').val(order.id);
-        $('#updateOrderNumber').val(order.orderNumber);
-        $('#updateStatus').val(order.status);
-        $('#updateDescription').val(order.description);
+        $('#editOrderId').val(order.id);
+        $('#editOrderNumber').val(order.orderNumber);
+        $('#editStatus').val(order.status);
+        $('#editDescription').val(order.description);
     }
 };
 

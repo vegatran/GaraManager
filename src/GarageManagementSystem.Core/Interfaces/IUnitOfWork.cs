@@ -18,6 +18,14 @@ namespace GarageManagementSystem.Core.Interfaces
         ISupplierRepository Suppliers { get; }
         IPaymentTransactionRepository PaymentTransactions { get; }
         IAppointmentRepository Appointments { get; }
+        
+        // Phase 1 - New repositories
+        IGenericRepository<Invoice> Invoices { get; }
+        IGenericRepository<Payment> Payments { get; }
+        IGenericRepository<InsuranceClaim> InsuranceClaims { get; }
+        IGenericRepository<ServiceQuotation> Quotations { get; } // Alias for ServiceQuotations
+        IVehicleInspectionRepository Inspections { get; } // Alias for VehicleInspections
+        
         IGenericRepository<T> Repository<T>() where T : BaseEntity;
         Task<int> SaveChangesAsync();
         Task BeginTransactionAsync();

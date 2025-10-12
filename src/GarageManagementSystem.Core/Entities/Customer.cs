@@ -19,6 +19,9 @@ namespace GarageManagementSystem.Core.Entities
 
     [StringLength(500)]
     public string? Address { get; set; }
+    
+    [StringLength(50)]
+    public string? TaxCode { get; set; } // Company tax code
 
     [StringLength(100)]
     public string? ContactPersonName { get; set; }

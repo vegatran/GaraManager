@@ -1,0 +1,75 @@
+<!-- Create Order Modal -->
+<div class="modal fade modal-with-select2" id="createOrderModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-primary">
+                <h4 class="modal-title">Tạo Đơn Hàng Mới</h4>
+                <button type="button" class="close text-white" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <form id="createOrderForm">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createCustomerId">Khách Hàng <span class="text-danger">*</span></label>
+                                <select class="form-control form-control-sm select2" id="createCustomerId" name="CustomerId" required style="width: 100%;">
+                                    <option value="">-- Chọn Khách Hàng --</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createVehicleId">Xe <span class="text-danger">*</span></label>
+                                <select class="form-control form-control-sm select2" id="createVehicleId" name="VehicleId" required style="width: 100%;">
+                                    <option value="">-- Chọn Xe --</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createOrderDate">Ngày Đơn Hàng <span class="text-danger">*</span></label>
+                                <input type="date" class="form-control form-control-sm" id="createOrderDate" name="OrderDate" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createServiceId">Dịch Vụ <span class="text-danger">*</span></label>
+                                <select class="form-control form-control-sm select2" id="createServiceId" name="ServiceId" required style="width: 100%;">
+                                    <option value="">-- Chọn Dịch Vụ --</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label for="createDescription">Mô Tả</label>
+                                <textarea class="form-control form-control-sm" id="createDescription" name="Description" rows="3" maxlength="500"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label for="createNotes">Ghi Chú</label>
+                                <textarea class="form-control form-control-sm" id="createNotes" name="Notes" rows="2" maxlength="500"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">
+                        <i class="fas fa-times"></i> Đóng
+                    </button>
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <i class="fas fa-save"></i> Lưu
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

@@ -107,7 +107,7 @@ window.EmployeeManagement = {
         });
 
         // Update employee form
-        $(document).on('submit', '#updateEmployeeForm', function(e) {
+        $(document).on('submit', '#editEmployeeForm', function(e) {
             e.preventDefault();
             self.updateEmployee();
         });
@@ -228,6 +228,7 @@ window.EmployeeManagement = {
             Department: $('#createDepartment').val(),
             HireDate: $('#createHireDate').val(),
             Salary: parseFloat($('#createSalary').val()) || 0,
+            Status: $('#createStatus').val(),
             Skills: $('#createSkills').val()
         };
 
@@ -260,19 +261,19 @@ window.EmployeeManagement = {
     // Update employee
     updateEmployee: function() {
         var self = this;
-        var employeeId = $('#updateEmployeeId').val();
+        var employeeId = $('#editId').val();
         var formData = {
             Id: parseInt(employeeId),
-            Name: $('#updateName').val(),
-            Email: $('#updateEmail').val(),
-            Phone: $('#updatePhone').val(),
-            Address: $('#updateAddress').val(),
-            Position: $('#updatePosition').val(),
-            Department: $('#updateDepartment').val(),
-            HireDate: $('#updateHireDate').val(),
-            Salary: parseFloat($('#updateSalary').val()) || 0,
-            Status: $('#updateStatus').val(),
-            Skills: $('#updateSkills').val()
+            Name: $('#editName').val(),
+            Email: $('#editEmail').val(),
+            Phone: $('#editPhone').val(),
+            Address: $('#editAddress').val(),
+            Position: $('#editPosition').val(),
+            Department: $('#editDepartment').val(),
+            HireDate: $('#editHireDate').val(),
+            Salary: parseFloat($('#editSalary').val()) || 0,
+            Status: $('#editStatus').val(),
+            Skills: $('#editSkills').val()
         };
 
         $.ajax({
@@ -317,17 +318,17 @@ window.EmployeeManagement = {
 
     // Populate edit modal
     populateEditModal: function(employee) {
-        $('#updateEmployeeId').val(employee.id);
-        $('#updateName').val(employee.name);
-        $('#updateEmail').val(employee.email);
-        $('#updatePhone').val(employee.phone);
-        $('#updateAddress').val(employee.address);
-        $('#updatePosition').val(employee.position); // Use name for dropdown
-        $('#updateDepartment').val(employee.department); // Use name for dropdown
-        $('#updateHireDate').val(employee.hireDate);
-        $('#updateSalary').val(employee.salary);
-        $('#updateStatus').val(employee.status);
-        $('#updateSkills').val(employee.skills);
+        $('#editId').val(employee.id);
+        $('#editName').val(employee.name);
+        $('#editEmail').val(employee.email);
+        $('#editPhone').val(employee.phone);
+        $('#editAddress').val(employee.address);
+        $('#editPosition').val(employee.position); // Use name for dropdown
+        $('#editDepartment').val(employee.department); // Use name for dropdown
+        $('#editHireDate').val(employee.hireDate);
+        $('#editSalary').val(employee.salary);
+        $('#editStatus').val(employee.status);
+        $('#editSkills').val(employee.skills);
     }
 };
 

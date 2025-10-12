@@ -310,6 +310,114 @@ namespace GarageManagementSystem.API.Controllers
             }
         }
 
+        /// <summary>
+        /// Get employee performance metrics
+        /// </summary>
+        [HttpGet("{id}/performance")]
+        public async Task<ActionResult<ApiResponse<object>>> GetEmployeePerformance(int id, [FromQuery] DateTime? startDate = null, [FromQuery] DateTime? endDate = null)
+        {
+            try
+            {
+                var employee = await _unitOfWork.Employees.GetByIdAsync(id);
+                if (employee == null)
+                {
+                    return NotFound(ApiResponse<object>.ErrorResult("Employee not found"));
+                }
+
+                // Default date range: last 30 days
+                startDate ??= DateTime.Now.AddDays(-30);
+                endDate ??= DateTime.Now;
+
+                // Get all service orders handled by this employee
+                var serviceOrders = await _unitOfWork.ServiceOrders.FindAsync(so =>
+                    !so.IsDeleted &&
+                    so.OrderDate >= startDate &&
+                    so.OrderDate <= endDate);
+
+                // For now, we'll use all service orders in the date range
+                // TODO: Add ServiceOrderLabors repository to IUnitOfWork to filter by employee
+                var employeeServiceOrders = serviceOrders.ToList();
+                var totalLaborHours = 0m;
+                var totalLaborCost = 0m;
+
+                // Get invoices for these service orders
+                var serviceOrderIds = employeeServiceOrders.Select(so => so.Id).ToList();
+                var invoices = await _unitOfWork.Invoices.FindAsync(inv =>
+                    inv.ServiceOrderId.HasValue &&
+                    serviceOrderIds.Contains(inv.ServiceOrderId.Value) &&
+                    !inv.IsDeleted);
+
+                // Calculate metrics
+                var totalOrders = employeeServiceOrders.Count;
+                var completedOrders = employeeServiceOrders.Count(so => so.Status == "Completed");
+                var totalRevenue = invoices.Sum(i => i.TotalAmount);
+
+                // Calculate average completion time for completed orders
+                var completedOrdersWithDates = employeeServiceOrders
+                    .Where(so => so.Status == "Completed" && so.CompletedDate.HasValue && so.StartDate.HasValue)
+                    .ToList();
+
+                double? avgCompletionDays = null;
+                if (completedOrdersWithDates.Any())
+                {
+                    avgCompletionDays = completedOrdersWithDates
+                        .Average(so => (so.CompletedDate!.Value - so.StartDate!.Value).TotalDays);
+                }
+
+                // Get recent orders
+                var recentOrders = employeeServiceOrders
+                    .OrderByDescending(so => so.OrderDate)
+                    .Take(10)
+                    .Select(so => new
+                    {
+                        so.Id,
+                        so.OrderNumber,
+                        so.OrderDate,
+                        so.Status,
+                        so.TotalAmount,
+                        so.CompletedDate
+                    })
+                    .ToList();
+
+                var performance = new
+                {
+                    Employee = new
+                    {
+                        employee.Id,
+                        employee.Name,
+                        employee.Email,
+                        employee.Phone,
+                        employee.DepartmentId,
+                        employee.PositionId
+                    },
+                    DateRange = new
+                    {
+                        StartDate = startDate,
+                        EndDate = endDate
+                    },
+                    Metrics = new
+                    {
+                        TotalServiceOrders = totalOrders,
+                        CompletedOrders = completedOrders,
+                        PendingOrders = totalOrders - completedOrders,
+                        CompletionRate = totalOrders > 0 ? (decimal)completedOrders / totalOrders * 100 : 0,
+                        TotalRevenue = totalRevenue,
+                        TotalLaborHours = totalLaborHours,
+                        TotalLaborCost = totalLaborCost,
+                        AverageCompletionDays = avgCompletionDays,
+                        RevenuePerOrder = totalOrders > 0 ? totalRevenue / totalOrders : 0
+                    },
+                    RecentOrders = recentOrders
+                };
+
+                return Ok(ApiResponse<object>.SuccessResult(performance));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<object>.ErrorResult("Error retrieving employee performance", ex.Message));
+            }
+        }
+
         private async Task<List<EmployeeDto>> MapToDtoWithNavigation(List<Core.Entities.Employee> employees)
         {
             var employeeDtos = new List<EmployeeDto>();

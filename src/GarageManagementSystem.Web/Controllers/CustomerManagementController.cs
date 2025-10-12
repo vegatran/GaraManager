@@ -63,8 +63,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Lấy danh sách tất cả khách hàng cho DataTable thông qua API
         /// </summary>
-        [HttpGet]
-        [Route("GetCustomers")]
+        [HttpGet("GetCustomers")]
         public async Task<IActionResult> GetCustomers()
         {
             var response = await _apiService.GetAsync<List<CustomerDto>>(ApiEndpoints.Customers.GetAll);
@@ -87,7 +86,11 @@ namespace GarageManagementSystem.Web.Controllers
                     }).Cast<object>().ToList();
                 }
 
-                return Json(new { data = customerList });
+                return Json(new { 
+                    success = true,
+                    data = customerList,
+                    message = "Lấy danh sách khách hàng thành công"
+                });
             }
             else
             {
@@ -98,75 +101,71 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Lấy thông tin chi tiết khách hàng theo ID thông qua API
         /// </summary>
-        [HttpGet]
-        [Route("Details/{id}")]
-        public async Task<IActionResult> Details(int id)
+        [HttpGet("GetCustomer/{id}")]
+        public async Task<IActionResult> GetCustomer(int id)
         {
-            var response = await _apiService.GetAsync<CustomerDto>(ApiEndpoints.Builder.WithId(ApiEndpoints.Customers.GetById, id));
+            var response = await _apiService.GetAsync<CustomerDto>(
+                ApiEndpoints.Builder.WithId(ApiEndpoints.Customers.GetById, id)
+            );
             
-            if (response.Success)
-            {
-                return PartialView("_CustomerDetails", response.Data);
-            }
-            else
-            {
-                return Json(new { error = response.ErrorMessage });
-            }
+            return Json(response);
         }
 
         /// <summary>
         /// Tạo khách hàng mới thông qua API
         /// </summary>
         [HttpPost]
-        [Route("Create")]
-        public async Task<IActionResult> Create(CreateCustomerDto model)
+        [Route("CreateCustomer")]
+        public async Task<IActionResult> CreateCustomer([FromBody] CreateCustomerDto customerDto)
         {
             if (!ModelState.IsValid)
             {
-                return Json(new { success = false, message = "Invalid model data" });
+                return BadRequest(new { success = false, errorMessage = "Dữ liệu không hợp lệ" });
             }
 
-            var response = await _apiService.PostAsync<object>(ApiEndpoints.Customers.Create, model);
-            
-            return Json(new { 
-                success = response.Success, 
-                message = response.Success ? "Customer created successfully" : response.ErrorMessage 
-            });
+            var response = await _apiService.PostAsync<CustomerDto>(
+                ApiEndpoints.Customers.Create,
+                customerDto
+            );
+
+            return Json(response);
         }
 
         /// <summary>
         /// Cập nhật thông tin khách hàng thông qua API
         /// </summary>
-        [HttpPost]
-        [Route("Edit")]
-        public async Task<IActionResult> Edit(UpdateCustomerDto model)
+        [HttpPut("UpdateCustomer/{id}")]
+        public async Task<IActionResult> UpdateCustomer(int id, [FromBody] UpdateCustomerDto customerDto)
         {
             if (!ModelState.IsValid)
             {
-                return Json(new { success = false, message = "Invalid model data" });
+                return BadRequest(new { success = false, errorMessage = "Dữ liệu không hợp lệ" });
             }
 
-            var response = await _apiService.PutAsync<object>(ApiEndpoints.Builder.WithId(ApiEndpoints.Customers.Update, model.Id), model);
-            
-            return Json(new { 
-                success = response.Success, 
-                message = response.Success ? "Customer updated successfully" : response.ErrorMessage 
-            });
+            if (id != customerDto.Id)
+            {
+                return BadRequest(new { success = false, errorMessage = "ID không khớp" });
+            }
+
+            var response = await _apiService.PutAsync<CustomerDto>(
+                ApiEndpoints.Builder.WithId(ApiEndpoints.Customers.Update, id),
+                customerDto
+            );
+
+            return Json(response);
         }
 
         /// <summary>
         /// Xóa khách hàng thông qua API
         /// </summary>
-        [HttpPost]
-        [Route("Delete/{id}")]
-        public async Task<IActionResult> Delete(int id)
+        [HttpDelete("DeleteCustomer/{id}")]
+        public async Task<IActionResult> DeleteCustomer(int id)
         {
-            var response = await _apiService.DeleteAsync<object>(ApiEndpoints.Builder.WithId(ApiEndpoints.Customers.Delete, id));
-            
-            return Json(new { 
-                success = response.Success, 
-                message = response.Success ? "Customer deleted successfully" : response.ErrorMessage 
-            });
+            var response = await _apiService.DeleteAsync<CustomerDto>(
+                ApiEndpoints.Builder.WithId(ApiEndpoints.Customers.Delete, id)
+            );
+
+            return Json(response);
         }
     }
 }

@@ -132,7 +132,7 @@ namespace GarageManagementSystem.API.Controllers
                     BankName = dto.BankName,
                     Notes = dto.Notes,
                     IsActive = dto.IsActive,
-                    Rating = dto.Rating
+                    Rating = dto.Rating.HasValue ? (decimal)dto.Rating.Value : 5.0m
                 };
 
                 // Bắt đầu transaction để đảm bảo tính toàn vẹn dữ liệu
@@ -185,7 +185,7 @@ namespace GarageManagementSystem.API.Controllers
                 supplier.BankName = dto.BankName;
                 supplier.Notes = dto.Notes;
                 supplier.IsActive = dto.IsActive;
-                supplier.Rating = dto.Rating;
+                supplier.Rating = dto.Rating.HasValue ? (decimal)dto.Rating.Value : 5.0m;
 
                 // Bắt đầu transaction để đảm bảo tính toàn vẹn dữ liệu
                 await _unitOfWork.BeginTransactionAsync();
@@ -229,13 +229,131 @@ namespace GarageManagementSystem.API.Controllers
             }
         }
 
+        /// <summary>
+        /// Update supplier rating (1-5 stars)
+        /// </summary>
+        [HttpPut("{id}/rating")]
+        public async Task<ActionResult<ApiResponse<SupplierDto>>> UpdateRating(int id, [FromBody] decimal rating)
+        {
+            try
+            {
+                if (rating < 1 || rating > 5)
+                {
+                    return BadRequest(ApiResponse<SupplierDto>.ErrorResult("Rating must be between 1 and 5"));
+                }
+
+                var supplier = await _unitOfWork.Suppliers.GetByIdAsync(id);
+                if (supplier == null)
+                {
+                    return NotFound(ApiResponse<SupplierDto>.ErrorResult("Supplier not found"));
+                }
+
+                supplier.Rating = rating;
+                await _unitOfWork.Suppliers.UpdateAsync(supplier);
+                await _unitOfWork.SaveChangesAsync();
+
+                return Ok(ApiResponse<SupplierDto>.SuccessResult(MapToDto(supplier), "Rating updated successfully"));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<SupplierDto>.ErrorResult("Error updating rating", ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// Get supplier performance and statistics
+        /// </summary>
+        [HttpGet("{id}/performance")]
+        public async Task<ActionResult<ApiResponse<object>>> GetSupplierPerformance(int id, [FromQuery] DateTime? startDate = null, [FromQuery] DateTime? endDate = null)
+        {
+            try
+            {
+                var supplier = await _unitOfWork.Suppliers.GetByIdAsync(id);
+                if (supplier == null)
+                {
+                    return NotFound(ApiResponse<object>.ErrorResult("Supplier not found"));
+                }
+
+                // Default date range: last 90 days
+                startDate ??= DateTime.Now.AddDays(-90);
+                endDate ??= DateTime.Now;
+
+                // Get purchase orders from this supplier
+                // Note: PurchaseOrders repository not in IUnitOfWork yet, using empty list
+                var purchaseOrders = new List<Core.Entities.PurchaseOrder>();
+
+                // Get stock transactions from this supplier
+                var stockTransactions = await _unitOfWork.StockTransactions.FindAsync(st =>
+                    st.SupplierId == id &&
+                    !st.IsDeleted &&
+                    st.TransactionDate >= startDate &&
+                    st.TransactionDate <= endDate);
+
+                // Calculate metrics
+                var totalPurchaseOrders = purchaseOrders.Count();
+                var completedOrders = purchaseOrders.Count(po => po.Status == "Completed");
+                var pendingOrders = purchaseOrders.Count(po => po.Status == "Pending" || po.Status == "Ordered");
+                var totalAmount = purchaseOrders.Sum(po => po.TotalAmount);
+                var totalItems = stockTransactions.Where(st => st.TransactionType == Core.Enums.StockTransactionType.NhapKho)
+                    .Sum(st => st.Quantity);
+
+                // Calculate delivery performance
+                var ordersWithDelivery = purchaseOrders
+                    .Where(po => po.ExpectedDeliveryDate.HasValue && po.ActualDeliveryDate.HasValue)
+                    .ToList();
+
+                var onTimeDeliveries = ordersWithDelivery.Count(po => po.ActualDeliveryDate <= po.ExpectedDeliveryDate);
+                var lateDeliveries = ordersWithDelivery.Count - onTimeDeliveries;
+                var deliveryOnTimeRate = ordersWithDelivery.Count > 0 ? (decimal)onTimeDeliveries / ordersWithDelivery.Count * 100 : 0;
+
+                var performance = new
+                {
+                    Supplier = MapToDto(supplier),
+                    DateRange = new
+                    {
+                        StartDate = startDate,
+                        EndDate = endDate
+                    },
+                    Metrics = new
+                    {
+                        TotalPurchaseOrders = totalPurchaseOrders,
+                        CompletedOrders = completedOrders,
+                        PendingOrders = pendingOrders,
+                        TotalAmount = totalAmount,
+                        TotalItemsPurchased = totalItems,
+                        AverageOrderValue = totalPurchaseOrders > 0 ? totalAmount / totalPurchaseOrders : 0,
+                        DeliveryOnTimeRate = deliveryOnTimeRate,
+                        OnTimeDeliveries = onTimeDeliveries,
+                        LateDeliveries = lateDeliveries,
+                        CurrentRating = supplier.Rating
+                    },
+                    RecentPurchaseOrders = purchaseOrders.OrderByDescending(po => po.OrderDate).Take(10).Select(po => new
+                    {
+                        po.Id,
+                        po.OrderNumber,
+                        po.OrderDate,
+                        po.Status,
+                        po.TotalAmount,
+                        po.ExpectedDeliveryDate,
+                        po.ActualDeliveryDate
+                    }).ToList()
+                };
+
+                return Ok(ApiResponse<object>.SuccessResult(performance));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<object>.ErrorResult("Error retrieving supplier performance", ex.Message));
+            }
+        }
+
         private static SupplierDto MapToDto(Core.Entities.Supplier s) => new()
         {
             Id = s.Id, SupplierCode = s.SupplierCode, SupplierName = s.SupplierName,
             Phone = s.Phone, Email = s.Email, Address = s.Address,
             ContactPerson = s.ContactPerson, ContactPhone = s.ContactPhone,
             TaxCode = s.TaxCode, BankAccount = s.BankAccount, BankName = s.BankName,
-            Notes = s.Notes, IsActive = s.IsActive, Rating = s.Rating,
+            Notes = s.Notes, IsActive = s.IsActive, Rating = (int?)s.Rating,
             CreatedAt = s.CreatedAt, CreatedBy = s.CreatedBy,
             UpdatedAt = s.UpdatedAt, UpdatedBy = s.UpdatedBy
         };

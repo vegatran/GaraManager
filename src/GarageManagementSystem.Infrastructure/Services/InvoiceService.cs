@@ -53,8 +53,8 @@ namespace GarageManagementSystem.Infrastructure.Services
                     VatAmount = invoiceData.VatAmount,
                     FinalAmount = invoiceData.FinalAmount,
                     Notes = invoiceData.Notes ?? string.Empty,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
+                    CreatedAt = DateTime.Now,
+                    UpdatedAt = DateTime.Now
                 };
 
                 _context.InsuranceInvoices.Add(invoice);
@@ -72,8 +72,8 @@ namespace GarageManagementSystem.Infrastructure.Services
                         CustomerPrice = itemDto.CustomerPrice,
                         InsurancePrice = itemDto.InsurancePrice,
                         Notes = itemDto.Notes ?? string.Empty,
-                        CreatedAt = DateTime.UtcNow,
-                        UpdatedAt = DateTime.UtcNow
+                        CreatedAt = DateTime.Now,
+                        UpdatedAt = DateTime.Now
                     };
 
                     _context.InsuranceInvoiceItems.Add(item);
@@ -217,7 +217,7 @@ namespace GarageManagementSystem.Infrastructure.Services
                 invoice.VatAmount = invoiceData.VatAmount;
                 invoice.FinalAmount = invoiceData.FinalAmount;
                 invoice.Notes = invoiceData.Notes ?? string.Empty;
-                invoice.UpdatedAt = DateTime.UtcNow;
+                invoice.UpdatedAt = DateTime.Now;
 
                 // Xóa các item cũ và thêm mới
                 _context.InsuranceInvoiceItems.RemoveRange(invoice.Items);
@@ -233,8 +233,8 @@ namespace GarageManagementSystem.Infrastructure.Services
                         CustomerPrice = itemDto.CustomerPrice,
                         InsurancePrice = itemDto.InsurancePrice,
                         Notes = itemDto.Notes ?? string.Empty,
-                        CreatedAt = DateTime.UtcNow,
-                        UpdatedAt = DateTime.UtcNow
+                        CreatedAt = DateTime.Now,
+                        UpdatedAt = DateTime.Now
                     };
 
                     _context.InsuranceInvoiceItems.Add(item);

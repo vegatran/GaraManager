@@ -119,7 +119,7 @@ namespace GarageManagementSystem.API.Controllers
                     Name = dto.Name,
                     Description = dto.Description,
                     IsActive = true,
-                    CreatedAt = DateTime.UtcNow
+                    CreatedAt = DateTime.Now
                 };
 
                 await _unitOfWork.Departments.AddAsync(department);

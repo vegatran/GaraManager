@@ -66,79 +66,8 @@
     </div>
 </section>
 
-<!-- Create Transaction Modal -->
-<div class="modal fade" id="createTransactionModal" tabindex="-1" role="dialog">
-    <div class="modal-dialog modal-lg" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h4 class="modal-title">Thêm Giao Dịch Kho Mới</h4>
-                <button type="button" class="close" data-dismiss="modal">
-                    <span>&times;</span>
-                </button>
-            </div>
-            <form id="createTransactionForm">
-                <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="partId">Phụ Tùng <span class="text-danger">*</span></label>
-                                <select class="form-control form-control-sm select2" id="partId" name="PartId" required>
-                                    <option value="">-- Chọn phụ tùng --</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="transactionType">Loại Giao Dịch <span class="text-danger">*</span></label>
-                                <select class="form-control form-control-sm" id="transactionType" name="TransactionType" required>
-                                    <option value="">-- Chọn loại giao dịch --</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="quantity">Số Lượng <span class="text-danger">*</span></label>
-                                <input type="number" class="form-control form-control-sm" id="quantity" name="Quantity" min="1" required>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="unitPrice">Đơn Giá (VNĐ) <span class="text-danger">*</span></label>
-                                <input type="number" class="form-control form-control-sm" id="unitPrice" name="UnitPrice" min="0" step="1000" required>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="supplierId">Nhà Cung Cấp</label>
-                                <select class="form-control form-control-sm select2" id="supplierId" name="SupplierId">
-                                    <option value="">-- Chọn nhà cung cấp --</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="referenceNumber">Số Tham Chiếu</label>
-                                <input type="text" class="form-control form-control-sm" id="referenceNumber" name="ReferenceNumber" maxlength="100">
-                            </div>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="notes">Ghi Chú</label>
-                        <textarea class="form-control form-control-sm" id="notes" name="Notes" rows="3" maxlength="1000"></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Hủy</button>
-                    <button type="submit" class="btn btn-primary btn-sm">Tạo Giao Dịch</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
+<!-- Include Modal Partial Views -->
+@await Html.PartialAsync("_CreateStockModal")
 
 <!-- Import Opening Balance Modal -->
 <div class="modal fade" id="importModal" tabindex="-1" role="dialog">

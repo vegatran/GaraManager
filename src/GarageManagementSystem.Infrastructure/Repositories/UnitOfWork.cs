@@ -27,6 +27,13 @@ namespace GarageManagementSystem.Infrastructure.Repositories
             Suppliers = new SupplierRepository(_context);
             PaymentTransactions = new PaymentTransactionRepository(_context);
             Appointments = new AppointmentRepository(_context);
+            
+            // Phase 1 - New repositories
+            Invoices = new GenericRepository<Invoice>(_context);
+            Payments = new GenericRepository<Payment>(_context);
+            InsuranceClaims = new GenericRepository<InsuranceClaim>(_context);
+            Quotations = ServiceQuotations; // Alias
+            Inspections = VehicleInspections; // Alias
         }
 
         public ICustomerRepository Customers { get; private set; }
@@ -43,6 +50,13 @@ namespace GarageManagementSystem.Infrastructure.Repositories
         public ISupplierRepository Suppliers { get; private set; }
         public IPaymentTransactionRepository PaymentTransactions { get; private set; }
         public IAppointmentRepository Appointments { get; private set; }
+        
+        // Phase 1 - New repositories
+        public IGenericRepository<Invoice> Invoices { get; private set; }
+        public IGenericRepository<Payment> Payments { get; private set; }
+        public IGenericRepository<InsuranceClaim> InsuranceClaims { get; private set; }
+        public IGenericRepository<ServiceQuotation> Quotations { get; private set; }
+        public IVehicleInspectionRepository Inspections { get; private set; }
 
         public IGenericRepository<T> Repository<T>() where T : BaseEntity
         {

@@ -41,7 +41,25 @@ builder.Services.AddAuthorization(options =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new() { Title = "Garage Management API", Version = "v1" });
+    c.SwaggerDoc("v1", new() 
+    { 
+        Title = "Garage Management API", 
+        Version = "v1",
+        Description = "Comprehensive API for Garage Management System including customer, vehicle, service, inventory, and financial management.",
+        Contact = new Microsoft.OpenApi.Models.OpenApiContact
+        {
+            Name = "Garage Management System",
+            Email = "support@garagemanagement.com"
+        }
+    });
+    
+    // Include XML comments for better documentation
+    var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = System.IO.Path.Combine(AppContext.BaseDirectory, xmlFile);
+    if (System.IO.File.Exists(xmlPath))
+    {
+        c.IncludeXmlComments(xmlPath);
+    }
     
     // Add JWT Authentication to Swagger
     c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
@@ -67,6 +85,10 @@ builder.Services.AddSwaggerGen(c =>
             new string[] {}
         }
     });
+    
+    // Tag descriptions
+    c.TagActionsBy(api => new[] { api.GroupName ?? api.ActionDescriptor.RouteValues["controller"] ?? "Default" });
+    c.DocInclusionPredicate((name, api) => true);
 });
 
 // Add HttpContextAccessor for AuditInterceptor
@@ -78,10 +100,11 @@ builder.Services.AddScoped<GarageManagementSystem.Infrastructure.Interceptors.Au
 // MySQL Server Version
 var serverVersion = new MySqlServerVersion(new Version(8, 0, 21));
 
-// Database with AuditInterceptor
+// Database with AuditInterceptor and HttpContextAccessor
 builder.Services.AddDbContext<GarageDbContext>((serviceProvider, options) =>
 {
     var auditInterceptor = serviceProvider.GetRequiredService<GarageManagementSystem.Infrastructure.Interceptors.AuditInterceptor>();
+    var httpContextAccessor = serviceProvider.GetRequiredService<IHttpContextAccessor>();
     options.UseMySql(builder.Configuration.GetConnectionString("DefaultConnection"), serverVersion)
            .AddInterceptors(auditInterceptor);
 });
@@ -106,6 +129,19 @@ builder.Services.AddScoped<GarageManagementSystem.Core.Services.IExcelImportServ
 
 // Invoice Service
 builder.Services.AddScoped<GarageManagementSystem.Shared.Services.IInvoiceService, GarageManagementSystem.Infrastructure.Services.InvoiceService>();
+
+// Configuration Service
+builder.Services.AddScoped<GarageManagementSystem.Core.Services.IConfigurationService, GarageManagementSystem.Core.Services.ConfigurationService>();
+
+// Cache Service
+builder.Services.AddMemoryCache();
+builder.Services.AddSingleton<GarageManagementSystem.Core.Services.ICacheService, GarageManagementSystem.Core.Services.CacheService>();
+
+// Audit Log Service
+builder.Services.AddScoped<GarageManagementSystem.Core.Services.IAuditLogService, GarageManagementSystem.Core.Services.AuditLogService>();
+
+// Background Jobs
+builder.Services.AddHostedService<GarageManagementSystem.API.Services.BackgroundJobService>();
 
 // CORS
 builder.Services.AddCors(options =>
@@ -132,6 +168,11 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+// Configure custom middleware
+app.UseMiddleware<GarageManagementSystem.API.Middleware.ErrorHandlingMiddleware>();
+app.UseMiddleware<GarageManagementSystem.API.Middleware.RequestLoggingMiddleware>();
+app.UseMiddleware<GarageManagementSystem.API.Middleware.RateLimitingMiddleware>();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

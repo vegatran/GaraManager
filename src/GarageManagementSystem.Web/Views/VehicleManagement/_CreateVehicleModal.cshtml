@@ -1,0 +1,91 @@
+<!-- Create Vehicle Modal -->
+<div class="modal fade modal-with-select2" id="createVehicleModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-primary">
+                <h4 class="modal-title">Thêm Xe Mới</h4>
+                <button type="button" class="close text-white" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <form id="createVehicleForm">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createCustomerId">Khách Hàng <span class="text-danger">*</span></label>
+                                <select class="form-control form-control-sm select2" id="createCustomerId" name="CustomerId" required style="width: 100%;">
+                                    <option value="">-- Chọn Khách Hàng --</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createLicensePlate">Biển Số Xe <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control form-control-sm" id="createLicensePlate" name="LicensePlate" required maxlength="20">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createMake">Hãng Xe <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control form-control-sm" id="createMake" name="Make" required maxlength="100">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createModel">Mẫu Xe <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control form-control-sm" id="createModel" name="Model" required maxlength="100">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createYear">Năm Sản Xuất</label>
+                                <input type="number" class="form-control form-control-sm" id="createYear" name="Year" min="1900" max="2100">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createColor">Màu Sắc</label>
+                                <input type="text" class="form-control form-control-sm" id="createColor" name="Color" maxlength="50">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createVIN">Số VIN</label>
+                                <input type="text" class="form-control form-control-sm" id="createVIN" name="VIN" maxlength="50">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createEngineNumber">Số Máy</label>
+                                <input type="text" class="form-control form-control-sm" id="createEngineNumber" name="EngineNumber" maxlength="50">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createMileage">Mileage (km)</label>
+                                <input type="number" class="form-control form-control-sm" id="createMileage" name="Mileage" min="0">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">
+                        <i class="fas fa-times"></i> Đóng
+                    </button>
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <i class="fas fa-save"></i> Lưu
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

@@ -120,7 +120,7 @@ window.VehicleManagement = {
         });
 
         // Update vehicle form
-        $(document).on('submit', '#updateVehicleForm', function(e) {
+        $(document).on('submit', '#editVehicleForm', function(e) {
             e.preventDefault();
             self.updateVehicle();
         });
@@ -269,18 +269,18 @@ window.VehicleManagement = {
     // Update vehicle
     updateVehicle: function() {
         var self = this;
-        var vehicleId = $('#updateVehicleId').val();
+        var vehicleId = $('#editId').val();
         var formData = {
             Id: parseInt(vehicleId),
-            CustomerId: parseInt($('#updateCustomerId').val()),
-            LicensePlate: $('#updateLicensePlate').val(),
-            Make: $('#updateMake').val(),
-            Model: $('#updateModel').val(),
-            Year: parseInt($('#updateYear').val()),
-            Color: $('#updateColor').val(),
-            VIN: $('#updateVIN').val(),
-            EngineNumber: $('#updateEngineNumber').val(),
-            Mileage: parseInt($('#updateMileage').val()) || 0
+            CustomerId: parseInt($('#editCustomerId').val()),
+            LicensePlate: $('#editLicensePlate').val(),
+            Make: $('#editMake').val(),
+            Model: $('#editModel').val(),
+            Year: parseInt($('#editYear').val()),
+            Color: $('#editColor').val(),
+            VIN: $('#editVIN').val(),
+            EngineNumber: $('#editEngineNumber').val(),
+            Mileage: parseInt($('#editMileage').val()) || 0
         };
 
         $.ajax({
@@ -311,6 +311,7 @@ window.VehicleManagement = {
 
     // Populate view modal
     populateViewModal: function(vehicle) {
+        $('#viewCustomer').text(vehicle.customerName || '');
         $('#viewLicensePlate').text(vehicle.licensePlate || '');
         $('#viewMake').text(vehicle.make || '');
         $('#viewModel').text(vehicle.model || '');
@@ -319,21 +320,20 @@ window.VehicleManagement = {
         $('#viewVIN').text(vehicle.vin || '');
         $('#viewEngineNumber').text(vehicle.engineNumber || '');
         $('#viewMileage').text(vehicle.mileage || '');
-        $('#viewCustomerName').text(vehicle.customerName || '');
     },
 
     // Populate edit modal
     populateEditModal: function(vehicle) {
-        $('#updateVehicleId').val(vehicle.id);
-        $('#updateCustomerId').val(vehicle.customerId);
-        $('#updateLicensePlate').val(vehicle.licensePlate);
-        $('#updateMake').val(vehicle.make);
-        $('#updateModel').val(vehicle.model);
-        $('#updateYear').val(vehicle.year);
-        $('#updateColor').val(vehicle.color);
-        $('#updateVIN').val(vehicle.vin);
-        $('#updateEngineNumber').val(vehicle.engineNumber);
-        $('#updateMileage').val(vehicle.mileage);
+        $('#editId').val(vehicle.id);
+        $('#editCustomerId').val(vehicle.customerId);
+        $('#editLicensePlate').val(vehicle.licensePlate);
+        $('#editMake').val(vehicle.make);
+        $('#editModel').val(vehicle.model);
+        $('#editYear').val(vehicle.year);
+        $('#editColor').val(vehicle.color);
+        $('#editVIN').val(vehicle.vin);
+        $('#editEngineNumber').val(vehicle.engineNumber);
+        $('#editMileage').val(vehicle.mileage);
     }
 };
 
