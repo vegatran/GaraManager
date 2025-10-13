@@ -249,6 +249,7 @@ namespace GarageManagementSystem.API.Controllers
                 }
 
                 // Update inspection properties
+                inspection.InspectorId = updateDto.InspectorId; // Missing line!
                 inspection.InspectionType = updateDto.InspectionType;
                 inspection.CurrentMileage = updateDto.CurrentMileage;
                 inspection.FuelLevel = updateDto.FuelLevel;
