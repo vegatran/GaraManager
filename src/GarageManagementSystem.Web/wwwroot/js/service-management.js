@@ -122,7 +122,7 @@ window.ServiceManagement = {
         var self = this;
         
         $.ajax({
-            url: '/ServiceManagement/GetService/' + id,
+            url: '/ServiceManagement/Details/' + id,
             type: 'GET',
             success: function(response) {
                 if (AuthHandler.validateApiResponse(response)) {
@@ -149,7 +149,7 @@ window.ServiceManagement = {
         var self = this;
         
         $.ajax({
-            url: '/ServiceManagement/GetService/' + id,
+            url: '/ServiceManagement/Details/' + id,
             type: 'GET',
             success: function(response) {
                 if (AuthHandler.validateApiResponse(response)) {
@@ -186,7 +186,7 @@ window.ServiceManagement = {
         }).then((result) => {
             if (result.isConfirmed) {
                 $.ajax({
-                    url: '/ServiceManagement/DeleteService/' + id,
+                    url: '/ServiceManagement/Delete/' + id,
                     type: 'DELETE',
                     success: function(response) {
                         if (AuthHandler.validateApiResponse(response)) {
@@ -223,7 +223,7 @@ window.ServiceManagement = {
         };
 
         $.ajax({
-            url: '/ServiceManagement/CreateService',
+            url: '/ServiceManagement/Create',
             type: 'POST',
             contentType: 'application/json',
             data: JSON.stringify(formData),
@@ -263,7 +263,7 @@ window.ServiceManagement = {
         };
 
         $.ajax({
-            url: '/ServiceManagement/UpdateService/' + serviceId,
+            url: '/ServiceManagement/Edit/' + serviceId,
             type: 'PUT',
             contentType: 'application/json',
             data: JSON.stringify(formData),

@@ -1,3 +1,4 @@
+using AutoMapper;
 using GarageManagementSystem.Core.Interfaces;
 using GarageManagementSystem.Shared.DTOs;
 using GarageManagementSystem.Shared.Models;
@@ -12,10 +13,12 @@ namespace GarageManagementSystem.API.Controllers
     public class EmployeesController : ControllerBase
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IMapper _mapper;
 
-        public EmployeesController(IUnitOfWork unitOfWork)
+        public EmployeesController(IUnitOfWork unitOfWork, IMapper mapper)
         {
             _unitOfWork = unitOfWork;
+            _mapper = mapper;
         }
 
         [HttpGet]
@@ -23,8 +26,8 @@ namespace GarageManagementSystem.API.Controllers
         {
             try
             {
-                var employees = await _unitOfWork.Employees.GetAllAsync();
-                var employeeDtos = await MapToDtoWithNavigation(employees.Where(e => !e.IsDeleted).ToList());
+                var employees = await _unitOfWork.Employees.GetAllWithNavigationAsync();
+                var employeeDtos = employees.Select(e => _mapper.Map<EmployeeDto>(e)).ToList();
                 
                 return Ok(ApiResponse<List<EmployeeDto>>.SuccessResult(employeeDtos));
             }
@@ -39,13 +42,13 @@ namespace GarageManagementSystem.API.Controllers
         {
             try
             {
-                var employee = await _unitOfWork.Employees.GetByIdAsync(id);
+                var employee = await _unitOfWork.Employees.GetByIdWithNavigationAsync(id);
                 if (employee == null)
                 {
                     return NotFound(ApiResponse<EmployeeDto>.ErrorResult("Employee not found"));
                 }
 
-                var employeeDto = MapToDto(employee);
+                var employeeDto = _mapper.Map<EmployeeDto>(employee);
                 return Ok(ApiResponse<EmployeeDto>.SuccessResult(employeeDto));
             }
             catch (Exception ex)
@@ -59,8 +62,8 @@ namespace GarageManagementSystem.API.Controllers
         {
             try
             {
-                var employees = await _unitOfWork.Employees.GetAllAsync();
-                var activeEmployees = employees.Where(e => e.Status == "Active").Select(MapToDto).ToList();
+                var employees = await _unitOfWork.Employees.GetAllWithNavigationAsync();
+                var activeEmployees = employees.Where(e => e.Status == "Active").Select(e => _mapper.Map<EmployeeDto>(e)).ToList();
                 
                 return Ok(ApiResponse<List<EmployeeDto>>.SuccessResult(activeEmployees));
             }
@@ -78,7 +81,7 @@ namespace GarageManagementSystem.API.Controllers
                 var employees = await _unitOfWork.Employees.GetAllAsync();
                 var deptEmployees = employees
                     .Where(e => e.Department != null && e.Department.Equals(department, StringComparison.OrdinalIgnoreCase))
-                    .Select(MapToDto)
+                    .Select(e => _mapper.Map<EmployeeDto>(e))
                     .ToList();
                 
                 return Ok(ApiResponse<List<EmployeeDto>>.SuccessResult(deptEmployees));
@@ -100,19 +103,10 @@ namespace GarageManagementSystem.API.Controllers
                     return BadRequest(ApiResponse<EmployeeDto>.ErrorResult("Invalid data", errors));
                 }
 
-                var employee = new Core.Entities.Employee
-                {
-                    Name = createDto.Name,
-                    Phone = createDto.Phone,
-                    Email = createDto.Email,
-                    Address = createDto.Address,
-                    Position = createDto.Position,
-                    Department = createDto.Department,
-                    HireDate = createDto.HireDate ?? DateTime.Now,
-                    Salary = createDto.Salary,
-                    Status = "Active",
-                    Skills = createDto.Skills
-                };
+                // Use AutoMapper to map DTO to Entity
+                var employee = _mapper.Map<Core.Entities.Employee>(createDto);
+                employee.Status = "Active";
+                employee.HireDate = createDto.HireDate ?? DateTime.Now;
 
                 // Bắt đầu transaction để đảm bảo tính toàn vẹn dữ liệu
                 await _unitOfWork.BeginTransactionAsync();
@@ -132,7 +126,7 @@ namespace GarageManagementSystem.API.Controllers
                     throw;
                 }
 
-                var employeeDto = MapToDto(employee);
+                var employeeDto = _mapper.Map<EmployeeDto>(employee);
                 return CreatedAtAction(nameof(GetEmployee), new { id = employee.Id }, 
                     ApiResponse<EmployeeDto>.SuccessResult(employeeDto, "Employee created successfully"));
             }
@@ -164,16 +158,8 @@ namespace GarageManagementSystem.API.Controllers
                     return NotFound(ApiResponse<EmployeeDto>.ErrorResult("Employee not found"));
                 }
 
-                employee.Name = updateDto.Name;
-                employee.Phone = updateDto.Phone;
-                employee.Email = updateDto.Email;
-                employee.Address = updateDto.Address;
-                employee.Position = updateDto.Position;
-                employee.Department = updateDto.Department;
-                employee.HireDate = updateDto.HireDate;
-                employee.Salary = updateDto.Salary;
-                employee.Status = updateDto.Status;
-                employee.Skills = updateDto.Skills;
+                // Use AutoMapper to map DTO to existing Entity
+                _mapper.Map(updateDto, employee);
 
                 // Bắt đầu transaction để đảm bảo tính toàn vẹn dữ liệu
                 await _unitOfWork.BeginTransactionAsync();
@@ -193,7 +179,7 @@ namespace GarageManagementSystem.API.Controllers
                     throw;
                 }
 
-                var employeeDto = MapToDto(employee);
+                var employeeDto = _mapper.Map<EmployeeDto>(employee);
                 return Ok(ApiResponse<EmployeeDto>.SuccessResult(employeeDto, "Employee updated successfully"));
             }
             catch (Exception ex)
@@ -255,7 +241,7 @@ namespace GarageManagementSystem.API.Controllers
                     throw;
                 }
 
-                var employeeDto = MapToDto(employee);
+                var employeeDto = _mapper.Map<EmployeeDto>(employee);
                 return Ok(ApiResponse<EmployeeDto>.SuccessResult(employeeDto, "Employee status updated successfully"));
             }
             catch (Exception ex)
@@ -418,72 +404,6 @@ namespace GarageManagementSystem.API.Controllers
             }
         }
 
-        private async Task<List<EmployeeDto>> MapToDtoWithNavigation(List<Core.Entities.Employee> employees)
-        {
-            var employeeDtos = new List<EmployeeDto>();
-            
-            foreach (var employee in employees)
-            {
-                var department = employee.DepartmentId.HasValue 
-                    ? await _unitOfWork.Departments.GetByIdAsync(employee.DepartmentId.Value) 
-                    : null;
-                    
-                var position = employee.PositionId.HasValue 
-                    ? await _unitOfWork.Positions.GetByIdAsync(employee.PositionId.Value) 
-                    : null;
-
-                employeeDtos.Add(new EmployeeDto
-                {
-                    Id = employee.Id,
-                    Name = employee.Name,
-                    Phone = employee.Phone,
-                    Email = employee.Email,
-                    Address = employee.Address,
-                    Position = employee.Position,
-                    Department = employee.Department,
-                    PositionId = employee.PositionId,
-                    DepartmentId = employee.DepartmentId,
-                    PositionName = position?.Name,
-                    DepartmentName = department?.Name,
-                    HireDate = employee.HireDate,
-                    Salary = employee.Salary,
-                    Status = employee.Status,
-                    Skills = employee.Skills,
-                    CreatedAt = employee.CreatedAt,
-                    CreatedBy = employee.CreatedBy,
-                    UpdatedAt = employee.UpdatedAt,
-                    UpdatedBy = employee.UpdatedBy
-                });
-            }
-            
-            return employeeDtos;
-        }
-
-        private static EmployeeDto MapToDto(Core.Entities.Employee employee)
-        {
-            return new EmployeeDto
-            {
-                Id = employee.Id,
-                Name = employee.Name,
-                Phone = employee.Phone,
-                Email = employee.Email,
-                Address = employee.Address,
-                Position = employee.Position,
-                Department = employee.Department,
-                PositionId = employee.PositionId,
-                DepartmentId = employee.DepartmentId,
-                PositionName = employee.PositionNavigation?.Name,
-                DepartmentName = employee.DepartmentNavigation?.Name,
-                HireDate = employee.HireDate,
-                Salary = employee.Salary,
-                Status = employee.Status,
-                Skills = employee.Skills,
-                CreatedAt = employee.CreatedAt,
-                CreatedBy = employee.CreatedBy,
-                UpdatedAt = employee.UpdatedAt,
-                UpdatedBy = employee.UpdatedBy
-            };
-        }
     }
 }
 

@@ -18,11 +18,10 @@ window.AuthHandler = {
         
         return $.get('/Home/GetConfig')
             .done(function(config) {
-                console.log('🔧 Config loaded from server:', config);
                 self._config = config;
             })
             .fail(function(xhr, status, error) {
-                console.warn('⚠️ Failed to load config from server:', status, error);
+                
                 self._config = {
                     IdentityServerAuthority: 'https://localhost:44333',
                     ApiBaseUrl: 'https://localhost:44303/api/'
@@ -74,31 +73,22 @@ window.AuthHandler = {
     redirectToLogin: function() {
         var self = this;
         
+        // Clear local storage/session storage if needed
+        localStorage.clear();
+        sessionStorage.clear();
+        
         // Load config if not available
         this.loadConfig().then(function() {
-            // Clear local storage/session storage if needed
-            localStorage.clear();
-            sessionStorage.clear();
-            
-            // Debug config
-            console.log('🔧 Current config:', self._config);
-            
-            // Check if config is valid
             if (!self._config || !self._config.IdentityServerAuthority) {
-                console.error('❌ Invalid config for redirect:', self._config);
-                // Fallback to hardcoded URL
-                window.location.href = 'https://localhost:44333/connect/endsession';
+                window.location.href = '/Home/Login';
                 return;
             }
-            
-            // Redirect to IdentityServer end session endpoint from config
-            var endSessionUrl = self._config.IdentityServerAuthority + '/connect/endsession';
-            console.log('🔄 Redirecting to:', endSessionUrl);
-            window.location.href = endSessionUrl;
+            var currentUrl = encodeURIComponent(window.location.href);
+            var loginUrl = self._config.IdentityServerAuthority + '/Account/Login?ReturnUrl=' + currentUrl;
+            window.location.href = loginUrl;
         }).catch(function(error) {
             console.error('❌ Error loading config for redirect:', error);
-            // Fallback to hardcoded URL
-            window.location.href = 'https://localhost:44333/connect/endsession';
+            window.location.href = '/Home/Login';
         });
     },
 
@@ -111,13 +101,6 @@ window.AuthHandler = {
         // Load config before setting up handler
         this.loadConfig().then(function() {
             $(document).ajaxError(function(event, xhr, settings, error) {
-                console.log('🔍 AJAX Error:', {
-                    status: xhr.status,
-                    statusText: xhr.statusText,
-                    url: settings.url,
-                    type: settings.type
-                });
-                
                 if (self.isUnauthorized(xhr)) {
                     console.log('🔒 401 Unauthorized detected in global handler');
                     self.handleUnauthorized(xhr, true);
@@ -142,7 +125,6 @@ window.AuthHandler = {
                 if (window.AjaxUtility && AjaxUtility.handleError) {
                     AjaxUtility.handleError(xhr, status, error);
                 } else {
-                    console.error('Unhandled AJAX Error:', xhr, status, error);
                     alert('An unexpected error occurred.');
                 }
             }
@@ -167,5 +149,4 @@ window.AuthHandler = {
 // Initialize global handler on document ready
 $(document).ready(function() {
     AuthHandler.setupGlobalHandler();
-    console.log('AuthHandler initialized');
 });

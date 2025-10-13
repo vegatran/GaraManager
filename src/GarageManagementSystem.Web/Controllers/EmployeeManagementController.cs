@@ -172,18 +172,24 @@ namespace GarageManagementSystem.Web.Controllers
             
             if (response.Success && response.Data != null)
             {
-                return Json(response.Data);
+                var departments = response.Data.Select(d => new
+                {
+                    value = d.Id.ToString(),
+                    text = d.Name
+                }).Cast<object>().ToList();
+                
+                return Json(departments);
             }
 
             // Dự phòng nếu API gặp lỗi
             var fallbackDepartments = new[]
             {
-                new { value = "Service", text = "Dịch Vụ" },
-                new { value = "Parts", text = "Phụ Tùng" },
-                new { value = "Administration", text = "Hành Chính" },
-                new { value = "Accounting", text = "Kế Toán" },
-                new { value = "CustomerService", text = "Chăm Sóc Khách Hàng" },
-                new { value = "Management", text = "Quản Lý" }
+                new { value = "1", text = "Dịch Vụ" },
+                new { value = "2", text = "Phụ Tùng" },
+                new { value = "3", text = "Hành Chính" },
+                new { value = "4", text = "Kế Toán" },
+                new { value = "5", text = "Chăm Sóc Khách Hàng" },
+                new { value = "6", text = "Quản Lý" }
             };
 
             return Json(fallbackDepartments);
@@ -199,21 +205,27 @@ namespace GarageManagementSystem.Web.Controllers
             
             if (response.Success && response.Data != null)
             {
-                return Json(response.Data);
+                var positions = response.Data.Select(p => new
+                {
+                    value = p.Id.ToString(),
+                    text = p.Name
+                }).Cast<object>().ToList();
+                
+                return Json(positions);
             }
 
             // Dự phòng nếu API gặp lỗi
             var fallbackPositions = new[]
             {
-                new { value = "Technician", text = "Kỹ Thuật Viên" },
-                new { value = "SeniorTechnician", text = "Kỹ Thuật Viên Cao Cấp" },
-                new { value = "PartsSpecialist", text = "Chuyên Viên Phụ Tùng" },
-                new { value = "ServiceAdvisor", text = "Tư Vấn Dịch Vụ" },
-                new { value = "Receptionist", text = "Lễ Tân" },
-                new { value = "Accountant", text = "Kế Toán" },
-                new { value = "Manager", text = "Quản Lý" },
-                new { value = "Assistant", text = "Trợ Lý" },
-                new { value = "Supervisor", text = "Giám Sát" }
+                new { value = "1", text = "Kỹ Thuật Viên" },
+                new { value = "2", text = "Kỹ Thuật Viên Cao Cấp" },
+                new { value = "3", text = "Chuyên Viên Phụ Tùng" },
+                new { value = "4", text = "Tư Vấn Dịch Vụ" },
+                new { value = "5", text = "Lễ Tân" },
+                new { value = "6", text = "Kế Toán" },
+                new { value = "7", text = "Quản Lý" },
+                new { value = "8", text = "Trợ Lý" },
+                new { value = "9", text = "Giám Sát" }
             };
 
             return Json(fallbackPositions);

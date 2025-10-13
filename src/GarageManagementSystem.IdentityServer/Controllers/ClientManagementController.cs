@@ -319,15 +319,7 @@ namespace GarageManagementSystem.IdentityServer.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(string id, CreateClientViewModel model)
         {
-            // Debug logging
-            Console.WriteLine($"DEBUG: SelectedClaims received: {model.SelectedClaims?.Count ?? 0}");
-            if (model.SelectedClaims != null)
-            {
-                foreach (var claim in model.SelectedClaims)
-                {
-                    Console.WriteLine($"DEBUG: Claim: {claim}");
-                }
-            }
+     
             if (!ModelState.IsValid)
             {
                 var errors = ModelState
@@ -471,8 +463,7 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                         })
                         .ToList();
                     
-                    _context.Set<Duende.IdentityServer.EntityFramework.Entities.ClientClaim>().AddRange(newClaims);
-                    Console.WriteLine($"DEBUG: Added {newClaims.Count} claims to client");
+                     _context.Set<Duende.IdentityServer.EntityFramework.Entities.ClientClaim>().AddRange(newClaims);
                 }
 
                 await _context.SaveChangesAsync();
@@ -510,33 +501,6 @@ namespace GarageManagementSystem.IdentityServer.Controllers
 
             try
             {
-                // Serialize client data to JSON
-                var clientData = System.Text.Json.JsonSerializer.Serialize(new
-                {
-                    ClientId = client.ClientId,
-                    ClientName = client.ClientName,
-                    Description = client.Description,
-                    ProtocolType = client.ProtocolType,
-                    Enabled = client.Enabled,
-                    RequireClientSecret = client.RequireClientSecret,
-                    RequirePkce = client.RequirePkce,
-                    AllowOfflineAccess = client.AllowOfflineAccess,
-                    IncludeJwtId = client.IncludeJwtId,
-                    RequireConsent = client.RequireConsent,
-                    AllowRememberConsent = client.AllowRememberConsent,
-                    AccessTokenLifetime = client.AccessTokenLifetime,
-                    IdentityTokenLifetime = client.IdentityTokenLifetime,
-                    AuthorizationCodeLifetime = client.AuthorizationCodeLifetime,
-                    UserSsoLifetime = client.UserSsoLifetime,
-                    AllowedGrantTypes = client.AllowedGrantTypes?.Select(gt => gt.GrantType),
-                    AllowedScopes = client.AllowedScopes?.Select(s => s.Scope),
-                    RedirectUris = client.RedirectUris?.Select(ru => ru.RedirectUri),
-                    PostLogoutRedirectUris = client.PostLogoutRedirectUris?.Select(pru => pru.PostLogoutRedirectUri),
-                    AllowedCorsOrigins = client.AllowedCorsOrigins?.Select(co => co.Origin),
-                    Claims = client.Claims?.Select(c => new { Type = c.Type, Value = c.Value })
-                });
-
-                // Insert into SoftDeleteRecords using Entity Framework (Soft Delete)
                 var softDeleteRecord = new SoftDeleteRecord
                 {
                     EntityType = "Client",

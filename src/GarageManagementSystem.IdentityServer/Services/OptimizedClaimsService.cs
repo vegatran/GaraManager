@@ -81,22 +81,12 @@ namespace GarageManagementSystem.IdentityServer.Services
                 if (IsCriticalClaim(dbClaim.Name))
                 {
                     // ⚠️ CHỈ BLOACK CÁC CLAIMS CRITICAL (sub, iss, aud, exp, iat, nbf, jti)
-                    Console.WriteLine($"🚫 BLOCKED critical claim: {dbClaim.Name}");
                     continue;
                 }
 
                 var value = await GetUserClaimValue(dbClaim, userId);
                 claims.Add(new System.Security.Claims.Claim(dbClaim.Name, value));
                 
-                // Log để biết claim nào sẽ override
-                if (IsDefaultIdentityServerClaim(dbClaim.Name))
-                {
-                    Console.WriteLine($"🔄 WILL OVERRIDE default claim: {dbClaim.Name} = {value}");
-                }
-                else
-                {
-                    Console.WriteLine($"➕ WILL ADD custom claim: {dbClaim.Name} = {value}");
-                }
             }
 
             // Cache 15 phút cho user-specific claims

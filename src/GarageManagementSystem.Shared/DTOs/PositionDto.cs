@@ -1,18 +1,41 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace GarageManagementSystem.Shared.DTOs
 {
-    /// <summary>
-    /// DTO for Position data transfer
-    /// </summary>
-    public class PositionDto
+    public class PositionDto : BaseDto
     {
-        public int Id { get; set; }
-        public string Value { get; set; } = string.Empty;
-        public string Text { get; set; } = string.Empty;
-        public string Description { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public string? Description { get; set; }
+        public bool IsActive { get; set; }
+        public decimal? MinSalary { get; set; }
+        public decimal? MaxSalary { get; set; }
+        public string? Requirements { get; set; }
+    }
+
+    public class CreatePositionDto
+    {
+        [Required(ErrorMessage = "Tên chức vụ là bắt buộc")]
+        [StringLength(100, ErrorMessage = "Tên chức vụ không được vượt quá 100 ký tự")]
+        public string Name { get; set; } = string.Empty;
+
+        [StringLength(500, ErrorMessage = "Mô tả không được vượt quá 500 ký tự")]
+        public string? Description { get; set; }
+
         public bool IsActive { get; set; } = true;
-        public DateTime CreatedAt { get; set; }
-        public DateTime? UpdatedAt { get; set; }
-        public string? CreatedBy { get; set; }
-        public string? UpdatedBy { get; set; }
+
+        [Range(0, double.MaxValue, ErrorMessage = "Lương tối thiểu phải >= 0")]
+        public decimal? MinSalary { get; set; }
+
+        [Range(0, double.MaxValue, ErrorMessage = "Lương tối đa phải >= 0")]
+        public decimal? MaxSalary { get; set; }
+
+        [StringLength(1000, ErrorMessage = "Yêu cầu không được vượt quá 1000 ký tự")]
+        public string? Requirements { get; set; }
+    }
+
+    public class UpdatePositionDto : CreatePositionDto
+    {
+        [Required(ErrorMessage = "ID là bắt buộc")]
+        public int Id { get; set; }
     }
 }

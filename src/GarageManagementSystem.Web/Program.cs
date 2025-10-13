@@ -17,11 +17,19 @@ builder.WebHost.ConfigureKestrel(options =>
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
+// Add global authorization policy - require authentication for all endpoints by default
+builder.Services.AddAuthorization(options =>
+{
+    options.FallbackPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build();
+});
+
 // Authentication - IdentityServer4 best practices
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultScheme = "Cookies";
-    options.DefaultChallengeScheme = "oidc";
+    options.DefaultChallengeScheme = "oidc"; // Redirect trực tiếp về IdentityServer
     options.DefaultSignInScheme = "Cookies";
     options.DefaultSignOutScheme = "oidc";
 })
@@ -30,7 +38,7 @@ builder.Services.AddAuthentication(options =>
     // Cookie configuration based on IdentityServer4 best practices
     options.ExpireTimeSpan = TimeSpan.FromHours(8); // Cookie expires after 8 hours
     options.SlidingExpiration = true; // Reset expiry on activity
-    options.LoginPath = "/Home/Login"; // Redirect to login if not authenticated
+    // options.LoginPath = "/Home/Login"; // ❌ XÓA DÒNG NÀY để redirect trực tiếp đến IdentityServer
     options.LogoutPath = "/Home/Logout";
     options.AccessDeniedPath = "/Home/AccessDenied";
     options.ReturnUrlParameter = "returnUrl";
@@ -50,7 +58,7 @@ builder.Services.AddAuthentication(options =>
     options.Authority = identityConfig["Authority"];
     options.ClientId = identityConfig["ClientId"];
     options.ClientSecret = identityConfig["ClientSecret"];
-    options.ResponseType = identityConfig["ResponseType"];
+    options.ResponseType = identityConfig["ResponseType"] ?? "code";
     
     // Add scopes from configuration - IdentityServer4 official pattern
     var scopes = identityConfig.GetSection("Scopes").Get<string[]>();
@@ -63,6 +71,10 @@ builder.Services.AddAuthentication(options =>
     options.SaveTokens = identityConfig.GetValue<bool>("SaveTokens");
     options.GetClaimsFromUserInfoEndpoint = identityConfig.GetValue<bool>("GetClaimsFromUserInfoEndpoint");
     options.RequireHttpsMetadata = identityConfig.GetValue<bool>("RequireHttpsMetadata");
+    
+    // IdentityServer4 Refresh Token configuration
+    options.UsePkce = false; // Disable PKCE for testing
+    options.AccessDeniedPath = "/Home/AccessDenied";
     
     // Configure to handle network issues
     options.BackchannelHttpHandler = new HttpClientHandler()
@@ -77,6 +89,18 @@ builder.Services.AddAuthentication(options =>
         {
             context.HandleResponse();
             context.Response.Redirect("/Home/Error");
+            return Task.CompletedTask;
+        },
+        OnAuthenticationFailed = context =>
+        {
+            var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+            logger.LogError("Authentication failed: {Error}", context.Exception?.Message);
+            return Task.CompletedTask;
+        },
+        OnUserInformationReceived = context =>
+        {
+            var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+            // logger.LogInformation("User information received for: {Subject}", context.User?.Identity?.Name ?? "Unknown");
             return Task.CompletedTask;
         }
     };
@@ -117,18 +141,11 @@ app.UseStaticFiles();
 app.UseRouting();
 
 app.UseAuthentication();
-
-// Add token validation middleware BEFORE authorization
-// app.UseTokenValidation(); // Temporarily disabled to fix redirect loop
-
 app.UseAuthorization();
 
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
-
-// Add token timeout handling middleware
-// app.UseTokenTimeoutHandling(); // Temporarily disabled to fix redirect issues
 
 // No direct database operations - Web App calls API instead
 

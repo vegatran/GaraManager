@@ -8,5 +8,7 @@ namespace GarageManagementSystem.Core.Interfaces
         Task<IEnumerable<Employee>> GetEmployeesByDepartmentAsync(string department);
         Task<IEnumerable<Employee>> GetEmployeesByPositionAsync(string position);
         Task<IEnumerable<Employee>> SearchEmployeesAsync(string searchTerm);
+        Task<IEnumerable<Employee>> GetAllWithNavigationAsync();
+        Task<Employee?> GetByIdWithNavigationAsync(int id);
     }
 }

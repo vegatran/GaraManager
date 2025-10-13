@@ -90,6 +90,7 @@ namespace GarageManagementSystem.Web.Controllers
             return View();
         }
 
+
         /// <summary>
         /// Kiểm tra xử lý token timeout
         /// </summary>
@@ -129,6 +130,7 @@ namespace GarageManagementSystem.Web.Controllers
             return Content("Routing works! No redirects!");
         }
 
+
         /// <summary>
         /// Lấy cấu hình client cho JavaScript
         /// </summary>
@@ -149,12 +151,22 @@ namespace GarageManagementSystem.Web.Controllers
         }
 
         /// <summary>
-        /// Login page - redirect to IdentityServer
+        /// Login page - redirect to IdentityServer with returnUrl
         /// </summary>
         [AllowAnonymous]
         [Route("Login")]
-        public IActionResult Login()
+        public IActionResult Login(string? returnUrl = null)
         {
+            // Nếu có returnUrl, truyền vào AuthenticationProperties
+            if (!string.IsNullOrEmpty(returnUrl))
+            {
+                var props = new AuthenticationProperties
+                {
+                    RedirectUri = returnUrl
+                };
+                return Challenge(props, "oidc");
+            }
+            
             return Challenge("oidc");
         }
 

@@ -13,6 +13,7 @@ window.EmployeeManagement = {
     init: function() {
         this.initDataTable();
         this.bindEvents();
+        this.loadDropdownData();
     },
 
     // Initialize DataTable
@@ -110,6 +111,78 @@ window.EmployeeManagement = {
         $(document).on('submit', '#editEmployeeForm', function(e) {
             e.preventDefault();
             self.updateEmployee();
+        });
+    },
+
+    // Load dropdown data for positions and departments
+    loadDropdownData: function() {
+        this.loadPositions();
+        this.loadDepartments();
+    },
+
+    // Load positions for dropdowns
+    loadPositions: function() {
+        var self = this;
+        
+        $.ajax({
+            url: '/EmployeeManagement/GetAvailablePositions',
+            type: 'GET',
+            success: function(response) {
+                console.log('🔍 Positions API Response:', response);
+                
+                // Clear existing options
+                $('#editPosition, #createPosition').empty();
+                $('#editPosition, #createPosition').append('<option value="">-- Chọn Chức Vụ --</option>');
+                
+                if (response && response.length > 0) {
+                    response.forEach(function(position) {
+                        var value = position.value || position.name || position.text;
+                        var text = position.text || position.name || position.value;
+                        $('#editPosition, #createPosition').append(
+                            '<option value="' + value + '">' + text + '</option>'
+                        );
+                    });
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error loading positions:', error);
+                if (AuthHandler.isUnauthorized(xhr)) {
+                    AuthHandler.handleUnauthorized(xhr, true);
+                }
+            }
+        });
+    },
+
+    // Load departments for dropdowns
+    loadDepartments: function() {
+        var self = this;
+        
+        $.ajax({
+            url: '/EmployeeManagement/GetAvailableDepartments',
+            type: 'GET',
+            success: function(response) {
+                console.log('🔍 Departments API Response:', response);
+                
+                // Clear existing options
+                $('#editDepartment, #createDepartment').empty();
+                $('#editDepartment, #createDepartment').append('<option value="">-- Chọn Bộ Phận --</option>');
+                
+                if (response && response.length > 0) {
+                    response.forEach(function(department) {
+                        var value = department.value || department.name || department.text;
+                        var text = department.text || department.name || department.value;
+                        $('#editDepartment, #createDepartment').append(
+                            '<option value="' + value + '">' + text + '</option>'
+                        );
+                    });
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error loading departments:', error);
+                if (AuthHandler.isUnauthorized(xhr)) {
+                    AuthHandler.handleUnauthorized(xhr, true);
+                }
+            }
         });
     },
 
@@ -268,9 +341,9 @@ window.EmployeeManagement = {
             Email: $('#editEmail').val(),
             Phone: $('#editPhone').val(),
             Address: $('#editAddress').val(),
-            Position: $('#editPosition').val(),
-            Department: $('#editDepartment').val(),
-            HireDate: $('#editHireDate').val(),
+            PositionId: $('#editPosition').val(),
+            DepartmentId: $('#editDepartment').val(),
+            HireDate: $('#editHireDate').val() != "" ? $('#editHireDate').val() : null,
             Salary: parseFloat($('#editSalary').val()) || 0,
             Status: $('#editStatus').val(),
             Skills: $('#editSkills').val()
@@ -318,13 +391,18 @@ window.EmployeeManagement = {
 
     // Populate edit modal
     populateEditModal: function(employee) {
+        console.log('🔍 Employee data for edit:', employee);
+        
         $('#editId').val(employee.id);
         $('#editName').val(employee.name);
         $('#editEmail').val(employee.email);
         $('#editPhone').val(employee.phone);
         $('#editAddress').val(employee.address);
-        $('#editPosition').val(employee.position); // Use name for dropdown
-        $('#editDepartment').val(employee.department); // Use name for dropdown
+        
+        // Use positionId/departmentId for dropdown values, fallback to names
+        $('#editPosition').val(employee.positionId || employee.position);
+        $('#editDepartment').val(employee.departmentId || employee.department);
+        
         $('#editHireDate').val(employee.hireDate);
         $('#editSalary').val(employee.salary);
         $('#editStatus').val(employee.status);

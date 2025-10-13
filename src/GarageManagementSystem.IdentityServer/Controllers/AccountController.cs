@@ -115,12 +115,10 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                     }
                     else
                     {
-                        Console.WriteLine($"❌ PostLogoutRedirectUri is null or empty");
                     }
                 }
                 else
                 {
-                    Console.WriteLine($"❌ LogoutContext is null");
                 }
             }
             // Fallback: redirect về Home/Index của IdentityServer

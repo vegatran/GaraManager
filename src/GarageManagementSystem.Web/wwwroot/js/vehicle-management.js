@@ -68,16 +68,19 @@ window.VehicleManagement = {
     // Load customers for dropdown
     loadCustomers: function() {
         $.ajax({
-            url: '/CustomerManagement/GetActiveCustomers',
+            url: '/VehicleManagement/GetActiveCustomers',
             type: 'GET',
             success: function(response) {
-                if (response.success && response.data) {
-                    var customers = response.data;
+                // GetActiveCustomers returns data directly, not wrapped in success/data
+                if (response && Array.isArray(response)) {
+                    var customers = response;
                     var options = '<option value="">Select Customer</option>';
                     customers.forEach(function(customer) {
                         options += `<option value="${customer.id}">${customer.name}</option>`;
                     });
-                    $('#createCustomerId, #updateCustomerId').html(options);
+                    $('#createCustomerId, #editCustomerId').html(options);
+                } else {
+                    console.error('Invalid customer data format:', response);
                 }
             },
             error: function(xhr, status, error) {
@@ -90,8 +93,8 @@ window.VehicleManagement = {
     bindEvents: function() {
         var self = this;
 
-        // Add vehicle button
-        $(document).on('click', '#addVehicleBtn', function() {
+        // Add vehicle button - using data-target selector
+        $(document).on('click', '[data-target="#createVehicleModal"]', function() {
             self.showCreateModal();
         });
 
@@ -231,14 +234,20 @@ window.VehicleManagement = {
         var formData = {
             CustomerId: parseInt($('#createCustomerId').val()),
             LicensePlate: $('#createLicensePlate').val(),
-            Make: $('#createMake').val(),
+            Brand: $('#createMake').val(),
             Model: $('#createModel').val(),
-            Year: parseInt($('#createYear').val()),
-            Color: $('#createColor').val(),
-            VIN: $('#createVIN').val(),
-            EngineNumber: $('#createEngineNumber').val(),
-            Mileage: parseInt($('#createMileage').val()) || 0
+            Year: $('#createYear').val() || null,
+            Color: $('#createColor').val() || null,
+            VIN: $('#createVIN').val() || null,
+            EngineNumber: $('#createEngineNumber').val() || null,
+            VehicleType: "Personal"
         };
+
+        // Validate required fields
+        if (!formData.CustomerId || !formData.LicensePlate || !formData.Brand || !formData.Model) {
+            GarageApp.showError('Vui lòng điền đầy đủ thông tin bắt buộc');
+            return;
+        }
 
         $.ajax({
             url: '/VehicleManagement/CreateVehicle',
@@ -274,14 +283,20 @@ window.VehicleManagement = {
             Id: parseInt(vehicleId),
             CustomerId: parseInt($('#editCustomerId').val()),
             LicensePlate: $('#editLicensePlate').val(),
-            Make: $('#editMake').val(),
+            Brand: $('#editMake').val(),
             Model: $('#editModel').val(),
-            Year: parseInt($('#editYear').val()),
-            Color: $('#editColor').val(),
-            VIN: $('#editVIN').val(),
-            EngineNumber: $('#editEngineNumber').val(),
-            Mileage: parseInt($('#editMileage').val()) || 0
+            Year: $('#editYear').val() || null,
+            Color: $('#editColor').val() || null,
+            VIN: $('#editVIN').val() || null,
+            EngineNumber: $('#editEngineNumber').val() || null,
+            VehicleType: "Personal"
         };
+
+        // Validate required fields
+        if (!formData.CustomerId || !formData.LicensePlate || !formData.Brand || !formData.Model) {
+            GarageApp.showError('Vui lòng điền đầy đủ thông tin bắt buộc');
+            return;
+        }
 
         $.ajax({
             url: '/VehicleManagement/UpdateVehicle/' + vehicleId,
@@ -313,7 +328,7 @@ window.VehicleManagement = {
     populateViewModal: function(vehicle) {
         $('#viewCustomer').text(vehicle.customerName || '');
         $('#viewLicensePlate').text(vehicle.licensePlate || '');
-        $('#viewMake').text(vehicle.make || '');
+        $('#viewMake').text(vehicle.brand || '');
         $('#viewModel').text(vehicle.model || '');
         $('#viewYear').text(vehicle.year || '');
         $('#viewColor').text(vehicle.color || '');
@@ -327,7 +342,7 @@ window.VehicleManagement = {
         $('#editId').val(vehicle.id);
         $('#editCustomerId').val(vehicle.customerId);
         $('#editLicensePlate').val(vehicle.licensePlate);
-        $('#editMake').val(vehicle.make);
+        $('#editMake').val(vehicle.brand);
         $('#editModel').val(vehicle.model);
         $('#editYear').val(vehicle.year);
         $('#editColor').val(vehicle.color);

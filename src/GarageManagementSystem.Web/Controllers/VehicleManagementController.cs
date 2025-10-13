@@ -23,8 +23,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Hiển thị trang quản lý xe
         /// </summary>
-        [Route("")]
-        [Route("Index")]
+        [HttpGet]
         public IActionResult Index()
         {
             return View();
@@ -33,8 +32,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Lấy danh sách tất cả xe cho DataTable thông qua API
         /// </summary>
-        [HttpGet]
-        [Route("GetVehicles")]
+        [HttpGet("GetVehicles")]
         public async Task<IActionResult> GetVehicles()
         {
             var response = await _apiService.GetAsync<List<VehicleDto>>(ApiEndpoints.Vehicles.GetAll);
@@ -55,13 +53,17 @@ namespace GarageManagementSystem.Web.Controllers
                         color = v.Color ?? "N/A",
                         vin = v.VIN ?? "N/A",
                         engineNumber = v.EngineNumber ?? "N/A",
-                        customerName = v.Customer?.Name ?? "N/A",
+                        customerName = v.CustomerName ?? "N/A",
                         customerId = v.CustomerId,
                         createdDate = v.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss")
                     }).Cast<object>().ToList();
                 }
 
-                return Json(new { data = vehicleList });
+                return Json(new { 
+                    success = true,
+                    data = vehicleList,
+                    message = "Lấy danh sách xe thành công"
+                });
             }
             else
             {
@@ -72,8 +74,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Lấy thông tin chi tiết xe theo ID thông qua API
         /// </summary>
-        [HttpGet]
-        [Route("Details/{id}")]
+        [HttpGet("GetVehicle/{id}")]
         public async Task<IActionResult> Details(int id)
         {
             var response = await _apiService.GetAsync<VehicleDto>(ApiEndpoints.Builder.WithId(ApiEndpoints.Vehicles.GetById, id));
@@ -91,8 +92,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Get vehicles by customer ID
         /// </summary>
-        [HttpGet]
-        [Route("GetByCustomer/{customerId}")]
+        [HttpGet("GetByCustomer/{customerId}")]
         public async Task<IActionResult> GetByCustomer(int customerId)
         {
             var response = await _apiService.GetAsync<List<VehicleDto>>(ApiEndpoints.Builder.WithId(ApiEndpoints.Vehicles.GetByCustomerId, customerId));
@@ -110,8 +110,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Get all customers for dropdown
         /// </summary>
-        [HttpGet]
-        [Route("GetCustomers")]
+        [HttpGet("GetCustomers")]
         public async Task<IActionResult> GetCustomers()
         {
             var response = await _apiService.GetAsync<List<CustomerDto>>(ApiEndpoints.Customers.GetAll);
@@ -135,8 +134,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Tạo xe mới thông qua API
         /// </summary>
-        [HttpPost]
-        [Route("Create")]
+        [HttpPost("CreateVehicle")]
         public async Task<IActionResult> Create(CreateVehicleDto model)
         {
             if (!ModelState.IsValid)
@@ -144,47 +142,63 @@ namespace GarageManagementSystem.Web.Controllers
                 return Json(new { success = false, message = "Invalid model data" });
             }
 
-            var response = await _apiService.PostAsync<object>(ApiEndpoints.Vehicles.Create, model);
+            var response = await _apiService.PostAsync<VehicleDto>(ApiEndpoints.Vehicles.Create, model);
             
-            return Json(new { 
-                success = response.Success, 
-                message = response.Success ? "Vehicle created successfully" : response.ErrorMessage 
-            });
+            return Json(response);
         }
 
         /// <summary>
         /// Cập nhật thông tin xe thông qua API
         /// </summary>
-        [HttpPost]
-        [Route("Edit")]
-        public async Task<IActionResult> Edit(UpdateVehicleDto model)
+        [HttpPut("UpdateVehicle/{id}")]
+        public async Task<IActionResult> UpdateVehicle(int id, [FromBody] UpdateVehicleDto model)
         {
             if (!ModelState.IsValid)
             {
-                return Json(new { success = false, message = "Invalid model data" });
+                return BadRequest(new { success = false, errorMessage = "Dữ liệu không hợp lệ" });
             }
 
-            var response = await _apiService.PutAsync<object>(ApiEndpoints.Builder.WithId(ApiEndpoints.Vehicles.Update, model.Id), model);
+            if (id != model.Id)
+            {
+                return BadRequest(new { success = false, errorMessage = "ID không khớp" });
+            }
+
+            var response = await _apiService.PutAsync<VehicleDto>(ApiEndpoints.Builder.WithId(ApiEndpoints.Vehicles.Update, id), model);
             
-            return Json(new { 
-                success = response.Success, 
-                message = response.Success ? "Vehicle updated successfully" : response.ErrorMessage 
-            });
+            return Json(response);
         }
 
         /// <summary>
         /// Xóa xe thông qua API
         /// </summary>
-        [HttpPost]
-        [Route("Delete/{id}")]
-        public async Task<IActionResult> Delete(int id)
+        [HttpDelete("DeleteVehicle/{id}")]
+        public async Task<IActionResult> DeleteVehicle(int id)
         {
-            var response = await _apiService.DeleteAsync<object>(ApiEndpoints.Builder.WithId(ApiEndpoints.Vehicles.Delete, id));
+            var response = await _apiService.DeleteAsync<VehicleDto>(ApiEndpoints.Builder.WithId(ApiEndpoints.Vehicles.Delete, id));
             
-            return Json(new { 
-                success = response.Success, 
-                message = response.Success ? "Vehicle deleted successfully" : response.ErrorMessage 
-            });
+            return Json(response);
+        }
+
+        /// <summary>
+        /// Lấy danh sách khách hàng đang hoạt động cho dropdown
+        /// </summary>
+        [HttpGet("GetActiveCustomers")]
+        public async Task<IActionResult> GetActiveCustomers()
+        {
+            var response = await _apiService.GetAsync<List<CustomerDto>>(ApiEndpoints.Customers.GetAll);
+            
+            if (response.Success && response.Data != null)
+            {
+                var customerList = response.Data.Select(c => new
+                {
+                    id = c.Id,
+                    name = c.Name
+                }).Cast<object>().ToList();
+
+                return Json(customerList);
+            }
+
+            return Json(new List<object>());
         }
     }
 }

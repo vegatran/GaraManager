@@ -42,6 +42,11 @@ namespace GarageManagementSystem.Shared.DTOs
         public int? ProcessedById { get; set; }
     }
 
+    public class UpdateStockTransactionDto : CreateStockTransactionDto
+    {
+        [Required] public int Id { get; set; }
+    }
+
     /// <summary>
     /// Helper methods cho TransactionType
     /// </summary>

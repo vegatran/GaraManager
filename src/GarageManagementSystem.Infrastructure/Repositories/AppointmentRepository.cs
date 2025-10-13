@@ -121,6 +121,27 @@ namespace GarageManagementSystem.Infrastructure.Repositories
 
             return $"{prefix}{sequence:D4}";
         }
+
+        public async Task<IEnumerable<Appointment>> GetAllWithDetailsAsync()
+        {
+            return await _dbSet
+                .Where(a => !a.IsDeleted)
+                .Include(a => a.Customer)
+                .Include(a => a.Vehicle)
+                .Include(a => a.AssignedTo)
+                .OrderByDescending(a => a.ScheduledDateTime)
+                .ToListAsync();
+        }
+
+        public async Task<Appointment?> GetByIdWithDetailsAsync(int id)
+        {
+            return await _dbSet
+                .Where(a => !a.IsDeleted && a.Id == id)
+                .Include(a => a.Customer)
+                .Include(a => a.Vehicle)
+                .Include(a => a.AssignedTo)
+                .FirstOrDefaultAsync();
+        }
     }
 }
 

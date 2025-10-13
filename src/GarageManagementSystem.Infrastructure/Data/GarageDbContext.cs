@@ -2,12 +2,19 @@ using GarageManagementSystem.Core.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Http;
 using System.Security.Claims;
+using OfficeOpenXml;
 
 namespace GarageManagementSystem.Infrastructure.Data
 {
     public class GarageDbContext : DbContext
     {
         private readonly IHttpContextAccessor? _httpContextAccessor;
+
+        static GarageDbContext()
+        {
+            // Set EPPlus license globally for version 8+ - Use new License property
+            ExcelPackage.License.SetNonCommercialOrganization("My Noncommercial organization");
+        }
 
         public GarageDbContext(DbContextOptions<GarageDbContext> options) : base(options)
         {

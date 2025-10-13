@@ -12,6 +12,7 @@ namespace GarageManagementSystem.Shared.DTOs
         public string? VIN { get; set; }
         public string? EngineNumber { get; set; }
         public int CustomerId { get; set; }
+        public string? CustomerName { get; set; } // Customer name for display
 
         // Vehicle Type Classification
         public string VehicleType { get; set; } = "Personal";

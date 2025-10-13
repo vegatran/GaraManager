@@ -18,6 +18,20 @@ namespace GarageManagementSystem.API.Controllers
             _unitOfWork = unitOfWork;
         }
 
+        [HttpGet]
+        public async Task<ActionResult<ApiResponse<List<AppointmentDto>>>> GetAllAppointments()
+        {
+            try
+            {
+                var appointments = await _unitOfWork.Appointments.GetAllWithDetailsAsync();
+                return Ok(ApiResponse<List<AppointmentDto>>.SuccessResult(appointments.Select(MapToDto).ToList()));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<List<AppointmentDto>>.ErrorResult("Error", ex.Message));
+            }
+        }
+
         [HttpGet("today")]
         public async Task<ActionResult<ApiResponse<List<AppointmentDto>>>> GetTodayAppointments()
         {
@@ -51,7 +65,7 @@ namespace GarageManagementSystem.API.Controllers
         {
             try
             {
-                var appointment = await _unitOfWork.Appointments.GetByIdAsync(id);
+                var appointment = await _unitOfWork.Appointments.GetByIdWithDetailsAsync(id);
                 if (appointment == null) return NotFound(ApiResponse<AppointmentDto>.ErrorResult("Not found"));
                 return Ok(ApiResponse<AppointmentDto>.SuccessResult(MapToDto(appointment)));
             }

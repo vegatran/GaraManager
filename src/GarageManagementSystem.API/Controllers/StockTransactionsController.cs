@@ -284,14 +284,24 @@ namespace GarageManagementSystem.API.Controllers
 
         private static StockTransactionDto MapToDto(Core.Entities.StockTransaction st) => new()
         {
-            Id = st.Id, TransactionNumber = st.TransactionNumber, PartId = st.PartId,
-            TransactionType = st.TransactionType.ToString(), Quantity = st.Quantity,
-            QuantityBefore = st.QuantityBefore, QuantityAfter = st.QuantityAfter,
-            UnitPrice = st.UnitPrice, TotalAmount = st.TotalAmount, TransactionDate = st.TransactionDate,
-            ServiceOrderId = st.ServiceOrderId, SupplierId = st.SupplierId,
-            ReferenceNumber = st.ReferenceNumber, Notes = st.Notes,
+            Id = st.Id, 
+            TransactionNumber = st.TransactionNumber, 
+            PartId = st.PartId,
+            TransactionType = st.TransactionType.ToString(), 
+            Quantity = st.Quantity,
+            QuantityBefore = st.QuantityBefore, 
+            QuantityAfter = st.QuantityAfter,
+            UnitPrice = st.UnitPrice, 
+            TotalAmount = st.TotalAmount, 
+            TransactionDate = st.TransactionDate,
+            ServiceOrderId = st.ServiceOrderId, 
+            SupplierId = st.SupplierId,
+            ProcessedById = st.ProcessedById,
+            ReferenceNumber = st.ReferenceNumber, 
+            Notes = st.Notes,
             Part = st.Part != null ? new PartDto { Id = st.Part.Id, PartName = st.Part.PartName, PartNumber = st.Part.PartNumber } : null,
-            CreatedAt = st.CreatedAt, CreatedBy = st.CreatedBy
+            CreatedAt = st.CreatedAt, 
+            CreatedBy = st.CreatedBy
         };
 
     /// <summary>

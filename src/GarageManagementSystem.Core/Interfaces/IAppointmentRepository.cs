@@ -13,6 +13,8 @@ namespace GarageManagementSystem.Core.Interfaces
         Task<IEnumerable<Appointment>> GetTodayAppointmentsAsync();
         Task<bool> IsTimeSlotAvailableAsync(DateTime scheduledDateTime, int duration, int? excludeId = null);
         Task<string> GenerateAppointmentNumberAsync();
+        Task<IEnumerable<Appointment>> GetAllWithDetailsAsync();
+        Task<Appointment?> GetByIdWithDetailsAsync(int id);
     }
 }
 

@@ -40,13 +40,30 @@ window.AppointmentManagement = {
                 }
             },
             columns: [
-                { data: 'id', title: 'ID', width: '60px' },
+                { data: 'id', title: 'Mã', width: '60px' },
                 { data: 'customerName', title: 'Khách Hàng' },
                 { data: 'vehicleLicensePlate', title: 'Xe' },
                 { data: 'appointmentDate', title: 'Ngày' },
                 { data: 'appointmentTime', title: 'Giờ' },
                 { data: 'serviceType', title: 'Loại Dịch Vụ' },
-                { data: 'status', title: 'Trạng Thái' },
+                { 
+                    data: 'status', 
+                    title: 'Trạng Thái',
+                    render: function(data, type, row) {
+                        var badgeClass = 'badge-secondary';
+                        var displayText = data;
+                        
+                        switch(data) {
+                            case 'Đã Đặt Lịch': badgeClass = 'badge-primary'; break;
+                            case 'Đã Xác Nhận': badgeClass = 'badge-info'; break;
+                            case 'Đang Thực Hiện': badgeClass = 'badge-warning'; break;
+                            case 'Hoàn Thành': badgeClass = 'badge-success'; break;
+                            case 'Đã Hủy': badgeClass = 'badge-danger'; break;
+                            case 'Không Đến': badgeClass = 'badge-dark'; break;
+                        }
+                        return `<span class="badge ${badgeClass}">${displayText}</span>`;
+                    }
+                },
                 {
                     data: null,
                     title: 'Thao Tác',
@@ -77,6 +94,7 @@ window.AppointmentManagement = {
     loadDropdowns: function() {
         this.loadCustomers();
         this.loadEmployees();
+        this.loadAppointmentTypes();
     },
 
     // Load customers
@@ -85,13 +103,16 @@ window.AppointmentManagement = {
             url: '/CustomerManagement/GetActiveCustomers',
             type: 'GET',
             success: function(response) {
-                if (response.success && response.data) {
-                    var customers = response.data;
-                    var options = '<option value="">Select Customer</option>';
+                // GetActiveCustomers returns data directly, not wrapped in success/data
+                if (response && Array.isArray(response)) {
+                    var customers = response;
+                    var options = '<option value="">Chọn khách hàng</option>';
                     customers.forEach(function(customer) {
                         options += `<option value="${customer.id}">${customer.name}</option>`;
                     });
-                    $('#createCustomerId, #updateCustomerId').html(options);
+                    $('#createCustomerId, #editCustomerId').html(options);
+                } else {
+                    console.error('Invalid customer data format:', response);
                 }
             },
             error: function(xhr, status, error) {
@@ -103,20 +124,45 @@ window.AppointmentManagement = {
     // Load employees
     loadEmployees: function() {
         $.ajax({
-            url: '/EmployeeManagement/GetActiveEmployees',
+            url: '/AppointmentManagement/GetEmployees',
             type: 'GET',
             success: function(response) {
-                if (response.success && response.data) {
-                    var employees = response.data;
-                    var options = '<option value="">Select Employee</option>';
+                if (response && Array.isArray(response)) {
+                    var employees = response;
+                    var options = '<option value="">Chọn nhân viên</option>';
                     employees.forEach(function(employee) {
-                        options += `<option value="${employee.id}">${employee.name}</option>`;
+                        options += `<option value="${employee.id}">${employee.text}</option>`;
                     });
-                    $('#createAssignedEmployeeId, #updateAssignedEmployeeId').html(options);
+                    $('#createAssignedEmployeeId, #editAssignedEmployeeId').html(options);
+                } else {
+                    console.error('Invalid employee data format:', response);
                 }
             },
             error: function(xhr, status, error) {
                 console.error('Error loading employees:', error);
+            }
+        });
+    },
+
+    // Load appointment types
+    loadAppointmentTypes: function() {
+        $.ajax({
+            url: '/AppointmentManagement/GetAppointmentTypes',
+            type: 'GET',
+            success: function(response) {
+                if (response && Array.isArray(response)) {
+                    var types = response;
+                    var options = '<option value="">-- Chọn Loại Dịch Vụ --</option>';
+                    types.forEach(function(type) {
+                        options += `<option value="${type.id}">${type.text}</option>`;
+                    });
+                    $('#createServiceType, #editServiceType').html(options);
+                } else {
+                    console.error('Invalid appointment types data format:', response);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error loading appointment types:', error);
             }
         });
     },
@@ -129,20 +175,24 @@ window.AppointmentManagement = {
         }
 
         $.ajax({
-            url: '/VehicleManagement/GetVehiclesByCustomer/' + customerId,
+            url: '/AppointmentManagement/GetVehiclesByCustomer/' + customerId,
             type: 'GET',
             success: function(response) {
-                if (response.success && response.data) {
-                    var vehicles = response.data;
-                    var options = '<option value="">Select Vehicle</option>';
+                if (response && Array.isArray(response)) {
+                    var vehicles = response;
+                    var options = '<option value="">-- Chọn Xe --</option>';
                     vehicles.forEach(function(vehicle) {
-                        options += `<option value="${vehicle.id}">${vehicle.licensePlate} - ${vehicle.make} ${vehicle.model}</option>`;
+                        options += `<option value="${vehicle.id}">${vehicle.text}</option>`;
                     });
                     $(targetSelect).html(options);
+                } else {
+                    console.error('Invalid vehicle data format:', response);
+                    $(targetSelect).html('<option value="">-- Chọn Xe --</option>');
                 }
             },
             error: function(xhr, status, error) {
                 console.error('Error loading vehicles:', error);
+                $(targetSelect).html('<option value="">-- Chọn Xe --</option>');
             }
         });
     },
@@ -162,9 +212,9 @@ window.AppointmentManagement = {
             self.loadVehiclesByCustomer(customerId, '#createVehicleId');
         });
 
-        $(document).on('change', '#updateCustomerId', function() {
+        $(document).on('change', '#editCustomerId', function() {
             var customerId = $(this).val();
-            self.loadVehiclesByCustomer(customerId, '#updateVehicleId');
+            self.loadVehiclesByCustomer(customerId, '#editVehicleId');
         });
 
         // View appointment
@@ -340,17 +390,16 @@ window.AppointmentManagement = {
     // Update appointment
     updateAppointment: function() {
         var self = this;
-        var appointmentId = $('#updateAppointmentId').val();
+        var appointmentId = $('#editId').val();
         var formData = {
             Id: parseInt(appointmentId),
-            CustomerId: parseInt($('#updateCustomerId').val()),
-            VehicleId: parseInt($('#updateVehicleId').val()),
-            AppointmentDate: $('#updateAppointmentDate').val(),
-            AppointmentTime: $('#updateAppointmentTime').val(),
-            ServiceType: $('#updateServiceType').val(),
-            Description: $('#updateDescription').val(),
-            Status: $('#updateStatus').val(),
-            AssignedEmployeeId: $('#updateAssignedEmployeeId').val() ? parseInt($('#updateAssignedEmployeeId').val()) : null
+            CustomerId: parseInt($('#editCustomerId').val()),
+            VehicleId: parseInt($('#editVehicleId').val()),
+            ScheduledDateTime: $('#editAppointmentDate').val() + 'T' + $('#editAppointmentTime').val(),
+            AppointmentType: $('#editServiceType').val(),
+            ServiceRequested: $('#editDescription').val(),
+            Status: $('#editStatus').val(),
+            AssignedToId: $('#editAssignedEmployeeId').val() ? parseInt($('#editAssignedEmployeeId').val()) : null
         };
 
         $.ajax({
@@ -381,36 +430,74 @@ window.AppointmentManagement = {
 
     // Populate view modal
     populateViewModal: function(appointment) {
-        $('#viewCustomerName').text(appointment.customerName || '');
-        $('#viewVehicleLicensePlate').text(appointment.vehicleLicensePlate || '');
-        $('#viewAppointmentDate').text(appointment.appointmentDate || '');
-        $('#viewAppointmentTime').text(appointment.appointmentTime || '');
-        $('#viewServiceType').text(appointment.serviceType || '');
-        $('#viewDescription').text(appointment.description || '');
-        $('#viewStatus').text(appointment.status || '');
-        $('#viewAssignedEmployeeName').text(appointment.assignedEmployeeName || '');
+        $('#viewCustomer').text(appointment.customer?.name || appointment.customerName || 'Không xác định');
+        $('#viewVehicle').text(appointment.vehicle?.licensePlate || appointment.vehicleLicensePlate || 'Không xác định');
+        $('#viewAppointmentDate').text(appointment.scheduledDateTime ? new Date(appointment.scheduledDateTime).toLocaleDateString('vi-VN') : appointment.appointmentDate || '');
+        $('#viewAppointmentTime').text(appointment.scheduledDateTime ? new Date(appointment.scheduledDateTime).toLocaleTimeString('vi-VN', {hour: '2-digit', minute: '2-digit'}) : appointment.appointmentTime || '');
+        $('#viewServiceType').text(this.translateServiceType(appointment.appointmentType || appointment.serviceType || ''));
+        $('#viewDescription').text(appointment.serviceRequested || appointment.description || 'Không có mô tả');
+        $('#viewStatus').text(this.translateStatus(appointment.status || ''));
+        $('#viewAssignedEmployee').text(appointment.assignedTo?.name || appointment.assignedEmployeeName || 'Chưa phân công');
+    },
+
+    // Translate service type to Vietnamese
+    translateServiceType: function(serviceType) {
+        const translations = {
+            'Maintenance': 'Bảo Dưỡng',
+            'Repair': 'Sửa Chữa',
+            'Inspection': 'Kiểm Tra',
+            'Diagnostic': 'Chẩn Đoán',
+            'Service': 'Dịch Vụ',
+            'Oil Change': 'Thay Dầu',
+            'Other': 'Khác'
+        };
+        return translations[serviceType] || serviceType;
+    },
+
+    // Translate status to Vietnamese
+    translateStatus: function(status) {
+        const translations = {
+            'Scheduled': 'Đã Đặt Lịch',
+            'Confirmed': 'Đã Xác Nhận',
+            'InProgress': 'Đang Thực Hiện',
+            'Completed': 'Hoàn Thành',
+            'Cancelled': 'Đã Hủy',
+            'NoShow': 'Không Đến'
+        };
+        return translations[status] || status;
     },
 
     // Populate edit modal
     populateEditModal: function(appointment) {
-        $('#updateAppointmentId').val(appointment.id);
-        $('#updateCustomerId').val(appointment.customerId);
-        
-        // Load vehicles for selected customer
         var self = this;
-        this.loadVehiclesByCustomer(appointment.customerId, '#updateVehicleId');
         
-        // Wait a bit for vehicles to load, then set the selected vehicle
+        // Load all dropdowns first
+        this.loadCustomers();
+        this.loadEmployees();
+        this.loadAppointmentTypes();
+        
+        // Set values after dropdowns are loaded
         setTimeout(function() {
-            $('#updateVehicleId').val(appointment.vehicleId);
-        }, 500);
-        
-        $('#updateAppointmentDate').val(appointment.appointmentDate);
-        $('#updateAppointmentTime').val(appointment.appointmentTime);
-        $('#updateServiceType').val(appointment.serviceType);
-        $('#updateDescription').val(appointment.description);
-        $('#updateStatus').val(appointment.status);
-        $('#updateAssignedEmployeeId').val(appointment.assignedEmployeeId);
+            $('#editId').val(appointment.id);
+            $('#editCustomerId').val(appointment.customerId);
+            
+            // Load vehicles for selected customer
+            self.loadVehiclesByCustomer(appointment.customerId, '#editVehicleId');
+            
+            // Set other values
+            $('#editAppointmentDate').val(appointment.scheduledDateTime ? new Date(appointment.scheduledDateTime).toISOString().split('T')[0] : '');
+            $('#editAppointmentTime').val(appointment.scheduledDateTime ? new Date(appointment.scheduledDateTime).toTimeString().slice(0, 5) : '');
+            $('#editServiceType').val(appointment.appointmentType);
+            $('#editDescription').val(appointment.serviceRequested || appointment.description);
+            $('#editStatus').val(appointment.status);
+            $('#editAssignedEmployeeId').val(appointment.assignedToId);
+            
+            // Wait a bit more for vehicles to load, then set the selected vehicle
+            setTimeout(function() {
+                $('#editVehicleId').val(appointment.vehicleId);
+                $('#editVehicleId').trigger('change');
+            }, 300);
+        }, 200);
     }
 };
 

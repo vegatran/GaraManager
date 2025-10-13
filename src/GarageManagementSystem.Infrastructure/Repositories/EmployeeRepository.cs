@@ -47,5 +47,24 @@ namespace GarageManagementSystem.Infrastructure.Repositories
                 .OrderBy(e => e.Name)
                 .ToListAsync();
         }
+
+        public async Task<IEnumerable<Employee>> GetAllWithNavigationAsync()
+        {
+            return await _dbSet
+                .Where(e => !e.IsDeleted)
+                .Include(e => e.PositionNavigation)
+                .Include(e => e.DepartmentNavigation)
+                .OrderBy(e => e.Name)
+                .ToListAsync();
+        }
+
+        public async Task<Employee?> GetByIdWithNavigationAsync(int id)
+        {
+            return await _dbSet
+                .Where(e => e.Id == id && !e.IsDeleted)
+                .Include(e => e.PositionNavigation)
+                .Include(e => e.DepartmentNavigation)
+                .FirstOrDefaultAsync();
+        }
     }
 }

@@ -1,3 +1,4 @@
+using AutoMapper;
 using GarageManagementSystem.Core.Interfaces;
 using GarageManagementSystem.Shared.DTOs;
 using GarageManagementSystem.Shared.Models;
@@ -12,10 +13,12 @@ namespace GarageManagementSystem.API.Controllers
     public class VehiclesController : ControllerBase
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IMapper _mapper;
 
-        public VehiclesController(IUnitOfWork unitOfWork)
+        public VehiclesController(IUnitOfWork unitOfWork, IMapper mapper)
         {
             _unitOfWork = unitOfWork;
+            _mapper = mapper;
         }
 
         [HttpGet]
@@ -24,7 +27,7 @@ namespace GarageManagementSystem.API.Controllers
             try
             {
                 var vehicles = await _unitOfWork.Vehicles.GetAllWithCustomerAsync();
-                var vehicleDtos = vehicles.Select(MapToDto).ToList();
+                var vehicleDtos = vehicles.Select(v => _mapper.Map<VehicleDto>(v)).ToList();
                 
                 return Ok(ApiResponse<List<VehicleDto>>.SuccessResult(vehicleDtos));
             }
@@ -45,7 +48,7 @@ namespace GarageManagementSystem.API.Controllers
                     return NotFound(ApiResponse<VehicleDto>.ErrorResult("Vehicle not found"));
                 }
 
-                var vehicleDto = MapToDto(vehicle);
+                var vehicleDto = _mapper.Map<VehicleDto>(vehicle);
                 return Ok(ApiResponse<VehicleDto>.SuccessResult(vehicleDto));
             }
             catch (Exception ex)
@@ -60,7 +63,7 @@ namespace GarageManagementSystem.API.Controllers
             try
             {
                 var vehicles = await _unitOfWork.Vehicles.GetByCustomerIdAsync(customerId);
-                var vehicleDtos = vehicles.Select(MapToDto).ToList();
+                var vehicleDtos = vehicles.Select(v => _mapper.Map<VehicleDto>(v)).ToList();
 
                 return Ok(ApiResponse<List<VehicleDto>>.SuccessResult(vehicleDtos));
             }
@@ -135,7 +138,7 @@ namespace GarageManagementSystem.API.Controllers
 
                 // Tải thông tin khách hàng cho DTO
                 vehicle = await _unitOfWork.Vehicles.GetByIdWithCustomerAsync(vehicle.Id);
-                var vehicleDto = MapToDto(vehicle!);
+                var vehicleDto = _mapper.Map<VehicleDto>(vehicle!);
 
                 return CreatedAtAction(nameof(GetVehicle), new { id = vehicle.Id }, 
                     ApiResponse<VehicleDto>.SuccessResult(vehicleDto, "Vehicle created successfully"));
@@ -219,7 +222,7 @@ namespace GarageManagementSystem.API.Controllers
 
                 // Reload with customer
                 vehicle = await _unitOfWork.Vehicles.GetByIdWithCustomerAsync(id);
-                var vehicleDto = MapToDto(vehicle!);
+                var vehicleDto = _mapper.Map<VehicleDto>(vehicle!);
 
                 return Ok(ApiResponse<VehicleDto>.SuccessResult(vehicleDto, "Vehicle updated successfully"));
             }
@@ -262,7 +265,7 @@ namespace GarageManagementSystem.API.Controllers
                 }
 
                 var vehicles = await _unitOfWork.Vehicles.SearchAsync(searchTerm);
-                var vehicleDtos = vehicles.Select(MapToDto).ToList();
+                var vehicleDtos = vehicles.Select(v => _mapper.Map<VehicleDto>(v)).ToList();
 
                 return Ok(ApiResponse<List<VehicleDto>>.SuccessResult(vehicleDtos));
             }
@@ -287,7 +290,7 @@ namespace GarageManagementSystem.API.Controllers
 
                 var vehicles = await _unitOfWork.Vehicles.GetAllWithCustomerAsync();
                 var filteredVehicles = vehicles.Where(v => v.VehicleType == vehicleType).ToList();
-                var vehicleDtos = filteredVehicles.Select(MapToDto).ToList();
+                var vehicleDtos = filteredVehicles.Select(v => _mapper.Map<VehicleDto>(v)).ToList();
 
                 return Ok(ApiResponse<List<VehicleDto>>.SuccessResult(vehicleDtos));
             }
@@ -307,7 +310,7 @@ namespace GarageManagementSystem.API.Controllers
             {
                 var vehicles = await _unitOfWork.Vehicles.GetAllWithCustomerAsync();
                 var insuranceVehicles = vehicles.Where(v => v.VehicleType == "Insurance").ToList();
-                var vehicleDtos = insuranceVehicles.Select(MapToDto).ToList();
+                var vehicleDtos = insuranceVehicles.Select(v => _mapper.Map<VehicleDto>(v)).ToList();
 
                 return Ok(ApiResponse<List<VehicleDto>>.SuccessResult(vehicleDtos));
             }
@@ -327,7 +330,7 @@ namespace GarageManagementSystem.API.Controllers
             {
                 var vehicles = await _unitOfWork.Vehicles.GetAllWithCustomerAsync();
                 var companyVehicles = vehicles.Where(v => v.VehicleType == "Company").ToList();
-                var vehicleDtos = companyVehicles.Select(MapToDto).ToList();
+                var vehicleDtos = companyVehicles.Select(v => _mapper.Map<VehicleDto>(v)).ToList();
 
                 return Ok(ApiResponse<List<VehicleDto>>.SuccessResult(vehicleDtos));
             }
@@ -404,7 +407,7 @@ namespace GarageManagementSystem.API.Controllers
                 await _unitOfWork.SaveChangesAsync();
 
                 var updatedVehicle = await _unitOfWork.Vehicles.GetByIdWithCustomerAsync(id);
-                var vehicleDto = MapToDto(updatedVehicle!);
+                var vehicleDto = _mapper.Map<VehicleDto>(updatedVehicle!);
 
                 return Ok(ApiResponse<VehicleDto>.SuccessResult(vehicleDto, "Vehicle type changed successfully"));
             }
@@ -455,46 +458,6 @@ namespace GarageManagementSystem.API.Controllers
             }
         }
 
-        private static VehicleDto MapToDto(Core.Entities.Vehicle vehicle)
-        {
-            return new VehicleDto
-            {
-                Id = vehicle.Id,
-                LicensePlate = vehicle.LicensePlate,
-                Brand = vehicle.Brand,
-                Model = vehicle.Model,
-                Year = vehicle.Year,
-                Color = vehicle.Color,
-                VIN = vehicle.VIN,
-                EngineNumber = vehicle.EngineNumber,
-                CustomerId = vehicle.CustomerId,
-                VehicleType = vehicle.VehicleType,
-                // Insurance fields
-                InsuranceCompany = vehicle.InsuranceCompany,
-                PolicyNumber = vehicle.PolicyNumber,
-                CoverageType = vehicle.CoverageType,
-                ClaimNumber = vehicle.ClaimNumber,
-                AdjusterName = vehicle.AdjusterName,
-                AdjusterPhone = vehicle.AdjusterPhone,
-                // Company fields
-                CompanyName = vehicle.CompanyName,
-                TaxCode = vehicle.TaxCode,
-                ContactPerson = vehicle.ContactPerson,
-                ContactPhone = vehicle.ContactPhone,
-                Department = vehicle.Department,
-                CostCenter = vehicle.CostCenter,
-                Customer = vehicle.Customer != null ? new CustomerDto
-                {
-                    Id = vehicle.Customer.Id,
-                    Name = vehicle.Customer.Name,
-                    Email = vehicle.Customer.Email,
-                    Phone = vehicle.Customer.Phone,
-                    Address = vehicle.Customer.Address
-                } : null,
-                CreatedAt = vehicle.CreatedAt,
-                UpdatedAt = vehicle.UpdatedAt
-            };
-        }
     }
 }
 

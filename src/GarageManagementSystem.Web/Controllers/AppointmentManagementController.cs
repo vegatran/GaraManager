@@ -31,6 +31,42 @@ namespace GarageManagementSystem.Web.Controllers
         }
 
         /// <summary>
+        /// Get all appointments for DataTable via API
+        /// </summary>
+        [HttpGet]
+        [Route("GetAppointments")]
+        public async Task<IActionResult> GetAppointments()
+        {
+            var response = await _apiService.GetAsync<List<AppointmentDto>>(ApiEndpoints.Appointments.GetAll);
+            
+            if (response.Success)
+            {
+                var appointmentList = new List<object>();
+                
+                if (response.Data != null)
+                {
+                    appointmentList = response.Data.Select(a => new
+                    {
+                        id = a.Id,
+                        appointmentNumber = a.AppointmentNumber,
+                        customerName = a.Customer?.Name ?? "Không xác định",
+                        vehicleLicensePlate = a.Vehicle?.LicensePlate ?? "Không xác định",
+                        appointmentDate = a.ScheduledDateTime.ToString("dd/MM/yyyy"),
+                        appointmentTime = a.ScheduledDateTime.ToString("HH:mm"),
+                        serviceType = TranslateServiceType(a.AppointmentType),
+                        status = TranslateStatus(a.Status)
+                    }).Cast<object>().ToList();
+                }
+
+                return Json(new { data = appointmentList });
+            }
+            else
+            {
+                return Json(new { error = response.ErrorMessage });
+            }
+        }
+
+        /// <summary>
         /// Get today's appointments for DataTable via API
         /// </summary>
         [HttpGet]
@@ -238,6 +274,56 @@ namespace GarageManagementSystem.Web.Controllers
             }
 
             return Json(new List<object>());
+        }
+
+        /// <summary>
+        /// Get employees for dropdown via API
+        /// </summary>
+        [HttpGet]
+        [Route("GetEmployees")]
+        public async Task<IActionResult> GetEmployees()
+        {
+            var response = await _apiService.GetAsync<List<EmployeeDto>>(ApiEndpoints.Employees.GetAll);
+            
+            if (response.Success && response.Data != null)
+            {
+                var employeeList = response.Data.Select(e => new
+                {
+                    id = e.Id,
+                    text = e.Name + (e.Position != null ? " - " + e.Position : "")
+                }).Cast<object>().ToList();
+
+                return Json(employeeList);
+            }
+
+            return Json(new List<object>());
+        }
+
+        private static string TranslateServiceType(string serviceType)
+        {
+            return serviceType switch
+            {
+                "Maintenance" => "Bảo Dưỡng",
+                "Repair" => "Sửa Chữa",
+                "Inspection" => "Kiểm Tra",
+                "Diagnostic" => "Chẩn Đoán",
+                "Service" => "Dịch Vụ",
+                _ => serviceType
+            };
+        }
+
+        private static string TranslateStatus(string status)
+        {
+            return status switch
+            {
+                "Scheduled" => "Đã Đặt Lịch",
+                "Confirmed" => "Đã Xác Nhận",
+                "InProgress" => "Đang Thực Hiện",
+                "Completed" => "Hoàn Thành",
+                "Cancelled" => "Đã Hủy",
+                "NoShow" => "Không Đến",
+                _ => status
+            };
         }
     }
 }

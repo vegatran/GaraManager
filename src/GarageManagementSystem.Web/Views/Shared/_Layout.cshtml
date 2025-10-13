@@ -97,18 +97,18 @@
                         <li class="nav-item">
                             <a href="@Url.Action("Index", "Home")" class="nav-link">
                                 <i class="nav-icon fas fa-tachometer-alt text-info"></i>
-                                <p>Tổng Quan</p>
+                                <p><span class="badge badge-info mr-2">0</span>Tổng Quan</p>
                             </a>
                         </li>
 
-                        <!-- OPERATIONS -->
-                        <li class="nav-header">VẬN HÀNH</li>
+                        <!-- QUY TRÌNH TIẾP NHẬN & ĐÁNH GIÁ -->
+                        <li class="nav-header">QUY TRÌNH TIẾP NHẬN & ĐÁNH GIÁ</li>
 
                         <!-- Appointments -->
                         <li class="nav-item">
                             <a href="@Url.Action("Index", "AppointmentManagement")" class="nav-link">
                                 <i class="nav-icon far fa-calendar-check text-primary"></i>
-                                <p>Lịch Hẹn</p>
+                                <p><span class="badge badge-primary mr-2">1</span>Lịch Hẹn</p>
                             </a>
                         </li>
 
@@ -116,7 +116,7 @@
                         <li class="nav-item">
                             <a href="@Url.Action("Index", "InspectionManagement")" class="nav-link">
                                 <i class="nav-icon fas fa-clipboard-check text-warning"></i>
-                                <p>Kiểm Tra Xe</p>
+                                <p><span class="badge badge-warning mr-2">2</span>Kiểm Tra Xe</p>
                             </a>
                         </li>
 
@@ -124,26 +124,29 @@
                         <li class="nav-item">
                             <a href="@Url.Action("Index", "QuotationManagement")" class="nav-link">
                                 <i class="nav-icon fas fa-file-invoice-dollar text-success"></i>
-                                <p>Báo Giá</p>
+                                <p><span class="badge badge-success mr-2">3</span>Báo Giá</p>
                             </a>
                         </li>
+
+                        <!-- QUY TRÌNH SỬA CHỮA -->
+                        <li class="nav-header">QUY TRÌNH SỬA CHỮA</li>
 
                         <!-- Service Orders -->
                         <li class="nav-item">
                             <a href="@Url.Action("Index", "OrderManagement")" class="nav-link">
                                 <i class="nav-icon fas fa-clipboard-list text-primary"></i>
-                                <p>Phiếu Sửa Chữa</p>
+                                <p><span class="badge badge-primary mr-2">4</span>Phiếu Sửa Chữa</p>
                             </a>
                         </li>
 
-                        <!-- BUSINESS -->
-                        <li class="nav-header">KINH DOANH</li>
+                        <!-- QUẢN LÝ KHÁCH HÀNG & XE -->
+                        <li class="nav-header">QUẢN LÝ KHÁCH HÀNG & XE</li>
 
                         <!-- Customers -->
                         <li class="nav-item">
                             <a href="@Url.Action("Index", "CustomerManagement")" class="nav-link">
                                 <i class="nav-icon fas fa-users text-info"></i>
-                                <p>Khách Hàng</p>
+                                <p><span class="badge badge-info mr-2">5</span>Khách Hàng</p>
                             </a>
                         </li>
 
@@ -151,26 +154,29 @@
                         <li class="nav-item">
                             <a href="@Url.Action("Index", "VehicleManagement")" class="nav-link">
                                 <i class="nav-icon fas fa-car text-secondary"></i>
-                                <p>Xe</p>
+                                <p><span class="badge badge-secondary mr-2">6</span>Xe</p>
                             </a>
                         </li>
+
+                        <!-- QUẢN LÝ NHÂN SỰ -->
+                        <li class="nav-header">QUẢN LÝ NHÂN SỰ</li>
 
                         <!-- Employees -->
                         <li class="nav-item">
                             <a href="@Url.Action("Index", "EmployeeManagement")" class="nav-link">
                                 <i class="nav-icon fas fa-user-tie text-primary"></i>
-                                <p>Nhân Viên</p>
+                                <p><span class="badge badge-primary mr-2">7</span>Nhân Viên</p>
                             </a>
                         </li>
 
-                        <!-- INVENTORY -->
-                        <li class="nav-header">KHO</li>
+                        <!-- QUẢN LÝ KHO & PHỤ TÙNG -->
+                        <li class="nav-header">QUẢN LÝ KHO & PHỤ TÙNG</li>
 
                         <!-- Parts Management -->
                         <li class="nav-item">
                             <a href="@Url.Action("Index", "PartsManagement")" class="nav-link">
                                 <i class="nav-icon fas fa-boxes text-warning"></i>
-                                <p>Phụ Tùng</p>
+                                <p><span class="badge badge-warning mr-2">8</span>Phụ Tùng</p>
                             </a>
                         </li>
 
@@ -178,7 +184,7 @@
                         <li class="nav-item">
                             <a href="@Url.Action("Index", "SupplierManagement")" class="nav-link">
                                 <i class="nav-icon fas fa-truck text-info"></i>
-                                <p>Nhà Cung Cấp</p>
+                                <p><span class="badge badge-info mr-2">9</span>Nhà Cung Cấp</p>
                             </a>
                         </li>
 
@@ -186,18 +192,18 @@
                         <li class="nav-item">
                             <a href="@Url.Action("Index", "StockManagement")" class="nav-link">
                                 <i class="nav-icon fas fa-exchange-alt text-secondary"></i>
-                                <p>Nhập Xuất Kho</p>
+                                <p><span class="badge badge-secondary mr-2">10</span>Nhập Xuất Kho</p>
                             </a>
                         </li>
 
-                        <!-- FINANCE -->
-                        <li class="nav-header">TÀI CHÍNH</li>
+                        <!-- QUẢN LÝ TÀI CHÍNH -->
+                        <li class="nav-header">QUẢN LÝ TÀI CHÍNH</li>
 
                         <!-- Insurance Invoices -->
                         <li class="nav-item">
                             <a href="@Url.Action("Index", "InsuranceInvoice")" class="nav-link">
                                 <i class="nav-icon fas fa-file-invoice text-info"></i>
-                                <p>Hóa Đơn Bảo Hiểm</p>
+                                <p><span class="badge badge-info mr-2">11</span>Hóa Đơn Bảo Hiểm</p>
                             </a>
                         </li>
 
@@ -205,18 +211,18 @@
                         <li class="nav-item">
                             <a href="@Url.Action("Index", "PaymentManagement")" class="nav-link">
                                 <i class="nav-icon fas fa-money-bill-wave text-success"></i>
-                                <p>Thanh Toán</p>
+                                <p><span class="badge badge-success mr-2">12</span>Thanh Toán</p>
                             </a>
                         </li>
 
-                        <!-- MASTER DATA -->
-                        <li class="nav-header">DANH MỤC</li>
+                        <!-- DANH MỤC HỆ THỐNG -->
+                        <li class="nav-header">DANH MỤC HỆ THỐNG</li>
 
                         <!-- Services -->
                         <li class="nav-item">
                             <a href="@Url.Action("Index", "ServiceManagement")" class="nav-link">
                                 <i class="nav-icon fas fa-tools text-danger"></i>
-                                <p>Dịch Vụ</p>
+                                <p><span class="badge badge-danger mr-2">13</span>Dịch Vụ</p>
                             </a>
                         </li>
 

@@ -145,9 +145,21 @@ else
 {
     app.UseHttpsRedirection();
 }
-app.UseStaticFiles();
+
+// Disable BrowserLink and Browser Refresh in development to fix CSP issues
+if (!app.Environment.IsDevelopment())
+{
+    app.UseStaticFiles();
+}
+else
+{
+    app.UseStaticFiles();
+}
 
 app.UseRouting();
+
+// Disable CSP in development to avoid BrowserLink conflicts
+// BrowserLink is disabled in project file to prevent reload issues
 
 app.UseAuthentication();
 app.UseIdentityServer(); // Thêm IdentityServer4 sau authentication

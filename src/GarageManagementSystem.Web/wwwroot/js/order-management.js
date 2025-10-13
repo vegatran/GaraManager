@@ -42,9 +42,9 @@ window.OrderManagement = {
                 { data: 'id', title: 'ID', width: '60px' },
                 { data: 'orderNumber', title: 'Số Đơn Hàng' },
                 { data: 'customerName', title: 'Khách Hàng' },
-                { data: 'vehicleLicensePlate', title: 'Xe' },
+                { data: 'vehiclePlate', title: 'Xe' },
                 { data: 'orderDate', title: 'Ngày Đặt' },
-                { data: 'totalAmount', title: 'Tổng Tiền' },
+                { data: 'finalAmount', title: 'Tổng Tiền' },
                 { data: 'status', title: 'Trạng Thái' },
                 {
                     data: null,
@@ -106,7 +106,7 @@ window.OrderManagement = {
         var self = this;
         
         $.ajax({
-            url: '/OrderManagement/GetOrder/' + id,
+            url: '/OrderManagement/Details/' + id,
             type: 'GET',
             success: function(response) {
                 if (AuthHandler.validateApiResponse(response)) {
@@ -133,7 +133,7 @@ window.OrderManagement = {
         var self = this;
         
         $.ajax({
-            url: '/OrderManagement/GetOrder/' + id,
+            url: '/OrderManagement/Details/' + id,
             type: 'GET',
             success: function(response) {
                 if (AuthHandler.validateApiResponse(response)) {
@@ -170,7 +170,7 @@ window.OrderManagement = {
         }).then((result) => {
             if (result.isConfirmed) {
                 $.ajax({
-                    url: '/OrderManagement/DeleteOrder/' + id,
+                    url: '/OrderManagement/Delete/' + id,
                     type: 'DELETE',
                     success: function(response) {
                         if (AuthHandler.validateApiResponse(response)) {
@@ -213,7 +213,7 @@ window.OrderManagement = {
             showLoaderOnConfirm: true,
             preConfirm: (status) => {
                 return $.ajax({
-                    url: '/OrderManagement/UpdateOrderStatus/' + id,
+                    url: '/OrderManagement/Edit/' + id,
                     type: 'PUT',
                     contentType: 'application/json',
                     data: JSON.stringify({ Status: status })

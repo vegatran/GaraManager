@@ -22,9 +22,6 @@ namespace GarageManagementSystem.Infrastructure.Services
         {
             _context = context;
             _logger = logger;
-            
-            // Set EPPlus license context
-            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
         }
 
         /// <summary>

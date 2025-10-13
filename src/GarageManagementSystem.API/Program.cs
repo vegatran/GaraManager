@@ -167,6 +167,9 @@ builder.Services.AddCors(options =>
     });
 });
 
+// Add AutoMapper
+builder.Services.AddAutoMapper(typeof(Program));
+
 var app = builder.Build();
 
 // Configure custom middleware

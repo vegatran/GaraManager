@@ -298,13 +298,15 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                     RequirePkce = false, // Tạm thời tắt PKCE để test
                     AllowPlainTextPkce = false,
                     RequireRequestObject = false,
-                    AllowAccessTokensViaBrowser = false,
+                    
+                    // IdentityServer4 Refresh Token configuration
                     AllowOfflineAccess = true,
+                    AccessTokenLifetime = 3600, // 1 hour
+                    AbsoluteRefreshTokenLifetime = 2592000, // 30 days
+                    SlidingRefreshTokenLifetime = 1296000, // 15 days
+                    AllowAccessTokensViaBrowser = false,
                     IdentityTokenLifetime = 300,
-                    AccessTokenLifetime = 3600,
                     AuthorizationCodeLifetime = 300,
-                    AbsoluteRefreshTokenLifetime = 2592000,
-                    SlidingRefreshTokenLifetime = 1296000,
                     RefreshTokenUsage = 1, // ReUse
                     UpdateAccessTokenClaimsOnRefresh = false,
                     RefreshTokenExpiration = 1, // Sliding
@@ -343,6 +345,7 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                     {
                         new ClientScope { Scope = "openid" },
                         new ClientScope { Scope = "profile" },
+                        new ClientScope { Scope = "offline_access" },
                         new ClientScope { Scope = "garage.api" }
                     },
                     // Claims = new List<Duende.IdentityServer.EntityFramework.Entities.ClientClaim>

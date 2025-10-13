@@ -87,7 +87,7 @@ namespace GarageManagementSystem.Web.Controllers
         {
             try
             {
-                var response = await _apiService.GetAsync<StockTransactionDto>(string.Format(ApiEndpoints.StockTransactions.GetByPart, id));
+                var response = await _apiService.GetAsync<StockTransactionDto>(string.Format(ApiEndpoints.StockTransactions.GetById, id));
                 
                 if (response.Success && response.Data != null)
                 {

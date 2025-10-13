@@ -1,3 +1,4 @@
+using AutoMapper;
 using GarageManagementSystem.Core.Interfaces;
 using GarageManagementSystem.Shared.DTOs;
 using GarageManagementSystem.Shared.Models;
@@ -12,10 +13,12 @@ namespace GarageManagementSystem.API.Controllers
     public class CustomersController : ControllerBase
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IMapper _mapper;
 
-        public CustomersController(IUnitOfWork unitOfWork)
+        public CustomersController(IUnitOfWork unitOfWork, IMapper mapper)
         {
             _unitOfWork = unitOfWork;
+            _mapper = mapper;
         }
 
         [HttpGet]
@@ -24,7 +27,7 @@ namespace GarageManagementSystem.API.Controllers
             try
             {
                 var customers = await _unitOfWork.Customers.GetAllAsync();
-                var customerDtos = customers.Select(MapToDto).ToList();
+                var customerDtos = customers.Select(c => _mapper.Map<CustomerDto>(c)).ToList();
                 
                 return Ok(ApiResponse<List<CustomerDto>>.SuccessResult(customerDtos));
             }
@@ -46,7 +49,7 @@ namespace GarageManagementSystem.API.Controllers
                     return NotFound(ApiResponse<CustomerDto>.ErrorResult("Customer not found"));
                 }
 
-                var customerDto = MapToDto(customer);
+                var customerDto = _mapper.Map<CustomerDto>(customer);
                 return Ok(ApiResponse<CustomerDto>.SuccessResult(customerDto));
             }
             catch (Exception ex)
@@ -118,7 +121,7 @@ namespace GarageManagementSystem.API.Controllers
                     throw;
                 }
 
-                var customerDto = MapToDto(customer);
+                var customerDto = _mapper.Map<CustomerDto>(customer);
                 return CreatedAtAction(nameof(GetCustomer), new { id = customer.Id }, 
                     ApiResponse<CustomerDto>.SuccessResult(customerDto, "Customer created successfully"));
             }
@@ -197,7 +200,7 @@ namespace GarageManagementSystem.API.Controllers
                     throw;
                 }
 
-                return Ok(ApiResponse<CustomerDto>.SuccessResult(MapToDto(customer), "Customer reactivated successfully"));
+                return Ok(ApiResponse<CustomerDto>.SuccessResult(_mapper.Map<CustomerDto>(customer), "Customer reactivated successfully"));
             }
             catch (Exception ex)
             {
@@ -253,7 +256,7 @@ namespace GarageManagementSystem.API.Controllers
                     throw;
                 }
 
-                var customerDto = MapToDto(customer);
+                var customerDto = _mapper.Map<CustomerDto>(customer);
                 return Ok(ApiResponse<CustomerDto>.SuccessResult(customerDto, "Customer updated successfully"));
             }
             catch (Exception ex)
@@ -297,7 +300,7 @@ namespace GarageManagementSystem.API.Controllers
                 }
 
                 var customers = await _unitOfWork.Customers.SearchAsync(searchTerm);
-                var customerDtos = customers.Select(MapToDto).ToList();
+                var customerDtos = customers.Select(c => _mapper.Map<CustomerDto>(c)).ToList();
 
                 return Ok(ApiResponse<List<CustomerDto>>.SuccessResult(customerDtos));
             }
@@ -341,7 +344,7 @@ namespace GarageManagementSystem.API.Controllers
 
                 var history = new
                 {
-                    Customer = MapToDto(customer),
+                    Customer = _mapper.Map<CustomerDto>(customer),
                     Statistics = new
                     {
                         TotalVehicles = vehicles.Count(),
@@ -415,23 +418,6 @@ namespace GarageManagementSystem.API.Controllers
             }
         }
 
-        private static CustomerDto MapToDto(Core.Entities.Customer customer)
-        {
-            return new CustomerDto
-            {
-                Id = customer.Id,
-                Name = customer.Name,
-                Email = customer.Email,
-                Phone = customer.Phone,
-                AlternativePhone = customer.AlternativePhone,
-                Address = customer.Address,
-                ContactPersonName = customer.ContactPersonName,
-                CreatedAt = customer.CreatedAt,
-                CreatedBy = customer.CreatedBy,
-                UpdatedAt = customer.UpdatedAt,
-                UpdatedBy = customer.UpdatedBy
-            };
-        }
     }
 }
 
