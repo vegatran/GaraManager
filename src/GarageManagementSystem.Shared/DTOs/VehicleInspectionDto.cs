@@ -44,6 +44,8 @@ namespace GarageManagementSystem.Shared.DTOs
 
         public int? InspectorId { get; set; }
 
+        public DateTime InspectionDate { get; set; } = DateTime.Now;
+
         [StringLength(50)]
         public string InspectionType { get; set; } = "General";
 

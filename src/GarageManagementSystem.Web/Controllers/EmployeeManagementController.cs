@@ -54,7 +54,7 @@ namespace GarageManagementSystem.Web.Controllers
                         phone = e.Phone ?? "N/A",
                         email = e.Email ?? "N/A",
                         hireDate = e.HireDate?.ToString("dd/MM/yyyy") ?? "N/A",
-                        status = e.Status ?? "Active"
+                        status = TranslateEmployeeStatus(e.Status ?? "Active")
                     }).Cast<object>().ToList();
                 }
 
@@ -231,6 +231,18 @@ namespace GarageManagementSystem.Web.Controllers
             return Json(fallbackPositions);
         }
 
+        private static string TranslateEmployeeStatus(string status)
+        {
+            return status switch
+            {
+                "Active" => "Đang Làm Việc",
+                "Inactive" => "Ngừng Làm Việc",
+                "Suspended" => "Tạm Đình Chỉ",
+                "Resigned" => "Đã Nghỉ Việc",
+                "Terminated" => "Đã Sa Thải",
+                _ => status
+            };
+        }
     }
 }
 

@@ -90,7 +90,7 @@ namespace GarageManagementSystem.Web.Controllers
                         scheduledDateTime = a.ScheduledDateTime.ToString("dd/MM/yyyy HH:mm"),
                         appointmentType = a.AppointmentType,
                         assignedTo = a.AssignedTo?.Name ?? "Chưa phân công",
-                        status = a.Status
+                        status = TranslateStatus(a.Status)
                     }).Cast<object>().ToList();
                 }
 
@@ -126,7 +126,7 @@ namespace GarageManagementSystem.Web.Controllers
                         scheduledDateTime = a.ScheduledDateTime.ToString("dd/MM/yyyy HH:mm"),
                         appointmentType = a.AppointmentType,
                         assignedTo = a.AssignedTo?.Name ?? "Chưa phân công",
-                        status = a.Status
+                        status = TranslateStatus(a.Status)
                     }).Cast<object>().ToList();
                 }
 

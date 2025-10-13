@@ -54,9 +54,9 @@ namespace GarageManagementSystem.Web.Controllers
                         orderDate = o.OrderDate.ToString("yyyy-MM-dd HH:mm"),
                         scheduledDate = o.ScheduledDate?.ToString("yyyy-MM-dd HH:mm") ?? "N/A",
                         completedDate = o.CompletedDate?.ToString("yyyy-MM-dd HH:mm") ?? "N/A",
-                        status = o.Status,
+                        status = TranslateOrderStatus(o.Status),
                         finalAmount = o.FinalAmount.ToString("N0"),
-                        paymentStatus = o.PaymentStatus ?? "Pending",
+                        paymentStatus = TranslatePaymentStatus(o.PaymentStatus ?? "Pending"),
                         serviceCount = o.ServiceOrderItems.Count
                     }).Cast<object>().ToList();
                 }
@@ -225,6 +225,33 @@ namespace GarageManagementSystem.Web.Controllers
                 success = response.Success, 
                 message = response.Success ? "Service order deleted successfully" : response.ErrorMessage 
             });
+        }
+
+        private static string TranslateOrderStatus(string status)
+        {
+            return status switch
+            {
+                "Pending" => "Chờ Xử Lý",
+                "Confirmed" => "Đã Xác Nhận",
+                "InProgress" => "Đang Thực Hiện",
+                "Completed" => "Hoàn Thành",
+                "Cancelled" => "Đã Hủy",
+                "OnHold" => "Tạm Dừng",
+                _ => status
+            };
+        }
+
+        private static string TranslatePaymentStatus(string status)
+        {
+            return status switch
+            {
+                "Pending" => "Chờ Thanh Toán",
+                "Paid" => "Đã Thanh Toán",
+                "Partial" => "Thanh Toán Một Phần",
+                "Overdue" => "Quá Hạn",
+                "Refunded" => "Đã Hoàn Tiền",
+                _ => status
+            };
         }
     }
 }
