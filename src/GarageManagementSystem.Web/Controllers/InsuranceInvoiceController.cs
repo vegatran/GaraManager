@@ -24,8 +24,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// Danh sách hóa đơn bảo hiểm
         /// </summary>
         [HttpGet]
-        [Route("")]
-        [Route("Index")]
+        [HttpGet]
         public async Task<IActionResult> Index(int? serviceOrderId = null, string? insuranceCompany = null)
         {
             try
@@ -64,7 +63,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Chi tiết hóa đơn bảo hiểm
         /// </summary>
-        [HttpGet("{id}")]
+        [HttpGet("GetInsuranceInvoice/{id}")]
         public async Task<IActionResult> Details(int id)
         {
             try
@@ -91,7 +90,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Tạo hóa đơn bảo hiểm mới
         /// </summary>
-        [HttpGet("create")]
+        [HttpGet("Create")]
         public async Task<IActionResult> Create(int serviceOrderId)
         {
             try
@@ -123,7 +122,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Xử lý tạo hóa đơn bảo hiểm
         /// </summary>
-        [HttpPost("create")]
+        [HttpPost("CreateInsuranceInvoice")]
         public async Task<IActionResult> Create(InsuranceInvoiceDto model)
         {
             try
@@ -159,7 +158,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Chỉnh sửa hóa đơn bảo hiểm
         /// </summary>
-        [HttpGet("{id}/edit")]
+        [HttpGet("Edit/{id}")]
         public async Task<IActionResult> Edit(int id)
         {
             try
@@ -186,7 +185,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Xử lý cập nhật hóa đơn bảo hiểm
         /// </summary>
-        [HttpPost("{id}/edit")]
+        [HttpPut("UpdateInsuranceInvoice/{id}")]
         public async Task<IActionResult> Edit(int id, InsuranceInvoiceDto model)
         {
             try
@@ -219,7 +218,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Xóa hóa đơn bảo hiểm
         /// </summary>
-        [HttpPost("{id}/delete")]
+        [HttpDelete("DeleteInsuranceInvoice/{id}")]
         public async Task<IActionResult> Delete(int id)
         {
             try
@@ -246,7 +245,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Xuất PDF hóa đơn bảo hiểm
         /// </summary>
-        [HttpGet("{id}/export/pdf")]
+        [HttpGet("ExportPdf/{id}")]
         public async Task<IActionResult> ExportPdf(int id)
         {
             try
@@ -274,7 +273,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Xuất Excel hóa đơn bảo hiểm
         /// </summary>
-        [HttpGet("{id}/export/excel")]
+        [HttpGet("ExportExcel/{id}")]
         public async Task<IActionResult> ExportExcel(int id)
         {
             try

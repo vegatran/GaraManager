@@ -7,7 +7,7 @@ using GarageManagementSystem.Web.Configuration;
 namespace GarageManagementSystem.Web.Controllers
 {
     /// <summary>
-    /// Controller for managing service orders with full CRUD operations via API
+    /// Controller quản lý đơn hàng sửa chữa với đầy đủ các thao tác CRUD thông qua API
     /// </summary>
     [Authorize]
     [Route("OrderManagement")]
@@ -21,20 +21,18 @@ namespace GarageManagementSystem.Web.Controllers
         }
 
         /// <summary>
-        /// Hiển thị trang quản lý đơn hàng
+        /// Hiển thị trang quản lý đơn hàng sửa chữa
         /// </summary>
-        [Route("")]
-        [Route("Index")]
+        [HttpGet]
         public IActionResult Index()
         {
             return View();
         }
 
         /// <summary>
-        /// Get all service orders for DataTable via API
+        /// Lấy danh sách tất cả đơn hàng sửa chữa cho DataTable thông qua API
         /// </summary>
-        [HttpGet]
-        [Route("GetOrders")]
+        [HttpGet("GetOrders")]
         public async Task<IActionResult> GetOrders()
         {
             var response = await _apiService.GetAsync<List<ServiceOrderDto>>(ApiEndpoints.ServiceOrders.GetAll);
@@ -49,11 +47,11 @@ namespace GarageManagementSystem.Web.Controllers
                     {
                         id = o.Id,
                         orderNumber = o.OrderNumber,
-                        customerName = o.Customer?.Name ?? "N/A",
-                        vehiclePlate = o.Vehicle?.LicensePlate ?? "N/A",
+                        customerName = o.Customer?.Name ?? "Không xác định",
+                        vehiclePlate = o.Vehicle?.LicensePlate ?? "Không xác định",
                         orderDate = o.OrderDate.ToString("yyyy-MM-dd HH:mm"),
-                        scheduledDate = o.ScheduledDate?.ToString("yyyy-MM-dd HH:mm") ?? "N/A",
-                        completedDate = o.CompletedDate?.ToString("yyyy-MM-dd HH:mm") ?? "N/A",
+                        scheduledDate = o.ScheduledDate?.ToString("yyyy-MM-dd HH:mm") ?? "Chưa lên lịch",
+                        completedDate = o.CompletedDate?.ToString("yyyy-MM-dd HH:mm") ?? "Chưa hoàn thành",
                         status = TranslateOrderStatus(o.Status),
                         finalAmount = o.FinalAmount.ToString("N0"),
                         paymentStatus = TranslatePaymentStatus(o.PaymentStatus ?? "Pending"),
@@ -61,7 +59,11 @@ namespace GarageManagementSystem.Web.Controllers
                     }).Cast<object>().ToList();
                 }
 
-                return Json(new { data = orderList });
+                return Json(new { 
+                    success = true,
+                    data = orderList,
+                    message = "Lấy danh sách đơn hàng sửa chữa thành công"
+                });
             }
             else
             {
@@ -70,29 +72,20 @@ namespace GarageManagementSystem.Web.Controllers
         }
 
         /// <summary>
-        /// Lấy thông tin chi tiết đơn hàng theo ID thông qua API
+        /// Lấy thông tin chi tiết đơn hàng sửa chữa theo ID thông qua API
         /// </summary>
-        [HttpGet]
-        [Route("Details/{id}")]
-        public async Task<IActionResult> Details(int id)
+        [HttpGet("GetOrder/{id}")]
+        public async Task<IActionResult> GetOrder(int id)
         {
             var response = await _apiService.GetAsync<ServiceOrderDto>(ApiEndpoints.Builder.WithId(ApiEndpoints.ServiceOrders.GetById, id));
             
-            if (response.Success)
-            {
-                return Json(new { success = true, data = response.Data });
-            }
-            else
-            {
-                return Json(new { success = false, error = response.ErrorMessage });
-            }
+            return Json(response);
         }
 
         /// <summary>
-        /// Get all customers for dropdown
+        /// Lấy danh sách khách hàng cho dropdown
         /// </summary>
-        [HttpGet]
-        [Route("GetCustomers")]
+        [HttpGet("GetCustomers")]
         public async Task<IActionResult> GetCustomers()
         {
             var response = await _apiService.GetAsync<List<CustomerDto>>(ApiEndpoints.Customers.GetAll);
@@ -115,10 +108,9 @@ namespace GarageManagementSystem.Web.Controllers
         }
 
         /// <summary>
-        /// Get vehicles by customer ID
+        /// Lấy danh sách xe theo khách hàng
         /// </summary>
-        [HttpGet]
-        [Route("GetVehiclesByCustomer/{customerId}")]
+        [HttpGet("GetVehiclesByCustomer/{customerId}")]
         public async Task<IActionResult> GetVehiclesByCustomer(int customerId)
         {
             var response = await _apiService.GetAsync<List<VehicleDto>>(ApiEndpoints.Builder.WithId(ApiEndpoints.Vehicles.GetByCustomerId, customerId));
@@ -143,10 +135,9 @@ namespace GarageManagementSystem.Web.Controllers
         }
 
         /// <summary>
-        /// Get all available services
+        /// Lấy danh sách dịch vụ có sẵn
         /// </summary>
-        [HttpGet]
-        [Route("GetServices")]
+        [HttpGet("GetServices")]
         public async Task<IActionResult> GetServices()
         {
             var response = await _apiService.GetAsync<List<ServiceDto>>(ApiEndpoints.Services.GetAll);
@@ -173,58 +164,74 @@ namespace GarageManagementSystem.Web.Controllers
         }
 
         /// <summary>
-        /// Create new service order via API
+        /// Tạo đơn hàng sửa chữa mới thông qua API
         /// </summary>
         [HttpPost]
-        [Route("Create")]
-        public async Task<IActionResult> Create([FromBody] CreateServiceOrderDto model)
+        [Route("CreateOrder")]
+        public async Task<IActionResult> CreateOrder([FromBody] CreateServiceOrderDto model)
         {
             if (!ModelState.IsValid)
             {
-                return Json(new { success = false, message = "Invalid model data" });
+                return BadRequest(new { success = false, errorMessage = "Dữ liệu không hợp lệ" });
             }
 
-            var response = await _apiService.PostAsync<object>(ApiEndpoints.ServiceOrders.Create, model);
+            var response = await _apiService.PostAsync<ServiceOrderDto>(ApiEndpoints.ServiceOrders.Create, model);
             
-            return Json(new { 
-                success = response.Success, 
-                message = response.Success ? "Service order created successfully" : response.ErrorMessage 
-            });
+            return Json(response);
         }
 
         /// <summary>
-        /// Update service order via API
+        /// Cập nhật đơn hàng sửa chữa thông qua API
         /// </summary>
-        [HttpPost]
-        [Route("Edit")]
-        public async Task<IActionResult> Edit([FromBody] UpdateServiceOrderDto model)
+        [HttpPut("UpdateOrder/{id}")]
+        public async Task<IActionResult> UpdateOrder(int id, [FromBody] UpdateServiceOrderDto model)
         {
             if (!ModelState.IsValid)
             {
-                return Json(new { success = false, message = "Invalid model data" });
+                return BadRequest(new { success = false, errorMessage = "Dữ liệu không hợp lệ" });
             }
 
-            var response = await _apiService.PutAsync<object>(ApiEndpoints.Builder.WithId(ApiEndpoints.ServiceOrders.Update, model.Id), model);
+            if (id != model.Id)
+            {
+                return BadRequest(new { success = false, errorMessage = "ID không khớp" });
+            }
+
+            var response = await _apiService.PutAsync<ServiceOrderDto>(ApiEndpoints.Builder.WithId(ApiEndpoints.ServiceOrders.Update, id), model);
             
-            return Json(new { 
-                success = response.Success, 
-                message = response.Success ? "Service order updated successfully" : response.ErrorMessage 
-            });
+            return Json(response);
         }
 
         /// <summary>
-        /// Delete service order via API
+        /// Xóa đơn hàng sửa chữa thông qua API
         /// </summary>
-        [HttpPost]
-        [Route("Delete/{id}")]
-        public async Task<IActionResult> Delete(int id)
+        [HttpDelete("DeleteOrder/{id}")]
+        public async Task<IActionResult> DeleteOrder(int id)
         {
-            var response = await _apiService.DeleteAsync<object>(ApiEndpoints.Builder.WithId(ApiEndpoints.ServiceOrders.Delete, id));
+            var response = await _apiService.DeleteAsync<ServiceOrderDto>(ApiEndpoints.Builder.WithId(ApiEndpoints.ServiceOrders.Delete, id));
             
-            return Json(new { 
-                success = response.Success, 
-                message = response.Success ? "Service order deleted successfully" : response.ErrorMessage 
-            });
+            return Json(response);
+        }
+
+        /// <summary>
+        /// Lấy danh sách nhân viên đang hoạt động cho dropdown
+        /// </summary>
+        [HttpGet("GetActiveEmployees")]
+        public async Task<IActionResult> GetActiveEmployees()
+        {
+            var response = await _apiService.GetAsync<List<EmployeeDto>>(ApiEndpoints.Employees.GetActive);
+            
+            if (response.Success && response.Data != null)
+            {
+                var employeeList = response.Data.Select(e => new
+                {
+                    id = e.Id,
+                    text = e.Name + " - " + (e.Position ?? "")
+                }).Cast<object>().ToList();
+
+                return Json(employeeList);
+            }
+
+            return Json(new List<object>());
         }
 
         private static string TranslateOrderStatus(string status)

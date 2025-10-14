@@ -1,3 +1,4 @@
+using AutoMapper;
 using GarageManagementSystem.Core.Interfaces;
 using GarageManagementSystem.Shared.DTOs;
 using GarageManagementSystem.Shared.Models;
@@ -12,10 +13,12 @@ namespace GarageManagementSystem.API.Controllers
     public class ServiceQuotationsController : ControllerBase
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IMapper _mapper;
 
-        public ServiceQuotationsController(IUnitOfWork unitOfWork)
+        public ServiceQuotationsController(IUnitOfWork unitOfWork, IMapper mapper)
         {
             _unitOfWork = unitOfWork;
+            _mapper = mapper;
         }
 
         [HttpGet]
@@ -142,22 +145,12 @@ namespace GarageManagementSystem.API.Controllers
                     return BadRequest(ApiResponse<ServiceQuotationDto>.ErrorResult("Customer not found"));
                 }
 
-                // Create quotation
-                var quotation = new Core.Entities.ServiceQuotation
-                {
-                    QuotationNumber = await _unitOfWork.ServiceQuotations.GenerateQuotationNumberAsync(),
-                    VehicleInspectionId = createDto.VehicleInspectionId,
-                    CustomerId = createDto.CustomerId,
-                    VehicleId = createDto.VehicleId,
-                    PreparedById = createDto.PreparedById,
-                    QuotationDate = DateTime.Now,
-                    ValidUntil = createDto.ValidUntil ?? DateTime.Now.AddDays(7), // Default 7 days
-                    Description = createDto.Description,
-                    Terms = createDto.Terms,
-                    TaxRate = createDto.TaxRate,
-                    DiscountAmount = createDto.DiscountAmount,
-                    Status = "Draft"
-                };
+                // Create quotation bằng AutoMapper
+                var quotation = _mapper.Map<Core.Entities.ServiceQuotation>(createDto);
+                quotation.QuotationNumber = await _unitOfWork.ServiceQuotations.GenerateQuotationNumberAsync();
+                quotation.QuotationDate = DateTime.Now;
+                quotation.ValidUntil = createDto.ValidUntil ?? DateTime.Now.AddDays(7); // Default 7 days
+                quotation.Status = "Draft";
 
                 // Add items and calculate totals
                 decimal subTotal = 0;
@@ -503,7 +496,12 @@ namespace GarageManagementSystem.API.Controllers
             }
         }
 
-        private static ServiceQuotationDto MapToDto(Core.Entities.ServiceQuotation quotation)
+        private ServiceQuotationDto MapToDto(Core.Entities.ServiceQuotation quotation)
+        {
+            return _mapper.Map<ServiceQuotationDto>(quotation);
+        }
+
+        private static ServiceQuotationDto MapToDtoOld(Core.Entities.ServiceQuotation quotation)
         {
             return new ServiceQuotationDto
             {

@@ -43,6 +43,8 @@ window.AuthHandler = {
      * Handle 401 Unauthorized response
      */
     handleUnauthorized: function(response, showMessage = true) {
+        console.log('🔒 Handling unauthorized response:', response);
+        
         // Clear any existing alerts
         if (Swal.isVisible()) {
             Swal.close();
@@ -67,11 +69,14 @@ window.AuthHandler = {
         }
     },
 
+
     /**
      * Redirect to login page
      */
     redirectToLogin: function() {
         var self = this;
+        
+        console.log('🔄 Starting redirect to login...');
         
         // Clear local storage/session storage if needed
         localStorage.clear();
@@ -79,15 +84,28 @@ window.AuthHandler = {
         
         // Load config if not available
         this.loadConfig().then(function() {
+            console.log('🔧 Config loaded:', self._config);
+            
             if (!self._config || !self._config.IdentityServerAuthority) {
+                // Fallback to local login page
+                console.log('⚠️ No config available, using fallback login');
                 window.location.href = '/Home/Login';
                 return;
             }
+            
+            // Use OpenID Connect challenge flow instead of direct redirect
+            // This will trigger the proper authentication flow
             var currentUrl = encodeURIComponent(window.location.href);
-            var loginUrl = self._config.IdentityServerAuthority + '/Account/Login?ReturnUrl=' + currentUrl;
-            window.location.href = loginUrl;
+            var challengeUrl = '/Home/Login?returnUrl=' + currentUrl;
+            
+            console.log('🔗 Redirecting to challenge URL:', challengeUrl);
+            console.log('🔗 Current URL:', window.location.href);
+            console.log('🔗 Encoded return URL:', currentUrl);
+            
+            window.location.href = challengeUrl;
         }).catch(function(error) {
             console.error('❌ Error loading config for redirect:', error);
+            console.log('🔄 Using fallback redirect');
             window.location.href = '/Home/Login';
         });
     },

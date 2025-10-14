@@ -91,32 +91,7 @@ namespace GarageManagementSystem.API.Controllers
                     return BadRequest(ApiResponse<VehicleDto>.ErrorResult("Customer not found"));
                 }
 
-                var vehicle = new Core.Entities.Vehicle
-                {
-                    LicensePlate = createDto.LicensePlate,
-                    Brand = createDto.Brand,
-                    Model = createDto.Model,
-                    Year = createDto.Year,
-                    Color = createDto.Color,
-                    VIN = createDto.VIN,
-                    EngineNumber = createDto.EngineNumber,
-                    CustomerId = createDto.CustomerId,
-                    VehicleType = createDto.VehicleType,
-                    // Các trường bảo hiểm
-                    InsuranceCompany = createDto.InsuranceCompany,
-                    PolicyNumber = createDto.PolicyNumber,
-                    CoverageType = createDto.CoverageType,
-                    ClaimNumber = createDto.ClaimNumber,
-                    AdjusterName = createDto.AdjusterName,
-                    AdjusterPhone = createDto.AdjusterPhone,
-                    // Các trường công ty
-                    CompanyName = createDto.CompanyName,
-                    TaxCode = createDto.TaxCode,
-                    ContactPerson = createDto.ContactPerson,
-                    ContactPhone = createDto.ContactPhone,
-                    Department = createDto.Department,
-                    CostCenter = createDto.CostCenter
-                };
+                var vehicle = _mapper.Map<Core.Entities.Vehicle>(createDto);
 
                 // Bắt đầu transaction để đảm bảo tính toàn vẹn dữ liệu
                 await _unitOfWork.BeginTransactionAsync();
@@ -178,29 +153,7 @@ namespace GarageManagementSystem.API.Controllers
                     return BadRequest(ApiResponse<VehicleDto>.ErrorResult("Customer not found"));
                 }
 
-                vehicle.LicensePlate = updateDto.LicensePlate;
-                vehicle.Brand = updateDto.Brand;
-                vehicle.Model = updateDto.Model;
-                vehicle.Year = updateDto.Year;
-                vehicle.Color = updateDto.Color;
-                vehicle.VIN = updateDto.VIN;
-                vehicle.EngineNumber = updateDto.EngineNumber;
-                vehicle.CustomerId = updateDto.CustomerId;
-                vehicle.VehicleType = updateDto.VehicleType;
-                // Insurance fields
-                vehicle.InsuranceCompany = updateDto.InsuranceCompany;
-                vehicle.PolicyNumber = updateDto.PolicyNumber;
-                vehicle.CoverageType = updateDto.CoverageType;
-                vehicle.ClaimNumber = updateDto.ClaimNumber;
-                vehicle.AdjusterName = updateDto.AdjusterName;
-                vehicle.AdjusterPhone = updateDto.AdjusterPhone;
-                // Company fields
-                vehicle.CompanyName = updateDto.CompanyName;
-                vehicle.TaxCode = updateDto.TaxCode;
-                vehicle.ContactPerson = updateDto.ContactPerson;
-                vehicle.ContactPhone = updateDto.ContactPhone;
-                vehicle.Department = updateDto.Department;
-                vehicle.CostCenter = updateDto.CostCenter;
+                _mapper.Map(updateDto, vehicle);
 
                 // Bắt đầu transaction để đảm bảo tính toàn vẹn dữ liệu
                 await _unitOfWork.BeginTransactionAsync();
@@ -455,6 +408,36 @@ namespace GarageManagementSystem.API.Controllers
             catch (Exception ex)
             {
                 return StatusCode(500, ApiResponse<VehicleWorkflowStatusDto>.ErrorResult("Error retrieving workflow status", ex.Message));
+            }
+        }
+
+        [HttpGet("available")]
+        public async Task<ActionResult<ApiResponse<List<VehicleDto>>>> GetAvailableVehicles()
+        {
+            try
+            {
+                var vehicles = await _unitOfWork.Vehicles.GetAvailableVehiclesAsync();
+                var vehicleDtos = vehicles.Select(v => _mapper.Map<VehicleDto>(v)).ToList();
+                
+                return Ok(ApiResponse<List<VehicleDto>>.SuccessResult(vehicleDtos));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<List<VehicleDto>>.ErrorResult("Error retrieving available vehicles", ex.Message));
+            }
+        }
+
+        [HttpGet("{id}/availability")]
+        public async Task<ActionResult<ApiResponse<bool>>> CheckVehicleAvailability(int id)
+        {
+            try
+            {
+                var isAvailable = await _unitOfWork.Vehicles.IsVehicleAvailableAsync(id);
+                return Ok(ApiResponse<bool>.SuccessResult(isAvailable));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<bool>.ErrorResult("Error checking vehicle availability", ex.Message));
             }
         }
 

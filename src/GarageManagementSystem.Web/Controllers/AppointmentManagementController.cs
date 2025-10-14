@@ -7,7 +7,7 @@ using GarageManagementSystem.Web.Configuration;
 namespace GarageManagementSystem.Web.Controllers
 {
     /// <summary>
-    /// Controller quản lý lịch hẹn with full CRUD operations via API
+    /// Controller quản lý lịch hẹn với đầy đủ các thao tác CRUD thông qua API
     /// </summary>
     [Authorize]
     [Route("AppointmentManagement")]
@@ -23,18 +23,16 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Hiển thị trang quản lý lịch hẹn
         /// </summary>
-        [Route("")]
-        [Route("Index")]
+        [HttpGet]
         public IActionResult Index()
         {
             return View();
         }
 
         /// <summary>
-        /// Get all appointments for DataTable via API
+        /// Lấy danh sách tất cả lịch hẹn cho DataTable thông qua API
         /// </summary>
-        [HttpGet]
-        [Route("GetAppointments")]
+        [HttpGet("GetAppointments")]
         public async Task<IActionResult> GetAppointments()
         {
             var response = await _apiService.GetAsync<List<AppointmentDto>>(ApiEndpoints.Appointments.GetAll);
@@ -69,8 +67,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Get today's appointments for DataTable via API
         /// </summary>
-        [HttpGet]
-        [Route("GetTodayAppointments")]
+        [HttpGet("GetTodayAppointments")]
         public async Task<IActionResult> GetTodayAppointments()
         {
             var response = await _apiService.GetAsync<List<AppointmentDto>>(ApiEndpoints.Appointments.GetToday);
@@ -105,8 +102,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Get upcoming appointments for DataTable via API
         /// </summary>
-        [HttpGet]
-        [Route("GetUpcomingAppointments")]
+        [HttpGet("GetUpcomingAppointments")]
         public async Task<IActionResult> GetUpcomingAppointments()
         {
             var response = await _apiService.GetAsync<List<AppointmentDto>>(ApiEndpoints.Appointments.GetUpcoming);
@@ -141,8 +137,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Lấy thông tin chi tiết lịch hẹn theo ID thông qua API
         /// </summary>
-        [HttpGet]
-        [Route("GetAppointment/{id}")]
+        [HttpGet("GetAppointment/{id}")]
         public async Task<IActionResult> GetAppointment(int id)
         {
             var response = await _apiService.GetAsync<AppointmentDto>(
@@ -155,8 +150,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Tạo lịch hẹn mới thông qua API
         /// </summary>
-        [HttpPost]
-        [Route("CreateAppointment")]
+        [HttpPost("CreateAppointment")]
         public async Task<IActionResult> CreateAppointment([FromBody] CreateAppointmentDto appointmentDto)
         {
             if (!ModelState.IsValid)
@@ -175,8 +169,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Cập nhật thông tin lịch hẹn thông qua API
         /// </summary>
-        [HttpPut]
-        [Route("UpdateAppointment/{id}")]
+        [HttpPut("UpdateAppointment/{id}")]
         public async Task<IActionResult> UpdateAppointment(int id, [FromBody] UpdateAppointmentDto appointmentDto)
         {
             if (!ModelState.IsValid)
@@ -200,8 +193,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Xóa lịch hẹn thông qua API
         /// </summary>
-        [HttpDelete]
-        [Route("DeleteAppointment/{id}")]
+        [HttpDelete("DeleteAppointment/{id}")]
         public async Task<IActionResult> DeleteAppointment(int id)
         {
             var response = await _apiService.DeleteAsync<AppointmentDto>(
@@ -214,8 +206,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Get customers for dropdown via API
         /// </summary>
-        [HttpGet]
-        [Route("GetCustomers")]
+        [HttpGet("GetCustomers")]
         public async Task<IActionResult> GetCustomers()
         {
             var response = await _apiService.GetAsync<List<CustomerDto>>(ApiEndpoints.Customers.GetAll);
@@ -237,8 +228,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Get vehicles by customer for dropdown via API
         /// </summary>
-        [HttpGet]
-        [Route("GetVehiclesByCustomer/{customerId}")]
+        [HttpGet("GetVehiclesByCustomer/{customerId}")]
         public async Task<IActionResult> GetVehiclesByCustomer(int customerId)
         {
             var response = await _apiService.GetAsync<List<VehicleDto>>(
@@ -260,10 +250,34 @@ namespace GarageManagementSystem.Web.Controllers
         }
 
         /// <summary>
+        /// Get available vehicles for dropdown via API
+        /// </summary>
+        [HttpGet("GetAvailableVehicles")]
+        public async Task<IActionResult> GetAvailableVehicles()
+        {
+            var response = await _apiService.GetAsync<List<VehicleDto>>("/api/vehicles/available");
+            
+            if (response.Success && response.Data != null)
+            {
+                var vehicleList = response.Data.Select(v => new
+                {
+                    id = v.Id,
+                    value = v.Id.ToString(),
+                    text = $"{v.Brand} {v.Model} - {v.LicensePlate}",
+                    customerId = v.CustomerId,
+                    customerName = v.Customer?.Name ?? "Không xác định"
+                }).Cast<object>().ToList();
+                
+                return Json(vehicleList);
+            }
+
+            return Json(new List<object>());
+        }
+
+        /// <summary>
         /// Get appointment types for dropdown via API
         /// </summary>
-        [HttpGet]
-        [Route("GetAppointmentTypes")]
+        [HttpGet("GetAppointmentTypes")]
         public async Task<IActionResult> GetAppointmentTypes()
         {
             var response = await _apiService.GetAsync<List<object>>(ApiEndpoints.Appointments.GetTypes);
@@ -279,8 +293,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Get employees for dropdown via API
         /// </summary>
-        [HttpGet]
-        [Route("GetEmployees")]
+        [HttpGet("GetEmployees")]
         public async Task<IActionResult> GetEmployees()
         {
             var response = await _apiService.GetAsync<List<EmployeeDto>>(ApiEndpoints.Employees.GetAll);

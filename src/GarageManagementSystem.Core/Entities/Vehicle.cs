@@ -28,6 +28,8 @@ namespace GarageManagementSystem.Core.Entities
         [StringLength(50)]
         public string? EngineNumber { get; set; }
 
+        public int? Mileage { get; set; } // Số km đã đi
+
         public int CustomerId { get; set; }
 
         // Vehicle Ownership Classification

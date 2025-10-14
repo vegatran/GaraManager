@@ -418,6 +418,44 @@ namespace GarageManagementSystem.API.Controllers
             }
         }
 
+        /// <summary>
+        /// Get customers with active vehicles (for reception)
+        /// </summary>
+        [HttpGet("with-active-vehicles")]
+        public async Task<ActionResult<ApiResponse<List<CustomerDto>>>> GetCustomersWithActiveVehicles()
+        {
+            try
+            {
+                var customers = await _unitOfWork.Customers.GetAllAsync();
+                
+                // Filter customers who have active service orders or appointments
+                var activeCustomers = new List<CustomerDto>();
+                
+                foreach (var customer in customers)
+                {
+                    // Check if customer has active service orders
+                    var hasActiveOrders = await _unitOfWork.ServiceOrders.GetServiceOrdersByCustomerIdAsync(customer.Id);
+                    var activeOrders = hasActiveOrders.Where(o => o.Status != "Completed" && o.Status != "Cancelled").Any();
+                    
+                    // Check if customer has active appointments
+                    var hasActiveAppointments = await _unitOfWork.Appointments.GetByCustomerIdAsync(customer.Id);
+                    var activeAppointments = hasActiveAppointments.Where(a => a.Status != "Completed" && a.Status != "Cancelled").Any();
+                    
+                    if (activeOrders || activeAppointments)
+                    {
+                        activeCustomers.Add(_mapper.Map<CustomerDto>(customer));
+                    }
+                }
+                
+                return Ok(ApiResponse<List<CustomerDto>>.SuccessResult(activeCustomers));
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Error retrieving customers with active vehicles: {ex}");
+                return StatusCode(500, ApiResponse<List<CustomerDto>>.ErrorResult("Error retrieving customers with active vehicles", ex.Message));
+            }
+        }
+
     }
 }
 

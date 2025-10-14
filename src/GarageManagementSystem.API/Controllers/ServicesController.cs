@@ -1,3 +1,4 @@
+using AutoMapper;
 using GarageManagementSystem.Core.Interfaces;
 using GarageManagementSystem.Shared.DTOs;
 using GarageManagementSystem.Shared.Models;
@@ -10,10 +11,12 @@ namespace GarageManagementSystem.API.Controllers
     public class ServicesController : ControllerBase
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IMapper _mapper;
 
-        public ServicesController(IUnitOfWork unitOfWork)
+        public ServicesController(IUnitOfWork unitOfWork, IMapper mapper)
         {
             _unitOfWork = unitOfWork;
+            _mapper = mapper;
         }
 
         [HttpGet]
@@ -216,20 +219,9 @@ namespace GarageManagementSystem.API.Controllers
             }
         }
 
-        private static ServiceDto MapToDto(Core.Entities.Service service)
+        private ServiceDto MapToDto(Core.Entities.Service service)
         {
-            return new ServiceDto
-            {
-                Id = service.Id,
-                Name = service.Name,
-                Description = service.Description,
-                Price = service.Price,
-                Duration = service.Duration,
-                Category = service.Category,
-                IsActive = service.IsActive,
-                CreatedAt = service.CreatedAt,
-                UpdatedAt = service.UpdatedAt
-            };
+            return _mapper.Map<ServiceDto>(service);
         }
     }
 }

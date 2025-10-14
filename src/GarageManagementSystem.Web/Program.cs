@@ -44,6 +44,26 @@ builder.Services.AddAuthentication(options =>
     options.ReturnUrlParameter = "returnUrl";
     options.Cookie.HttpOnly = true;
     options.Cookie.SecurePolicy = Microsoft.AspNetCore.Http.CookieSecurePolicy.SameAsRequest;
+    
+    // Add events to handle cookie expiration
+    options.Events = new Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationEvents
+    {
+        OnValidatePrincipal = context =>
+        {
+            // Check if the principal is still valid
+            if (context.Principal?.Identity?.IsAuthenticated == true)
+            {
+                // Check token expiration if needed
+                var expiresAt = context.Properties.ExpiresUtc;
+                if (expiresAt.HasValue && expiresAt.Value < DateTimeOffset.UtcNow)
+                {
+                    context.RejectPrincipal();
+                    return Task.CompletedTask;
+                }
+            }
+            return Task.CompletedTask;
+        }
+    };
     options.Cookie.Name = "GarageManagement.Auth";
     options.Cookie.IsEssential = true; // Essential for authentication
     
@@ -76,6 +96,11 @@ builder.Services.AddAuthentication(options =>
     options.UsePkce = false; // Disable PKCE for testing
     options.AccessDeniedPath = "/Home/AccessDenied";
     
+    // Configure callback paths
+    options.CallbackPath = "/signin-oidc";
+    options.SignedOutCallbackPath = "/signout-callback-oidc";
+    options.RemoteSignOutPath = "/signout-oidc";
+    
     // Configure to handle network issues
     options.BackchannelHttpHandler = new HttpClientHandler()
     {
@@ -87,6 +112,10 @@ builder.Services.AddAuthentication(options =>
     {
         OnRemoteFailure = context =>
         {
+            var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+            logger.LogError("OpenID Connect Remote Failure: {Error}", context.Failure?.Message);
+            logger.LogError("Remote Failure Details: {Details}", context.Failure?.ToString());
+            
             context.HandleResponse();
             context.Response.Redirect("/Home/Error");
             return Task.CompletedTask;

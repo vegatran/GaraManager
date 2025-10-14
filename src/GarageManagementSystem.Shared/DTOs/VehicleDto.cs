@@ -62,6 +62,9 @@ namespace GarageManagementSystem.Shared.DTOs
         [StringLength(50, ErrorMessage = "Số máy không được vượt quá 50 ký tự")]
         public string? EngineNumber { get; set; }
 
+        [Range(0, int.MaxValue, ErrorMessage = "Số km phải lớn hơn hoặc bằng 0")]
+        public int? Mileage { get; set; }
+
         [Required(ErrorMessage = "Khách hàng là bắt buộc")]
         public int CustomerId { get; set; }
 

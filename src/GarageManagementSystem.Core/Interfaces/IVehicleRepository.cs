@@ -16,5 +16,9 @@ namespace GarageManagementSystem.Core.Interfaces
         Task<Vehicle?> GetByIdWithCustomerAsync(int id);
         Task<IEnumerable<Vehicle>> GetByCustomerIdAsync(int customerId);
         Task<IEnumerable<Vehicle>> SearchAsync(string searchTerm);
+        
+        // Kiểm tra xe có sẵn cho dịch vụ mới
+        Task<bool> IsVehicleAvailableAsync(int vehicleId);
+        Task<IEnumerable<Vehicle>> GetAvailableVehiclesAsync();
     }
 }

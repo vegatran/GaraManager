@@ -1,3 +1,4 @@
+using AutoMapper;
 using GarageManagementSystem.Core.Interfaces;
 using GarageManagementSystem.Shared.DTOs;
 using GarageManagementSystem.Shared.Models;
@@ -12,10 +13,12 @@ namespace GarageManagementSystem.API.Controllers
     public class VehicleInspectionsController : ControllerBase
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IMapper _mapper;
 
-        public VehicleInspectionsController(IUnitOfWork unitOfWork)
+        public VehicleInspectionsController(IUnitOfWork unitOfWork, IMapper mapper)
         {
             _unitOfWork = unitOfWork;
+            _mapper = mapper;
         }
 
         [HttpGet]
@@ -155,28 +158,10 @@ namespace GarageManagementSystem.API.Controllers
                 };
 
                 // Tạo phiếu kiểm tra
-                var inspection = new Core.Entities.VehicleInspection
-                {
-                    InspectionNumber = await _unitOfWork.VehicleInspections.GenerateInspectionNumberAsync(),
-                    VehicleId = createDto.VehicleId,
-                    CustomerId = createDto.CustomerId,
-                    InspectorId = createDto.InspectorId,
-                    InspectionDate = DateTime.Now,
-                    InspectionType = inspectionType,
-                    CurrentMileage = createDto.CurrentMileage,
-                    FuelLevel = createDto.FuelLevel,
-                    GeneralCondition = createDto.GeneralCondition,
-                    ExteriorCondition = createDto.ExteriorCondition,
-                    InteriorCondition = createDto.InteriorCondition,
-                    EngineCondition = createDto.EngineCondition,
-                    BrakeCondition = createDto.BrakeCondition,
-                    SuspensionCondition = createDto.SuspensionCondition,
-                    TireCondition = createDto.TireCondition,
-                    CustomerComplaints = createDto.CustomerComplaints,
-                    Recommendations = createDto.Recommendations,
-                    TechnicianNotes = createDto.TechnicianNotes,
-                    Status = "InProgress"
-                };
+                var inspection = _mapper.Map<Core.Entities.VehicleInspection>(createDto);
+                inspection.InspectionNumber = await _unitOfWork.VehicleInspections.GenerateInspectionNumberAsync();
+                inspection.InspectionType = inspectionType;
+                inspection.Status = "InProgress";
 
                 // Add issues
                 foreach (var issueDto in createDto.Issues)
@@ -261,6 +246,8 @@ namespace GarageManagementSystem.API.Controllers
                 inspection.BrakeCondition = updateDto.BrakeCondition;
                 inspection.SuspensionCondition = updateDto.SuspensionCondition;
                 inspection.TireCondition = updateDto.TireCondition;
+                inspection.ElectricalCondition = updateDto.ElectricalCondition;
+                inspection.LightsCondition = updateDto.LightsCondition;
                 inspection.CustomerComplaints = updateDto.CustomerComplaints;
                 inspection.Recommendations = updateDto.Recommendations;
                 inspection.TechnicianNotes = updateDto.TechnicianNotes;
@@ -370,7 +357,12 @@ namespace GarageManagementSystem.API.Controllers
             }
         }
 
-        private static VehicleInspectionDto MapToDto(Core.Entities.VehicleInspection inspection)
+        private VehicleInspectionDto MapToDto(Core.Entities.VehicleInspection inspection)
+        {
+            return _mapper.Map<VehicleInspectionDto>(inspection);
+        }
+
+        private static VehicleInspectionDto MapToDtoOld(Core.Entities.VehicleInspection inspection)
         {
             return new VehicleInspectionDto
             {
@@ -390,6 +382,8 @@ namespace GarageManagementSystem.API.Controllers
                 BrakeCondition = inspection.BrakeCondition,
                 SuspensionCondition = inspection.SuspensionCondition,
                 TireCondition = inspection.TireCondition,
+                ElectricalCondition = inspection.ElectricalCondition,
+                LightsCondition = inspection.LightsCondition,
                 CustomerComplaints = inspection.CustomerComplaints,
                 Recommendations = inspection.Recommendations,
                 TechnicianNotes = inspection.TechnicianNotes,

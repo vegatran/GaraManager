@@ -83,6 +83,14 @@
         "css/dataTables.bootstrap4.min.css",
         "js/dataTables.bootstrap4.min.js"
       ]
+    },
+    {
+      "provider": "unpkg",
+      "library": "bootstrap-3-typeahead@4.0.2",
+      "destination": "wwwroot/lib/bootstrap-typeahead/",
+      "files": [
+        "bootstrap3-typeahead.min.js"
+      ]
     }
   ]
 }

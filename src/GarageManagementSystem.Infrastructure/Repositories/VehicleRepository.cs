@@ -99,5 +99,46 @@ namespace GarageManagementSystem.Infrastructure.Repositories
                 .Include(v => v.Customer)
                 .ToListAsync();
         }
+
+        public async Task<bool> IsVehicleAvailableAsync(int vehicleId)
+        {
+            // Kiểm tra xe có đang trong quá trình sửa chữa hoặc lịch hẹn chưa hoàn thành không
+            var hasActiveServiceOrder = await _context.ServiceOrders
+                .AnyAsync(so => !so.IsDeleted && 
+                               so.VehicleId == vehicleId && 
+                               so.Status != "Completed" && 
+                               so.Status != "Cancelled");
+
+            var hasActiveAppointment = await _context.Appointments
+                .AnyAsync(a => !a.IsDeleted && 
+                              a.VehicleId == vehicleId && 
+                              a.Status != "Completed" && 
+                              a.Status != "Cancelled" && 
+                              a.Status != "NoShow");
+
+            // Xe sẵn sàng nếu không có ServiceOrder hoặc Appointment đang active
+            return !hasActiveServiceOrder && !hasActiveAppointment;
+        }
+
+        public async Task<IEnumerable<Vehicle>> GetAvailableVehiclesAsync()
+        {
+            // Lấy danh sách xe có sẵn (không đang trong quá trình sửa chữa)
+            var allVehicles = await _dbSet
+                .Where(v => !v.IsDeleted)
+                .Include(v => v.Customer)
+                .ToListAsync();
+
+            var availableVehicles = new List<Vehicle>();
+            
+            foreach (var vehicle in allVehicles)
+            {
+                if (await IsVehicleAvailableAsync(vehicle.Id))
+                {
+                    availableVehicles.Add(vehicle);
+                }
+            }
+
+            return availableVehicles;
+        }
     }
 }

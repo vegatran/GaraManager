@@ -89,220 +89,7 @@
                     </div>
                 </div>
 
-                <!-- Sidebar Menu -->
-                <nav class="mt-2">
-                    <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
-                        
-                        <!-- Dashboard -->
-                        <li class="nav-item">
-                            <a href="@Url.Action("Index", "Home")" class="nav-link">
-                                <i class="nav-icon fas fa-tachometer-alt text-info"></i>
-                                <p><span class="badge badge-info mr-2">0</span>Tổng Quan</p>
-                            </a>
-                        </li>
-
-                        <!-- QUY TRÌNH TIẾP NHẬN & ĐÁNH GIÁ -->
-                        <li class="nav-header">QUY TRÌNH TIẾP NHẬN & ĐÁNH GIÁ</li>
-
-                        <!-- Appointments -->
-                        <li class="nav-item">
-                            <a href="@Url.Action("Index", "AppointmentManagement")" class="nav-link">
-                                <i class="nav-icon far fa-calendar-check text-primary"></i>
-                                <p><span class="badge badge-primary mr-2">1</span>Lịch Hẹn</p>
-                            </a>
-                        </li>
-
-                        <!-- Vehicle Inspections -->
-                        <li class="nav-item">
-                            <a href="@Url.Action("Index", "InspectionManagement")" class="nav-link">
-                                <i class="nav-icon fas fa-clipboard-check text-warning"></i>
-                                <p><span class="badge badge-warning mr-2">2</span>Kiểm Tra Xe</p>
-                            </a>
-                        </li>
-
-                        <!-- Service Quotations -->
-                        <li class="nav-item">
-                            <a href="@Url.Action("Index", "QuotationManagement")" class="nav-link">
-                                <i class="nav-icon fas fa-file-invoice-dollar text-success"></i>
-                                <p><span class="badge badge-success mr-2">3</span>Báo Giá</p>
-                            </a>
-                        </li>
-
-                        <!-- QUY TRÌNH SỬA CHỮA -->
-                        <li class="nav-header">QUY TRÌNH SỬA CHỮA</li>
-
-                        <!-- Service Orders -->
-                        <li class="nav-item">
-                            <a href="@Url.Action("Index", "OrderManagement")" class="nav-link">
-                                <i class="nav-icon fas fa-clipboard-list text-primary"></i>
-                                <p><span class="badge badge-primary mr-2">4</span>Phiếu Sửa Chữa</p>
-                            </a>
-                        </li>
-
-                        <!-- QUẢN LÝ KHÁCH HÀNG & XE -->
-                        <li class="nav-header">QUẢN LÝ KHÁCH HÀNG & XE</li>
-
-                        <!-- Customers -->
-                        <li class="nav-item">
-                            <a href="@Url.Action("Index", "CustomerManagement")" class="nav-link">
-                                <i class="nav-icon fas fa-users text-info"></i>
-                                <p><span class="badge badge-info mr-2">5</span>Khách Hàng</p>
-                            </a>
-                        </li>
-
-                        <!-- Vehicles -->
-                        <li class="nav-item">
-                            <a href="@Url.Action("Index", "VehicleManagement")" class="nav-link">
-                                <i class="nav-icon fas fa-car text-secondary"></i>
-                                <p><span class="badge badge-secondary mr-2">6</span>Xe</p>
-                            </a>
-                        </li>
-
-                        <!-- QUẢN LÝ NHÂN SỰ -->
-                        <li class="nav-header">QUẢN LÝ NHÂN SỰ</li>
-
-                        <!-- Employees -->
-                        <li class="nav-item">
-                            <a href="@Url.Action("Index", "EmployeeManagement")" class="nav-link">
-                                <i class="nav-icon fas fa-user-tie text-primary"></i>
-                                <p><span class="badge badge-primary mr-2">7</span>Nhân Viên</p>
-                            </a>
-                        </li>
-
-                        <!-- QUẢN LÝ KHO & PHỤ TÙNG -->
-                        <li class="nav-header">QUẢN LÝ KHO & PHỤ TÙNG</li>
-
-                        <!-- Parts Management -->
-                        <li class="nav-item">
-                            <a href="@Url.Action("Index", "PartsManagement")" class="nav-link">
-                                <i class="nav-icon fas fa-boxes text-warning"></i>
-                                <p><span class="badge badge-warning mr-2">8</span>Phụ Tùng</p>
-                            </a>
-                        </li>
-
-                        <!-- Suppliers -->
-                        <li class="nav-item">
-                            <a href="@Url.Action("Index", "SupplierManagement")" class="nav-link">
-                                <i class="nav-icon fas fa-truck text-info"></i>
-                                <p><span class="badge badge-info mr-2">9</span>Nhà Cung Cấp</p>
-                            </a>
-                        </li>
-
-                        <!-- Stock Transactions -->
-                        <li class="nav-item">
-                            <a href="@Url.Action("Index", "StockManagement")" class="nav-link">
-                                <i class="nav-icon fas fa-exchange-alt text-secondary"></i>
-                                <p><span class="badge badge-secondary mr-2">10</span>Nhập Xuất Kho</p>
-                            </a>
-                        </li>
-
-                        <!-- QUẢN LÝ TÀI CHÍNH -->
-                        <li class="nav-header">QUẢN LÝ TÀI CHÍNH</li>
-
-                        <!-- Insurance Invoices -->
-                        <li class="nav-item">
-                            <a href="@Url.Action("Index", "InsuranceInvoice")" class="nav-link">
-                                <i class="nav-icon fas fa-file-invoice text-info"></i>
-                                <p><span class="badge badge-info mr-2">11</span>Hóa Đơn Bảo Hiểm</p>
-                            </a>
-                        </li>
-
-                        <!-- Payments -->
-                        <li class="nav-item">
-                            <a href="@Url.Action("Index", "PaymentManagement")" class="nav-link">
-                                <i class="nav-icon fas fa-money-bill-wave text-success"></i>
-                                <p><span class="badge badge-success mr-2">12</span>Thanh Toán</p>
-                            </a>
-                        </li>
-
-                        <!-- DANH MỤC HỆ THỐNG -->
-                        <li class="nav-header">DANH MỤC HỆ THỐNG</li>
-
-                        <!-- Services -->
-                        <li class="nav-item">
-                            <a href="@Url.Action("Index", "ServiceManagement")" class="nav-link">
-                                <i class="nav-icon fas fa-tools text-danger"></i>
-                                <p><span class="badge badge-danger mr-2">13</span>Dịch Vụ</p>
-                            </a>
-                        </li>
-
-                        <!-- REPORTS -->
-                        <li class="nav-header">BÁO CÁO</li>
-
-                        <!-- Reports Menu -->
-                        <li class="nav-item">
-                            <a href="#" class="nav-link">
-                                <i class="nav-icon fas fa-chart-bar text-success"></i>
-                                <p>
-                                    Báo Cáo
-                                    <i class="right fas fa-angle-left"></i>
-                                </p>
-                            </a>
-                            <ul class="nav nav-treeview">
-                                <li class="nav-item">
-                                    <a href="#" class="nav-link">
-                                        <i class="far fa-circle nav-icon"></i>
-                                        <p>Báo Cáo Doanh Thu</p>
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a href="#" class="nav-link">
-                                        <i class="far fa-circle nav-icon"></i>
-                                        <p>Báo Cáo Dịch Vụ</p>
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a href="#" class="nav-link">
-                                        <i class="far fa-circle nav-icon"></i>
-                                        <p>Báo Cáo Tồn Kho</p>
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a href="#" class="nav-link">
-                                        <i class="far fa-circle nav-icon"></i>
-                                        <p>Báo Cáo Khách Hàng</p>
-                                    </a>
-                                </li>
-                            </ul>
-                        </li>
-
-                        <!-- SYSTEM -->
-                        <li class="nav-header">HỆ THỐNG</li>
-
-                        <!-- Setup -->
-                        <li class="nav-item">
-                            <a href="@Url.Action("Index", "Setup")" class="nav-link">
-                                <i class="nav-icon fas fa-database text-warning"></i>
-                                <p>Setup Dữ Liệu</p>
-                            </a>
-                        </li>
-
-                        <!-- Settings -->
-                        <li class="nav-item">
-                            <a href="#" class="nav-link">
-                                <i class="nav-icon fas fa-cog text-secondary"></i>
-                                <p>
-                                    Cài Đặt
-                                    <i class="right fas fa-angle-left"></i>
-                                </p>
-                            </a>
-                            <ul class="nav nav-treeview">
-                                <li class="nav-item">
-                                    <a href="@Url.Action("Profile", "Home")" class="nav-link">
-                                        <i class="far fa-circle nav-icon"></i>
-                                        <p>Hồ Sơ</p>
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a href="@Url.Action("TestApi", "Home")" class="nav-link">
-                                        <i class="far fa-circle nav-icon"></i>
-                                        <p>Kiểm Tra API</p>
-                                    </a>
-                                </li>
-                            </ul>
-                        </li>
-                    </ul>
-                </nav>
+                @await Html.PartialAsync("_SidebarMenu")
             </div>
         </aside>
 
@@ -334,6 +121,8 @@
     <script src="~/js/datatables-vietnamese.js" asp-append-version="true"></script>
     <!-- Select2 -->
     <script src="~/lib/select2/dist/js/select2.min.js"></script>
+    <!-- Bootstrap Typeahead -->
+    <script src="~/lib/bootstrap-typeahead/bootstrap3-typeahead.min.js"></script>
     <!-- SweetAlert2 -->
     <script src="~/lib/sweetalert2/sweetalert2.min.js"></script>
     <!-- Chart.js -->
@@ -352,20 +141,8 @@
     <!-- Dynamic menu activation script -->
     <script>
         $(document).ready(function() {
-            // Get current path
-            var path = window.location.pathname;
-            
-            // Remove active class from all nav links
-            $('.nav-link').removeClass('active');
-            
-            // Add active class to current nav link
-            $('.nav-link').each(function() {
-                var href = $(this).attr('href');
-                if (href && path.includes(href.replace('@Url.Action("', '').replace('", "Home")', ''))) {
-                    $(this).addClass('active');
-                    $(this).closest('.nav-item').addClass('menu-open');
-                }
-            });
+            // Don't clear active classes - let Razor handle it
+            // The server-side logic in _SidebarMenu.cshtml already sets the correct active state
         });
     </script>
 </body>

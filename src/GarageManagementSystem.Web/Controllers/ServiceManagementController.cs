@@ -23,8 +23,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Hiển thị trang quản lý dịch vụ
         /// </summary>
-        [Route("")]
-        [Route("Index")]
+        [HttpGet]
         public IActionResult Index()
         {
             return View();
@@ -34,7 +33,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// Lấy danh sách tất cả dịch vụ cho DataTable thông qua API
         /// </summary>
         [HttpGet]
-        [Route("GetServices")]
+        [HttpGet("GetServices")]
         public async Task<IActionResult> GetServices()
         {
             var response = await _apiService.GetAsync<List<ServiceDto>>(ApiEndpoints.Services.GetAll);
@@ -72,7 +71,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// Lấy thông tin chi tiết dịch vụ theo ID thông qua API
         /// </summary>
         [HttpGet]
-        [Route("Details/{id}")]
+        [HttpGet("GetService/{id}")]
         public async Task<IActionResult> Details(int id)
         {
             var response = await _apiService.GetAsync<ServiceDto>(ApiEndpoints.Builder.WithId(ApiEndpoints.Services.GetById, id));
@@ -91,7 +90,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// Tạo dịch vụ mới thông qua API
         /// </summary>
         [HttpPost]
-        [Route("Create")]
+        [HttpPost("CreateService")]
         public async Task<IActionResult> Create(CreateServiceDto model)
         {
             if (!ModelState.IsValid)
@@ -111,7 +110,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// Cập nhật thông tin dịch vụ thông qua API
         /// </summary>
         [HttpPost]
-        [Route("Edit")]
+        [HttpPut("UpdateService/{id}")]
         public async Task<IActionResult> Edit(UpdateServiceDto model)
         {
             if (!ModelState.IsValid)
@@ -131,7 +130,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// Xóa dịch vụ thông qua API
         /// </summary>
         [HttpPost]
-        [Route("Delete/{id}")]
+        [HttpDelete("DeleteService/{id}")]
         public async Task<IActionResult> Delete(int id)
         {
             var response = await _apiService.DeleteAsync<object>(ApiEndpoints.Builder.WithId(ApiEndpoints.Services.Delete, id));

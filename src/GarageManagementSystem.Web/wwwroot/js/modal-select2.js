@@ -1,8 +1,8 @@
 /**
  * Modal Select2 Utility
  * 
- * Handles Select2 initialization within Bootstrap modals
- * Prevents z-index issues with Select2 dropdowns
+ * Simple Select2 initialization without custom CSS fixes
+ * Uses default Select2 behavior
  */
 
 window.ModalSelect2 = {
@@ -19,9 +19,8 @@ window.ModalSelect2 = {
                 $select.select2('destroy');
             }
             
-            // Initialize Select2
+            // Initialize Select2 with basic options only
             $select.select2({
-                dropdownParent: $modal,
                 width: '100%',
                 placeholder: $select.data('placeholder') || 'Select an option',
                 allowClear: true

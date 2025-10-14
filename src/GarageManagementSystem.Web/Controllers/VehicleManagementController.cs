@@ -135,7 +135,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// Tạo xe mới thông qua API
         /// </summary>
         [HttpPost("CreateVehicle")]
-        public async Task<IActionResult> Create(CreateVehicleDto model)
+        public async Task<IActionResult> Create([FromBody] CreateVehicleDto model)
         {
             if (!ModelState.IsValid)
             {

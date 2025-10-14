@@ -19,6 +19,8 @@ namespace GarageManagementSystem.Shared.DTOs
         public string? BrakeCondition { get; set; }
         public string? SuspensionCondition { get; set; }
         public string? TireCondition { get; set; }
+        public string? ElectricalCondition { get; set; }
+        public string? LightsCondition { get; set; }
         public string? CustomerComplaints { get; set; }
         public string? Recommendations { get; set; }
         public string? TechnicianNotes { get; set; }
@@ -74,6 +76,12 @@ namespace GarageManagementSystem.Shared.DTOs
 
         [StringLength(5000)]
         public string? TireCondition { get; set; }
+
+        [StringLength(5000)]
+        public string? ElectricalCondition { get; set; }
+
+        [StringLength(5000)]
+        public string? LightsCondition { get; set; }
 
         [StringLength(2000)]
         public string? CustomerComplaints { get; set; }

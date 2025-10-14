@@ -180,6 +180,7 @@ namespace GarageManagementSystem.Web.Controllers
             return View();
         }
 
+
         /// <summary>
         /// Logout user from both local app and IdentityServer
         /// </summary>

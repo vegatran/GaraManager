@@ -1,3 +1,4 @@
+using AutoMapper;
 using GarageManagementSystem.Core.Interfaces;
 using GarageManagementSystem.Shared.DTOs;
 using GarageManagementSystem.Shared.Models;
@@ -12,10 +13,12 @@ namespace GarageManagementSystem.API.Controllers
     public class ServiceOrdersController : ControllerBase
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IMapper _mapper;
 
-        public ServiceOrdersController(IUnitOfWork unitOfWork)
+        public ServiceOrdersController(IUnitOfWork unitOfWork, IMapper mapper)
         {
             _unitOfWork = unitOfWork;
+            _mapper = mapper;
         }
 
         [HttpGet]
@@ -118,19 +121,10 @@ namespace GarageManagementSystem.API.Controllers
                     _ => "Pending"                     // Thanh toán khách hàng
                 };
 
-                // Tạo đơn hàng
-                var order = new Core.Entities.ServiceOrder
-                {
-                    OrderNumber = GenerateOrderNumber(),
-                    CustomerId = createDto.CustomerId,
-                    VehicleId = createDto.VehicleId,
-                    OrderDate = DateTime.Now,
-                    ScheduledDate = createDto.ScheduledDate,
-                    Status = "Pending",
-                    Notes = createDto.Notes,
-                    DiscountAmount = createDto.DiscountAmount,
-                    PaymentStatus = paymentStatus
-                };
+                // Tạo đơn hàng bằng AutoMapper
+                var order = _mapper.Map<Core.Entities.ServiceOrder>(createDto);
+                order.OrderNumber = GenerateOrderNumber();
+                order.PaymentStatus = paymentStatus;
 
                 // Calculate totals and add service items
                 decimal totalAmount = 0;
@@ -142,14 +136,9 @@ namespace GarageManagementSystem.API.Controllers
                         return BadRequest(ApiResponse<ServiceOrderDto>.ErrorResult($"Service with ID {itemDto.ServiceId} not found"));
                     }
 
-                    var orderItem = new Core.Entities.ServiceOrderItem
-                    {
-                        ServiceId = itemDto.ServiceId,
-                        Quantity = itemDto.Quantity,
-                        UnitPrice = service.Price,
-                        TotalPrice = service.Price * itemDto.Quantity,
-                        Notes = itemDto.Notes
-                    };
+                    var orderItem = _mapper.Map<Core.Entities.ServiceOrderItem>(itemDto);
+                    orderItem.UnitPrice = service.Price;
+                    orderItem.TotalPrice = service.Price * itemDto.Quantity;
 
                     order.ServiceOrderItems.Add(orderItem);
                     totalAmount += orderItem.TotalPrice;
@@ -345,64 +334,9 @@ namespace GarageManagementSystem.API.Controllers
             return $"SO-{DateTime.Now:yyyyMMdd}-{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
         }
 
-        private static ServiceOrderDto MapToDto(Core.Entities.ServiceOrder order)
+        private ServiceOrderDto MapToDto(Core.Entities.ServiceOrder order)
         {
-            return new ServiceOrderDto
-            {
-                Id = order.Id,
-                OrderNumber = order.OrderNumber,
-                CustomerId = order.CustomerId,
-                VehicleId = order.VehicleId,
-                Customer = order.Customer != null ? new CustomerDto
-                {
-                    Id = order.Customer.Id,
-                    Name = order.Customer.Name,
-                    Email = order.Customer.Email,
-                    Phone = order.Customer.Phone,
-                    Address = order.Customer.Address
-                } : null,
-                Vehicle = order.Vehicle != null ? new VehicleDto
-                {
-                    Id = order.Vehicle.Id,
-                    LicensePlate = order.Vehicle.LicensePlate,
-                    Brand = order.Vehicle.Brand,
-                    Model = order.Vehicle.Model,
-                    Year = order.Vehicle.Year,
-                    Color = order.Vehicle.Color
-                } : null,
-                OrderDate = order.OrderDate,
-                ScheduledDate = order.ScheduledDate,
-                CompletedDate = order.CompletedDate,
-                Status = order.Status,
-                Notes = order.Notes,
-                TotalAmount = order.TotalAmount,
-                DiscountAmount = order.DiscountAmount,
-                FinalAmount = order.FinalAmount,
-                PaymentStatus = order.PaymentStatus,
-                ServiceOrderItems = order.ServiceOrderItems?.Select(item => new ServiceOrderItemDto
-                {
-                    Id = item.Id,
-                    ServiceOrderId = item.ServiceOrderId,
-                    ServiceId = item.ServiceId,
-                    Service = item.Service != null ? new ServiceDto
-                    {
-                        Id = item.Service.Id,
-                        Name = item.Service.Name,
-                        Description = item.Service.Description,
-                        Price = item.Service.Price,
-                        Duration = item.Service.Duration,
-                        Category = item.Service.Category
-                    } : null,
-                    Quantity = item.Quantity,
-                    UnitPrice = item.UnitPrice,
-                    TotalPrice = item.TotalPrice,
-                    Notes = item.Notes,
-                    CreatedAt = item.CreatedAt,
-                    UpdatedAt = item.UpdatedAt
-                }).ToList() ?? new List<ServiceOrderItemDto>(),
-                CreatedAt = order.CreatedAt,
-                UpdatedAt = order.UpdatedAt
-            };
+            return _mapper.Map<ServiceOrderDto>(order);
         }
 
         /// <summary>

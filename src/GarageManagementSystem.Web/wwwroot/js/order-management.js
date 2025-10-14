@@ -52,17 +52,33 @@ window.OrderManagement = {
                     orderable: false,
                     searchable: false,
                     render: function(data, type, row) {
-                        return `
+                        var actions = `
                             <button class="btn btn-info btn-sm view-order" data-id="${row.id}">
                                 <i class="fas fa-eye"></i>
                             </button>
-                            <button class="btn btn-warning btn-sm edit-order" data-id="${row.id}">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="btn btn-danger btn-sm delete-order" data-id="${row.id}">
-                                <i class="fas fa-trash"></i>
-                            </button>
                         `;
+                        
+                        // Chỉ hiển thị nút Edit và Delete khi trạng thái chưa hoàn thành
+                        var isCompleted = row.status === 'Completed' || 
+                                         row.status === 'Hoàn Thành' ||  // Chữ T viết hoa (từ TranslateStatus)
+                                         row.status === 'Hoàn thành' || 
+                                         row.status === 'completed' || 
+                                         row.status === 'hoàn thành' ||
+                                         (row.status && row.status.toLowerCase().includes('hoàn thành')) ||
+                                         (row.status && row.status.toLowerCase().includes('completed'));
+                        
+                        if (!isCompleted) {
+                            actions += `
+                                <button class="btn btn-warning btn-sm edit-order" data-id="${row.id}">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-danger btn-sm delete-order" data-id="${row.id}">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            `;
+                        }
+                        
+                        return actions;
                     }
                 }
             ],
@@ -106,7 +122,7 @@ window.OrderManagement = {
         var self = this;
         
         $.ajax({
-            url: '/OrderManagement/Details/' + id,
+            url: '/OrderManagement/GetOrder/' + id,
             type: 'GET',
             success: function(response) {
                 if (AuthHandler.validateApiResponse(response)) {
@@ -133,7 +149,7 @@ window.OrderManagement = {
         var self = this;
         
         $.ajax({
-            url: '/OrderManagement/Details/' + id,
+            url: '/OrderManagement/GetOrder/' + id,
             type: 'GET',
             success: function(response) {
                 if (AuthHandler.validateApiResponse(response)) {
@@ -170,7 +186,7 @@ window.OrderManagement = {
         }).then((result) => {
             if (result.isConfirmed) {
                 $.ajax({
-                    url: '/OrderManagement/Delete/' + id,
+                    url: '/OrderManagement/DeleteOrder/' + id,
                     type: 'DELETE',
                     success: function(response) {
                         if (AuthHandler.validateApiResponse(response)) {
@@ -213,7 +229,7 @@ window.OrderManagement = {
             showLoaderOnConfirm: true,
             preConfirm: (status) => {
                 return $.ajax({
-                    url: '/OrderManagement/Edit/' + id,
+                    url: '/OrderManagement/UpdateOrder/' + id,
                     type: 'PUT',
                     contentType: 'application/json',
                     data: JSON.stringify({ Status: status })

@@ -1,3 +1,4 @@
+using AutoMapper;
 using GarageManagementSystem.Core.Interfaces;
 using GarageManagementSystem.Shared.DTOs;
 using GarageManagementSystem.Shared.Models;
@@ -12,10 +13,12 @@ namespace GarageManagementSystem.API.Controllers
     public class AppointmentsController : ControllerBase
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IMapper _mapper;
 
-        public AppointmentsController(IUnitOfWork unitOfWork)
+        public AppointmentsController(IUnitOfWork unitOfWork, IMapper mapper)
         {
             _unitOfWork = unitOfWork;
+            _mapper = mapper;
         }
 
         [HttpGet]
@@ -84,19 +87,9 @@ namespace GarageManagementSystem.API.Controllers
                 var isAvailable = await _unitOfWork.Appointments.IsTimeSlotAvailableAsync(dto.ScheduledDateTime, dto.EstimatedDuration);
                 if (!isAvailable) return BadRequest(ApiResponse<AppointmentDto>.ErrorResult("Time slot not available"));
 
-                var appointment = new Core.Entities.Appointment
-                {
-                    AppointmentNumber = await _unitOfWork.Appointments.GenerateAppointmentNumberAsync(),
-                    CustomerId = dto.CustomerId,
-                    VehicleId = dto.VehicleId,
-                    ScheduledDateTime = dto.ScheduledDateTime,
-                    EstimatedDuration = dto.EstimatedDuration,
-                    AppointmentType = dto.AppointmentType,
-                    ServiceRequested = dto.ServiceRequested,
-                    CustomerNotes = dto.CustomerNotes,
-                    AssignedToId = dto.AssignedToId,
-                    Status = "Scheduled"
-                };
+                var appointment = _mapper.Map<Core.Entities.Appointment>(dto);
+                appointment.AppointmentNumber = await _unitOfWork.Appointments.GenerateAppointmentNumberAsync();
+                appointment.Status = "Scheduled";
 
                 // Bắt đầu transaction để đảm bảo tính toàn vẹn dữ liệu
                 await _unitOfWork.BeginTransactionAsync();
@@ -204,17 +197,10 @@ namespace GarageManagementSystem.API.Controllers
             }
         }
 
-        private static AppointmentDto MapToDto(Core.Entities.Appointment a) => new()
+        private AppointmentDto MapToDto(Core.Entities.Appointment a)
         {
-            Id = a.Id, AppointmentNumber = a.AppointmentNumber, CustomerId = a.CustomerId, VehicleId = a.VehicleId,
-            ScheduledDateTime = a.ScheduledDateTime, EstimatedDuration = a.EstimatedDuration,
-            AppointmentType = a.AppointmentType, ServiceRequested = a.ServiceRequested, CustomerNotes = a.CustomerNotes,
-            Status = a.Status, ConfirmedDate = a.ConfirmedDate, ArrivalTime = a.ArrivalTime,
-            AssignedToId = a.AssignedToId, ReminderSent = a.ReminderSent, CancellationReason = a.CancellationReason,
-            Customer = a.Customer != null ? new CustomerDto { Id = a.Customer.Id, Name = a.Customer.Name } : null,
-            Vehicle = a.Vehicle != null ? new VehicleDto { Id = a.Vehicle.Id, LicensePlate = a.Vehicle.LicensePlate } : null,
-            CreatedAt = a.CreatedAt, CreatedBy = a.CreatedBy, UpdatedAt = a.UpdatedAt, UpdatedBy = a.UpdatedBy
-        };
+            return _mapper.Map<AppointmentDto>(a);
+        }
     }
 }
 

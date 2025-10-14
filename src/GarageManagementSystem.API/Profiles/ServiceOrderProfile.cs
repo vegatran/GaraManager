@@ -51,6 +51,20 @@ namespace GarageManagementSystem.API.Profiles
                 .ForMember(dest => dest.ServiceQuotation, opt => opt.Ignore())
                 .ForMember(dest => dest.OrderNumber, opt => opt.Ignore())
                 .ForMember(dest => dest.OrderDate, opt => opt.Ignore());
+
+            // ServiceOrderItem mappings
+            CreateMap<ServiceOrderItem, ServiceOrderItemDto>()
+                .ForMember(dest => dest.Service, opt => opt.MapFrom(src => src.Service));
+
+            CreateMap<CreateServiceOrderItemDto, ServiceOrderItem>()
+                .ForMember(dest => dest.Id, opt => opt.Ignore())
+                .ForMember(dest => dest.ServiceOrderId, opt => opt.Ignore())
+                .ForMember(dest => dest.Service, opt => opt.Ignore())
+                .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
+                .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())
+                .ForMember(dest => dest.CreatedBy, opt => opt.Ignore())
+                .ForMember(dest => dest.UpdatedBy, opt => opt.Ignore())
+                .ForMember(dest => dest.IsDeleted, opt => opt.Ignore());
         }
     }
 }

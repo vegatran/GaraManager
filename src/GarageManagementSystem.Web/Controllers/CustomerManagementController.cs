@@ -23,8 +23,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Hiển thị trang quản lý khách hàng
         /// </summary>
-        [Route("")]
-        [Route("Index")]
+        [HttpGet]
         public IActionResult Index()
         {
             // Debug: Log authentication status
@@ -34,9 +33,20 @@ namespace GarageManagementSystem.Web.Controllers
         }
 
         /// <summary>
+        /// Hiển thị trang tiếp đón khách hàng - khách đang có xe tại gara
+        /// </summary>
+        [HttpGet("Reception")]
+        public IActionResult Reception()
+        {
+            ViewBag.Title = "Tiếp Đón Khách Hàng";
+            ViewBag.Subtitle = "Khách hàng đang có xe tại gara";
+            return View("Reception");
+        }
+
+        /// <summary>
         /// Debug endpoint - test redirect
         /// </summary>
-        [Route("Test")]
+        [HttpGet("Test")]
         public IActionResult Test()
         {
             return Content("CustomerManagement Test - No redirect!");
@@ -45,8 +55,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Lấy danh sách khách hàng đang hoạt động
         /// </summary>
-        [HttpGet]
-        [Route("GetActiveCustomers")]
+        [HttpGet("GetActiveCustomers")]
         public async Task<IActionResult> GetActiveCustomers()
         {
             var response = await _apiService.GetAsync<List<CustomerDto>>(ApiEndpoints.Customers.GetAll);
@@ -58,6 +67,68 @@ namespace GarageManagementSystem.Web.Controllers
             }
             
             return Json(new List<CustomerDto>());
+        }
+
+        /// <summary>
+        /// Lấy danh sách khách hàng đang có xe tại gara (đang sửa chữa/kiểm tra)
+        /// </summary>
+        [HttpGet("GetCustomersWithActiveVehicles")]
+        public async Task<IActionResult> GetCustomersWithActiveVehicles()
+        {
+            try
+            {
+                // Lấy danh sách xe đang có service order hoặc appointment chưa hoàn thành
+                var serviceOrdersResponse = await _apiService.GetAsync<List<ServiceOrderDto>>(ApiEndpoints.ServiceOrders.GetAll);
+                var appointmentsResponse = await _apiService.GetAsync<List<AppointmentDto>>(ApiEndpoints.Appointments.GetAll);
+                
+                var activeCustomerIds = new HashSet<int>();
+                
+                // Thu thập customer ID từ service orders đang hoạt động
+                if (serviceOrdersResponse.Success && serviceOrdersResponse.Data != null)
+                {
+                    var activeServiceOrders = serviceOrdersResponse.Data
+                        .Where(so => so.Status != "Completed" && 
+                                   so.Status != "Cancelled")
+                        .Select(so => so.CustomerId);
+                    foreach (var customerId in activeServiceOrders)
+                    {
+                        activeCustomerIds.Add(customerId);
+                    }
+                }
+                
+                // Thu thập customer ID từ appointments đang hoạt động
+                if (appointmentsResponse.Success && appointmentsResponse.Data != null)
+                {
+                    var activeAppointments = appointmentsResponse.Data
+                        .Where(a => a.Status != "Completed" && 
+                                  a.Status != "Cancelled" && 
+                                  a.Status != "NoShow")
+                        .Select(a => a.CustomerId);
+                    foreach (var customerId in activeAppointments)
+                    {
+                        activeCustomerIds.Add(customerId);
+                    }
+                }
+                
+                // Lấy thông tin khách hàng
+                var customersResponse = await _apiService.GetAsync<List<CustomerDto>>(ApiEndpoints.Customers.GetAll);
+                
+                if (customersResponse.Success && customersResponse.Data != null)
+                {
+                    var activeCustomers = customersResponse.Data
+                        .Where(c => activeCustomerIds.Contains(c.Id))
+                        .ToList();
+                    
+                    return Json(activeCustomers);
+                }
+                
+                return Json(new List<CustomerDto>());
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error getting customers with active vehicles: {ex.Message}");
+                return Json(new List<CustomerDto>());
+            }
         }
 
         /// <summary>
@@ -114,8 +185,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Tạo khách hàng mới thông qua API
         /// </summary>
-        [HttpPost]
-        [Route("CreateCustomer")]
+        [HttpPost("CreateCustomer")]
         public async Task<IActionResult> CreateCustomer([FromBody] CreateCustomerDto customerDto)
         {
             if (!ModelState.IsValid)

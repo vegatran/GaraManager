@@ -1,3 +1,4 @@
+using AutoMapper;
 using GarageManagementSystem.Core.Interfaces;
 using GarageManagementSystem.Shared.DTOs;
 using GarageManagementSystem.Shared.Models;
@@ -12,10 +13,12 @@ namespace GarageManagementSystem.API.Controllers
     public class PartsController : ControllerBase
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IMapper _mapper;
 
-        public PartsController(IUnitOfWork unitOfWork)
+        public PartsController(IUnitOfWork unitOfWork, IMapper mapper)
         {
             _unitOfWork = unitOfWork;
+            _mapper = mapper;
         }
 
         [HttpGet]
@@ -98,23 +101,7 @@ namespace GarageManagementSystem.API.Controllers
                 if (!ModelState.IsValid)
                     return BadRequest(ApiResponse<PartDto>.ErrorResult("Invalid data"));
 
-                var part = new Core.Entities.Part
-                {
-                    PartNumber = dto.PartNumber,
-                    PartName = dto.PartName,
-                    Description = dto.Description,
-                    Category = dto.Category,
-                    Brand = dto.Brand,
-                    CostPrice = dto.CostPrice,
-                    SellPrice = dto.SellPrice,
-                    QuantityInStock = dto.QuantityInStock,
-                    MinimumStock = dto.MinimumStock,
-                    ReorderLevel = dto.ReorderLevel,
-                    Unit = dto.Unit,
-                    CompatibleVehicles = dto.CompatibleVehicles,
-                    Location = dto.Location,
-                    IsActive = dto.IsActive
-                };
+                var part = _mapper.Map<Core.Entities.Part>(dto);
 
                 // Bắt đầu transaction để đảm bảo tính toàn vẹn dữ liệu
                 await _unitOfWork.BeginTransactionAsync();
@@ -207,30 +194,9 @@ namespace GarageManagementSystem.API.Controllers
             }
         }
 
-        private static PartDto MapToDto(Core.Entities.Part part)
+        private PartDto MapToDto(Core.Entities.Part part)
         {
-            return new PartDto
-            {
-                Id = part.Id,
-                PartNumber = part.PartNumber,
-                PartName = part.PartName,
-                Description = part.Description,
-                Category = part.Category,
-                Brand = part.Brand,
-                CostPrice = part.CostPrice,
-                SellPrice = part.SellPrice,
-                QuantityInStock = part.QuantityInStock,
-                MinimumStock = part.MinimumStock,
-                ReorderLevel = part.ReorderLevel,
-                Unit = part.Unit,
-                CompatibleVehicles = part.CompatibleVehicles,
-                Location = part.Location,
-                IsActive = part.IsActive,
-                CreatedAt = part.CreatedAt,
-                CreatedBy = part.CreatedBy,
-                UpdatedAt = part.UpdatedAt,
-                UpdatedBy = part.UpdatedBy
-            };
+            return _mapper.Map<PartDto>(part);
         }
     }
 }

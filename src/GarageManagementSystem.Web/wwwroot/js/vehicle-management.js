@@ -234,12 +234,13 @@ window.VehicleManagement = {
         var formData = {
             CustomerId: parseInt($('#createCustomerId').val()),
             LicensePlate: $('#createLicensePlate').val(),
-            Brand: $('#createMake').val(),
+            Brand: $('#createBrand').val(),
             Model: $('#createModel').val(),
             Year: $('#createYear').val() || null,
             Color: $('#createColor').val() || null,
             VIN: $('#createVIN').val() || null,
             EngineNumber: $('#createEngineNumber').val() || null,
+            Mileage: $('#createMileage').val() ? parseInt($('#createMileage').val()) : null,
             VehicleType: "Personal"
         };
 
@@ -283,12 +284,13 @@ window.VehicleManagement = {
             Id: parseInt(vehicleId),
             CustomerId: parseInt($('#editCustomerId').val()),
             LicensePlate: $('#editLicensePlate').val(),
-            Brand: $('#editMake').val(),
+            Brand: $('#editBrand').val(),
             Model: $('#editModel').val(),
             Year: $('#editYear').val() || null,
             Color: $('#editColor').val() || null,
             VIN: $('#editVIN').val() || null,
             EngineNumber: $('#editEngineNumber').val() || null,
+            Mileage: $('#editMileage').val() ? parseInt($('#editMileage').val()) : null,
             VehicleType: "Personal"
         };
 
@@ -342,7 +344,7 @@ window.VehicleManagement = {
         $('#editId').val(vehicle.id);
         $('#editCustomerId').val(vehicle.customerId);
         $('#editLicensePlate').val(vehicle.licensePlate);
-        $('#editMake').val(vehicle.brand);
+        $('#editBrand').val(vehicle.brand);
         $('#editModel').val(vehicle.model);
         $('#editYear').val(vehicle.year);
         $('#editColor').val(vehicle.color);
