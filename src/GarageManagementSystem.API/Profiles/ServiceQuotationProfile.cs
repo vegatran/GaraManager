@@ -41,16 +41,24 @@ namespace GarageManagementSystem.API.Profiles
                 .ForMember(dest => dest.Vehicle, opt => opt.Ignore())
                 .ForMember(dest => dest.Items, opt => opt.Ignore())
                 .ForMember(dest => dest.QuotationNumber, opt => opt.Ignore())
-                .ForMember(dest => dest.QuotationDate, opt => opt.Ignore());
+                .ForMember(dest => dest.QuotationDate, opt => opt.Ignore())
+                .ForMember(dest => dest.Status, opt => opt.Condition(src => !string.IsNullOrEmpty(src.Status)));
 
             // QuotationItem mappings
             CreateMap<QuotationItem, QuotationItemDto>()
-                .ForMember(dest => dest.Service, opt => opt.MapFrom(src => src.Service));
+                .ForMember(dest => dest.Service, opt => opt.MapFrom(src => src.Service))
+                .ForMember(dest => dest.ServiceType, opt => opt.MapFrom(src => src.ItemType))
+                .ForMember(dest => dest.HasInvoice, opt => opt.MapFrom(src => src.HasInvoice))
+                .ForMember(dest => dest.IsVATApplicable, opt => opt.MapFrom(src => src.IsVATApplicable))
+                .ForMember(dest => dest.ItemCategory, opt => opt.MapFrom(src => src.ItemCategory));
 
             CreateMap<CreateQuotationItemDto, QuotationItem>()
                 .ForMember(dest => dest.Id, opt => opt.Ignore())
                 .ForMember(dest => dest.ServiceQuotationId, opt => opt.Ignore())
                 .ForMember(dest => dest.Service, opt => opt.Ignore())
+                .ForMember(dest => dest.ItemType, opt => opt.MapFrom(src => src.ServiceType ?? "Service"))
+                .ForMember(dest => dest.HasInvoice, opt => opt.MapFrom(src => src.HasInvoice))
+                .ForMember(dest => dest.ItemCategory, opt => opt.MapFrom(src => src.ItemCategory ?? "Material"))
                 .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
                 .ForMember(dest => dest.CreatedBy, opt => opt.Ignore())
                 .ForMember(dest => dest.IsDeleted, opt => opt.Ignore());

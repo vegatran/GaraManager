@@ -54,12 +54,12 @@ namespace GarageManagementSystem.Web.Controllers
                             quantity = t.Quantity,
                             quantityBefore = t.QuantityBefore,
                             quantityAfter = t.QuantityAfter,
-                            unitPrice = t.UnitPrice.ToString("N0") + " VNĐ",
-                            totalAmount = t.TotalAmount.ToString("N0") + " VNĐ",
-                            transactionDate = t.TransactionDate.ToString("dd/MM/yyyy HH:mm"),
+                            unitPrice = t.UnitPrice, // Raw value for DataTablesUtility.renderCurrency
+                            totalAmount = t.TotalAmount, // Raw value for DataTablesUtility.renderCurrency
+                            transactionDate = t.TransactionDate, // Raw DateTime for DataTablesUtility.renderDate
                             referenceNumber = t.ReferenceNumber ?? "N/A",
                             notes = t.Notes ?? "N/A",
-                            createdDate = t.CreatedAt.ToString("dd/MM/yyyy HH:mm")
+                            createdDate = t.CreatedAt
                         }).Cast<object>().ToList();
                     }
 
@@ -101,42 +101,10 @@ namespace GarageManagementSystem.Web.Controllers
             }
         }
 
-        /// <summary>
-        /// Lấy danh sách phụ tùng để hiển thị trong dropdown
-        /// </summary>
-        [HttpGet]
-        [HttpGet("GetAvailableParts")]
-        public async Task<IActionResult> GetAvailableParts()
-        {
-            try
-            {
-                var response = await _apiService.GetAsync<List<PartDto>>(ApiEndpoints.Parts.GetAll);
-                
-                if (response.Success && response.Data != null)
-                {
-                    var parts = response.Data.Select(p => new
-                    {
-                        id = p.Id,
-                        text = $"{p.PartName} ({p.PartNumber})"
-                    }).ToList();
-
-                    return Json(new { success = true, data = parts });
-                }
-                else
-                {
-                    return Json(new { success = false, message = response.ErrorMessage ?? "Không thể tải danh sách phụ tùng" });
-                }
-            }
-            catch (Exception ex)
-            {
-                return Json(new { success = false, message = $"Lỗi khi tải danh sách phụ tùng: {ex.Message}" });
-            }
-        }
 
         /// <summary>
         /// Lấy danh sách nhà cung cấp để hiển thị trong dropdown
         /// </summary>
-        [HttpGet]
         [HttpGet("GetAvailableSuppliers")]
         public async Task<IActionResult> GetAvailableSuppliers()
         {
@@ -168,7 +136,6 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Tạo giao dịch kho mới
         /// </summary>
-        [HttpPost]
         [HttpPost("CreateStockTransaction")]
         public async Task<IActionResult> CreateStockTransaction([FromBody] CreateStockTransactionDto dto)
         {
@@ -199,9 +166,95 @@ namespace GarageManagementSystem.Web.Controllers
         }
 
         /// <summary>
+        /// ✅ THÊM: Tìm kiếm phụ tùng cho Typeahead
+        /// </summary>
+        [HttpGet("SearchParts")]
+        public async Task<IActionResult> SearchParts(string q)
+        {
+            try
+            {
+                // ✅ SỬA: Sử dụng searchTerm thay vì q
+                var response = await _apiService.GetAsync<List<PartDto>>(ApiEndpoints.Parts.Search + "?searchTerm=" + Uri.EscapeDataString(q ?? ""));
+                
+                if (response.Success && response.Data != null)
+                {
+                    var parts = response.Data.Select(p => new
+                    {
+                        id = p.Id,
+                        text = $"{p.PartName} ({p.PartNumber})"
+                    }).Cast<object>().ToList();
+                    
+                    return Json(new { success = true, data = parts });
+                }
+
+                return Json(new { success = true, data = new List<object>() });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Lỗi khi tìm kiếm phụ tùng: {ex.Message}" });
+            }
+        }
+
+        /// <summary>
+        /// ✅ THÊM: Lấy danh sách phụ tùng có sẵn cho Typeahead
+        /// </summary>
+        [HttpGet("GetAvailableParts")]
+        public async Task<IActionResult> GetAvailableParts()
+        {
+            try
+            {
+                var response = await _apiService.GetAsync<List<PartDto>>(ApiEndpoints.Parts.GetAll);
+                
+                if (response.Success && response.Data != null)
+                {
+                    var parts = response.Data.Select(p => new
+                    {
+                        id = p.Id,
+                        text = $"{p.PartName} ({p.PartNumber})"
+                    }).Cast<object>().ToList();
+                    
+                    return Json(new { success = true, data = parts });
+                }
+
+                return Json(new { success = true, data = new List<object>() });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Lỗi khi lấy danh sách phụ tùng: {ex.Message}" });
+            }
+        }
+
+        /// <summary>
+        /// ✅ THÊM: Tạo đơn nhập hàng với nhiều phụ tùng
+        /// </summary>
+        [HttpPost("CreatePurchaseOrder")]
+        public async Task<IActionResult> CreatePurchaseOrder([FromBody] CreatePurchaseOrderDto dto)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(new { success = false, message = "Dữ liệu không hợp lệ" });
+                }
+
+                if (dto.Items == null || dto.Items.Count == 0)
+                {
+                    return BadRequest(new { success = false, message = "Vui lòng thêm ít nhất một phụ tùng vào đơn hàng" });
+                }
+
+                var response = await _apiService.PostAsync<List<StockTransactionDto>>(ApiEndpoints.StockTransactions.CreatePurchaseOrder, dto);
+                
+                return Json(response);
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Lỗi khi tạo đơn nhập hàng: {ex.Message}" });
+            }
+        }
+
+        /// <summary>
         /// Lấy danh sách loại giao dịch kho
         /// </summary>
-        [HttpGet]
         [HttpGet("GetTransactionTypes")]
         public IActionResult GetTransactionTypes()
         {
@@ -219,7 +272,6 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Import dữ liệu tồn đầu kỳ từ Excel
         /// </summary>
-        [HttpPost]
         [HttpPost("ImportOpeningBalance")]
         public async Task<IActionResult> ImportOpeningBalance([FromBody] OpeningBalanceImportRequest request)
         {
@@ -250,7 +302,6 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Import dữ liệu từ Excel file
         /// </summary>
-        [HttpPost]
         [HttpPost("ImportExcel")]
         public async Task<IActionResult> ImportExcel(IFormFile file)
         {
@@ -282,7 +333,6 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Validate Excel file trước khi import
         /// </summary>
-        [HttpPost]
         [HttpPost("ValidateExcel")]
         public async Task<IActionResult> ValidateExcel(IFormFile file)
         {
@@ -314,28 +364,38 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Tải template Excel mẫu
         /// </summary>
-        [HttpGet]
         [HttpGet("DownloadTemplate")]
-        public async Task<IActionResult> DownloadTemplate()
+        public IActionResult DownloadTemplate()
         {
             try
             {
-                var response = await _apiService.GetAsync<byte[]>(ApiEndpoints.StockTransactions.DownloadTemplate);
+                // Tạo template Excel đơn giản
+                var templateData = CreateExcelTemplate();
+                var fileName = $"Stock_Import_Template_{DateTime.Now:yyyyMMdd}.xlsx";
                 
-                if (response.Success && response.Data != null)
-                {
-                    var fileName = $"Stock_Import_Template_{DateTime.Now:yyyyMMdd}.xlsx";
-                    return File(response.Data, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
-                }
-                else
-                {
-                    return BadRequest("Không thể tải template");
-                }
+                return File(templateData, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
             }
             catch (Exception ex)
             {
                 return BadRequest($"Lỗi tải template: {ex.Message}");
             }
+        }
+
+        /// <summary>
+        /// Tạo template Excel cho nhập kho
+        /// </summary>
+        private byte[] CreateExcelTemplate()
+        {
+            // Tạo CSV template đơn giản thay vì Excel phức tạp
+            var csvContent = @"Mã Hiệu,Tên VTTH,Đơn Vị,Tồn Đầu Kỳ,Đơn Giá,Ghi Chú
+PART001,Lốp Michelin 205/55R16,Chiếc,20,1000000,Lốp xe hạng trung
+PART002,Ắc Quy GS 60Ah,Chiếc,15,1500000,Ắc quy xe hạng trung
+PART003,Má Phanh BOSCH,Bộ,25,350000,Má phanh chất lượng cao
+PART004,Đĩa Phanh BOSCH,Chiếc,20,650000,Đĩa phanh chất lượng cao
+PART005,Sơn Xe 2K,Bộ,10,1000000,Sơn xe chất lượng cao
+PART006,Dầu Động Cơ 5W-30,Lít,50,150000,Dầu động cơ tổng hợp";
+
+            return System.Text.Encoding.UTF8.GetBytes(csvContent);
         }
     }
 }

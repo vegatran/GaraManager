@@ -47,8 +47,8 @@ window.AjaxUtility = {
         } else if (xhr.responseText) {
             try {
                 var response = JSON.parse(xhr.responseText);
-                if (response.message) {
-                    errorMessage = response.message;
+                if (GarageApp.parseErrorMessage(response)) {
+                    errorMessage = GarageApp.parseErrorMessage(response);
                 }
             } catch (e) {
                 errorMessage = xhr.responseText;

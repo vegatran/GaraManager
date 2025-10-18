@@ -13,11 +13,14 @@ namespace GarageManagementSystem.Core.Interfaces
         IGenericRepository<Position> Positions { get; }
         IVehicleInspectionRepository VehicleInspections { get; }
         IServiceQuotationRepository ServiceQuotations { get; }
+        IGenericRepository<QuotationItem> ServiceQuotationItems { get; }
         IPartRepository Parts { get; }
         IStockTransactionRepository StockTransactions { get; }
         ISupplierRepository Suppliers { get; }
         IPaymentTransactionRepository PaymentTransactions { get; }
         IAppointmentRepository Appointments { get; }
+        IPrintTemplateRepository PrintTemplates { get; }
+        ICustomerReceptionRepository CustomerReceptions { get; }
         
         // Phase 1 - New repositories
         IGenericRepository<Invoice> Invoices { get; }

@@ -6,11 +6,12 @@
 3. [Quản lý khách hàng](#quản-lý-khách-hàng)
 4. [Quản lý xe](#quản-lý-xe)
 5. [Quản lý phụ tùng](#quản-lý-phụ-tùng)
-6. [Quản lý dịch vụ](#quản-lý-dịch-vụ)
-7. [Tạo đơn hàng sửa chữa](#tạo-đơn-hàng-sửa-chữa)
-8. [Quản lý thanh toán](#quản-lý-thanh-toán)
-9. [Báo cáo và thống kê](#báo-cáo-và-thống-kê)
-10. [Troubleshooting](#troubleshooting)
+6. [Quản lý kho chi tiết](#quản-lý-kho-chi-tiết)
+7. [Quản lý dịch vụ](#quản-lý-dịch-vụ)
+8. [Tạo đơn hàng sửa chữa](#tạo-đơn-hàng-sửa-chữa)
+9. [Quản lý thanh toán](#quản-lý-thanh-toán)
+10. [Báo cáo và thống kê](#báo-cáo-và-thống-kê)
+11. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -884,6 +885,354 @@ Sau khi đăng nhập thành công, chọn vai trò:
 │        [ LƯU ĐƠN HÀNG ]        [ IN BÁO GIÁ ]          │
 └─────────────────────────────────────────────────────────┘
 ```
+
+---
+
+## 📦 QUẢN LÝ KHO CHI TIẾT
+
+### **Tổng quan về quản lý kho**
+
+**Nguyên tắc cơ bản:**
+- **Mọi thay đổi tồn kho** phải được ghi nhận qua **Giao dịch kho**
+- **Không được sửa trực tiếp** số lượng tồn kho
+- **Tất cả giao dịch** đều có lịch sử để kiểm tra
+
+**Các loại giao dịch kho:**
+- 🔵 **Tồn đầu kỳ**: Ghi nhận hàng có sẵn khi bắt đầu sử dụng hệ thống
+- 🟢 **Nhập kho**: Ghi nhận hàng mới từ nhà cung cấp
+- 🔴 **Xuất kho**: Ghi nhận hàng đã sử dụng cho sửa chữa hoặc bán
+- 🟡 **Điều chỉnh**: Điều chỉnh tồn kho khi kiểm kê
+
+---
+
+### **🆕 QUY TRÌNH TẠO SẢN PHẨM MỚI**
+
+#### **Bước 1: Tạo danh mục sản phẩm**
+
+1. **Vào menu:** `Quản Lý Kho` → `Quản Lý Phụ Tùng`
+2. **Click nút:** `+ Thêm Phụ Tùng`
+3. **Điền thông tin sản phẩm:**
+
+```
+┌─────────────────────────────────────────────────────────┐
+│              TẠO SẢN PHẨM MỚI                          │
+├─────────────────────────────────────────────────────────┤
+│ Thông tin bắt buộc:                                    │
+│ ┌─────────────────┐ ┌─────────────────┐                 │
+│ │ Mã phụ tùng *   │ │ Tên phụ tùng *  │                 │
+│ │ [ACQUY_NEW]     │ │ [Ắc Quy GS N70] │                 │
+│ └─────────────────┘ └─────────────────┘                 │
+│ ┌─────────────────┐ ┌─────────────────┐                 │
+│ │ Giá vốn *       │ │ Giá bán *       │                 │
+│ │ [1,500,000]     │ │ [1,650,000]     │                 │
+│ └─────────────────┘ └─────────────────┘                 │
+│ ┌─────────────────┐ ┌─────────────────┐                 │
+│ │ Tồn tối thiểu * │ │ Đơn vị *        │                 │
+│ │ [5]             │ │ [CÁI ▼]         │                 │
+│ └─────────────────┘ └─────────────────┘                 │
+│ ┌─────────────────┐ ┌─────────────────┐                 │
+│ │ Danh mục *      │ │ Thương hiệu *   │                 │
+│ │ [Ắc quy ▼]      │ │ [GS ▼]          │                 │
+│ └─────────────────┘ └─────────────────┘                 │
+│                                                         │
+│ ⚠️ Lưu ý: Số lượng tồn kho mặc định = 0                │
+│                                                         │
+│        [ HỦY ]                    [ LƯU ]               │
+└─────────────────────────────────────────────────────────┘
+```
+
+4. **Click:** `Lưu`
+5. **Kết quả:** Sản phẩm được tạo với `Số lượng tồn kho = 0`
+
+---
+
+### **📥 QUY TRÌNH NHẬP KHO**
+
+#### **Tình huống 1: Ghi nhận tồn đầu kỳ**
+
+**Khi nào:** Khi bắt đầu sử dụng hệ thống và có sẵn hàng trong kho
+
+1. **Vào menu:** `Quản Lý Kho` → `Quản Lý Tồn Kho`
+2. **Click nút:** `+ Thêm Giao Dịch Mới`
+3. **Điền thông tin:**
+
+```
+┌─────────────────────────────────────────────────────────┐
+│              GHI NHẬN TỒN ĐẦU KỲ                       │
+├─────────────────────────────────────────────────────────┤
+│ ┌─────────────────────────────────────────────────────┐ │
+│ │ Loại giao dịch: [Tồn đầu kỳ ▼]                    │ │
+│ │ Phụ tùng: [ACQUY_NEW - Ắc Quy GS N70 Mới ▼]       │ │
+│ │ Số lượng: [10]                                     │ │
+│ │ Giá vốn đơn vị: [1,500,000 VNĐ]                   │ │
+│ │ Giá bán đơn vị: [1,650,000 VNĐ]                   │ │
+│ │ Ngày giao dịch: [01/01/2025 08:00]                │ │
+│ │ Ghi chú: [Tồn đầu kỳ - Ắc Quy GS N70 Mới]         │ │
+│ │ Có hóa đơn: [✅ Có]                               │ │
+│ └─────────────────────────────────────────────────────┘ │
+│                                                         │
+│        [ HỦY ]                    [ LƯU ]               │
+└─────────────────────────────────────────────────────────┘
+```
+
+4. **Click:** `Lưu`
+
+**✅ Kết quả:**
+- Tạo `StockTransaction` (Type = TonDauKy)
+- `Parts.QuantityInStock` tự động cập nhật: `0 → 10`
+- Hiển thị trong bảng lịch sử giao dịch kho
+
+#### **Tình huống 2: Nhập hàng từ nhà cung cấp**
+
+**Khi nào:** Khi nhận hàng mới từ nhà cung cấp
+
+1. **Vào menu:** `Quản Lý Kho` → `Quản Lý Tồn Kho`
+2. **Click nút:** `+ Thêm Giao Dịch Mới`
+3. **Điền thông tin:**
+
+```
+┌─────────────────────────────────────────────────────────┐
+│              NHẬP HÀNG TỪ NHÀ CUNG CẤP                 │
+├─────────────────────────────────────────────────────────┤
+│ ┌─────────────────────────────────────────────────────┐ │
+│ │ Loại giao dịch: [Nhập kho ▼]                       │ │
+│ │ Phụ tùng: [ACQUY_NEW - Ắc Quy GS N70 Mới ▼]       │ │
+│ │ Số lượng: [20]                                     │ │
+│ │ Nhà cung cấp: [NCC Ắc Quy Miền Nam]               │ │
+│ │ Số hóa đơn: [HD-2025-001]                         │ │
+│ │ Giá vốn đơn vị: [1,480,000 VNĐ] (giá mới)        │ │
+│ │ Giá bán đơn vị: [1,650,000 VNĐ]                   │ │
+│ │ Ngày giao dịch: [15/01/2025 10:00]                │ │
+│ │ Ghi chú: [Nhập kho - Ắc Quy GS N70 Mới]           │ │
+│ │ Có hóa đơn: [✅ Có]                               │ │
+│ └─────────────────────────────────────────────────────┘ │
+│                                                         │
+│        [ HỦY ]                    [ LƯU ]               │
+└─────────────────────────────────────────────────────────┘
+```
+
+4. **Click:** `Lưu`
+
+**✅ Kết quả:**
+- Tạo `StockTransaction` (Type = NhapKho)
+- `Parts.QuantityInStock` tự động cập nhật: `10 → 30`
+- Hệ thống tự động tính giá trung bình
+- Tổng giá trị nhập kho tự động tính
+
+#### **Tình huống 3: Nhập hàng từ Excel**
+
+**Khi nào:** Khi có nhiều sản phẩm cần nhập cùng lúc
+
+1. **Vào menu:** `Quản Lý Kho` → `Quản Lý Tồn Kho`
+2. **Click nút:** `Tải Template` để lấy file mẫu
+3. **Điền dữ liệu vào Excel:**
+
+```
+Mã Hiệu    | Tên VTTH              | Đơn Vị | Tồn Đầu Kỳ | Đơn Giá  | Ghi Chú
+ACQUY_NEW  | Ắc Quy GS N70 Mới    | CÁI    | 10         | 1500000  | Tồn đầu kỳ
+LOTP_NEW   | Lốp Michelin 205/55  | Chiếc  | 20         | 1200000  | Tồn đầu kỳ
+```
+
+4. **Click nút:** `Import Excel`
+5. **Chọn file Excel** và click `Tải lên`
+6. **Kiểm tra preview** và click `Xác nhận nhập`
+
+---
+
+### **📤 QUY TRÌNH XUẤT KHO**
+
+#### **Tình huống 1: Xuất kho cho đơn sửa chữa**
+
+**Cách 1: Từ đơn sửa chữa (Tự động)**
+1. **Vào menu:** `Quản Lý Đơn Hàng` → `Quản Lý Lệnh Sửa Chữa`
+2. **Mở đơn sửa chữa** cần thêm phụ tùng
+3. **Click tab:** `Phụ Tùng`
+4. **Click nút:** `Thêm Phụ Tùng`
+5. **Điền thông tin:**
+   - **Phụ tùng**: Chọn từ danh sách
+   - **Số lượng**: `1`
+   - **Giá bán**: Tự động điền từ giá bán của sản phẩm
+6. **Click:** `Lưu`
+7. **Hệ thống tự động:**
+   - Tạo giao dịch xuất kho
+   - Cập nhật số lượng tồn kho
+   - Gắn với đơn sửa chữa
+
+**Cách 2: Xuất kho thủ công**
+1. **Vào menu:** `Quản Lý Kho` → `Quản Lý Tồn Kho`
+2. **Click nút:** `+ Thêm Giao Dịch Mới`
+3. **Điền thông tin:**
+
+```
+┌─────────────────────────────────────────────────────────┐
+│              XUẤT KHO THỦ CÔNG                         │
+├─────────────────────────────────────────────────────────┤
+│ ┌─────────────────────────────────────────────────────┐ │
+│ │ Loại giao dịch: [Xuất kho ▼]                       │ │
+│ │ Phụ tùng: [ACQUY_NEW - Ắc Quy GS N70 Mới ▼]       │ │
+│ │ Số lượng: [5]                                      │ │
+│ │ Lý do xuất: [Sửa chữa ▼]                          │ │
+│ │ Đơn hàng liên quan: [SO-2025-001] (tùy chọn)      │ │
+│ │ Ngày giao dịch: [20/01/2025 14:00]                │ │
+│ │ Ghi chú: [Xuất kho - Ắc Quy GS N70 Mới cho đơn...]│ │
+│ └─────────────────────────────────────────────────────┘ │
+│                                                         │
+│        [ HỦY ]                    [ LƯU ]               │
+└─────────────────────────────────────────────────────────┘
+```
+
+4. **Click:** `Lưu`
+
+#### **Tình huống 2: Xuất kho bán lẻ**
+
+1. **Vào menu:** `Quản Lý Kho` → `Quản Lý Tồn Kho`
+2. **Click nút:** `+ Thêm Giao Dịch Mới`
+3. **Điền thông tin:**
+   - **Loại giao dịch**: `Xuất kho`
+   - **Phụ tùng**: Chọn sản phẩm
+   - **Số lượng**: `2`
+   - **Lý do xuất**: `Bán lẻ`
+   - **Khách hàng**: `Nguyễn Văn A` (tùy chọn)
+   - **Ngày giao dịch**: `22/01/2025 09:00`
+   - **Ghi chú**: `Xuất kho bán lẻ - Ắc Quy GS N70 Mới`
+4. **Click:** `Lưu`
+
+---
+
+### **📊 THEO DÕI TỒN KHO**
+
+#### **Xem tồn kho hiện tại**
+
+1. **Vào menu:** `Quản Lý Kho` → `Quản Lý Phụ Tùng`
+2. **Xem bảng danh sách** với các cột:
+   - **Mã phụ tùng**
+   - **Tên phụ tùng**
+   - **Tồn cuối kỳ**: Số lượng hiện có
+   - **Tồn tối thiểu**: Mức cảnh báo
+   - **Trạng thái**: 🟢 Đủ hàng / 🔴 Sắp hết / ❌ Hết hàng
+
+#### **Xem lịch sử giao dịch**
+
+1. **Vào menu:** `Quản Lý Kho` → `Quản Lý Tồn Kho`
+2. **Xem bảng giao dịch** với các cột:
+   - **Mã giao dịch**: `ST001`, `ST002`...
+   - **Phụ tùng**: Tên sản phẩm
+   - **Loại giao dịch**: 
+     - 🔵 `Tồn đầu kỳ`
+     - 🟢 `Nhập kho`
+     - 🔴 `Xuất kho`
+   - **Số lượng**: Số lượng giao dịch
+   - **Tồn trước**: Tồn kho trước giao dịch
+   - **Tồn sau**: Tồn kho sau giao dịch
+   - **Đơn giá**: Giá đơn vị
+   - **Thành tiền**: Tổng giá trị
+   - **Ngày giao dịch**: Thời gian thực hiện
+   - **Ghi chú**: Mô tả giao dịch
+
+#### **Tìm kiếm giao dịch**
+
+**Tìm theo:**
+- **Mã giao dịch**: `ST001`
+- **Tên phụ tùng**: `Ắc Quy`
+- **Loại giao dịch**: `Nhập kho`
+- **Ngày**: Từ `01/01/2025` đến `31/01/2025`
+
+**Cách sử dụng:**
+1. **Nhập từ khóa** vào ô tìm kiếm
+2. **Chọn bộ lọc** (nếu có)
+3. **Click:** `Tìm kiếm`
+
+---
+
+### **📈 BÁO CÁO VÀ THỐNG KÊ**
+
+#### **Báo cáo tồn kho**
+
+1. **Vào menu:** `Quản Lý Kho` → `Báo Cáo Tồn Kho`
+2. **Chọn thời gian**: Tháng, quý, năm
+3. **Chọn danh mục**: Tất cả hoặc danh mục cụ thể
+4. **Click:** `Tạo báo cáo`
+
+**Nội dung báo cáo:**
+- **Tổng số sản phẩm**: 150 loại
+- **Tổng giá trị tồn kho**: 2,500,000,000 VNĐ
+- **Sản phẩm sắp hết**: 15 loại
+- **Sản phẩm hết hàng**: 3 loại
+- **Top 10 sản phẩm** có giá trị cao nhất
+
+#### **Báo cáo nhập xuất**
+
+1. **Vào menu:** `Quản Lý Kho` → `Báo Cáo Nhập Xuất`
+2. **Chọn loại báo cáo:**
+   - **Báo cáo nhập kho**: Thống kê hàng nhập
+   - **Báo cáo xuất kho**: Thống kê hàng xuất
+   - **Báo cáo tổng hợp**: Cả nhập và xuất
+3. **Chọn thời gian** và **Click:** `Tạo báo cáo`
+
+**Nội dung báo cáo:**
+- **Tổng giá trị nhập**: 5,000,000 VNĐ
+- **Tổng giá trị xuất**: 3,500,000 VNĐ
+- **Số lượng giao dịch**: 25 lần
+- **Nhà cung cấp lớn nhất**: NCC ABC
+- **Sản phẩm xuất nhiều nhất**: Ắc quy GS
+
+---
+
+### **❓ CÂU HỎI THƯỜNG GẶP**
+
+#### **Q1: Tại sao không thể sửa trực tiếp số lượng tồn kho?**
+
+**A:** Để đảm bảo tính minh bạch và có thể kiểm tra lịch sử. Mọi thay đổi tồn kho phải được ghi nhận qua giao dịch để:
+- Có lịch sử rõ ràng
+- Dễ dàng kiểm tra và đối chiếu
+- Tránh sai sót và gian lận
+
+#### **Q2: Khi nào nên sử dụng "Tồn đầu kỳ"?**
+
+**A:** Sử dụng khi:
+- Bắt đầu sử dụng hệ thống
+- Có sẵn hàng trong kho từ trước
+- Kiểm kê và ghi nhận lại tồn kho
+
+#### **Q3: Làm sao biết sản phẩm nào sắp hết hàng?**
+
+**A:** Hệ thống sẽ:
+- **Hiển thị cảnh báo** màu đỏ khi `Tồn kho < Tồn tối thiểu`
+- **Gửi thông báo** email (nếu cấu hình)
+- **Hiển thị trong báo cáo** tồn kho
+
+#### **Q4: Có thể xóa giao dịch kho không?**
+
+**A:** **Không được xóa** giao dịch đã lưu. Nếu sai sót:
+- **Tạo giao dịch điều chỉnh** để sửa lại
+- **Liên hệ quản trị viên** để hỗ trợ
+
+#### **Q5: Làm sao tính giá trung bình khi nhập hàng nhiều lần?**
+
+**A:** Hệ thống tự động tính theo công thức:
+```
+Giá trung bình = (Giá cũ × Số lượng cũ + Giá mới × Số lượng mới) ÷ Tổng số lượng
+```
+
+**Ví dụ:**
+- Lần 1: 10 cái × 1,500,000 = 15,000,000
+- Lần 2: 20 cái × 1,480,000 = 29,600,000
+- **Giá trung bình**: (15,000,000 + 29,600,000) ÷ 30 = **1,486,667 VNĐ**
+
+#### **Q6: Có thể in báo cáo tồn kho không?**
+
+**A:** Có, hệ thống hỗ trợ:
+- **In trực tiếp** từ màn hình
+- **Xuất Excel** để chỉnh sửa
+- **Xuất PDF** để gửi email
+
+#### **Q7: Làm sao phân quyền cho nhân viên?**
+
+**A:** Quản trị viên có thể cấp quyền:
+- **Xem tồn kho**: Chỉ xem, không sửa
+- **Nhập kho**: Được tạo giao dịch nhập
+- **Xuất kho**: Được tạo giao dịch xuất
+- **Quản lý đầy đủ**: Tất cả quyền
 
 ---
 

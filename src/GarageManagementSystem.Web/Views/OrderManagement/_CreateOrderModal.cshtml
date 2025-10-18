@@ -13,22 +13,31 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label for="createCustomerId">Khách Hàng <span class="text-danger">*</span></label>
-                                <select class="form-control form-control-sm select2" id="createCustomerId" name="CustomerId" required style="width: 100%;">
-                                    <option value="">-- Chọn Khách Hàng --</option>
+                                <label for="createServiceQuotationId">Báo Giá <span class="text-danger">*</span></label>
+                                <select class="form-control form-control-sm select2" id="createServiceQuotationId" name="ServiceQuotationId" required style="width: 100%;">
+                                    <option value="">-- Chọn Báo Giá --</option>
                                 </select>
+                                <small class="form-text text-muted">Chỉ hiển thị báo giá đã được phê duyệt</small>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label for="createVehicleId">Xe <span class="text-danger">*</span></label>
-                                <select class="form-control form-control-sm select2" id="createVehicleId" name="VehicleId" required style="width: 100%;">
-                                    <option value="">-- Chọn Xe --</option>
+                                <label for="createCustomerId">Khách Hàng</label>
+                                <select class="form-control form-control-sm select2" id="createCustomerId" name="CustomerId" style="width: 100%;" disabled>
+                                    <option value="">Sẽ tự động chọn theo báo giá</option>
                                 </select>
                             </div>
                         </div>
                     </div>
                     <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createVehicleId">Xe</label>
+                                <select class="form-control form-control-sm select2" id="createVehicleId" name="VehicleId" style="width: 100%;" disabled>
+                                    <option value="">Sẽ tự động chọn theo báo giá</option>
+                                </select>
+                            </div>
+                        </div>
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label for="createOrderDate">Ngày Đơn Hàng <span class="text-danger">*</span></label>

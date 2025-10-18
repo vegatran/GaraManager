@@ -1,0 +1,197 @@
+<!-- Edit Reception Modal -->
+<div class="modal fade" id="editReceptionModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">Chỉnh Sửa Phiếu Tiếp Đón</h4>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form id="editReceptionForm">
+                <input type="hidden" id="editReceptionId" />
+                <div class="modal-body">
+                    <div class="row">
+                        <!-- Basic Information -->
+                        <div class="col-md-6">
+                            <div class="card card-primary">
+                                <div class="card-header">
+                                    <h3 class="card-title">Thông Tin Cơ Bản</h3>
+                                </div>
+                                <div class="card-body">
+                                    <div class="form-group">
+                                        <label for="editReceptionNumber">Số Phiếu</label>
+                                        <input type="text" class="form-control form-control-sm" id="editReceptionNumber" readonly />
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="editCustomerSelect">Khách Hàng <span class="text-danger">*</span></label>
+                                        <select class="form-control form-control-sm" id="editCustomerSelect" disabled>
+                                            <option value="">-- Chọn khách hàng --</option>
+                                        </select>
+                                        <small class="form-text text-muted">Không thể thay đổi khách hàng sau khi tạo phiếu tiếp đón</small>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="editVehicleSelect">Xe <span class="text-danger">*</span></label>
+                                        <select class="form-control form-control-sm" id="editVehicleSelect" disabled>
+                                            <option value="">-- Chọn xe --</option>
+                                        </select>
+                                        <small class="form-text text-muted">Không thể thay đổi xe sau khi tạo phiếu tiếp đón</small>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="editServiceType">Loại Dịch Vụ <span class="text-danger">*</span></label>
+                                        <select class="form-control form-control-sm" id="editServiceType" required>
+                                            <option value="">-- Chọn loại dịch vụ --</option>
+                                            <option value="Repair">Sửa Chữa</option>
+                                            <option value="Maintenance">Bảo Dưỡng</option>
+                                            <option value="Warranty">Bảo Hành</option>
+                                            <option value="Bodywork">Sửa Chữa Thân Xe</option>
+                                            <option value="Other">Khác</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="editPriority">Mức Độ Ưu Tiên <span class="text-danger">*</span></label>
+                                        <select class="form-control form-control-sm" id="editPriority" required>
+                                            <option value="Low">Thấp</option>
+                                            <option value="Normal">Bình Thường</option>
+                                            <option value="High">Cao</option>
+                                            <option value="Urgent">Khẩn Cấp</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Assignment Information -->
+                        <div class="col-md-6">
+                            <div class="card card-info">
+                                <div class="card-header">
+                                    <h3 class="card-title">Thông Tin Phân Công</h3>
+                                </div>
+                                <div class="card-body">
+                                    <div class="form-group">
+                                        <label for="editTechnicianSelect">Kỹ Thuật Viên Phụ Trách</label>
+                                        <select class="form-control form-control-sm" id="editTechnicianSelect">
+                                            <option value="">-- Chọn kỹ thuật viên --</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="editInspectionStartDate">Ngày Hẹn Kiểm Tra</label>
+                                        <input type="datetime-local" class="form-control form-control-sm" id="editInspectionStartDate" />
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="editInspectionCompletedDate">Ngày Dự Kiến Hoàn Thành</label>
+                                        <input type="date" class="form-control form-control-sm" id="editInspectionCompletedDate" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Customer Information -->
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="card card-warning">
+                                <div class="card-header">
+                                    <h3 class="card-title">Thông Tin Khách Hàng</h3>
+                                </div>
+                                <div class="card-body">
+                                    <div class="form-group">
+                                        <label for="editCustomerRequest">Yêu Cầu Của Khách Hàng</label>
+                                        <textarea class="form-control form-control-sm" id="editCustomerRequest" rows="3" 
+                                            placeholder="Mô tả yêu cầu của khách hàng..."></textarea>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="editCustomerComplaints">Mô Tả Lỗi/Tình Trạng</label>
+                                        <textarea class="form-control form-control-sm" id="editCustomerComplaints" rows="3" 
+                                            placeholder="Mô tả lỗi hoặc tình trạng xe..."></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Insurance Information -->
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="card card-success">
+                                <div class="card-header">
+                                    <h3 class="card-title">Thông Tin Bảo Hiểm (Nếu có)</h3>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="editInsuranceCompany">Công Ty Bảo Hiểm</label>
+                                                <input type="text" class="form-control form-control-sm" id="editInsuranceCompany" 
+                                                    placeholder="Tên công ty bảo hiểm" />
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="editInsurancePolicy">Số Hợp Đồng</label>
+                                                <input type="text" class="form-control form-control-sm" id="editInsurancePolicy" 
+                                                    placeholder="Số hợp đồng bảo hiểm" />
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="editInsuranceClaimDate">Ngày Báo Hiểm</label>
+                                                <input type="date" class="form-control form-control-sm" id="editInsuranceClaimDate" disabled />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Emergency Contact -->
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="card card-danger">
+                                <div class="card-header">
+                                    <h3 class="card-title">Liên Hệ Khẩn Cấp (Nếu cần)</h3>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label for="editEmergencyContact">Số Điện Thoại</label>
+                                                <input type="tel" class="form-control form-control-sm" id="editEmergencyContact" 
+                                                    placeholder="Số điện thoại liên hệ khẩn cấp" />
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label for="editEmergencyContactName">Tên Người Liên Hệ</label>
+                                                <input type="text" class="form-control form-control-sm" id="editEmergencyContactName" 
+                                                    placeholder="Tên người liên hệ khẩn cấp" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Notes -->
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="form-group">
+                                <label for="editReceptionNotes">Ghi Chú Của Nhân Viên Tiếp Đón</label>
+                                <textarea class="form-control form-control-sm" id="editReceptionNotes" rows="3" 
+                                    placeholder="Ghi chú thêm của nhân viên tiếp đón..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <i class="fas fa-save"></i> Cập Nhật
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

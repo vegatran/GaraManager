@@ -1,0 +1,180 @@
+<!-- View Reception Modal -->
+<div class="modal fade" id="viewReceptionModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">Chi Tiết Phiếu Tiếp Đón</h4>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <!-- Basic Information -->
+                    <div class="col-md-6">
+                        <div class="card card-primary">
+                            <div class="card-header">
+                                <h3 class="card-title">Thông Tin Cơ Bản</h3>
+                            </div>
+                            <div class="card-body">
+                                <table class="table table-borderless">
+                                    <tr>
+                                        <td><strong>Số Phiếu:</strong></td>
+                                        <td id="viewReceptionNumber">-</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Khách Hàng:</strong></td>
+                                        <td id="viewCustomerName">-</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Xe:</strong></td>
+                                        <td id="viewVehiclePlate">-</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Thông Tin Xe:</strong></td>
+                                        <td id="viewVehicleInfo">-</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Ngày Tiếp Đón:</strong></td>
+                                        <td id="viewReceptionDate">-</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Loại Dịch Vụ:</strong></td>
+                                        <td id="viewServiceType">-</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Mức Độ Ưu Tiên:</strong></td>
+                                        <td id="viewPriority">-</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Trạng Thái:</strong></td>
+                                        <td id="viewStatus">-</td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Assignment Information -->
+                    <div class="col-md-6">
+                        <div class="card card-info">
+                            <div class="card-header">
+                                <h3 class="card-title">Thông Tin Phân Công</h3>
+                            </div>
+                            <div class="card-body">
+                                <table class="table table-borderless">
+                                    <tr>
+                                        <td><strong>Kỹ Thuật Viên:</strong></td>
+                                        <td id="viewTechnicianName">-</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Ngày Hẹn Kiểm Tra:</strong></td>
+                                        <td id="viewInspectionStartDate">-</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Ngày Dự Kiến Hoàn Thành:</strong></td>
+                                        <td id="viewInspectionCompletedDate">-</td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Customer Information -->
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card card-warning">
+                            <div class="card-header">
+                                <h3 class="card-title">Thông Tin Khách Hàng</h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-group">
+                                    <label><strong>Yêu Cầu Của Khách Hàng:</strong></label>
+                                    <div id="viewCustomerRequest" class="form-control-plaintext border rounded p-2 bg-light">-</div>
+                                </div>
+                                <div class="form-group">
+                                    <label><strong>Mô Tả Lỗi/Tình Trạng:</strong></label>
+                                    <div id="viewCustomerComplaints" class="form-control-plaintext border rounded p-2 bg-light">-</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Insurance Information -->
+                <div class="row" id="viewInsuranceSection" style="display: none;">
+                    <div class="col-12">
+                        <div class="card card-success">
+                            <div class="card-header">
+                                <h3 class="card-title">Thông Tin Bảo Hiểm</h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label><strong>Công Ty Bảo Hiểm:</strong></label>
+                                            <div id="viewInsuranceCompany" class="form-control-plaintext border rounded p-2 bg-light">-</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label><strong>Số Hợp Đồng:</strong></label>
+                                            <div id="viewInsurancePolicy" class="form-control-plaintext border rounded p-2 bg-light">-</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label><strong>Ngày Báo Hiểm:</strong></label>
+                                            <div id="viewInsuranceClaimDate" class="form-control-plaintext border rounded p-2 bg-light">-</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Emergency Contact -->
+                <div class="row" id="viewEmergencySection" style="display: none;">
+                    <div class="col-12">
+                        <div class="card card-danger">
+                            <div class="card-header">
+                                <h3 class="card-title">Liên Hệ Khẩn Cấp</h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label><strong>Số Điện Thoại:</strong></label>
+                                            <div id="viewEmergencyContact" class="form-control-plaintext border rounded p-2 bg-light">-</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label><strong>Tên Người Liên Hệ:</strong></label>
+                                            <div id="viewEmergencyContactName" class="form-control-plaintext border rounded p-2 bg-light">-</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Notes -->
+                <div class="row">
+                    <div class="col-12">
+                        <div class="form-group">
+                            <label><strong>Ghi Chú Của Nhân Viên Tiếp Đón:</strong></label>
+                            <div id="viewReceptionNotes" class="form-control-plaintext border rounded p-2 bg-light">-</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>

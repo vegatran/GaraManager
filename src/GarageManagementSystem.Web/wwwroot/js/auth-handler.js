@@ -74,40 +74,21 @@ window.AuthHandler = {
      * Redirect to login page
      */
     redirectToLogin: function() {
-        var self = this;
-        
-        console.log('🔄 Starting redirect to login...');
+        console.log('🔄 Redirecting directly to login page...');
         
         // Clear local storage/session storage if needed
         localStorage.clear();
         sessionStorage.clear();
         
-        // Load config if not available
-        this.loadConfig().then(function() {
-            console.log('🔧 Config loaded:', self._config);
-            
-            if (!self._config || !self._config.IdentityServerAuthority) {
-                // Fallback to local login page
-                console.log('⚠️ No config available, using fallback login');
-                window.location.href = '/Home/Login';
-                return;
-            }
-            
-            // Use OpenID Connect challenge flow instead of direct redirect
-            // This will trigger the proper authentication flow
-            var currentUrl = encodeURIComponent(window.location.href);
-            var challengeUrl = '/Home/Login?returnUrl=' + currentUrl;
-            
-            console.log('🔗 Redirecting to challenge URL:', challengeUrl);
-            console.log('🔗 Current URL:', window.location.href);
-            console.log('🔗 Encoded return URL:', currentUrl);
-            
-            window.location.href = challengeUrl;
-        }).catch(function(error) {
-            console.error('❌ Error loading config for redirect:', error);
-            console.log('🔄 Using fallback redirect');
-            window.location.href = '/Home/Login';
-        });
+        // Redirect directly to login page with current URL as returnUrl
+        var currentUrl = encodeURIComponent(window.location.href);
+        var loginUrl = '/Home/Login?returnUrl=' + currentUrl;
+        
+        console.log('🔗 Redirecting to login URL:', loginUrl);
+        console.log('🔗 Current URL:', window.location.href);
+        console.log('🔗 Encoded return URL:', currentUrl);
+        
+        window.location.href = loginUrl;
     },
 
     /**

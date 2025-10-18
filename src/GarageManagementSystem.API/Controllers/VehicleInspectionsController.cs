@@ -1,4 +1,5 @@
 using AutoMapper;
+using GarageManagementSystem.Core.Enums;
 using GarageManagementSystem.Core.Interfaces;
 using GarageManagementSystem.Shared.DTOs;
 using GarageManagementSystem.Shared.Models;
@@ -33,7 +34,7 @@ namespace GarageManagementSystem.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ApiResponse<List<VehicleInspectionDto>>.ErrorResult("Error retrieving inspections", ex.Message));
+                return StatusCode(500, ApiResponse<List<VehicleInspectionDto>>.ErrorResult("Lỗi khi lấy danh sách kiểm tra xe", ex.Message));
             }
         }
 
@@ -45,7 +46,7 @@ namespace GarageManagementSystem.API.Controllers
                 var inspection = await _unitOfWork.VehicleInspections.GetByIdWithDetailsAsync(id);
                 if (inspection == null)
                 {
-                    return NotFound(ApiResponse<VehicleInspectionDto>.ErrorResult("Inspection not found"));
+                    return NotFound(ApiResponse<VehicleInspectionDto>.ErrorResult("Không tìm thấy kiểm tra xe"));
                 }
 
                 var inspectionDto = MapToDto(inspection);
@@ -53,7 +54,7 @@ namespace GarageManagementSystem.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ApiResponse<VehicleInspectionDto>.ErrorResult("Error retrieving inspection", ex.Message));
+                return StatusCode(500, ApiResponse<VehicleInspectionDto>.ErrorResult("Lỗi khi lấy thông tin kiểm tra xe", ex.Message));
             }
         }
 
@@ -69,7 +70,7 @@ namespace GarageManagementSystem.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ApiResponse<List<VehicleInspectionDto>>.ErrorResult("Error retrieving inspections", ex.Message));
+                return StatusCode(500, ApiResponse<List<VehicleInspectionDto>>.ErrorResult("Lỗi khi lấy danh sách kiểm tra xe", ex.Message));
             }
         }
 
@@ -85,7 +86,7 @@ namespace GarageManagementSystem.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ApiResponse<List<VehicleInspectionDto>>.ErrorResult("Error retrieving inspections", ex.Message));
+                return StatusCode(500, ApiResponse<List<VehicleInspectionDto>>.ErrorResult("Lỗi khi lấy danh sách kiểm tra xe", ex.Message));
             }
         }
 
@@ -101,7 +102,7 @@ namespace GarageManagementSystem.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ApiResponse<List<VehicleInspectionDto>>.ErrorResult("Error retrieving inspections", ex.Message));
+                return StatusCode(500, ApiResponse<List<VehicleInspectionDto>>.ErrorResult("Lỗi khi lấy danh sách kiểm tra xe", ex.Message));
             }
         }
 
@@ -121,7 +122,7 @@ namespace GarageManagementSystem.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ApiResponse<VehicleInspectionDto>.ErrorResult("Error retrieving inspection", ex.Message));
+                return StatusCode(500, ApiResponse<VehicleInspectionDto>.ErrorResult("Lỗi khi lấy thông tin kiểm tra xe", ex.Message));
             }
         }
 
@@ -133,20 +134,44 @@ namespace GarageManagementSystem.API.Controllers
                 if (!ModelState.IsValid)
                 {
                     var errors = ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage)).ToList();
-                    return BadRequest(ApiResponse<VehicleInspectionDto>.ErrorResult("Invalid data", errors));
+                    return BadRequest(ApiResponse<VehicleInspectionDto>.ErrorResult("Dữ liệu không hợp lệ", errors));
+                }
+
+                // Business Rule: Kiểm tra xem có CustomerReceptionId không
+                if (createDto.CustomerReceptionId.HasValue)
+                {
+                    var reception = await _unitOfWork.CustomerReceptions.GetByIdAsync(createDto.CustomerReceptionId.Value);
+                    if (reception == null)
+                    {
+                        return BadRequest(ApiResponse<VehicleInspectionDto>.ErrorResult("Không tìm thấy phiếu tiếp đón"));
+                    }
+
+                    // Business Rule: Chỉ cho phép tạo kiểm tra từ CustomerReception đã được phân công kỹ thuật viên
+                    if (reception.Status != ReceptionStatus.Assigned && reception.Status != ReceptionStatus.InProgress && reception.Status != ReceptionStatus.Pending)
+                    {
+                        return BadRequest(ApiResponse<VehicleInspectionDto>.ErrorResult(
+                            $"Không thể tạo kiểm tra xe. Phiếu tiếp đón phải ở trạng thái 'Chờ Kiểm Tra', 'Đã Phân Công' hoặc 'Đang Kiểm Tra'. Trạng thái hiện tại: {reception.Status}"));
+                    }
+
+                    // Business Rule: Kiểm tra xem đã có kiểm tra cho CustomerReception này chưa
+                    var existingInspection = await _unitOfWork.VehicleInspections.GetByCustomerReceptionIdAsync(createDto.CustomerReceptionId.Value);
+                    if (existingInspection != null)
+                    {
+                        return BadRequest(ApiResponse<VehicleInspectionDto>.ErrorResult("Đã tồn tại kiểm tra xe cho phiếu tiếp đón này"));
+                    }
                 }
 
                 // Validate vehicle and customer exist
                 var vehicle = await _unitOfWork.Vehicles.GetByIdAsync(createDto.VehicleId);
                 if (vehicle == null)
                 {
-                    return BadRequest(ApiResponse<VehicleInspectionDto>.ErrorResult("Vehicle not found"));
+                    return BadRequest(ApiResponse<VehicleInspectionDto>.ErrorResult("Không tìm thấy xe"));
                 }
 
                 var customer = await _unitOfWork.Customers.GetByIdAsync(createDto.CustomerId);
                 if (customer == null)
                 {
-                    return BadRequest(ApiResponse<VehicleInspectionDto>.ErrorResult("Customer not found"));
+                    return BadRequest(ApiResponse<VehicleInspectionDto>.ErrorResult("Không tìm thấy khách hàng"));
                 }
 
                 // Tự động đặt InspectionType dựa trên VehicleType nếu không được chỉ định
@@ -198,16 +223,29 @@ namespace GarageManagementSystem.API.Controllers
                     throw;
                 }
 
+                // Business Rule: Cập nhật trạng thái CustomerReception thành "InProgress" nếu có
+                if (createDto.CustomerReceptionId.HasValue)
+                {
+                    var reception = await _unitOfWork.CustomerReceptions.GetByIdAsync(createDto.CustomerReceptionId.Value);
+                    if (reception != null)
+                    {
+                        reception.Status = ReceptionStatus.InProgress;
+                        reception.UpdatedAt = DateTime.Now;
+                        await _unitOfWork.CustomerReceptions.UpdateAsync(reception);
+                        await _unitOfWork.SaveChangesAsync();
+                    }
+                }
+
                 // Reload with details
                 inspection = await _unitOfWork.VehicleInspections.GetByIdWithDetailsAsync(inspection.Id);
                 var inspectionDto = MapToDto(inspection!);
 
                 return CreatedAtAction(nameof(GetInspection), new { id = inspection.Id }, 
-                    ApiResponse<VehicleInspectionDto>.SuccessResult(inspectionDto, "Inspection created successfully"));
+                    ApiResponse<VehicleInspectionDto>.SuccessResult(inspectionDto, "Tạo kiểm tra xe thành công"));
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ApiResponse<VehicleInspectionDto>.ErrorResult("Error creating inspection", ex.Message));
+                return StatusCode(500, ApiResponse<VehicleInspectionDto>.ErrorResult("Lỗi khi tạo kiểm tra xe", ex.Message));
             }
         }
 
@@ -224,13 +262,13 @@ namespace GarageManagementSystem.API.Controllers
                 if (!ModelState.IsValid)
                 {
                     var errors = ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage)).ToList();
-                    return BadRequest(ApiResponse<VehicleInspectionDto>.ErrorResult("Invalid data", errors));
+                    return BadRequest(ApiResponse<VehicleInspectionDto>.ErrorResult("Dữ liệu không hợp lệ", errors));
                 }
 
                 var inspection = await _unitOfWork.VehicleInspections.GetByIdAsync(id);
                 if (inspection == null)
                 {
-                    return NotFound(ApiResponse<VehicleInspectionDto>.ErrorResult("Inspection not found"));
+                    return NotFound(ApiResponse<VehicleInspectionDto>.ErrorResult("Không tìm thấy kiểm tra xe"));
                 }
 
                 // Update inspection properties
@@ -321,7 +359,7 @@ namespace GarageManagementSystem.API.Controllers
                 var inspection = await _unitOfWork.VehicleInspections.GetByIdAsync(id);
                 if (inspection == null)
                 {
-                    return NotFound(ApiResponse<VehicleInspectionDto>.ErrorResult("Inspection not found"));
+                    return NotFound(ApiResponse<VehicleInspectionDto>.ErrorResult("Không tìm thấy kiểm tra xe"));
                 }
 
                 inspection.Status = "Completed";
@@ -334,6 +372,20 @@ namespace GarageManagementSystem.API.Controllers
                 {
                     await _unitOfWork.VehicleInspections.UpdateAsync(inspection);
                     await _unitOfWork.SaveChangesAsync();
+
+                    // Business Rule: Cập nhật trạng thái CustomerReception thành "Completed" nếu có
+                    if (inspection.CustomerReceptionId.HasValue)
+                    {
+                        var reception = await _unitOfWork.CustomerReceptions.GetByIdAsync(inspection.CustomerReceptionId.Value);
+                        if (reception != null)
+                        {
+                            reception.Status = ReceptionStatus.Completed;
+                            reception.InspectionCompletedDate = DateTime.Now;
+                            reception.UpdatedAt = DateTime.Now;
+                            await _unitOfWork.CustomerReceptions.UpdateAsync(reception);
+                            await _unitOfWork.SaveChangesAsync();
+                        }
+                    }
 
                     // Commit transaction nếu thành công
                     await _unitOfWork.CommitTransactionAsync();

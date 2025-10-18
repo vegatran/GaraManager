@@ -148,7 +148,7 @@ window.PaymentManagement = {
                     $('#refundReasonRow').hide();
                     window.PaymentManagement.paymentTable.ajax.reload();
                 } else {
-                    GarageApp.showError(response.errorMessage || 'Không thể ghi nhận thanh toán');
+                    GarageApp.showError(GarageApp.parseErrorMessage(response) || 'Không thể ghi nhận thanh toán');
                 }
             },
             error: function(xhr) {
@@ -233,7 +233,7 @@ window.PaymentManagement = {
                             GarageApp.showSuccess('Xóa giao dịch thanh toán thành công');
                             window.PaymentManagement.paymentTable.ajax.reload();
                         } else {
-                            GarageApp.showError(response.errorMessage || 'Không thể xóa giao dịch thanh toán');
+                            GarageApp.showError(GarageApp.parseErrorMessage(response) || 'Không thể xóa giao dịch thanh toán');
                         }
                     },
                     error: function(xhr) {

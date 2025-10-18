@@ -210,7 +210,7 @@ window.DataTablesVietnamese = {
             responsive: true,
             autoWidth: false,
             processing: true,
-            dom: 'Bfrtip',
+            dom: 'Brtip',  // Ẩn search input (f)
             buttons: [
                 {
                     extend: 'copy',
@@ -268,7 +268,7 @@ $(document).ready(function() {
         processing: true,
         pageLength: 10,
         lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Tất cả"]],
-        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>' +
+        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6">>' +
              '<"row"<"col-sm-12"tr>>' +
              '<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>'
     });

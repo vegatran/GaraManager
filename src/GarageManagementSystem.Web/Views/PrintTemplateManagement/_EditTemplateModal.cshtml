@@ -1,0 +1,140 @@
+<!-- Modal Edit Template -->
+<div class="modal fade" id="editTemplateModal" tabindex="-1" role="dialog" aria-labelledby="editTemplateModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editTemplateModalLabel">Chỉnh Sửa Mẫu In</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form id="editTemplateForm">
+                <div class="modal-body">
+                    <input type="hidden" id="editTemplateId" name="Id" />
+                    
+                    <!-- Basic Information -->
+                    <div class="card card-outline card-primary">
+                        <div class="card-header">
+                            <h3 class="card-title">Thông Tin Cơ Bản</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="editTemplateName">Tên Mẫu <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control form-control-sm" id="editTemplateName" name="TemplateName" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="editTemplateType">Loại Mẫu <span class="text-danger">*</span></label>
+                                        <select class="form-control form-control-sm" id="editTemplateType" name="TemplateType" required>
+                                            <option value="Quotation">Báo Giá</option>
+                                            <option value="Invoice">Hóa Đơn</option>
+                                            <option value="Receipt">Phiếu Thu</option>
+                                            <option value="Order">Đơn Hàng</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="editDescription">Mô Tả</label>
+                                <textarea class="form-control form-control-sm" id="editDescription" name="Description" rows="3"></textarea>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <div class="custom-control custom-checkbox">
+                                            <input type="checkbox" class="custom-control-input" id="editIsActive" name="IsActive">
+                                            <label class="custom-control-label" for="editIsActive">Kích Hoạt</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <div class="custom-control custom-checkbox">
+                                            <input type="checkbox" class="custom-control-input" id="editIsDefault" name="IsDefault">
+                                            <label class="custom-control-label" for="editIsDefault">Mặc Định</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Company Information -->
+                    <div class="card card-outline card-info">
+                        <div class="card-header">
+                            <h3 class="card-title">Thông Tin Công Ty</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="editCompanyName">Tên Công Ty</label>
+                                        <input type="text" class="form-control form-control-sm" id="editCompanyName" name="CompanyName">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="editTaxCode">Mã Số Thuế</label>
+                                        <input type="text" class="form-control form-control-sm" id="editTaxCode" name="TaxCode">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="editCompanyAddress">Địa Chỉ</label>
+                                <textarea class="form-control form-control-sm" id="editCompanyAddress" name="CompanyAddress" rows="2"></textarea>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="editCompanyPhone">Điện Thoại</label>
+                                        <input type="text" class="form-control form-control-sm" id="editCompanyPhone" name="CompanyPhone">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="editCompanyEmail">Email</label>
+                                        <input type="email" class="form-control form-control-sm" id="editCompanyEmail" name="CompanyEmail">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="editCompanyWebsite">Website</label>
+                                        <input type="text" class="form-control form-control-sm" id="editCompanyWebsite" name="CompanyWebsite">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Template Content -->
+                    <div class="card card-outline card-success">
+                        <div class="card-header">
+                            <h3 class="card-title">Nội Dung Mẫu</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label for="editHeaderHtml">HTML Header</label>
+                                <textarea class="form-control form-control-sm" id="editHeaderHtml" name="HeaderHtml" rows="6" placeholder="HTML cho phần đầu trang"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="editFooterHtml">HTML Footer</label>
+                                <textarea class="form-control form-control-sm" id="editFooterHtml" name="FooterHtml" rows="4" placeholder="HTML cho phần cuối trang"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="editCustomCss">CSS Tùy Chỉnh</label>
+                                <textarea class="form-control form-control-sm" id="editCustomCss" name="CustomCss" rows="6" placeholder="CSS tùy chỉnh cho mẫu in"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Đóng</button>
+                    <button type="submit" class="btn btn-primary btn-sm">Cập Nhật</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

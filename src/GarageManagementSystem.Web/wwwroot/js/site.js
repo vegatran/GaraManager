@@ -118,6 +118,36 @@ window.GarageApp = {
     // Hide loading spinner
     hideLoading: function() {
         Swal.close();
+    },
+
+    // Parse error message from API response
+    parseErrorMessage: function(response) {
+        // Nếu có message trực tiếp, dùng nó
+        if (response.message && response.message.trim() !== '') {
+            return response.message;
+        }
+        
+        // Nếu có errorMessage, thử parse JSON bên trong
+        if (response.errorMessage) {
+            try {
+                // Tìm JSON trong errorMessage (sau "API Error: BadRequest - ")
+                const jsonMatch = response.errorMessage.match(/\{.*\}/);
+                if (jsonMatch) {
+                    const innerResponse = JSON.parse(jsonMatch[0]);
+                    if (innerResponse.message) {
+                        return innerResponse.message;
+                    }
+                }
+                // Nếu không parse được JSON, dùng errorMessage gốc
+                return response.errorMessage;
+            } catch (e) {
+                // Nếu parse lỗi, dùng errorMessage gốc
+                return response.errorMessage;
+            }
+        }
+        
+        // Fallback message
+        return 'Đã xảy ra lỗi không xác định';
     }
 };
 

@@ -15,6 +15,9 @@ namespace GarageManagementSystem.Core.Entities
         
         [StringLength(50)]
         public string ItemType { get; set; } = "Service"; // Part or Service
+        
+        [StringLength(50)]
+        public string ItemCategory { get; set; } = "Material"; // Material, Service, Labor
 
         [Required]
         [StringLength(200)]
@@ -56,7 +59,25 @@ namespace GarageManagementSystem.Core.Entities
 
         public bool IsApproved { get; set; } = false;
 
-        [StringLength(500)]
+        /// <summary>
+        /// Có hóa đơn hay không (chỉ áp dụng cho phụ tùng)
+        /// </summary>
+        public bool HasInvoice { get; set; } = false;
+
+        // Pricing Model Support
+        [StringLength(20)]
+        public string PricingModel { get; set; } = "Combined"; // "Combined", "Separated", "LaborOnly"
+        
+        public decimal MaterialCost { get; set; } = 0; // Chi phí vật liệu
+        
+        public decimal LaborCost { get; set; } = 0; // Chi phí công lao động
+        
+        public bool IsVATApplicable { get; set; } = true; // Có chịu VAT không
+        
+        [StringLength(1500)]
+        public string? PricingBreakdown { get; set; } // Chi tiết phân tích giá (JSON)
+
+        [StringLength(1500)]
         public string? Notes { get; set; }
 
         public int? DisplayOrder { get; set; }

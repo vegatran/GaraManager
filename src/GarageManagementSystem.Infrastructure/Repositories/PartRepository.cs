@@ -62,6 +62,16 @@ namespace GarageManagementSystem.Infrastructure.Repositories
                 await UpdateAsync(part);
             }
         }
+
+        /// <summary>
+        /// ✅ THÊM: Bulk load parts by IDs để tối ưu performance
+        /// </summary>
+        public async Task<IEnumerable<Part>> GetByIdsAsync(List<int> ids)
+        {
+            return await _dbSet
+                .Where(p => !p.IsDeleted && ids.Contains(p.Id))
+                .ToListAsync();
+        }
     }
 }
 

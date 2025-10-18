@@ -67,6 +67,9 @@ namespace GarageManagementSystem.Infrastructure.Data
         public DbSet<PurchaseOrder> PurchaseOrders { get; set; }
         public DbSet<PurchaseOrderItem> PurchaseOrderItems { get; set; }
         public DbSet<PartInventoryBatch> PartInventoryBatches { get; set; }
+        
+        // Print Templates
+        public DbSet<PrintTemplate> PrintTemplates { get; set; }
         public DbSet<PartBatchUsage> PartBatchUsages { get; set; }
         public DbSet<VehicleBrand> VehicleBrands { get; set; }
         public DbSet<VehicleModel> VehicleModels { get; set; }
@@ -75,10 +78,16 @@ namespace GarageManagementSystem.Infrastructure.Data
         public DbSet<FinancialTransaction> FinancialTransactions { get; set; }
         public DbSet<FinancialTransactionAttachment> FinancialTransactionAttachments { get; set; }
         public DbSet<PartSupplier> PartSuppliers { get; set; }
+        
+        // Customer Reception for new workflow
+        public DbSet<CustomerReception> CustomerReceptions { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+
+            // Configure Customer Reception
+            ConfigureCustomerReception(modelBuilder);
 
             // Customer configuration
             modelBuilder.Entity<Customer>(entity =>
@@ -951,6 +960,58 @@ namespace GarageManagementSystem.Infrastructure.Data
             }
 
             return "Anonymous";
+        }
+
+        // Customer Reception configuration
+        private void ConfigureCustomerReception(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<CustomerReception>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.ReceptionNumber).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.CustomerRequest).HasMaxLength(1000);
+                entity.Property(e => e.CustomerComplaints).HasMaxLength(1000);
+                entity.Property(e => e.ReceptionNotes).HasMaxLength(1000);
+                entity.Property(e => e.Status).IsRequired().HasMaxLength(20);
+                entity.Property(e => e.Priority).IsRequired().HasMaxLength(20);
+                entity.Property(e => e.ServiceType).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.InsuranceCompany).HasMaxLength(100);
+                entity.Property(e => e.InsurancePolicyNumber).HasMaxLength(50);
+                entity.Property(e => e.EmergencyContact).HasMaxLength(20);
+                entity.Property(e => e.EmergencyContactName).HasMaxLength(200);
+                
+                // Cached information
+                entity.Property(e => e.CustomerName).HasMaxLength(200);
+                entity.Property(e => e.CustomerPhone).HasMaxLength(20);
+                entity.Property(e => e.VehiclePlate).HasMaxLength(20);
+                entity.Property(e => e.VehicleMake).HasMaxLength(50);
+                entity.Property(e => e.VehicleModel).HasMaxLength(50);
+
+                // Unique index cho ReceptionNumber
+                entity.HasIndex(e => e.ReceptionNumber)
+                    .IsUnique();
+
+                // Foreign key relationships
+                entity.HasOne(e => e.Customer)
+                    .WithMany()
+                    .HasForeignKey(e => e.CustomerId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.Vehicle)
+                    .WithMany()
+                    .HasForeignKey(e => e.VehicleId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.AssignedTechnician)
+                    .WithMany()
+                    .HasForeignKey(e => e.AssignedTechnicianId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(e => e.VehicleInspection)
+                    .WithOne(i => i.CustomerReception)
+                    .HasForeignKey<VehicleInspection>(i => i.CustomerReceptionId)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
         }
     }
 }

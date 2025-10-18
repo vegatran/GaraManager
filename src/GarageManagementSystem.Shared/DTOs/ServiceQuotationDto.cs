@@ -19,6 +19,7 @@ namespace GarageManagementSystem.Shared.DTOs
         
         public decimal SubTotal { get; set; }
         public decimal TaxAmount { get; set; }
+        public decimal VATAmount { get; set; } // ✅ THÊM VATAmount
         public decimal TaxRate { get; set; }
         public decimal DiscountAmount { get; set; }
         public decimal TotalAmount { get; set; }
@@ -58,6 +59,7 @@ namespace GarageManagementSystem.Shared.DTOs
     public class CreateServiceQuotationDto
     {
         public int? VehicleInspectionId { get; set; }
+        public int? CustomerReceptionId { get; set; }
 
         [Required(ErrorMessage = "Customer is required")]
         public int CustomerId { get; set; }
@@ -113,6 +115,10 @@ namespace GarageManagementSystem.Shared.DTOs
 
         [StringLength(5000)]
         public string? RejectionReason { get; set; }
+
+        [Required(ErrorMessage = "At least one item is required")]
+        [MinLength(1, ErrorMessage = "At least one item is required")]
+        public List<CreateQuotationItemDto> Items { get; set; } = new();
     }
 
 
@@ -129,7 +135,12 @@ namespace GarageManagementSystem.Shared.DTOs
         public decimal TotalPrice { get; set; }
         public bool IsOptional { get; set; }
         public bool IsApproved { get; set; }
+        public bool HasInvoice { get; set; }
+        public bool IsVATApplicable { get; set; }
+        public decimal? VATRate { get; set; } // ✅ THÊM VATRate
         public string? Notes { get; set; }
+        public string? ServiceType { get; set; } // parts, repair, paint
+        public string? ItemCategory { get; set; } = "Material"; // Material, Service, Labor
         public ServiceDto? Service { get; set; }
         public InspectionIssueDto? InspectionIssue { get; set; }
     }
@@ -156,8 +167,16 @@ namespace GarageManagementSystem.Shared.DTOs
 
         public bool IsOptional { get; set; } = false;
 
+        public bool HasInvoice { get; set; } = false;
+
         [StringLength(500)]
         public string? Notes { get; set; }
+
+        [StringLength(50)]
+        public string? ServiceType { get; set; } // parts, repair, paint
+        
+        [StringLength(50)]
+        public string? ItemCategory { get; set; } = "Material"; // Material, Service, Labor
     }
 }
 

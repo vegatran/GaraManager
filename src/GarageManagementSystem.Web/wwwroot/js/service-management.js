@@ -19,61 +19,54 @@ window.ServiceManagement = {
     initDataTable: function() {
         var self = this;
         
-        // Destroy existing DataTable if it exists
-        if ($.fn.DataTable.isDataTable('#serviceTable')) {
-            $('#serviceTable').DataTable().destroy();
-        }
-        
-        this.serviceTable = DataTablesVietnamese.init('#serviceTable', {
-            processing: true,
-            serverSide: false,
-            ajax: {
-                url: '/ServiceManagement/GetServices',
-                type: 'GET',
-                error: function(xhr, status, error) {
-                    if (AuthHandler.isUnauthorized(xhr)) {
-                        AuthHandler.handleUnauthorized(xhr, true);
-                    } else {
-                        GarageApp.showError('Error loading services');
-                    }
-                }
+        // Sử dụng DataTablesUtility với style chung
+        var columns = [
+            { data: 'id', title: 'ID', width: '60px' },
+            { data: 'serviceName', title: 'Tên Dịch Vụ' },
+            { data: 'serviceCode', title: 'Mã Dịch Vụ' },
+            { data: 'description', title: 'Mô Tả' },
+            { 
+                data: 'price', 
+                title: 'Giá',
+                render: DataTablesUtility.renderCurrency
             },
-            columns: [
-                { data: 'id', title: 'ID', width: '60px' },
-                { data: 'serviceName', title: 'Tên Dịch Vụ' },
-                { data: 'serviceCode', title: 'Mã Dịch Vụ' },
-                { data: 'description', title: 'Mô Tả' },
-                { data: 'price', title: 'Giá' },
-                { data: 'duration', title: 'Thời Gian (phút)' },
-                {
-                    data: null,
-                    title: 'Thao Tác',
-                    orderable: false,
-                    searchable: false,
-                    render: function(data, type, row) {
-                        return `
-                            <button class="btn btn-info btn-sm view-service" data-id="${row.id}">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                            <button class="btn btn-warning btn-sm edit-service" data-id="${row.id}">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="btn btn-danger btn-sm delete-service" data-id="${row.id}">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        `;
-                    }
+            { data: 'duration', title: 'Thời Gian (phút)' },
+            {
+                data: null,
+                title: 'Thao Tác',
+                orderable: false,
+                searchable: false,
+                render: function(data, type, row) {
+                    return `
+                        <button class="btn btn-info btn-sm view-service" data-id="${row.id}">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="btn btn-warning btn-sm edit-service" data-id="${row.id}">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-danger btn-sm delete-service" data-id="${row.id}">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    `;
                 }
-            ],
+            }
+        ];
+        
+        this.serviceTable = DataTablesUtility.initAjaxTable('#serviceTable', '/ServiceManagement/GetServices', columns, {
             order: [[0, 'desc']],
-            pageLength: 10,
-            responsive: true
+            pageLength: 25,
+            dom: 'rtip'  // Chỉ hiển thị table, paging, info, processing (không có search box và length menu)
         });
     },
 
     // Bind events
     bindEvents: function() {
         var self = this;
+
+        // Search functionality
+        $('#searchInput').on('keyup', function() {
+            self.serviceTable.search(this.value).draw();
+        });
 
         // Add service button
         $(document).on('click', '#addServiceBtn', function() {
@@ -130,7 +123,7 @@ window.ServiceManagement = {
                         self.populateViewModal(response.data);
                         $('#viewServiceModal').modal('show');
                     } else {
-                        GarageApp.showError(response.message || 'Error loading service');
+                        GarageApp.showError(GarageApp.parseErrorMessage(response) || 'Error loading service');
                     }
                 }
             },
@@ -157,7 +150,7 @@ window.ServiceManagement = {
                         self.populateEditModal(response.data);
                         $('#editServiceModal').modal('show');
                     } else {
-                        GarageApp.showError(response.message || 'Error loading service');
+                        GarageApp.showError(GarageApp.parseErrorMessage(response) || 'Error loading service');
                     }
                 }
             },
@@ -194,7 +187,7 @@ window.ServiceManagement = {
                                 GarageApp.showSuccess('Service deleted successfully!');
                                 self.serviceTable.ajax.reload();
                             } else {
-                                GarageApp.showError(response.message || 'Error deleting service');
+                                GarageApp.showError(GarageApp.parseErrorMessage(response) || 'Error deleting service');
                             }
                         }
                     },
@@ -234,7 +227,7 @@ window.ServiceManagement = {
                         $('#createServiceModal').modal('hide');
                         self.serviceTable.ajax.reload();
                     } else {
-                        GarageApp.showError(response.message || 'Error creating service');
+                        GarageApp.showError(GarageApp.parseErrorMessage(response) || 'Error creating service');
                     }
                 }
             },
@@ -274,7 +267,7 @@ window.ServiceManagement = {
                         $('#editServiceModal').modal('hide');
                         self.serviceTable.ajax.reload();
                     } else {
-                        GarageApp.showError(response.message || 'Error updating service');
+                        GarageApp.showError(GarageApp.parseErrorMessage(response) || 'Error updating service');
                     }
                 }
             },

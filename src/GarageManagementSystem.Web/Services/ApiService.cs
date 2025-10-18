@@ -229,13 +229,13 @@ namespace GarageManagementSystem.Web.Services
                 
                 if (response.IsSuccessStatusCode)
                 {
-                    var responseData = JsonSerializer.Deserialize<T>(responseContent);
-                    return new ApiResponse<T>
+                    // Deserialize the full ApiResponse first
+                    var apiResponse = JsonSerializer.Deserialize<ApiResponse<T>>(responseContent, new JsonSerializerOptions
                     {
-                        Success = true,
-                        Data = responseData,
-                        StatusCode = response.StatusCode
-                    };
+                        PropertyNameCaseInsensitive = true
+                    });
+                    
+                    return apiResponse;
                 }
                 else
                 {
@@ -286,13 +286,13 @@ namespace GarageManagementSystem.Web.Services
                 
                 if (response.IsSuccessStatusCode)
                 {
-                    var responseData = JsonSerializer.Deserialize<T>(responseContent);
-                    return new ApiResponse<T>
+                    // Deserialize the full ApiResponse first
+                    var apiResponse = JsonSerializer.Deserialize<ApiResponse<T>>(responseContent, new JsonSerializerOptions
                     {
-                        Success = true,
-                        Data = responseData,
-                        StatusCode = response.StatusCode
-                    };
+                        PropertyNameCaseInsensitive = true
+                    });
+                    
+                    return apiResponse;
                 }
                 else
                 {

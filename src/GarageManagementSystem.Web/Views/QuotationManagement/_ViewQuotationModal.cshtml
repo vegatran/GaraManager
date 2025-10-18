@@ -1,0 +1,136 @@
+<!-- View Quotation Modal -->
+<div class="modal fade" id="viewQuotationModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">Chi Tiết Báo Giá</h4>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <!-- Thông tin cơ bản -->
+                <div class="mb-4 p-3 border rounded bg-light">
+                    <h6 class="text-primary font-weight-bold mb-3">
+                        <i class="fas fa-info-circle mr-2"></i>Thông Tin Cơ Bản
+                    </h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label class="font-weight-bold text-muted small">Số Báo Giá:</label>
+                                <p id="viewQuotationNumber" class="form-control-plaintext font-weight-bold text-dark mb-0"></p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label class="font-weight-bold text-muted small">Trạng Thái:</label>
+                                <p id="viewStatus" class="form-control-plaintext mb-0"></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-0">
+                                <label class="font-weight-bold text-muted small">Khách Hàng:</label>
+                                <p id="viewCustomer" class="form-control-plaintext mb-0"></p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group mb-0">
+                                <label class="font-weight-bold text-muted small">Xe:</label>
+                                <p id="viewVehicle" class="form-control-plaintext mb-0"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Thông tin ngày tháng -->
+                <div class="mb-4 p-3 border rounded bg-light">
+                    <h6 class="text-success font-weight-bold mb-3">
+                        <i class="fas fa-calendar-alt mr-2"></i>Thông Tin Ngày Tháng
+                    </h6>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group mb-3">
+                                <label class="font-weight-bold text-muted small">Loại Báo Giá:</label>
+                                <p id="viewQuotationType" class="form-control-plaintext mb-0"></p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group mb-3">
+                                <label class="font-weight-bold text-muted small">Ngày Báo Giá:</label>
+                                <p id="viewQuotationDate" class="form-control-plaintext mb-0"></p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group mb-0">
+                                <label class="font-weight-bold text-muted small">Hiệu Lực Đến:</label>
+                                <p id="viewValidUntil" class="form-control-plaintext mb-0"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Thông tin mô tả -->
+                <div class="mb-4 p-3 border rounded bg-light">
+                    <h6 class="text-info font-weight-bold mb-3">
+                        <i class="fas fa-file-alt mr-2"></i>Thông Tin Mô Tả
+                    </h6>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-group mb-3">
+                                <label class="font-weight-bold text-muted small">Mô Tả:</label>
+                                <p id="viewDescription" class="form-control-plaintext mb-0"></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-group mb-0">
+                                <label class="font-weight-bold text-muted small">Điều Khoản:</label>
+                                <p id="viewTerms" class="form-control-plaintext mb-0"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-12">
+                        <h5 class="mb-3">Chi Tiết Dịch Vụ</h5>
+                        <div id="viewServiceItems" class="table-responsive">
+                            <!-- Service items will be populated here -->
+                        </div>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-md-12">
+                        <table class="table table-sm">
+                            <tr>
+                                <td class="text-right font-weight-bold">Tạm Tính:</td>
+                                <td class="text-right" style="width: 200px;"><span id="viewSubTotal"></span> VNĐ</td>
+                            </tr>
+                            <tr>
+                                <td class="text-right font-weight-bold">Thuế (<span id="viewTaxRate"></span>%):</td>
+                                <td class="text-right"><span id="viewTaxAmount"></span> VNĐ</td>
+                            </tr>
+                            <tr>
+                                <td class="text-right font-weight-bold">Giảm Giá:</td>
+                                <td class="text-right"><span id="viewDiscountAmount"></span> VNĐ</td>
+                            </tr>
+                            <tr class="font-weight-bold" style="font-size: 1.1em;">
+                                <td class="text-right">Tổng Cộng:</td>
+                                <td class="text-right text-primary"><span id="viewTotalAmount"></span> VNĐ</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Đóng</button>
+                <button type="button" class="btn btn-primary btn-sm print-quotation" data-id="" title="In Báo Giá">
+                    <i class="fas fa-print"></i> In Báo Giá
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+

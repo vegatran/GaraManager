@@ -20,63 +20,60 @@ window.EmployeeManagement = {
     initDataTable: function() {
         var self = this;
         
-        // Destroy existing DataTable if it exists
-        if ($.fn.DataTable.isDataTable('#employeeTable')) {
-            $('#employeeTable').DataTable().destroy();
-        }
-        
-        this.employeeTable = DataTablesVietnamese.init('#employeeTable', {
-            processing: true,
-            serverSide: false,
-            ajax: {
-                url: '/EmployeeManagement/GetEmployees',
-                type: 'GET',
-                error: function(xhr, status, error) {
-                    if (AuthHandler.isUnauthorized(xhr)) {
-                        AuthHandler.handleUnauthorized(xhr, true);
-                    } else {
-                        GarageApp.showError('Error loading employees');
-                    }
-                }
+        // Sử dụng DataTablesUtility với style chung
+        var columns = [
+            { data: 'id', title: 'ID', width: '60px' },
+            { data: 'name', title: 'Tên Nhân Viên' },
+            { data: 'position', title: 'Chức Vụ' },
+            { data: 'department', title: 'Bộ Phận' },
+            { data: 'phone', title: 'Số Điện Thoại' },
+            { data: 'email', title: 'Email' },
+            { 
+                data: 'hireDate', 
+                title: 'Ngày Tuyển',
+                render: DataTablesUtility.renderDate
             },
-            columns: [
-                { data: 'id', title: 'ID', width: '60px' },
-                { data: 'name', title: 'Tên Nhân Viên' },
-                { data: 'position', title: 'Chức Vụ' },
-                { data: 'department', title: 'Bộ Phận' },
-                { data: 'phone', title: 'Số Điện Thoại' },
-                { data: 'email', title: 'Email' },
-                { data: 'hireDate', title: 'Ngày Tuyển' },
-                { data: 'status', title: 'Trạng Thái' },
-                {
-                    data: null,
-                    title: 'Thao Tác',
-                    orderable: false,
-                    searchable: false,
-                    render: function(data, type, row) {
-                        return `
-                            <button class="btn btn-info btn-sm view-employee" data-id="${row.id}">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                            <button class="btn btn-warning btn-sm edit-employee" data-id="${row.id}">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="btn btn-danger btn-sm delete-employee" data-id="${row.id}">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        `;
-                    }
+            { 
+                data: 'status', 
+                title: 'Trạng Thái',
+                render: DataTablesUtility.renderStatus
+            },
+            {
+                data: null,
+                title: 'Thao Tác',
+                orderable: false,
+                searchable: false,
+                render: function(data, type, row) {
+                    return `
+                        <button class="btn btn-info btn-sm view-employee" data-id="${row.id}">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="btn btn-warning btn-sm edit-employee" data-id="${row.id}">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-danger btn-sm delete-employee" data-id="${row.id}">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    `;
                 }
-            ],
+            }
+        ];
+        
+        this.employeeTable = DataTablesUtility.initAjaxTable('#employeeTable', '/EmployeeManagement/GetEmployees', columns, {
             order: [[0, 'desc']],
-            pageLength: 10,
-            responsive: true
+            pageLength: 25,
+            dom: 'rtip'  // Chỉ hiển thị table, paging, info, processing (không có search box và length menu)
         });
     },
 
     // Bind events
     bindEvents: function() {
         var self = this;
+
+        // Search functionality
+        $('#searchInput').on('keyup', function() {
+            self.employeeTable.search(this.value).draw();
+        });
 
         // Add employee button
         $(document).on('click', '#addEmployeeBtn', function() {
@@ -207,7 +204,7 @@ window.EmployeeManagement = {
                         self.populateViewModal(response.data);
                         $('#viewEmployeeModal').modal('show');
                     } else {
-                        GarageApp.showError(response.message || 'Error loading employee');
+                        GarageApp.showError(GarageApp.parseErrorMessage(response) || 'Error loading employee');
                     }
                 }
             },
@@ -236,7 +233,7 @@ window.EmployeeManagement = {
                         self.populateEditModal(response.data);
                         $('#editEmployeeModal').modal('show');
                     } else {
-                        GarageApp.showError(response.message || 'Error loading employee');
+                        GarageApp.showError(GarageApp.parseErrorMessage(response) || 'Error loading employee');
                     }
                 }
             },
@@ -273,7 +270,7 @@ window.EmployeeManagement = {
                                 GarageApp.showSuccess('Employee deleted successfully!');
                                 self.employeeTable.ajax.reload();
                             } else {
-                                GarageApp.showError(response.message || 'Error deleting employee');
+                                GarageApp.showError(GarageApp.parseErrorMessage(response) || 'Error deleting employee');
                             }
                         }
                     },
@@ -317,7 +314,7 @@ window.EmployeeManagement = {
                         $('#createEmployeeModal').modal('hide');
                         self.employeeTable.ajax.reload();
                     } else {
-                        GarageApp.showError(response.message || 'Error creating employee');
+                        GarageApp.showError(GarageApp.parseErrorMessage(response) || 'Error creating employee');
                     }
                 }
             },
@@ -361,7 +358,7 @@ window.EmployeeManagement = {
                         $('#editEmployeeModal').modal('hide');
                         self.employeeTable.ajax.reload();
                     } else {
-                        GarageApp.showError(response.message || 'Error updating employee');
+                        GarageApp.showError(GarageApp.parseErrorMessage(response) || 'Error updating employee');
                     }
                 }
             },

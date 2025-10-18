@@ -181,7 +181,7 @@ window.ExcelImport = {
             if (result.errorCount > 0 && result.errors && result.errors.length > 0) {
                 message += `\n\n📋 Chi tiết lỗi:\n`;
                 result.errors.slice(0, 5).forEach(function(error) {
-                    message += `• Dòng ${error.rowNumber}: ${error.errorMessage}\n`;
+                    message += `• Dòng ${error.rowNumber}: ${errorGarageApp.parseErrorMessage(response)}\n`;
                 });
                 if (result.errors.length > 5) {
                     message += `... và ${result.errors.length - 5} lỗi khác`;
@@ -200,7 +200,7 @@ window.ExcelImport = {
                 }, 2000);
             }
         } else {
-            GarageApp.showError(response.message || 'Import thất bại');
+            GarageApp.showError(responseGarageApp.parseErrorMessage(response) || 'Import thất bại');
         }
     },
 
@@ -212,8 +212,8 @@ window.ExcelImport = {
             AuthHandler.handleUnauthorized(xhr, true);
         } else {
             var errorMessage = 'Lỗi import: ' + error;
-            if (xhr.responseJSON && xhr.responseJSON.message) {
-                errorMessage = xhr.responseJSON.message;
+            if (xhr.responseJSON && xhr.responseJSONGarageApp.parseErrorMessage(response)) {
+                errorMessage = xhr.responseJSONGarageApp.parseErrorMessage(response);
             }
             GarageApp.showError(errorMessage);
         }
@@ -239,7 +239,7 @@ window.ExcelImport = {
             if (result.errors && result.errors.length > 0) {
                 content += '<ul class="mb-0 mt-2">';
                 result.errors.slice(0, 10).forEach(function(error) {
-                    content += `<li><strong>Dòng ${error.rowNumber}</strong>: ${error.errorMessage}</li>`;
+                    content += `<li><strong>Dòng ${error.rowNumber}</strong>: ${errorGarageApp.parseErrorMessage(response)}</li>`;
                 });
                 if (result.errors.length > 10) {
                     content += `<li>... và ${result.errors.length - 10} lỗi khác</li>`;

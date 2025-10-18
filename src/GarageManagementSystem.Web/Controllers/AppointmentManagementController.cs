@@ -49,7 +49,7 @@ namespace GarageManagementSystem.Web.Controllers
                         appointmentNumber = a.AppointmentNumber,
                         customerName = a.Customer?.Name ?? "Không xác định",
                         vehicleLicensePlate = a.Vehicle?.LicensePlate ?? "Không xác định",
-                        appointmentDate = a.ScheduledDateTime.ToString("dd/MM/yyyy"),
+                        appointmentDate = a.ScheduledDateTime,
                         appointmentTime = a.ScheduledDateTime.ToString("HH:mm"),
                         serviceType = TranslateServiceType(a.AppointmentType),
                         status = TranslateStatus(a.Status)
@@ -84,7 +84,7 @@ namespace GarageManagementSystem.Web.Controllers
                         appointmentNumber = a.AppointmentNumber,
                         customerName = a.Customer?.Name ?? "N/A",
                         vehiclePlate = a.Vehicle?.LicensePlate ?? "N/A",
-                        scheduledDateTime = a.ScheduledDateTime.ToString("dd/MM/yyyy HH:mm"),
+                        scheduledDateTime = a.ScheduledDateTime,
                         appointmentType = a.AppointmentType,
                         assignedTo = a.AssignedTo?.Name ?? "Chưa phân công",
                         status = TranslateStatus(a.Status)
@@ -119,7 +119,7 @@ namespace GarageManagementSystem.Web.Controllers
                         appointmentNumber = a.AppointmentNumber,
                         customerName = a.Customer?.Name ?? "N/A",
                         vehiclePlate = a.Vehicle?.LicensePlate ?? "N/A",
-                        scheduledDateTime = a.ScheduledDateTime.ToString("dd/MM/yyyy HH:mm"),
+                        scheduledDateTime = a.ScheduledDateTime,
                         appointmentType = a.AppointmentType,
                         assignedTo = a.AssignedTo?.Name ?? "Chưa phân công",
                         status = TranslateStatus(a.Status)

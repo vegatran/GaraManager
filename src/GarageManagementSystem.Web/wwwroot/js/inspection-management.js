@@ -20,92 +20,114 @@ window.InspectionManagement = {
     initDataTable: function() {
         var self = this;
         
-        this.inspectionTable = DataTablesVietnamese.init('#inspectionTable', {
-            ajax: {
-                url: '/InspectionManagement/GetInspections',
-                type: 'GET',
-                error: function(xhr, status, error) {
-                    if (AuthHandler.isUnauthorized(xhr)) {
-                        AuthHandler.handleUnauthorized(xhr, true);
-                    } else {
-                        console.error('Error loading inspections:', error);
-                        GarageApp.showError('Lỗi khi tải danh sách kiểm tra xe');
+        // Sử dụng DataTablesUtility với style chung
+        var columns = [
+            { data: 'id', title: 'ID', width: '5%' },
+            { data: 'inspectionNumber', title: 'Số Kiểm Tra', width: '10%' },
+            { data: 'vehicleInfo', title: 'Thông Tin Xe', width: '15%' },
+            { data: 'customerName', title: 'Khách Hàng', width: '12%' },
+            { data: 'inspectorName', title: 'Kỹ Thuật Viên', width: '12%' },
+            { 
+                data: 'inspectionDate', 
+                title: 'Ngày Kiểm Tra', 
+                width: '10%',
+                render: DataTablesUtility.renderDate
+            },
+            { 
+                data: 'status', 
+                title: 'Trạng Thái', 
+                width: '8%',
+                render: function(data, type, row) {
+                    var badgeClass = 'badge-secondary';
+                    switch(data) {
+                        case 'Pending': badgeClass = 'badge-warning'; break;
+                        case 'InProgress': badgeClass = 'badge-info'; break;
+                        case 'Completed': badgeClass = 'badge-success'; break;
+                        case 'Cancelled': badgeClass = 'badge-danger'; break;
                     }
+                    return `<span class="badge ${badgeClass}">${data}</span>`;
                 }
             },
-            columns: [
-                { data: 'id', title: 'ID', width: '5%' },
-                { data: 'inspectionNumber', title: 'Số Kiểm Tra', width: '10%' },
-                { data: 'vehicleInfo', title: 'Thông Tin Xe', width: '15%' },
-                { data: 'customerName', title: 'Khách Hàng', width: '12%' },
-                { data: 'inspectorName', title: 'Kỹ Thuật Viên', width: '12%' },
-                { data: 'inspectionDate', title: 'Ngày Kiểm Tra', width: '10%' },
-                { 
-                    data: 'status', 
-                    title: 'Trạng Thái', 
-                    width: '8%',
-                    render: function(data, type, row) {
-                        var badgeClass = 'badge-secondary';
-                        switch(data) {
-                            case 'Pending': badgeClass = 'badge-warning'; break;
-                            case 'InProgress': badgeClass = 'badge-info'; break;
-                            case 'Completed': badgeClass = 'badge-success'; break;
-                            case 'Cancelled': badgeClass = 'badge-danger'; break;
-                        }
-                        return `<span class="badge ${badgeClass}">${data}</span>`;
-                    }
-                },
-                { data: 'currentMileage', title: 'Số Km', width: '8%' },
-                { data: 'generalCondition', title: 'Tình Trạng', width: '10%' },
-                {
-                    data: null,
-                    title: 'Thao Tác',
-                    width: '10%',
-                    orderable: false,
-                    render: function(data, type, row) {
-                        var actions = `
-                            <div class="btn-group" role="group">
-                                <button type="button" class="btn btn-info btn-sm view-inspection" data-id="${row.id}" title="Xem">
-                                    <i class="fas fa-eye"></i>
-                                </button>
+            { data: 'currentMileage', title: 'Số Km', width: '8%' },
+            { 
+                data: 'generalCondition', 
+                title: 'Tình Trạng', 
+                width: '10%',
+                render: function(data, type, row) {
+                    return InspectionManagement.translateGeneralCondition(data);
+                }
+            },
+            {
+                data: null,
+                title: 'Thao Tác',
+                width: '10%',
+                orderable: false,
+                render: function(data, type, row) {
+                    var actions = `
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-info btn-sm view-inspection" data-id="${row.id}" title="Xem">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                    `;
+                    
+                    // Kiểm tra trạng thái để hiển thị nút phù hợp
+                    var isCompleted = row.status === 'Completed' || 
+                                     row.status === 'Hoàn Thành' ||  // Chữ T viết hoa (từ TranslateStatus)
+                                     row.status === 'Hoàn thành' || 
+                                     row.status === 'completed' || 
+                                     row.status === 'hoàn thành' ||
+                                     (row.status && row.status.toLowerCase().includes('hoàn thành')) ||
+                                     (row.status && row.status.toLowerCase().includes('completed'));
+                    
+                    var isInProgress = row.status === 'InProgress' || 
+                                      row.status === 'Đang Kiểm Tra' ||
+                                      row.status === 'Đang xử lý' ||
+                                      (row.status && row.status.toLowerCase().includes('đang'));
+                    
+                    if (!isCompleted) {
+                        // Nút Sửa và Xóa cho tất cả trạng thái chưa hoàn thành
+                        actions += `
+                            <button type="button" class="btn btn-warning btn-sm edit-inspection" data-id="${row.id}" title="Sửa">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button type="button" class="btn btn-danger btn-sm delete-inspection" data-id="${row.id}" title="Xóa">
+                                <i class="fas fa-trash"></i>
+                            </button>
                         `;
                         
-                        // Chỉ hiển thị nút Edit và Delete khi trạng thái chưa hoàn thành
-                        var isCompleted = row.status === 'Completed' || 
-                                         row.status === 'Hoàn Thành' ||  // Chữ T viết hoa (từ TranslateStatus)
-                                         row.status === 'Hoàn thành' || 
-                                         row.status === 'completed' || 
-                                         row.status === 'hoàn thành' ||
-                                         (row.status && row.status.toLowerCase().includes('hoàn thành')) ||
-                                         (row.status && row.status.toLowerCase().includes('completed'));
-                        
-                        if (!isCompleted) {
+                        // Nút Hoàn Thành chỉ hiển thị khi đang kiểm tra
+                        if (isInProgress) {
                             actions += `
-                                <button type="button" class="btn btn-warning btn-sm edit-inspection" data-id="${row.id}" title="Sửa">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <button type="button" class="btn btn-danger btn-sm delete-inspection" data-id="${row.id}" title="Xóa">
-                                    <i class="fas fa-trash"></i>
+                                <button type="button" class="btn btn-success btn-sm complete-inspection" data-id="${row.id}" title="Hoàn Thành Kiểm Tra">
+                                    <i class="fas fa-check"></i>
                                 </button>
                             `;
                         }
-                        
-                        actions += `
-                            </div>
-                        `;
-                        
-                        return actions;
                     }
+                    
+                    actions += `
+                        </div>
+                    `;
+                    
+                    return actions;
                 }
-            ],
+            }
+        ];
+        
+        this.inspectionTable = DataTablesUtility.initAjaxTable('#inspectionTable', '/InspectionManagement/GetInspections', columns, {
             order: [[0, 'desc']],
-            pageLength: 25
+            pageLength: 25,
+            dom: 'rtip'  // Chỉ hiển thị table, paging, info, processing (không có search box và length menu)
         });
     },
 
     bindEvents: function() {
         var self = this;
 
+        // Search functionality
+        $('#searchInput').on('keyup', function() {
+            self.inspectionTable.search(this.value).draw();
+        });
 
         // Add inspection button
         $(document).on('click', '[data-target="#createInspectionModal"]', function() {
@@ -130,6 +152,12 @@ window.InspectionManagement = {
             self.deleteInspection(id);
         });
 
+        // Complete inspection
+        $(document).on('click', '.complete-inspection', function() {
+            var id = $(this).data('id');
+            self.completeInspection(id);
+        });
+
         // Create inspection form
         $(document).on('submit', '#createInspectionForm', function(e) {
             e.preventDefault();
@@ -141,12 +169,94 @@ window.InspectionManagement = {
             e.preventDefault();
             self.updateInspection();
         });
+
+        // Bind CustomerReception change event
+        $(document).on('change', '#createCustomerReceptionId', function() {
+            self.onReceptionChange();
+        });
     },
 
     loadDropdowns: function() {
+        this.loadReceptions();
         this.loadVehicles();
         this.loadCustomers();
         this.loadEmployees();
+    },
+
+    loadReceptions: function() {
+        var self = this;
+        console.log('Loading receptions...');
+        $.ajax({
+            url: '/InspectionManagement/GetAvailableReceptions',
+            type: 'GET',
+            success: function(data) {
+                console.log('API Response:', data);
+                var $select = $('#createCustomerReceptionId');
+                console.log('Select element:', $select.length > 0 ? 'Found' : 'Not found');
+                
+                $select.empty().append('<option value="">Chọn phiếu tiếp đón</option>');
+                
+                if (data && data.length > 0) {
+                    console.log('Processing', data.length, 'receptions');
+                    $.each(data, function(index, item) {
+                        $select.append(`<option value="${item.value}" 
+                            data-customer-id="${item.customerId}" 
+                            data-vehicle-id="${item.vehicleId}" 
+                            data-customer-name="${item.customerName}" 
+                            data-vehicle-info="${item.vehicleInfo}" 
+                            data-assigned-technician-id="${item.assignedTechnicianId}">${item.text}</option>`);
+                    });
+                } else {
+                    console.log('No receptions found');
+                }
+                
+                $select.select2({
+                    placeholder: 'Chọn phiếu tiếp đón',
+                    allowClear: true
+                });
+            },
+            error: function(xhr, status, error) {
+                console.error('Error loading receptions:', error);
+                console.error('Response:', xhr.responseText);
+                GarageApp.showError('Lỗi khi tải danh sách phiếu tiếp đón');
+            }
+        });
+    },
+
+    onReceptionChange: function() {
+        var selectedOption = $('#createCustomerReceptionId option:selected');
+        
+        if (selectedOption.val()) {
+            // Tự động điền thông tin từ CustomerReception
+            var customerId = selectedOption.data('customer-id');
+            var vehicleId = selectedOption.data('vehicle-id');
+            var customerName = selectedOption.data('customer-name');
+            var vehicleInfo = selectedOption.data('vehicle-info');
+            var assignedTechnicianId = selectedOption.data('assigned-technician-id');
+            
+            // Điền thông tin xe
+            $('#createVehicleId').val(vehicleId).trigger('change');
+            
+            // Điền thông tin khách hàng
+            $('#createCustomerId').val(customerId).trigger('change');
+            
+            // Điền thông tin kỹ thuật viên
+            $('#createInspectorId').val(assignedTechnicianId).trigger('change');
+            
+            // Hiển thị thông tin đã chọn
+            console.log('Selected Reception:', {
+                customerId: customerId,
+                vehicleId: vehicleId,
+                customerName: customerName,
+                vehicleInfo: vehicleInfo,
+                assignedTechnicianId: assignedTechnicianId
+            });
+        } else {
+            // Reset các field khi không chọn reception
+            $('#createVehicleId').val('').trigger('change');
+            $('#createCustomerId').val('').trigger('change');
+            $('#createInspectorId').val('').trigger('change');
+        }
     },
 
     loadVehicles: function() {
@@ -161,7 +271,7 @@ window.InspectionManagement = {
                     vehicles.forEach(function(vehicle) {
                         options += `<option value="${vehicle.value}" data-customer-id="${vehicle.customerId}" data-customer-name="${vehicle.customerName}">${vehicle.text}</option>`;
                     });
-                    $('#createVehicleId, #editVehicleId').html(options);
+                    $('#createVehicleId').html(options);
                     
                     // Thêm event handler khi chọn xe
                     self.setupVehicleChangeHandler();
@@ -178,8 +288,8 @@ window.InspectionManagement = {
     setupVehicleChangeHandler: function() {
         var self = this;
         
-        // Event handler cho dropdown xe
-        $('#createVehicleId, #editVehicleId').on('change', function() {
+        // Event handler cho dropdown xe (chỉ cho create modal)
+        $('#createVehicleId').on('change', function() {
             var selectedVehicle = $(this).find('option:selected');
             var customerId = selectedVehicle.data('customer-id');
             var customerName = selectedVehicle.data('customer-name');
@@ -252,6 +362,11 @@ window.InspectionManagement = {
         
         // Reset trạng thái dropdown khách hàng
         $('#createCustomerId').prop('disabled', true).val('').trigger('change');
+        
+        // Đợi modal hiển thị xong rồi mới load data
+        $('#createInspectionModal').on('shown.bs.modal', function() {
+            InspectionManagement.loadReceptions();
+        });
     },
 
     viewInspection: function(id) {
@@ -266,7 +381,7 @@ window.InspectionManagement = {
                         self.populateViewModal(inspection);
                         $('#viewInspectionModal').modal('show');
                     } else {
-                        GarageApp.showError(response.message || 'Lỗi khi tải thông tin kiểm tra xe');
+                        GarageApp.showError(GarageApp.parseErrorMessage(response) || 'Lỗi khi tải thông tin kiểm tra xe');
                     }
                 }
             },
@@ -295,7 +410,7 @@ window.InspectionManagement = {
                         // Reset trạng thái dropdown khách hàng
                         $('#editCustomerId').prop('disabled', true);
                     } else {
-                        GarageApp.showError(response.message || 'Lỗi khi tải thông tin kiểm tra xe');
+                        GarageApp.showError(GarageApp.parseErrorMessage(response) || 'Lỗi khi tải thông tin kiểm tra xe');
                     }
                 }
             },
@@ -315,6 +430,7 @@ window.InspectionManagement = {
         var customerId = selectedVehicle.data('customer-id');
         
         var formData = {
+            CustomerReceptionId: parseInt($('#createCustomerReceptionId').val()),
             VehicleId: parseInt($('#createVehicleId').val()),
             CustomerId: customerId ? parseInt(customerId) : null,
             InspectorId: parseInt($('#createInspectorId').val()),
@@ -356,7 +472,7 @@ window.InspectionManagement = {
                         $('#createInspectionModal').modal('hide');
                         self.inspectionTable.ajax.reload();
                     } else {
-                        GarageApp.showError(response.message || 'Lỗi khi tạo kiểm tra xe');
+                        GarageApp.showError(GarageApp.parseErrorMessage(response) || 'Lỗi khi tạo kiểm tra xe');
                     }
                 }
             },
@@ -419,7 +535,7 @@ window.InspectionManagement = {
                         $('#editInspectionModal').modal('hide');
                         self.inspectionTable.ajax.reload();
                     } else {
-                        GarageApp.showError(response.message || 'Lỗi khi cập nhật kiểm tra xe');
+                        GarageApp.showError(GarageApp.parseErrorMessage(response) || 'Lỗi khi cập nhật kiểm tra xe');
                     }
                 }
             },
@@ -456,7 +572,7 @@ window.InspectionManagement = {
                                 GarageApp.showSuccess('Xóa kiểm tra xe thành công!');
                                 self.inspectionTable.ajax.reload();
                             } else {
-                                GarageApp.showError(response.message || 'Lỗi khi xóa kiểm tra xe');
+                                GarageApp.showError(GarageApp.parseErrorMessage(response) || 'Lỗi khi xóa kiểm tra xe');
                             }
                         }
                     },
@@ -498,9 +614,13 @@ window.InspectionManagement = {
 
     populateEditModal: function(inspection) {
         $('#editId').val(inspection.id);
-        $('#editVehicleId').val(inspection.vehicleId).trigger('change');
+        $('#editVehicleId').val(inspection.vehicleId);
         
-        // Khách hàng sẽ được tự động set theo xe trong setupVehicleChangeHandler
+        // Set khách hàng theo xe (không cần trigger change vì xe đã disabled)
+        if (inspection.customerId) {
+            $('#editCustomerId').val(inspection.customerId);
+        }
+        
         $('#editInspectorId').val(inspection.inspectorId).trigger('change');
         $('#editInspectionDate').val(inspection.inspectionDate ? new Date(inspection.inspectionDate).toISOString().split('T')[0] : '');
         $('#editInspectionType').val(inspection.inspectionType || '');
@@ -519,6 +639,64 @@ window.InspectionManagement = {
         $('#editRecommendations').val(inspection.recommendations || '');
         $('#editTechnicianNotes').val(inspection.technicianNotes || '');
         $('#editStatus').val(inspection.status || '');
+    },
+
+    // Complete inspection
+    completeInspection: function(id) {
+        var self = this;
+        
+        Swal.fire({
+            title: 'Xác nhận hoàn thành kiểm tra?',
+            text: 'Bạn có chắc chắn muốn đánh dấu kiểm tra xe này là đã hoàn thành?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#28a745',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Hoàn thành',
+            cancelButtonText: 'Hủy'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: '/InspectionManagement/CompleteInspection/' + id,
+                    type: 'POST',
+                    success: function(response) {
+                        if (response.success) {
+                            Swal.fire({
+                                title: 'Thành công!',
+                                text: 'Đã hoàn thành kiểm tra xe',
+                                icon: 'success',
+                                timer: 2000,
+                                showConfirmButton: false
+                            });
+                            self.dataTable.ajax.reload();
+                        } else {
+                            GarageApp.showError(response.message || 'Có lỗi xảy ra khi hoàn thành kiểm tra');
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error completing inspection:', error);
+                        var errorMessage = 'Lỗi khi hoàn thành kiểm tra xe';
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            errorMessage = xhr.responseJSON.message;
+                        }
+                        GarageApp.showError(errorMessage);
+                    }
+                });
+            }
+        });
+    },
+
+    // Translate GeneralCondition từ English sang Vietnamese
+    translateGeneralCondition: function(condition) {
+        if (!condition) return '';
+        
+        switch (condition.toLowerCase()) {
+            case 'excellent': return 'Xuất sắc';
+            case 'good': return 'Tốt';
+            case 'fair': return 'Khá';
+            case 'poor': return 'Kém';
+            default: return condition; // Trả về nguyên gốc nếu không match
+        }
     }
 };
 

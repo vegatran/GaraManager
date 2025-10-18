@@ -114,6 +114,17 @@ namespace GarageManagementSystem.Infrastructure.Repositories
                 .OrderByDescending(vi => vi.InspectionDate)
                 .FirstOrDefaultAsync();
         }
+
+        public async Task<VehicleInspection?> GetByCustomerReceptionIdAsync(int customerReceptionId)
+        {
+            return await _dbSet
+                .Where(vi => !vi.IsDeleted && vi.CustomerReceptionId == customerReceptionId)
+                .Include(vi => vi.Customer)
+                .Include(vi => vi.Vehicle)
+                .Include(vi => vi.Inspector)
+                .Include(vi => vi.Issues.Where(i => !i.IsDeleted))
+                .FirstOrDefaultAsync();
+        }
     }
 }
 

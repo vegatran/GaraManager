@@ -1,73 +1,162 @@
-<!-- Create Transaction Modal -->
+<!-- Create Purchase Order Modal -->
 <div class="modal fade" id="createTransactionModal" tabindex="-1" role="dialog">
-    <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-dialog modal-xl" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h4 class="modal-title">Thêm Giao Dịch Kho Mới</h4>
+                <h4 class="modal-title">📦 Tạo Đơn Nhập Hàng Mới</h4>
                 <button type="button" class="close" data-dismiss="modal">
                     <span>&times;</span>
                 </button>
             </div>
             <form id="createTransactionForm">
                 <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="partId">Phụ Tùng <span class="text-danger">*</span></label>
-                                <select class="form-control form-control-sm select2" id="partId" name="PartId" required>
-                                    <option value="">-- Chọn phụ tùng --</option>
-                                </select>
-                            </div>
+                    <!-- Purchase Order Header -->
+                    <div class="card card-primary">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">📋 Thông Tin Đơn Hàng</h5>
                         </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="transactionType">Loại Giao Dịch <span class="text-danger">*</span></label>
-                                <select class="form-control form-control-sm" id="transactionType" name="TransactionType" required>
-                                    <option value="">-- Chọn loại giao dịch --</option>
-                                </select>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="transactionType">Loại Giao Dịch <span class="text-danger">*</span></label>
+                                        <select class="form-control form-control-sm" id="transactionType" name="TransactionType" required>
+                                            <option value="">-- Chọn loại giao dịch --</option>
+                                            <option value="NhapKho">🟢 Nhập kho</option>
+                                            <option value="TonDauKy">🔵 Tồn đầu kỳ</option>
+                                            <option value="XuatKho">🔴 Xuất kho</option>
+                                            <option value="DieuChinh">🟡 Điều chỉnh</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="supplierId">Nhà Cung Cấp <span class="text-danger">*</span></label>
+                                        <select class="form-control form-control-sm select2" id="supplierId" name="SupplierId" required>
+                                            <option value="">-- Chọn nhà cung cấp --</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="referenceNumber">Số Hóa Đơn <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control form-control-sm" id="referenceNumber" name="ReferenceNumber" maxlength="100" placeholder="VD: HD-2025-001" required>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="transactionDate">Ngày Giao Dịch <span class="text-danger">*</span></label>
+                                        <input type="datetime-local" class="form-control form-control-sm" id="transactionDate" name="TransactionDate" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="notes">Ghi Chú Đơn Hàng</label>
+                                        <input type="text" class="form-control form-control-sm" id="notes" name="Notes" maxlength="500" placeholder="Ghi chú chung cho đơn hàng">
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="quantity">Số Lượng <span class="text-danger">*</span></label>
-                                <input type="number" class="form-control form-control-sm" id="quantity" name="Quantity" min="1" required>
+
+                    <!-- Items List -->
+                    <div class="card card-success">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">📦 Danh Sách Phụ Tùng</h5>
+                        </div>
+                        <div class="card-body">
+                            <!-- ✅ SỬA: Di chuyển button ra ngoài table, đặt ở vị trí hợp lý -->
+                            <div class="row mb-3">
+                                <div class="col-12 text-right">
+                                    <button type="button" class="btn btn-primary btn-sm" id="addItemBtn" 
+                                            title="Thêm phụ tùng mới vào đơn hàng (F9)">
+                                        <i class="fas fa-plus"></i> Thêm Phụ Tùng
+                                        <small class="ml-1 text-muted">(F9)</small>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-sm" id="itemsTable">
+                                    <thead class="thead-light">
+                                        <tr>
+                                            <th width="5%">#</th>
+                                            <th width="25%">Phụ Tùng <span class="text-danger">*</span></th>
+                                            <th width="10%">Số Lượng <span class="text-danger">*</span></th>
+                                            <th width="15%">Đơn Giá <span class="text-danger">*</span></th>
+                                            <th width="15%">Thành Tiền</th>
+                                            <th width="10%">Có Hóa Đơn</th>
+                                            <th width="10%">Thao Tác</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="itemsTableBody">
+                                        <!-- Items will be added dynamically -->
+                                    </tbody>
+                                    <tfoot class="bg-light">
+                                        <tr>
+                                            <td colspan="4" class="text-right font-weight-bold">Tổng Cộng:</td>
+                                            <td class="font-weight-bold" id="totalAmount">0 VNĐ</td>
+                                            <td colspan="2"></td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                            <div class="alert alert-info mt-3">
+                                <i class="fas fa-info-circle"></i>
+                                <strong>Hướng dẫn:</strong> 
+                                <ul class="mb-0 mt-2">
+                                    <li>Click <strong>"Thêm Phụ Tùng"</strong> để thêm nhiều loại phụ tùng vào đơn hàng</li>
+                                    <li>Mỗi dòng là một loại phụ tùng khác nhau</li>
+                                    <li>Sử dụng <kbd>F9</kbd> để thêm nhanh, <kbd>Ctrl+Enter</kbd> để lưu</li>
+                                </ul>
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="unitPrice">Đơn Giá (VNĐ) <span class="text-danger">*</span></label>
-                                <input type="number" class="form-control form-control-sm" id="unitPrice" name="UnitPrice" min="0" step="1000" required>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="supplierId">Nhà Cung Cấp</label>
-                                <select class="form-control form-control-sm select2" id="supplierId" name="SupplierId">
-                                    <option value="">-- Chọn nhà cung cấp --</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="referenceNumber">Số Tham Chiếu</label>
-                                <input type="text" class="form-control form-control-sm" id="referenceNumber" name="ReferenceNumber" maxlength="100">
-                            </div>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="notes">Ghi Chú</label>
-                        <textarea class="form-control form-control-sm" id="notes" name="Notes" rows="3" maxlength="1000"></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Hủy</button>
-                    <button type="submit" class="btn btn-primary btn-sm">Tạo Giao Dịch</button>
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <i class="fas fa-save"></i> Tạo Đơn Nhập Hàng
+                    </button>
                 </div>
             </form>
         </div>
     </div>
 </div>
+
+<!-- Item Row Template (Hidden) -->
+<template id="itemRowTemplate">
+    <tr class="item-row">
+        <td class="text-center">
+            <span class="item-index">1</span>
+        </td>
+        <td>
+            <input type="text" class="form-control form-control-sm item-part-typeahead" 
+                   name="Items[0].PartName" placeholder="Gõ để tìm phụ tùng..." 
+                   autocomplete="off" required>
+            <input type="hidden" class="item-part-id" name="Items[0].PartId">
+        </td>
+        <td>
+            <input type="number" class="form-control form-control-sm item-quantity" name="Items[0].Quantity" min="1" value="1" required>
+        </td>
+        <td>
+            <input type="number" class="form-control form-control-sm item-unit-price" name="Items[0].UnitPrice" min="0" step="1000" value="0" required>
+        </td>
+        <td class="text-right">
+            <span class="item-total">0 VNĐ</span>
+        </td>
+        <td class="text-center">
+            <input type="checkbox" class="item-has-invoice" name="Items[0].HasInvoice" checked>
+        </td>
+        <td class="text-center">
+            <button type="button" class="btn btn-danger btn-sm remove-item-btn">
+                <i class="fas fa-times"></i>
+            </button>
+        </td>
+    </tr>
+</template>
+
+<style>
+</style>

@@ -1,0 +1,239 @@
+<!-- Create Quotation Modal -->
+<div class="modal fade modal-with-select2" id="createQuotationModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h4 class="modal-title"><i class="fas fa-file-invoice-dollar"></i> Tạo Báo Giá Mới</h4>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form id="createQuotationForm">
+                <div class="modal-body">
+                    <!-- Thông Tin Cơ Bản -->
+                    <div class="card card-outline card-primary mb-3">
+                        <div class="card-header">
+                            <h3 class="card-title"><i class="fas fa-info-circle"></i> Thông Tin Cơ Bản</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="createVehicleInspectionId"><i class="fas fa-car text-primary"></i> Kiểm Tra Xe <span class="text-danger">*</span></label>
+                                        <select class="form-control form-control-sm select2" id="createVehicleInspectionId" name="VehicleInspectionId" required style="width: 100%;">
+                                            <option value="">Chọn kiểm tra xe</option>
+                                        </select>
+                                        <small class="form-text text-muted">Chỉ hiển thị kiểm tra xe đã hoàn thành</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="createCustomerId"><i class="fas fa-user text-success"></i> Khách Hàng</label>
+                                        <select class="form-control form-control-sm select2" id="createCustomerId" name="CustomerId" style="width: 100%;" disabled>
+                                            <option value="">Sẽ tự động chọn theo kiểm tra xe</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="createVehicleId"><i class="fas fa-car text-warning"></i> Xe</label>
+                                        <select class="form-control form-control-sm select2" id="createVehicleId" name="VehicleId" style="width: 100%;" disabled>
+                                            <option value="">Sẽ tự động chọn theo kiểm tra xe</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Cấu Hình Báo Giá -->
+                    <div class="card card-outline card-info mb-3">
+                        <div class="card-header">
+                            <h3 class="card-title"><i class="fas fa-cog"></i> Cấu Hình Báo Giá</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="createValidUntil"><i class="fas fa-calendar text-info"></i> Hiệu Lực Đến</label>
+                                        <input type="date" class="form-control form-control-sm" id="createValidUntil" name="ValidUntil">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="createQuotationType"><i class="fas fa-tags text-warning"></i> Loại Báo Giá</label>
+                                        <select class="form-control form-control-sm" id="createQuotationType" name="QuotationType">
+                                            <option value="Personal">Cá nhân</option>
+                                            <option value="Insurance">Bảo hiểm</option>
+                                            <option value="Company">Công ty</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="createTaxRate"><i class="fas fa-percentage text-danger"></i> Thuế VAT (%)</label>
+                                        <input type="number" class="form-control form-control-sm" id="createTaxRate" name="TaxRate" min="0" max="100" step="0.1" value="10">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Mô Tả & Điều Khoản -->
+                    <div class="card card-outline card-success mb-3">
+                        <div class="card-header">
+                            <h3 class="card-title"><i class="fas fa-file-alt"></i> Mô Tả & Điều Khoản</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="form-group">
+                                        <label for="createDescription"><i class="fas fa-align-left text-success"></i> Mô Tả</label>
+                                        <textarea class="form-control form-control-sm" id="createDescription" name="Description" rows="2" placeholder="Mô tả báo giá..."></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="form-group">
+                                        <label for="createTerms"><i class="fas fa-clipboard-list text-info"></i> Điều Khoản</label>
+                                        <textarea class="form-control form-control-sm" id="createTerms" name="Terms" rows="2" placeholder="Các điều khoản thanh toán và bảo hành..."></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Dịch Vụ -->
+                    <div class="card card-outline card-warning mb-3">
+                        <div class="card-header">
+                            <h3 class="card-title"><i class="fas fa-list-alt"></i> Dịch Vụ <span class="text-danger">*</span></h3>
+                        </div>
+                        <div class="card-body">
+                            <!-- Service Type Tabs -->
+                            <ul class="nav nav-tabs" id="serviceTypeTabs" role="tablist">
+                                <li class="nav-item">
+                                    <a class="nav-link active" id="parts-tab" data-toggle="tab" href="#parts" role="tab" aria-controls="parts" aria-selected="true">
+                                        <i class="fas fa-cogs"></i> Phụ Tùng
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" id="repair-tab" data-toggle="tab" href="#repair" role="tab" aria-controls="repair" aria-selected="false">
+                                        <i class="fas fa-tools"></i> Sửa Chữa
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" id="paint-tab" data-toggle="tab" href="#paint" role="tab" aria-controls="paint" aria-selected="false">
+                                        <i class="fas fa-paint-brush"></i> Sơn
+                                    </a>
+                                </li>
+                            </ul>
+                            
+                            <!-- Tab Content -->
+                            <div class="tab-content" id="serviceTypeTabContent">
+                                <!-- Phụ Tùng Tab -->
+                                <div class="tab-pane fade show active" id="parts" role="tabpanel" aria-labelledby="parts-tab">
+                                    <div class="mt-3">
+                                        <div class="table-responsive">
+                                            <table class="table table-bordered table-sm">
+                                                <thead class="thead-light">
+                                                    <tr>
+                                                        <th width="25%">Tên Phụ Tùng</th>
+                                                        <th width="10%">Số Lượng</th>
+                                                        <th width="15%">Đơn Giá (VNĐ)</th>
+                                                        <th width="15%">Thành Tiền (VNĐ)</th>
+                                                        <th width="10%">Có Hóa Đơn</th>
+                                                        <th width="10%">Thao Tác</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="createPartsItems">
+                                                    <!-- Parts items will be added here -->
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <button type="button" class="btn btn-sm btn-success mt-2" id="addCreatePartsItem">
+                                            <i class="fas fa-plus"></i> Thêm Phụ Tùng
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-info mt-2 ml-2" id="addCreatePartsLabor">
+                                            <i class="fas fa-tools"></i> Thêm Tiền Công Phụ Tùng
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <!-- Sửa Chữa Tab -->
+                                <div class="tab-pane fade" id="repair" role="tabpanel" aria-labelledby="repair-tab">
+                                    <div class="mt-3">
+                                        <div class="alert alert-info">
+                                            <i class="fas fa-info-circle"></i> Giá sửa chữa có thể thay đổi tùy theo mức độ hư hại thực tế
+                                        </div>
+                                        <div class="table-responsive">
+                                            <table class="table table-bordered table-sm">
+                                                <thead class="thead-light">
+                                                    <tr>
+                                                        <th width="25%">Tên Dịch Vụ</th>
+                                                        <th width="10%">Số Lượng</th>
+                                                        <th width="15%">Đơn Giá (VNĐ)</th>
+                                                        <th width="15%">Thành Tiền (VNĐ)</th>
+                                                        <th width="10%">Có Hóa Đơn</th>
+                                                        <th width="10%">Thao Tác</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="createRepairItems">
+                                                    <!-- Repair items will be added here -->
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <button type="button" class="btn btn-sm btn-success mt-2" id="addCreateRepairItem">
+                                            <i class="fas fa-plus"></i> Thêm Dịch Vụ Sửa Chữa
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-info mt-2 ml-2" id="addCreateRepairLabor">
+                                            <i class="fas fa-wrench"></i> Thêm Tiền Công Sửa Chữa
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <!-- Sơn Tab -->
+                                <div class="tab-pane fade" id="paint" role="tabpanel" aria-labelledby="paint-tab">
+                                    <div class="mt-3">
+                                        <div class="alert alert-info">
+                                            <i class="fas fa-info-circle"></i> Giá sơn có thể thay đổi tùy theo kích thước vùng bị trầy xước
+                                        </div>
+                                        <div class="table-responsive">
+                                            <table class="table table-bordered table-sm">
+                                                <thead class="thead-light">
+                                                    <tr>
+                                                        <th width="25%">Tên Dịch Vụ</th>
+                                                        <th width="10%">Số Lượng</th>
+                                                        <th width="15%">Đơn Giá (VNĐ)</th>
+                                                        <th width="15%">Thành Tiền (VNĐ)</th>
+                                                        <th width="10%">Có Hóa Đơn</th>
+                                                        <th width="10%">Thao Tác</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="createPaintItems">
+                                                    <!-- Paint items will be added here -->
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <button type="button" class="btn btn-sm btn-success mt-2" id="addCreatePaintItem">
+                                            <i class="fas fa-plus"></i> Thêm Dịch Vụ Sơn
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-info mt-2 ml-2" id="addCreatePaintLabor">
+                                            <i class="fas fa-paint-brush"></i> Thêm Tiền Công Sơn
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">
+                        <i class="fas fa-times"></i> Hủy
+                    </button>
+                    <button type="submit" class="btn btn-success btn-sm">
+                        <i class="fas fa-save"></i> Lưu Báo Giá
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+

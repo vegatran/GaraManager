@@ -72,7 +72,7 @@ window.Setup = {
                 if (response.success) {
                     GarageApp.showSuccess('Settings saved successfully!');
                 } else {
-                    GarageApp.showError(response.message || 'Error saving settings');
+                    GarageApp.showError(GarageApp.parseErrorMessage(response) || 'Error saving settings');
                 }
             },
             error: function(xhr, status, error) {
@@ -90,7 +90,7 @@ window.Setup = {
                 if (response.success) {
                     GarageApp.showSuccess('Connection successful!');
                 } else {
-                    GarageApp.showError(response.message || 'Connection failed');
+                    GarageApp.showError(GarageApp.parseErrorMessage(response) || 'Connection failed');
                 }
             },
             error: function(xhr, status, error) {

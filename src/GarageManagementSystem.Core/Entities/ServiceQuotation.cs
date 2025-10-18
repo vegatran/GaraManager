@@ -99,11 +99,15 @@ namespace GarageManagementSystem.Core.Entities
         // If approved, reference to created ServiceOrder
         public int? ServiceOrderId { get; set; }
 
+        // Reference to Customer Reception (for workflow tracking)
+        public int? CustomerReceptionId { get; set; }
+
         // Navigation properties
         public virtual VehicleInspection? VehicleInspection { get; set; }
         public virtual Customer Customer { get; set; } = null!;
         public virtual Vehicle Vehicle { get; set; } = null!;
         public virtual Employee? PreparedBy { get; set; }
+        public virtual CustomerReception? CustomerReception { get; set; }
         public virtual ServiceOrder? ServiceOrder { get; set; }
         public virtual ICollection<QuotationItem> Items { get; set; } = new List<QuotationItem>();
     }

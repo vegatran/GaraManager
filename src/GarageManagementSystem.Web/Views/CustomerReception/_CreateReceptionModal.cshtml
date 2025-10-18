@@ -1,0 +1,190 @@
+<!-- Create Reception Modal -->
+<div class="modal fade" id="createReceptionModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">Tiếp Đón Khách Hàng Mới</h4>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form id="createReceptionForm">
+                <div class="modal-body">
+                    <div class="row">
+                        <!-- Basic Information -->
+                        <div class="col-md-6">
+                            <div class="card card-primary">
+                                <div class="card-header">
+                                    <h3 class="card-title">Thông Tin Cơ Bản</h3>
+                                </div>
+                                <div class="card-body">
+                                    <div class="form-group">
+                                        <label for="createCustomerSelect">Khách Hàng <span class="text-danger">*</span></label>
+                                        <select class="form-control form-control-sm" id="createCustomerSelect" required>
+                                            <option value="">-- Chọn khách hàng --</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="createVehicleSelect">Xe <span class="text-danger">*</span></label>
+                                        <select class="form-control form-control-sm" id="createVehicleSelect" required>
+                                            <option value="">-- Chọn xe --</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="createServiceType">Loại Dịch Vụ <span class="text-danger">*</span></label>
+                                        <select class="form-control form-control-sm" id="createServiceType" required>
+                                            <option value="">-- Chọn loại dịch vụ --</option>
+                                            <option value="Repair">Sửa Chữa</option>
+                                            <option value="Maintenance">Bảo Dưỡng</option>
+                                            <option value="Warranty">Bảo Hành</option>
+                                            <option value="Bodywork">Sửa Chữa Thân Xe</option>
+                                            <option value="Other">Khác</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="createPriority">Mức Độ Ưu Tiên <span class="text-danger">*</span></label>
+                                        <select class="form-control form-control-sm" id="createPriority" required>
+                                            <option value="Low">Thấp</option>
+                                            <option value="Normal" selected>Bình Thường</option>
+                                            <option value="High">Cao</option>
+                                            <option value="Urgent">Khẩn Cấp</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Assignment Information -->
+                        <div class="col-md-6">
+                            <div class="card card-info">
+                                <div class="card-header">
+                                    <h3 class="card-title">Thông Tin Phân Công</h3>
+                                </div>
+                                <div class="card-body">
+                                    <div class="form-group">
+                                        <label for="createTechnicianSelect">Kỹ Thuật Viên Phụ Trách <span class="text-danger">*</span></label>
+                                        <select class="form-control form-control-sm" id="createTechnicianSelect" required>
+                                            <option value="">-- Chọn kỹ thuật viên --</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="createInspectionStartDate">Ngày Hẹn Kiểm Tra</label>
+                                        <input type="datetime-local" class="form-control form-control-sm" id="createInspectionStartDate" />
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="createInspectionCompletedDate">Ngày Dự Kiến Hoàn Thành</label>
+                                        <input type="date" class="form-control form-control-sm" id="createInspectionCompletedDate" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Customer Information -->
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="card card-warning">
+                                <div class="card-header">
+                                    <h3 class="card-title">Thông Tin Khách Hàng</h3>
+                                </div>
+                                <div class="card-body">
+                                    <div class="form-group">
+                                        <label for="createCustomerRequest">Yêu Cầu Của Khách Hàng</label>
+                                        <textarea class="form-control form-control-sm" id="createCustomerRequest" rows="3" 
+                                            placeholder="Mô tả yêu cầu của khách hàng..."></textarea>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="createCustomerComplaints">Mô Tả Lỗi/Tình Trạng</label>
+                                        <textarea class="form-control form-control-sm" id="createCustomerComplaints" rows="3" 
+                                            placeholder="Mô tả lỗi hoặc tình trạng xe..."></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Insurance Information -->
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="card card-success">
+                                <div class="card-header">
+                                    <h3 class="card-title">Thông Tin Bảo Hiểm (Nếu có)</h3>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="createInsuranceCompany">Công Ty Bảo Hiểm</label>
+                                                <input type="text" class="form-control form-control-sm" id="createInsuranceCompany" 
+                                                    placeholder="Tên công ty bảo hiểm" />
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="createInsurancePolicy">Số Hợp Đồng</label>
+                                                <input type="text" class="form-control form-control-sm" id="createInsurancePolicy" 
+                                                    placeholder="Số hợp đồng bảo hiểm" />
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="createInsuranceClaimDate">Ngày Báo Hiểm</label>
+                                                <input type="date" class="form-control form-control-sm" id="createInsuranceClaimDate" disabled />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Emergency Contact -->
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="card card-danger">
+                                <div class="card-header">
+                                    <h3 class="card-title">Liên Hệ Khẩn Cấp (Nếu cần)</h3>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label for="createEmergencyContact">Số Điện Thoại</label>
+                                                <input type="tel" class="form-control form-control-sm" id="createEmergencyContact" 
+                                                    placeholder="Số điện thoại liên hệ khẩn cấp" />
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label for="createEmergencyContactName">Tên Người Liên Hệ</label>
+                                                <input type="text" class="form-control form-control-sm" id="createEmergencyContactName" 
+                                                    placeholder="Tên người liên hệ khẩn cấp" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Notes -->
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="form-group">
+                                <label for="createReceptionNotes">Ghi Chú Của Nhân Viên Tiếp Đón</label>
+                                <textarea class="form-control form-control-sm" id="createReceptionNotes" rows="3" 
+                                    placeholder="Ghi chú thêm của nhân viên tiếp đón..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <i class="fas fa-save"></i> Tạo Phiếu Tiếp Đón
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

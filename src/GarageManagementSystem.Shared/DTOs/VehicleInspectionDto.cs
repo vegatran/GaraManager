@@ -45,6 +45,7 @@ namespace GarageManagementSystem.Shared.DTOs
         public int CustomerId { get; set; }
 
         public int? InspectorId { get; set; }
+        public int? CustomerReceptionId { get; set; }
 
         public DateTime InspectionDate { get; set; } = DateTime.Now;
 

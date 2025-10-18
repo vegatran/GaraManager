@@ -83,7 +83,38 @@ namespace GarageManagementSystem.Web.Controllers
         }
 
         /// <summary>
-        /// Lấy danh sách khách hàng cho dropdown
+        /// Lấy danh sách ServiceQuotation đã được phê duyệt để tạo phiếu sửa chữa
+        /// </summary>
+        [HttpGet("GetAvailableQuotations")]
+        public async Task<IActionResult> GetAvailableQuotations()
+        {
+            var response = await _apiService.GetAsync<List<ServiceQuotationDto>>(ApiEndpoints.ServiceQuotations.GetAll);
+            
+            if (response.Success && response.Data != null)
+            {
+                // Chỉ lấy những quotation đã được phê duyệt và chưa có service order
+                var availableQuotations = response.Data
+                    .Where(q => q.Status == "Approved")
+                    .Select(q => new
+                    {
+                        value = q.Id.ToString(),
+                        text = $"{q.QuotationNumber} - {q.Vehicle?.Brand} {q.Vehicle?.Model} ({q.Vehicle?.LicensePlate}) - {q.Customer?.Name}",
+                        vehicleId = q.VehicleId,
+                        customerId = q.CustomerId,
+                        vehicleInfo = $"{q.Vehicle?.Brand} {q.Vehicle?.Model} - {q.Vehicle?.LicensePlate}",
+                        customerName = q.Customer?.Name ?? "Không xác định",
+                        totalAmount = q.TotalAmount,
+                        quotationDate = q.CreatedAt
+                    }).Cast<object>().ToList();
+                
+                return Json(availableQuotations);
+            }
+
+            return Json(new List<object>());
+        }
+
+        /// <summary>
+        /// Lấy danh sách khách hàng cho dropdown (legacy - không dùng trong quy trình mới)
         /// </summary>
         [HttpGet("GetCustomers")]
         public async Task<IActionResult> GetCustomers()

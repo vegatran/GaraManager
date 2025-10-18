@@ -53,7 +53,7 @@ namespace GarageManagementSystem.Web.Controllers
                         departmentId = e.DepartmentId,
                         phone = e.Phone ?? "N/A",
                         email = e.Email ?? "N/A",
-                        hireDate = e.HireDate?.ToString("dd/MM/yyyy") ?? "N/A",
+                        hireDate = e.HireDate,
                         status = TranslateEmployeeStatus(e.Status ?? "Active")
                     }).Cast<object>().ToList();
                 }

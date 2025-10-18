@@ -1,0 +1,121 @@
+<!-- Create Payment Modal -->
+<div class="modal fade modal-with-select2" id="createPaymentModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">Ghi Nhận Thanh Toán</h4>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form id="createPaymentForm">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createServiceOrderId">Đơn Hàng Dịch Vụ <span class="text-danger">*</span></label>
+                                <select class="form-control form-control-sm select2" id="createServiceOrderId" name="ServiceOrderId" required style="width: 100%;">
+                                    <option value="">Chọn đơn hàng</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createAmount">Số Tiền <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control form-control-sm" id="createAmount" name="Amount" required min="1" step="1000">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createPaymentMethod">Phương Thức Thanh Toán <span class="text-danger">*</span></label>
+                                <select class="form-control form-control-sm" id="createPaymentMethod" name="PaymentMethod" required>
+                                    <option value="Cash">Tiền Mặt</option>
+                                    <option value="BankTransfer">Chuyển Khoản</option>
+                                    <option value="CreditCard">Thẻ Tín Dụng</option>
+                                    <option value="DebitCard">Thẻ Ghi Nợ</option>
+                                    <option value="Momo">Ví MoMo</option>
+                                    <option value="ZaloPay">ZaloPay</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createTransactionReference">Mã Tham Chiếu</label>
+                                <input type="text" class="form-control form-control-sm" id="createTransactionReference" name="TransactionReference" maxlength="100">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row" id="cardDetailsRow" style="display: none;">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createCardType">Loại Thẻ</label>
+                                <input type="text" class="form-control form-control-sm" id="createCardType" name="CardType" maxlength="100">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createCardLastFourDigits">4 Số Cuối Thẻ</label>
+                                <input type="text" class="form-control form-control-sm" id="createCardLastFourDigits" name="CardLastFourDigits" maxlength="4" pattern="[0-9]{4}">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label for="createNotes">Ghi Chú</label>
+                                <textarea class="form-control form-control-sm" id="createNotes" name="Notes" rows="3" maxlength="1000"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="custom-control custom-checkbox">
+                                <input type="checkbox" class="custom-control-input" id="createIsRefund" name="IsRefund">
+                                <label class="custom-control-label" for="createIsRefund">Đây là giao dịch hoàn tiền</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row" id="refundReasonRow" style="display: none;">
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label for="createRefundReason">Lý Do Hoàn Tiền</label>
+                                <textarea class="form-control form-control-sm" id="createRefundReason" name="RefundReason" rows="2" maxlength="500"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary btn-sm">Lưu Thanh Toán</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Show/hide card details based on payment method
+$('#createPaymentMethod').on('change', function() {
+    var method = $(this).val();
+    if (method === 'CreditCard' || method === 'DebitCard') {
+        $('#cardDetailsRow').show();
+    } else {
+        $('#cardDetailsRow').hide();
+        $('#createCardType').val('');
+        $('#createCardLastFourDigits').val('');
+    }
+});
+
+// Show/hide refund reason based on checkbox
+$('#createIsRefund').on('change', function() {
+    if ($(this).is(':checked')) {
+        $('#refundReasonRow').show();
+    } else {
+        $('#refundReasonRow').hide();
+        $('#createRefundReason').val('');
+    }
+});
+</script>
+

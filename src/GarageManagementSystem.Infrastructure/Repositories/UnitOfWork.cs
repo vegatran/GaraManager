@@ -22,11 +22,14 @@ namespace GarageManagementSystem.Infrastructure.Repositories
             Positions = new GenericRepository<Position>(_context);
             VehicleInspections = new VehicleInspectionRepository(_context);
             ServiceQuotations = new ServiceQuotationRepository(_context);
+            ServiceQuotationItems = new GenericRepository<QuotationItem>(_context);
             Parts = new PartRepository(_context);
             StockTransactions = new StockTransactionRepository(_context);
             Suppliers = new SupplierRepository(_context);
             PaymentTransactions = new PaymentTransactionRepository(_context);
             Appointments = new AppointmentRepository(_context);
+            PrintTemplates = new PrintTemplateRepository(_context);
+            CustomerReceptions = new CustomerReceptionRepository(_context);
             
             // Phase 1 - New repositories
             Invoices = new GenericRepository<Invoice>(_context);
@@ -45,11 +48,14 @@ namespace GarageManagementSystem.Infrastructure.Repositories
         public IGenericRepository<Position> Positions { get; private set; }
         public IVehicleInspectionRepository VehicleInspections { get; private set; }
         public IServiceQuotationRepository ServiceQuotations { get; private set; }
+        public IGenericRepository<QuotationItem> ServiceQuotationItems { get; private set; }
         public IPartRepository Parts { get; private set; }
         public IStockTransactionRepository StockTransactions { get; private set; }
         public ISupplierRepository Suppliers { get; private set; }
         public IPaymentTransactionRepository PaymentTransactions { get; private set; }
         public IAppointmentRepository Appointments { get; private set; }
+        public IPrintTemplateRepository PrintTemplates { get; private set; }
+        public ICustomerReceptionRepository CustomerReceptions { get; private set; }
         
         // Phase 1 - New repositories
         public IGenericRepository<Invoice> Invoices { get; private set; }

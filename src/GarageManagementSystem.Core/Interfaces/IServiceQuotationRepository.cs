@@ -14,6 +14,7 @@ namespace GarageManagementSystem.Core.Interfaces
         Task<IEnumerable<ServiceQuotation>> GetApprovedQuotationsAsync();
         Task<IEnumerable<ServiceQuotation>> GetExpiredQuotationsAsync();
         Task<string> GenerateQuotationNumberAsync();
+        Task<ServiceQuotation?> GetByVehicleInspectionIdAsync(int vehicleInspectionId);
     }
 }
 

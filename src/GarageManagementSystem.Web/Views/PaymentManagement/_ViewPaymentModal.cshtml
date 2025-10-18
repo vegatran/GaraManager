@@ -1,0 +1,116 @@
+<!-- View Payment Modal -->
+<div class="modal fade" id="viewPaymentModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">Chi Tiết Thanh Toán</h4>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Số Biên Nhận:</label>
+                            <p id="viewReceiptNumber" class="form-control-plaintext font-weight-bold"></p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Ngày Thanh Toán:</label>
+                            <p id="viewPaymentDate" class="form-control-plaintext"></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Đơn Hàng Dịch Vụ:</label>
+                            <p id="viewServiceOrderId" class="form-control-plaintext"></p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Số Tiền:</label>
+                            <p id="viewAmount" class="form-control-plaintext text-primary font-weight-bold"></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Phương Thức Thanh Toán:</label>
+                            <p id="viewPaymentMethod" class="form-control-plaintext"></p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Mã Tham Chiếu:</label>
+                            <p id="viewTransactionReference" class="form-control-plaintext"></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="row" id="viewCardDetailsRow" style="display: none;">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Loại Thẻ:</label>
+                            <p id="viewCardType" class="form-control-plaintext"></p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>4 Số Cuối Thẻ:</label>
+                            <p id="viewCardLastFourDigits" class="form-control-plaintext"></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Người Nhận:</label>
+                            <p id="viewReceivedBy" class="form-control-plaintext"></p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Loại Giao Dịch:</label>
+                            <p id="viewIsRefund" class="form-control-plaintext"></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="row" id="viewRefundReasonRow" style="display: none;">
+                    <div class="col-md-12">
+                        <div class="form-group">
+                            <label>Lý Do Hoàn Tiền:</label>
+                            <p id="viewRefundReason" class="form-control-plaintext text-danger"></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="form-group">
+                            <label>Ghi Chú:</label>
+                            <p id="viewNotes" class="form-control-plaintext"></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Ngày Tạo:</label>
+                            <p id="viewCreatedAt" class="form-control-plaintext"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Đóng</button>
+                <button type="button" class="btn btn-primary btn-sm" onclick="window.print()">
+                    <i class="fas fa-print"></i> In Biên Nhận
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+

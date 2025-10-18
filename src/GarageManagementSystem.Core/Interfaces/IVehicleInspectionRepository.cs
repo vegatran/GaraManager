@@ -13,6 +13,7 @@ namespace GarageManagementSystem.Core.Interfaces
         Task<IEnumerable<VehicleInspection>> GetPendingInspectionsAsync();
         Task<string> GenerateInspectionNumberAsync();
         Task<VehicleInspection?> GetLatestInspectionByVehicleAsync(int vehicleId);
+        Task<VehicleInspection?> GetByCustomerReceptionIdAsync(int customerReceptionId);
     }
 }
 

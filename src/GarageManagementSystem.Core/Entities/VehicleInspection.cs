@@ -84,6 +84,9 @@ namespace GarageManagementSystem.Core.Entities
         [StringLength(20)]
         public string Status { get; set; } = "Pending"; // Pending, InProgress, Completed, Cancelled
 
+        // Reference to Customer Reception
+        public int? CustomerReceptionId { get; set; }
+
         public DateTime? CompletedDate { get; set; }
 
         // If quotation created from this inspection
@@ -114,6 +117,7 @@ namespace GarageManagementSystem.Core.Entities
         public virtual Vehicle Vehicle { get; set; } = null!;
         public virtual Customer Customer { get; set; } = null!;
         public virtual Employee? Inspector { get; set; }
+        public virtual CustomerReception? CustomerReception { get; set; }
         public virtual ServiceQuotation? Quotation { get; set; }
         public virtual ICollection<InspectionIssue> Issues { get; set; } = new List<InspectionIssue>();
         public virtual ICollection<InspectionPhoto> Photos { get; set; } = new List<InspectionPhoto>();

@@ -10,6 +10,7 @@ namespace GarageManagementSystem.Core.Interfaces
         Task<IEnumerable<Part>> SearchPartsAsync(string searchTerm);
         Task<bool> IsPartNumberExistsAsync(string partNumber, int? excludeId = null);
         Task UpdateStockAsync(int partId, int quantity);
+        Task<IEnumerable<Part>> GetByIdsAsync(List<int> ids); // ✅ THÊM
     }
 }
 

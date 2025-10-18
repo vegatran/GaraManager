@@ -1,0 +1,229 @@
+<!-- Edit Inspection Modal -->
+<div class="modal fade modal-with-select2" id="editInspectionModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h4 class="modal-title"><i class="fas fa-edit"></i> Chỉnh Sửa Kiểm Tra Xe</h4>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form id="editInspectionForm">
+                <input type="hidden" id="editId" name="Id">
+                <div class="modal-body">
+                    <!-- Thông Tin Kiểm Tra -->
+                    <div class="card card-outline card-primary mb-3">
+                        <div class="card-header">
+                            <h3 class="card-title"><i class="fas fa-info-circle"></i> Thông Tin Kiểm Tra</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="editVehicleId">Xe <span class="text-danger">*</span></label>
+                                        <select class="form-control form-control-sm select2" id="editVehicleId" name="VehicleId" required style="width: 100%;" disabled>
+                                            <option value="">Chọn xe</option>
+                                        </select>
+                                        <small class="form-text text-muted">Không thể thay đổi xe sau khi đã tạo kiểm tra</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="editCustomerId">Khách Hàng</label>
+                                        <select class="form-control form-control-sm select2" id="editCustomerId" name="CustomerId" style="width: 100%;" disabled>
+                                            <option value="">Sẽ tự động chọn theo xe</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="editInspectorId">Kỹ Thuật Viên <span class="text-danger">*</span></label>
+                                        <select class="form-control form-control-sm select2" id="editInspectorId" name="InspectorId" required style="width: 100%;">
+                                            <option value="">Chọn kỹ thuật viên</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="editInspectionDate">Ngày Kiểm Tra <span class="text-danger">*</span></label>
+                                        <input type="date" class="form-control form-control-sm" id="editInspectionDate" name="InspectionDate" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="editInspectionType">Loại Kiểm Tra</label>
+                                        <select class="form-control form-control-sm" id="editInspectionType" name="InspectionType">
+                                            <option value="Routine">Kiểm tra định kỳ</option>
+                                            <option value="PreService">Kiểm tra trước sửa chữa</option>
+                                            <option value="PostService">Kiểm tra sau sửa chữa</option>
+                                            <option value="DamageAssessment">Đánh giá thiệt hại</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="editCurrentMileage">Số Km Hiện Tại</label>
+                                        <input type="number" class="form-control form-control-sm" id="editCurrentMileage" name="CurrentMileage" min="0">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="editFuelLevel">Mức Nhiên Liệu</label>
+                                        <select class="form-control form-control-sm" id="editFuelLevel" name="FuelLevel">
+                                            <option value="">Chọn mức nhiên liệu</option>
+                                            <option value="Empty">Hết nhiên liệu</option>
+                                            <option value="Quarter">1/4 bình</option>
+                                            <option value="Half">1/2 bình</option>
+                                            <option value="ThreeQuarter">3/4 bình</option>
+                                            <option value="Full">Đầy bình</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="editGeneralCondition">Tình Trạng Chung</label>
+                                        <select class="form-control form-control-sm" id="editGeneralCondition" name="GeneralCondition">
+                                            <option value="">Chọn tình trạng</option>
+                                            <option value="Excellent">Xuất sắc</option>
+                                            <option value="Good">Tốt</option>
+                                            <option value="Fair">Khá</option>
+                                            <option value="Poor">Kém</option>
+                                            <option value="Critical">Nghiêm trọng</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="editStatus">Trạng Thái</label>
+                                        <select class="form-control form-control-sm" id="editStatus" name="Status">
+                                            <option value="Pending">Chờ xử lý</option>
+                                            <option value="InProgress">Đang xử lý</option>
+                                            <option value="Completed">Hoàn thành</option>
+                                            <option value="Cancelled">Đã hủy</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tình Trạng Xe -->
+                    <div class="card card-outline card-info mb-3">
+                        <div class="card-header">
+                            <h3 class="card-title"><i class="fas fa-car"></i> Tình Trạng Xe</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="editExteriorCondition">Tình Trạng Ngoại Thất</label>
+                                        <textarea class="form-control form-control-sm" id="editExteriorCondition" name="ExteriorCondition" rows="3" placeholder="Mô tả chi tiết: cửa xe, gương chiếu hậu, cảng xe, móp méo, trầy xước..."></textarea>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="editInteriorCondition">Tình Trạng Nội Thất</label>
+                                        <textarea class="form-control form-control-sm" id="editInteriorCondition" name="InteriorCondition" rows="3" placeholder="Mô tả chi tiết: ghế ngồi, bảng điều khiển, sàn xe, trần xe..."></textarea>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="editEngineCondition">Tình Trạng Động Cơ</label>
+                                        <textarea class="form-control form-control-sm" id="editEngineCondition" name="EngineCondition" rows="3" placeholder="Mô tả chi tiết: tiếng động cơ, khói xả, rò rỉ dầu, bộ lọc gió..."></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="editBrakeCondition">Tình Trạng Phanh</label>
+                                        <textarea class="form-control form-control-sm" id="editBrakeCondition" name="BrakeCondition" rows="3" placeholder="Mô tả chi tiết: phanh tay, phanh chân, đĩa phanh, má phanh..."></textarea>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="editSuspensionCondition">Tình Trạng Hệ Thống Treo</label>
+                                        <textarea class="form-control form-control-sm" id="editSuspensionCondition" name="SuspensionCondition" rows="3" placeholder="Mô tả chi tiết: giảm xóc, nhíp, thanh chống, ổ bi..."></textarea>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="editTireCondition">Tình Trạng Lốp</label>
+                                        <textarea class="form-control form-control-sm" id="editTireCondition" name="TireCondition" rows="3" placeholder="Mô tả chi tiết: lốp trước/sau, độ mòn, vết nứt, áp suất..."></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="editElectricalCondition">Tình Trạng Hệ Thống Điện</label>
+                                        <textarea class="form-control form-control-sm" id="editElectricalCondition" name="ElectricalCondition" rows="3" placeholder="Mô tả chi tiết: ắc quy, máy phát, dây điện, cầu chì..."></textarea>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="editLightsCondition">Tình Trạng Đèn</label>
+                                        <textarea class="form-control form-control-sm" id="editLightsCondition" name="LightsCondition" rows="3" placeholder="Mô tả chi tiết: đèn pha, đèn hậu, đèn xi-nhan, đèn phanh..."></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Ghi Chú & Khuyến Nghị -->
+                    <div class="card card-outline card-success">
+                        <div class="card-header">
+                            <h3 class="card-title"><i class="fas fa-sticky-note"></i> Ghi Chú & Khuyến Nghị</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-12">
+                                           <div class="form-group">
+                                               <label for="editElectricalCondition">Tình Trạng Hệ Thống Điện</label>
+                                               <textarea class="form-control form-control-sm" id="editElectricalCondition" name="ElectricalCondition" rows="3" placeholder="Mô tả chi tiết: ắc quy, máy phát, dây điện, cầu chì..."></textarea>
+                                           </div>
+                                           <div class="form-group">
+                                               <label for="editLightsCondition">Tình Trạng Đèn</label>
+                                               <textarea class="form-control form-control-sm" id="editLightsCondition" name="LightsCondition" rows="3" placeholder="Mô tả chi tiết: đèn pha, đèn hậu, đèn xi-nhan, đèn phanh..."></textarea>
+                                           </div>
+                                           <div class="form-group">
+                                               <label for="editTechnicianNotes">Ghi Chú Kỹ Thuật Viên</label>
+                                               <textarea class="form-control form-control-sm" id="editTechnicianNotes" name="TechnicianNotes" rows="3" placeholder="Ghi chú của kỹ thuật viên..."></textarea>
+                                           </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="form-group">
+                                        <label for="editCustomerComplaints">Khiếu Nại Khách Hàng</label>
+                                        <textarea class="form-control form-control-sm" id="editCustomerComplaints" name="CustomerComplaints" rows="3" placeholder="Mô tả khiếu nại của khách hàng..."></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="form-group">
+                                        <label for="editRecommendations">Khuyến Nghị</label>
+                                        <textarea class="form-control form-control-sm" id="editRecommendations" name="Recommendations" rows="3" placeholder="Các khuyến nghị sửa chữa..."></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">
+                        <i class="fas fa-times"></i> Hủy
+                    </button>
+                    <button type="submit" class="btn btn-warning btn-sm">
+                        <i class="fas fa-save"></i> Cập Nhật Kiểm Tra
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

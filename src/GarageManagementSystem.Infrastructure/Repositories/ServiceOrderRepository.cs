@@ -126,5 +126,15 @@ namespace GarageManagementSystem.Infrastructure.Repositories
         {
             return await GetServiceOrdersByStatusAsync(status);
         }
+
+        public async Task<ServiceOrder?> GetByServiceQuotationIdAsync(int serviceQuotationId)
+        {
+            return await _dbSet
+                .Where(so => !so.IsDeleted && so.ServiceQuotationId == serviceQuotationId)
+                .Include(so => so.Customer)
+                .Include(so => so.Vehicle)
+                .Include(so => so.ServiceOrderItems.Where(soi => !soi.IsDeleted))
+                .FirstOrDefaultAsync();
+        }
     }
 }

@@ -20,90 +20,78 @@ window.AppointmentManagement = {
     initDataTable: function() {
         var self = this;
         
-        // Destroy existing DataTable if it exists
-        if ($.fn.DataTable.isDataTable('#appointmentTable')) {
-            $('#appointmentTable').DataTable().destroy();
-        }
-        
-        this.appointmentTable = DataTablesVietnamese.init('#appointmentTable', {
-            processing: true,
-            serverSide: false,
-            ajax: {
-                url: '/AppointmentManagement/GetAppointments',
-                type: 'GET',
-                error: function(xhr, status, error) {
-                    if (AuthHandler.isUnauthorized(xhr)) {
-                        AuthHandler.handleUnauthorized(xhr, true);
-                    } else {
-                        GarageApp.showError('Error loading appointments');
+        // Sử dụng DataTablesUtility với style chung
+        var columns = [
+            { data: 'id', title: 'Mã', width: '60px' },
+            { data: 'customerName', title: 'Khách Hàng' },
+            { data: 'vehicleLicensePlate', title: 'Xe' },
+            { 
+                data: 'appointmentDate', 
+                title: 'Ngày',
+                render: DataTablesUtility.renderDate
+            },
+            { data: 'appointmentTime', title: 'Giờ' },
+            { data: 'serviceType', title: 'Loại Dịch Vụ' },
+            { 
+                data: 'status', 
+                title: 'Trạng Thái',
+                render: function(data, type, row) {
+                    var badgeClass = 'badge-secondary';
+                    var displayText = data;
+                    
+                    switch(data) {
+                        case 'Đã Đặt Lịch': badgeClass = 'badge-primary'; break;
+                        case 'Đã Xác Nhận': badgeClass = 'badge-info'; break;
+                        case 'Đang Thực Hiện': badgeClass = 'badge-warning'; break;
+                        case 'Hoàn Thành': badgeClass = 'badge-success'; break;
+                        case 'Đã Hủy': badgeClass = 'badge-danger'; break;
+                        case 'Không Đến': badgeClass = 'badge-dark'; break;
                     }
+                    return `<span class="badge ${badgeClass}">${displayText}</span>`;
                 }
             },
-            columns: [
-                { data: 'id', title: 'Mã', width: '60px' },
-                { data: 'customerName', title: 'Khách Hàng' },
-                { data: 'vehicleLicensePlate', title: 'Xe' },
-                { data: 'appointmentDate', title: 'Ngày' },
-                { data: 'appointmentTime', title: 'Giờ' },
-                { data: 'serviceType', title: 'Loại Dịch Vụ' },
-                { 
-                    data: 'status', 
-                    title: 'Trạng Thái',
-                    render: function(data, type, row) {
-                        var badgeClass = 'badge-secondary';
-                        var displayText = data;
-                        
-                        switch(data) {
-                            case 'Đã Đặt Lịch': badgeClass = 'badge-primary'; break;
-                            case 'Đã Xác Nhận': badgeClass = 'badge-info'; break;
-                            case 'Đang Thực Hiện': badgeClass = 'badge-warning'; break;
-                            case 'Hoàn Thành': badgeClass = 'badge-success'; break;
-                            case 'Đã Hủy': badgeClass = 'badge-danger'; break;
-                            case 'Không Đến': badgeClass = 'badge-dark'; break;
-                        }
-                        return `<span class="badge ${badgeClass}">${displayText}</span>`;
-                    }
-                },
-                {
-                    data: null,
-                    title: 'Thao Tác',
-                    orderable: false,
-                    searchable: false,
-                    render: function(data, type, row) {
-                        var actions = `
-                            <button class="btn btn-info btn-sm view-appointment" data-id="${row.id}">
-                                <i class="fas fa-eye"></i>
+            {
+                data: null,
+                title: 'Thao Tác',
+                orderable: false,
+                searchable: false,
+                render: function(data, type, row) {
+                    var actions = `
+                        <button class="btn btn-info btn-sm view-appointment" data-id="${row.id}">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    `;
+                    
+                    // Chỉ hiển thị nút Edit và Delete khi trạng thái chưa hoàn thành
+                    // Kiểm tra nhiều trường hợp có thể của trạng thái "hoàn thành"
+                    var isCompleted = row.status === 'Completed' || 
+                                     row.status === 'Hoàn Thành' ||  // Chữ T viết hoa (từ TranslateStatus)
+                                     row.status === 'Hoàn thành' || 
+                                     row.status === 'completed' || 
+                                     row.status === 'hoàn thành' ||
+                                     (row.status && row.status.toLowerCase().includes('hoàn thành')) ||
+                                     (row.status && row.status.toLowerCase().includes('completed'));
+                    
+                    if (!isCompleted) {
+                        actions += `
+                            <button class="btn btn-warning btn-sm edit-appointment" data-id="${row.id}">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-danger btn-sm delete-appointment" data-id="${row.id}">
+                                <i class="fas fa-trash"></i>
                             </button>
                         `;
-                        
-                        // Chỉ hiển thị nút Edit và Delete khi trạng thái chưa hoàn thành
-                        // Kiểm tra nhiều trường hợp có thể của trạng thái "hoàn thành"
-                        var isCompleted = row.status === 'Completed' || 
-                                         row.status === 'Hoàn Thành' ||  // Chữ T viết hoa (từ TranslateStatus)
-                                         row.status === 'Hoàn thành' || 
-                                         row.status === 'completed' || 
-                                         row.status === 'hoàn thành' ||
-                                         (row.status && row.status.toLowerCase().includes('hoàn thành')) ||
-                                         (row.status && row.status.toLowerCase().includes('completed'));
-                        
-                        if (!isCompleted) {
-                            actions += `
-                                <button class="btn btn-warning btn-sm edit-appointment" data-id="${row.id}">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <button class="btn btn-danger btn-sm delete-appointment" data-id="${row.id}">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            `;
-                        }
-                        
-                        return actions;
                     }
+                    
+                    return actions;
                 }
-            ],
+            }
+        ];
+        
+        this.appointmentTable = DataTablesUtility.initAjaxTable('#appointmentTable', '/AppointmentManagement/GetAppointments', columns, {
             order: [[0, 'desc']],
-            pageLength: 10,
-            responsive: true
+            pageLength: 25,
+            dom: 'rtip'  // Chỉ hiển thị table, paging, info, processing (không có search box và length menu)
         });
     },
 
@@ -276,6 +264,11 @@ window.AppointmentManagement = {
     bindEvents: function() {
         var self = this;
 
+        // Search functionality
+        $('#searchInput').on('keyup', function() {
+            self.appointmentTable.search(this.value).draw();
+        });
+
         // Add appointment button
         $(document).on('click', '#addAppointmentBtn', function() {
             self.showCreateModal();
@@ -345,7 +338,7 @@ window.AppointmentManagement = {
                         self.populateViewModal(response.data);
                         $('#viewAppointmentModal').modal('show');
                     } else {
-                        GarageApp.showError(response.message || 'Error loading appointment');
+                        GarageApp.showError(GarageApp.parseErrorMessage(response) || 'Error loading appointment');
                     }
                 }
             },
@@ -372,7 +365,7 @@ window.AppointmentManagement = {
                         self.populateEditModal(response.data);
                         $('#editAppointmentModal').modal('show');
                     } else {
-                        GarageApp.showError(response.message || 'Error loading appointment');
+                        GarageApp.showError(GarageApp.parseErrorMessage(response) || 'Error loading appointment');
                     }
                 }
             },
@@ -409,7 +402,7 @@ window.AppointmentManagement = {
                                 GarageApp.showSuccess('Appointment deleted successfully!');
                                 self.appointmentTable.ajax.reload();
                             } else {
-                                GarageApp.showError(response.message || 'Error deleting appointment');
+                                GarageApp.showError(GarageApp.parseErrorMessage(response) || 'Error deleting appointment');
                             }
                         }
                     },
@@ -450,7 +443,7 @@ window.AppointmentManagement = {
                         $('#createAppointmentModal').modal('hide');
                         self.appointmentTable.ajax.reload();
                     } else {
-                        GarageApp.showError(response.message || 'Error creating appointment');
+                        GarageApp.showError(GarageApp.parseErrorMessage(response) || 'Error creating appointment');
                     }
                 }
             },
@@ -491,7 +484,7 @@ window.AppointmentManagement = {
                         $('#editAppointmentModal').modal('hide');
                         self.appointmentTable.ajax.reload();
                     } else {
-                        GarageApp.showError(response.message || 'Error updating appointment');
+                        GarageApp.showError(GarageApp.parseErrorMessage(response) || 'Error updating appointment');
                     }
                 }
             },

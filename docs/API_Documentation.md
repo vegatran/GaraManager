@@ -1,11 +1,15 @@
-# API DOCUMENTATION - GARAGE MANAGEMENT SYSTEM
+# API DOCUMENTATION - GARAGE MANAGEMENT SYSTEM (QUY TRÌNH MỚI)
 
 ## 📋 MỤC LỤC
 1. [Overview](#overview)
 2. [Authentication](#authentication)
-3. [Vehicle Management APIs](#vehicle-management-apis)
-4. [Parts & Inventory APIs](#parts--inventory-apis)
-5. [Service Order APIs](#service-order-apis)
+3. [🔄 WORKFLOW APIs (QUY TRÌNH MỚI)](#-workflow-apis-quy-trình-mới)
+   - [Customer Reception APIs](#customer-reception-apis)
+   - [Vehicle Inspection APIs](#vehicle-inspection-apis)
+   - [Service Quotation APIs](#service-quotation-apis)
+   - [Service Order APIs](#service-order-apis)
+4. [Vehicle Management APIs](#vehicle-management-apis)
+5. [Parts & Inventory APIs](#parts--inventory-apis)
 6. [Financial Management APIs](#financial-management-apis)
 7. [Reporting APIs](#reporting-apis)
 8. [Error Handling](#error-handling)
@@ -107,6 +111,238 @@ POST /api/auth/refresh
 POST /api/auth/logout
 Authorization: Bearer {access_token}
 ```
+
+---
+
+## 🔄 WORKFLOW APIs (QUY TRÌNH MỚI)
+
+### **🔄 CUSTOMER RECEPTION APIs**
+
+**Base Endpoint:** `/api/CustomerReceptions`
+
+#### **1. Get All Customer Receptions**
+```http
+GET /api/CustomerReceptions
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "receptionNumber": "REC-20250115-0001",
+      "customerId": 1,
+      "customerName": "Nguyễn Văn A",
+      "vehicleId": 1,
+      "vehiclePlate": "29A-12345",
+      "vehicleMake": "Toyota",
+      "vehicleModel": "Camry",
+      "vehicleYear": 2020,
+      "serviceType": "Maintenance",
+      "priority": "Normal",
+      "assignedTechnicianId": 1,
+      "assignedTechnician": {
+        "id": 1,
+        "name": "Trần Văn B"
+      },
+      "status": "Assigned",
+      "receptionDate": "2025-01-15T08:00:00Z",
+      "inspectionStartDate": "2025-01-15T09:00:00Z",
+      "inspectionCompletedDate": "2025-01-15T17:00:00Z",
+      "customerRequest": "Kiểm tra toàn bộ xe",
+      "customerComplaints": "Xe có tiếng kêu lạ",
+      "receptionNotes": "Khách hàng VIP"
+    }
+  ],
+  "message": "Lấy danh sách phiếu tiếp đón thành công"
+}
+```
+
+#### **2. Create Customer Reception**
+```http
+POST /api/CustomerReceptions
+```
+
+**Request Body:**
+```json
+{
+  "customerId": 1,
+  "vehicleId": 1,
+  "serviceType": "Maintenance",
+  "priority": "Normal",
+  "assignedTechnicianId": 1,
+  "inspectionStartDate": "2025-01-15T09:00:00Z",
+  "customerRequest": "Kiểm tra toàn bộ xe",
+  "customerComplaints": "Xe có tiếng kêu lạ",
+  "receptionNotes": "Khách hàng VIP"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "receptionNumber": "REC-20250115-0001",
+    "status": "Assigned",
+    "message": "Tạo phiếu tiếp đón thành công"
+  }
+}
+```
+
+#### **3. Get Available Receptions for Inspection**
+```http
+GET /api/CustomerReceptions/GetAvailableForInspection
+```
+
+**Response:** Danh sách phiếu tiếp đón có status "Assigned" để tạo kiểm tra xe.
+
+#### **4. Update Reception Status**
+```http
+PUT /api/CustomerReceptions/{id}/UpdateStatus
+```
+
+**Request Body:**
+```json
+{
+  "status": "InProgress",
+  "notes": "Bắt đầu kiểm tra xe"
+}
+```
+
+### **🔍 VEHICLE INSPECTION APIs**
+
+**Base Endpoint:** `/api/VehicleInspections`
+
+#### **1. Create Inspection from Reception**
+```http
+POST /api/VehicleInspections
+```
+
+**Request Body:**
+```json
+{
+  "customerReceptionId": 1,
+  "vehicleId": 1,
+  "customerId": 1,
+  "inspectorId": 1,
+  "inspectionDate": "2025-01-15T09:00:00Z",
+  "inspectionType": "General",
+  "currentMileage": 50000,
+  "fuelLevel": "Half",
+  "generalCondition": "Good",
+  "exteriorCondition": "Good",
+  "interiorCondition": "Good",
+  "engineCondition": "Good",
+  "brakeCondition": "Good",
+  "suspensionCondition": "Good",
+  "tireCondition": "Good",
+  "electricalCondition": "Good",
+  "lightsCondition": "Good",
+  "customerComplaints": "Xe có tiếng kêu lạ",
+  "recommendations": "Thay dầu động cơ",
+  "technicianNotes": "Cần kiểm tra thêm hệ thống phanh"
+}
+```
+
+**Business Rules:**
+- Chỉ tạo từ CustomerReception có status "Assigned"
+- Tự động cập nhật CustomerReception status = "InProgress"
+
+#### **2. Complete Inspection**
+```http
+PUT /api/VehicleInspections/{id}/Complete
+```
+
+**Response:** Tự động cập nhật CustomerReception status = "Inspected"
+
+#### **3. Get Available Inspections for Quotation**
+```http
+GET /api/VehicleInspections/GetAvailableForQuotation
+```
+
+**Response:** Danh sách inspection có status "Completed" để tạo báo giá.
+
+### **💰 SERVICE QUOTATION APIs**
+
+**Base Endpoint:** `/api/ServiceQuotations`
+
+#### **1. Create Quotation from Inspection**
+```http
+POST /api/ServiceQuotations
+```
+
+**Request Body:**
+```json
+{
+  "vehicleInspectionId": 1,
+  "vehicleId": 1,
+  "customerId": 1,
+  "description": "Báo giá sửa chữa sau kiểm tra",
+  "validUntil": "2025-01-22T17:00:00Z",
+  "taxRate": 0.1,
+  "discountAmount": 0,
+  "items": [
+    {
+      "serviceId": 1,
+      "itemName": "Thay dầu động cơ",
+      "description": "Thay dầu động cơ 5W-30",
+      "quantity": 1,
+      "unitPrice": 500000,
+      "itemType": "Labor"
+    }
+  ]
+}
+```
+
+**Business Rules:**
+- Chỉ tạo từ VehicleInspection có status "Completed"
+- Tự động cập nhật CustomerReception status = "Quoted"
+
+#### **2. Approve Quotation**
+```http
+PUT /api/ServiceQuotations/{id}/Approve
+```
+
+**Response:** Tự động cập nhật CustomerReception status = "Quoted"
+
+#### **3. Get Available Quotations for Service Order**
+```http
+GET /api/ServiceQuotations/GetAvailableForOrder
+```
+
+**Response:** Danh sách quotation có status "Approved" để tạo phiếu sửa chữa.
+
+### **🛠️ SERVICE ORDER APIs (Updated)**
+
+**Base Endpoint:** `/api/ServiceOrders`
+
+#### **1. Create Service Order from Quotation**
+```http
+POST /api/ServiceOrders
+```
+
+**Request Body:**
+```json
+{
+  "serviceQuotationId": 1,
+  "vehicleId": 1,
+  "customerId": 1,
+  "orderDate": "2025-01-15T08:00:00Z",
+  "estimatedStartDate": "2025-01-16T08:00:00Z",
+  "estimatedEndDate": "2025-01-17T17:00:00Z",
+  "priority": "Normal",
+  "notes": "Bắt đầu sửa chữa theo báo giá",
+  "status": "Pending"
+}
+```
+
+**Business Rules:**
+- Chỉ tạo từ ServiceQuotation có status "Approved"
+- Tự động cập nhật CustomerReception status = "ServiceOrdered"
 
 ---
 

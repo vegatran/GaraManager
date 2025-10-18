@@ -20,48 +20,39 @@ window.VehicleManagement = {
     initDataTable: function() {
         var self = this;
         
-        this.vehicleTable = DataTablesVietnamese.init('#vehicleTable', {
-            ajax: {
-                url: '/VehicleManagement/GetVehicles',
-                type: 'GET',
-                error: function(xhr, status, error) {
-                    if (AuthHandler.isUnauthorized(xhr)) {
-                        AuthHandler.handleUnauthorized(xhr, true);
-                    } else {
-                        GarageApp.showError('Lỗi khi tải danh sách xe');
-                    }
+        // Sử dụng DataTablesUtility với style chung
+        var columns = [
+            { data: 'id', title: 'ID', width: '60px' },
+            { data: 'licensePlate', title: 'Biển Số Xe' },
+            { data: 'brand', title: 'Hãng Xe' },
+            { data: 'model', title: 'Mẫu Xe' },
+            { data: 'year', title: 'Năm SX' },
+            { data: 'customerName', title: 'Khách Hàng' },
+            {
+                data: null,
+                title: 'Thao Tác',
+                orderable: false,
+                searchable: false,
+                render: function(data, type, row) {
+                    return `
+                        <button class="btn btn-info btn-sm view-vehicle" data-id="${row.id}">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="btn btn-warning btn-sm edit-vehicle" data-id="${row.id}">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-danger btn-sm delete-vehicle" data-id="${row.id}">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    `;
                 }
-            },
-            columns: [
-                { data: 'id', title: 'ID', width: '60px' },
-                { data: 'licensePlate', title: 'Biển Số Xe' },
-                { data: 'brand', title: 'Hãng Xe' },
-                { data: 'model', title: 'Mẫu Xe' },
-                { data: 'year', title: 'Năm SX' },
-                { data: 'customerName', title: 'Khách Hàng' },
-                {
-                    data: null,
-                    title: 'Thao Tác',
-                    orderable: false,
-                    searchable: false,
-                    render: function(data, type, row) {
-                        return `
-                            <button class="btn btn-info btn-sm view-vehicle" data-id="${row.id}">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                            <button class="btn btn-warning btn-sm edit-vehicle" data-id="${row.id}">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="btn btn-danger btn-sm delete-vehicle" data-id="${row.id}">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        `;
-                    }
-                }
-            ],
+            }
+        ];
+        
+        this.vehicleTable = DataTablesUtility.initAjaxTable('#vehicleTable', '/VehicleManagement/GetVehicles', columns, {
             order: [[0, 'desc']],
-            pageLength: 10,
-            responsive: true
+            pageLength: 25,
+            dom: 'rtip'  // Chỉ hiển thị table, paging, info, processing (không có search box và length menu)
         });
     },
 
@@ -92,6 +83,11 @@ window.VehicleManagement = {
     // Bind events
     bindEvents: function() {
         var self = this;
+
+        // Search functionality
+        $('#searchInput').on('keyup', function() {
+            self.vehicleTable.search(this.value).draw();
+        });
 
         // Add vehicle button - using data-target selector
         $(document).on('click', '[data-target="#createVehicleModal"]', function() {
@@ -148,7 +144,7 @@ window.VehicleManagement = {
                         self.populateViewModal(response.data);
                         $('#viewVehicleModal').modal('show');
                     } else {
-                        GarageApp.showError(response.message || 'Lỗi khi tải thông tin xe');
+                        GarageApp.showError(GarageApp.parseErrorMessage(response) || 'Lỗi khi tải thông tin xe');
                     }
                 }
             },
@@ -175,7 +171,7 @@ window.VehicleManagement = {
                         self.populateEditModal(response.data);
                         $('#editVehicleModal').modal('show');
                     } else {
-                        GarageApp.showError(response.message || 'Lỗi khi tải thông tin xe');
+                        GarageApp.showError(GarageApp.parseErrorMessage(response) || 'Lỗi khi tải thông tin xe');
                     }
                 }
             },
@@ -212,7 +208,7 @@ window.VehicleManagement = {
                                 GarageApp.showSuccess('Vehicle deleted successfully!');
                                 self.vehicleTable.ajax.reload();
                             } else {
-                                GarageApp.showError(response.message || 'Error deleting vehicle');
+                                GarageApp.showError(GarageApp.parseErrorMessage(response) || 'Error deleting vehicle');
                             }
                         }
                     },
@@ -262,7 +258,7 @@ window.VehicleManagement = {
                         $('#createVehicleModal').modal('hide');
                         self.vehicleTable.ajax.reload();
                     } else {
-                        GarageApp.showError(response.message || 'Error creating vehicle');
+                        GarageApp.showError(GarageApp.parseErrorMessage(response) || 'Error creating vehicle');
                     }
                 }
             },
@@ -312,7 +308,7 @@ window.VehicleManagement = {
                         $('#editVehicleModal').modal('hide');
                         self.vehicleTable.ajax.reload();
                     } else {
-                        GarageApp.showError(response.message || 'Error updating vehicle');
+                        GarageApp.showError(GarageApp.parseErrorMessage(response) || 'Error updating vehicle');
                     }
                 }
             },

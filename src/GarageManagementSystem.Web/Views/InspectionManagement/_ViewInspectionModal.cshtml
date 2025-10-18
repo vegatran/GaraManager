@@ -1,0 +1,187 @@
+<!-- View Inspection Modal -->
+<div class="modal fade" id="viewInspectionModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">Chi Tiết Kiểm Tra Xe</h4>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <!-- Thông tin tổng hợp -->
+                <div class="mb-4 p-3 border rounded bg-light">
+                    <h6 class="text-primary font-weight-bold mb-3">
+                        <i class="fas fa-info-circle mr-2"></i>Thông Tin Kiểm Tra
+                    </h6>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group mb-3">
+                                <label class="font-weight-bold text-muted small">Số Kiểm Tra:</label>
+                                <p id="viewInspectionNumber" class="form-control-plaintext font-weight-bold text-dark mb-0"></p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group mb-3">
+                                <label class="font-weight-bold text-muted small">Ngày Kiểm Tra:</label>
+                                <p id="viewInspectionDate" class="form-control-plaintext mb-0"></p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group mb-3">
+                                <label class="font-weight-bold text-muted small">Loại Kiểm Tra:</label>
+                                <p id="viewInspectionType" class="form-control-plaintext mb-0"></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group mb-3">
+                                <label class="font-weight-bold text-muted small">Trạng Thái:</label>
+                                <p id="viewStatus" class="form-control-plaintext mb-0"></p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group mb-3">
+                                <label class="font-weight-bold text-muted small">Thông Tin Xe:</label>
+                                <p id="viewVehicleInfo" class="form-control-plaintext mb-0"></p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group mb-3">
+                                <label class="font-weight-bold text-muted small">Khách Hàng:</label>
+                                <p id="viewCustomerName" class="form-control-plaintext mb-0"></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group mb-0">
+                                <label class="font-weight-bold text-muted small">Kỹ Thuật Viên:</label>
+                                <p id="viewInspectorName" class="form-control-plaintext mb-0"></p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group mb-0">
+                                <label class="font-weight-bold text-muted small">Số Km Hiện Tại:</label>
+                                <p id="viewCurrentMileage" class="form-control-plaintext mb-0"></p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group mb-0">
+                                <label class="font-weight-bold text-muted small">Mức Nhiên Liệu:</label>
+                                <p id="viewFuelLevel" class="form-control-plaintext mb-0"></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-group mb-0">
+                                <label class="font-weight-bold text-muted small">Tình Trạng Chung:</label>
+                                <p id="viewGeneralCondition" class="form-control-plaintext mb-0"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+                <!-- Tình trạng chi tiết các bộ phận -->
+                <div class="mb-4 p-3 border rounded bg-light">
+                    <h6 class="text-info font-weight-bold mb-3">
+                        <i class="fas fa-tools mr-2"></i>Tình Trạng Chi Tiết Các Bộ Phận
+                    </h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label class="font-weight-bold text-muted small">Ngoại Thất:</label>
+                                <p id="viewExteriorCondition" class="form-control-plaintext mb-0"></p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label class="font-weight-bold text-muted small">Nội Thất:</label>
+                                <p id="viewInteriorCondition" class="form-control-plaintext mb-0"></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label class="font-weight-bold text-muted small">Động Cơ:</label>
+                                <p id="viewEngineCondition" class="form-control-plaintext mb-0"></p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label class="font-weight-bold text-muted small">Phanh:</label>
+                                <p id="viewBrakeCondition" class="form-control-plaintext mb-0"></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label class="font-weight-bold text-muted small">Hệ Thống Treo:</label>
+                                <p id="viewSuspensionCondition" class="form-control-plaintext mb-0"></p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label class="font-weight-bold text-muted small">Lốp:</label>
+                                <p id="viewTireCondition" class="form-control-plaintext mb-0"></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-0">
+                                <label class="font-weight-bold text-muted small">Hệ Thống Điện:</label>
+                                <p id="viewElectricalCondition" class="form-control-plaintext mb-0"></p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group mb-0">
+                                <label class="font-weight-bold text-muted small">Đèn:</label>
+                                <p id="viewLightsCondition" class="form-control-plaintext mb-0"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Thông tin chi tiết -->
+                <div class="mb-0 p-3 border rounded bg-light">
+                    <h6 class="text-warning font-weight-bold mb-3">
+                        <i class="fas fa-clipboard-list mr-2"></i>Thông Tin Chi Tiết
+                    </h6>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-group mb-3">
+                                <label class="font-weight-bold text-muted small">Khiếu Nại Khách Hàng:</label>
+                                <p id="viewCustomerComplaints" class="form-control-plaintext mb-0"></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-group mb-3">
+                                <label class="font-weight-bold text-muted small">Khuyến Nghị:</label>
+                                <p id="viewRecommendations" class="form-control-plaintext mb-0"></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-group mb-0">
+                                <label class="font-weight-bold text-muted small">Ghi Chú Kỹ Thuật Viên:</label>
+                                <p id="viewTechnicianNotes" class="form-control-plaintext mb-0"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,4 +1,5 @@
 using AutoMapper;
+using GarageManagementSystem.Core.Enums;
 using GarageManagementSystem.Core.Interfaces;
 using GarageManagementSystem.Shared.DTOs;
 using GarageManagementSystem.Shared.Models;
@@ -33,7 +34,7 @@ namespace GarageManagementSystem.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ApiResponse<List<ServiceOrderDto>>.ErrorResult("Error retrieving service orders", ex.Message));
+                return StatusCode(500, ApiResponse<List<ServiceOrderDto>>.ErrorResult("Lỗi khi lấy danh sách phiếu sửa chữa", ex.Message));
             }
         }
 
@@ -45,7 +46,7 @@ namespace GarageManagementSystem.API.Controllers
                 var order = await _unitOfWork.ServiceOrders.GetByIdWithDetailsAsync(id);
                 if (order == null)
                 {
-                    return NotFound(ApiResponse<ServiceOrderDto>.ErrorResult("Service order not found"));
+                    return NotFound(ApiResponse<ServiceOrderDto>.ErrorResult("Không tìm thấy phiếu sửa chữa"));
                 }
 
                 var orderDto = MapToDto(order);
@@ -53,7 +54,7 @@ namespace GarageManagementSystem.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ApiResponse<ServiceOrderDto>.ErrorResult("Error retrieving service order", ex.Message));
+                return StatusCode(500, ApiResponse<ServiceOrderDto>.ErrorResult("Lỗi khi lấy thông tin phiếu sửa chữa", ex.Message));
             }
         }
 
@@ -97,20 +98,61 @@ namespace GarageManagementSystem.API.Controllers
                 if (!ModelState.IsValid)
                 {
                     var errors = ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage)).ToList();
-                    return BadRequest(ApiResponse<ServiceOrderDto>.ErrorResult("Invalid data", errors));
+                    return BadRequest(ApiResponse<ServiceOrderDto>.ErrorResult("Dữ liệu không hợp lệ", errors));
+                }
+
+                // Business Rule: Kiểm tra xem có ServiceQuotationId không
+                if (createDto.ServiceQuotationId.HasValue)
+                {
+                    var quotation = await _unitOfWork.ServiceQuotations.GetByIdAsync(createDto.ServiceQuotationId.Value);
+                    if (quotation == null)
+                    {
+                        return BadRequest(ApiResponse<ServiceOrderDto>.ErrorResult("Không tìm thấy báo giá"));
+                    }
+
+                    // Business Rule: Chỉ cho phép tạo phiếu sửa chữa từ báo giá đã được phê duyệt
+                    if (quotation.Status != "Approved")
+                    {
+                        return BadRequest(ApiResponse<ServiceOrderDto>.ErrorResult(
+                            $"Không thể tạo phiếu sửa chữa. Báo giá phải ở trạng thái 'Đã Phê Duyệt'. Trạng thái hiện tại: {quotation.Status}"));
+                    }
+
+                    // Business Rule: Kiểm tra xem đã có phiếu sửa chữa cho báo giá này chưa
+                    var existingOrder = await _unitOfWork.ServiceOrders.GetByServiceQuotationIdAsync(createDto.ServiceQuotationId.Value);
+                    if (existingOrder != null)
+                    {
+                        return BadRequest(ApiResponse<ServiceOrderDto>.ErrorResult("Đã tồn tại phiếu sửa chữa cho báo giá này"));
+                    }
+                }
+
+                // Business Rule: Kiểm tra xem có CustomerReceptionId không
+                if (createDto.CustomerReceptionId.HasValue)
+                {
+                    var reception = await _unitOfWork.CustomerReceptions.GetByIdAsync(createDto.CustomerReceptionId.Value);
+                    if (reception == null)
+                    {
+                        return BadRequest(ApiResponse<ServiceOrderDto>.ErrorResult("Không tìm thấy phiếu tiếp đón"));
+                    }
+
+                    // Business Rule: Chỉ cho phép tạo phiếu sửa chữa từ CustomerReception đã hoàn thành kiểm tra
+                    if (reception.Status != ReceptionStatus.Completed)
+                    {
+                        return BadRequest(ApiResponse<ServiceOrderDto>.ErrorResult(
+                            $"Không thể tạo phiếu sửa chữa. Phiếu tiếp đón phải ở trạng thái 'Đã Hoàn Thành'. Trạng thái hiện tại: {reception.Status}"));
+                    }
                 }
 
                 // Validate customer and vehicle exist
                 var customer = await _unitOfWork.Customers.GetByIdAsync(createDto.CustomerId);
                 if (customer == null)
                 {
-                    return BadRequest(ApiResponse<ServiceOrderDto>.ErrorResult("Customer not found"));
+                    return BadRequest(ApiResponse<ServiceOrderDto>.ErrorResult("Không tìm thấy khách hàng"));
                 }
 
                 var vehicle = await _unitOfWork.Vehicles.GetByIdAsync(createDto.VehicleId);
                 if (vehicle == null)
                 {
-                    return BadRequest(ApiResponse<ServiceOrderDto>.ErrorResult("Vehicle not found"));
+                    return BadRequest(ApiResponse<ServiceOrderDto>.ErrorResult("Không tìm thấy xe"));
                 }
 
                 // Đặt PaymentStatus dựa trên VehicleType
@@ -165,16 +207,24 @@ namespace GarageManagementSystem.API.Controllers
                     throw;
                 }
 
+                // Business Rule: CustomerReception status remains "Completed" after service order creation
+                // No need to update status as it's already in final state
+                if (createDto.CustomerReceptionId.HasValue)
+                {
+                    // CustomerReception status is already "Completed"
+                    // ServiceOrder is a separate workflow step
+                }
+
                 // Reload with details
                 order = await _unitOfWork.ServiceOrders.GetByIdWithDetailsAsync(order.Id);
                 var orderDto = MapToDto(order!);
 
                 return CreatedAtAction(nameof(GetServiceOrder), new { id = order.Id }, 
-                    ApiResponse<ServiceOrderDto>.SuccessResult(orderDto, "Service order created successfully"));
+                    ApiResponse<ServiceOrderDto>.SuccessResult(orderDto, "Tạo phiếu sửa chữa thành công"));
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ApiResponse<ServiceOrderDto>.ErrorResult("Error creating service order", ex.Message));
+                return StatusCode(500, ApiResponse<ServiceOrderDto>.ErrorResult("Lỗi khi tạo phiếu sửa chữa", ex.Message));
             }
         }
 
@@ -191,13 +241,13 @@ namespace GarageManagementSystem.API.Controllers
                 if (!ModelState.IsValid)
                 {
                     var errors = ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage)).ToList();
-                    return BadRequest(ApiResponse<ServiceOrderDto>.ErrorResult("Invalid data", errors));
+                    return BadRequest(ApiResponse<ServiceOrderDto>.ErrorResult("Dữ liệu không hợp lệ", errors));
                 }
 
                 var order = await _unitOfWork.ServiceOrders.GetByIdAsync(id);
                 if (order == null)
                 {
-                    return NotFound(ApiResponse<ServiceOrderDto>.ErrorResult("Service order not found"));
+                    return NotFound(ApiResponse<ServiceOrderDto>.ErrorResult("Không tìm thấy phiếu sửa chữa"));
                 }
 
                 // Update order properties
@@ -287,7 +337,7 @@ namespace GarageManagementSystem.API.Controllers
                 var order = await _unitOfWork.ServiceOrders.GetByIdAsync(id);
                 if (order == null)
                 {
-                    return NotFound(ApiResponse<ServiceOrderDto>.ErrorResult("Service order not found"));
+                    return NotFound(ApiResponse<ServiceOrderDto>.ErrorResult("Không tìm thấy phiếu sửa chữa"));
                 }
 
                 order.Status = status;
@@ -395,7 +445,7 @@ namespace GarageManagementSystem.API.Controllers
                 var order = await _unitOfWork.ServiceOrders.GetByIdAsync(id);
                 if (order == null)
                 {
-                    return NotFound(ApiResponse<ServiceOrderDto>.ErrorResult("Service order not found"));
+                    return NotFound(ApiResponse<ServiceOrderDto>.ErrorResult("Không tìm thấy phiếu sửa chữa"));
                 }
 
                 // Validate payment status transition

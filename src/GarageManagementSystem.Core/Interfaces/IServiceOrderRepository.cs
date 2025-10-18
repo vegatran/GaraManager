@@ -18,5 +18,6 @@ namespace GarageManagementSystem.Core.Interfaces
         Task<IEnumerable<ServiceOrder>> GetByCustomerIdAsync(int customerId);
         Task<IEnumerable<ServiceOrder>> GetByVehicleIdAsync(int vehicleId);
         Task<IEnumerable<ServiceOrder>> GetByStatusAsync(string status);
+        Task<ServiceOrder?> GetByServiceQuotationIdAsync(int serviceQuotationId);
     }
 }

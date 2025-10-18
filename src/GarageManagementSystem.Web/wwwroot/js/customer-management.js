@@ -19,66 +19,59 @@ window.CustomerManagement = {
     initDataTable: function() {
         var self = this;
         
-        // Destroy existing DataTable if it exists
-        if ($.fn.DataTable.isDataTable('#customerTable')) {
-            $('#customerTable').DataTable().destroy();
-        }
-        
-        this.customerTable = DataTablesVietnamese.init('#customerTable', {
-            ajax: {
-                url: '/CustomerManagement/GetCustomers',
-                type: 'GET',
-                error: function(xhr, status, error) {
-                    if (AuthHandler.isUnauthorized(xhr)) {
-                        AuthHandler.handleUnauthorized(xhr, true);
-                    } else {
-                        GarageApp.showError('Lỗi khi tải danh sách khách hàng');
-                    }
-                }
+        // Sử dụng DataTablesUtility với style chung
+        var columns = [
+            { data: 'id', title: 'ID', width: '60px' },
+            { data: 'name', title: 'Tên' },
+            { data: 'email', title: 'Email' },
+            { data: 'phone', title: 'Số Điện Thoại' },
+            { data: 'address', title: 'Địa Chỉ' },
+            { 
+                data: 'createdDate', 
+                title: 'Ngày Tạo',
+                render: DataTablesUtility.renderDate
             },
-            columns: [
-                { data: 'id', title: 'ID', width: '60px' },
-                { data: 'name', title: 'Tên' },
-                { data: 'email', title: 'Email' },
-                { data: 'phone', title: 'Số Điện Thoại' },
-                { data: 'address', title: 'Địa Chỉ' },
-                { data: 'createdDate', title: 'Ngày Tạo' },
-                { 
-                    data: 'isActive', 
-                    title: 'Trạng Thái',
-                    render: function(data, type, row) {
-                        return data ? '<span class="badge badge-success">Hoạt động</span>' : '<span class="badge badge-danger">Không hoạt động</span>';
-                    }
-                },
-                {
-                    data: null,
-                    title: 'Thao Tác',
-                    orderable: false,
-                    searchable: false,
-                    render: function(data, type, row) {
-                        return `
-                            <button class="btn btn-info btn-sm view-customer" data-id="${row.id}">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                            <button class="btn btn-warning btn-sm edit-customer" data-id="${row.id}">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="btn btn-danger btn-sm delete-customer" data-id="${row.id}">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        `;
-                    }
+            { 
+                data: 'isActive', 
+                title: 'Trạng Thái',
+                render: DataTablesUtility.renderStatus
+            },
+            {
+                data: null,
+                title: 'Thao Tác',
+                orderable: false,
+                searchable: false,
+                render: function(data, type, row) {
+                    return `
+                        <button class="btn btn-info btn-sm view-customer" data-id="${row.id}">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="btn btn-warning btn-sm edit-customer" data-id="${row.id}">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-danger btn-sm delete-customer" data-id="${row.id}">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    `;
                 }
-            ],
+            }
+        ];
+        
+        this.customerTable = DataTablesUtility.initAjaxTable('#customerTable', '/CustomerManagement/GetCustomers', columns, {
             order: [[0, 'desc']],
-            pageLength: 10,
-            responsive: true
+            pageLength: 25,
+            dom: 'rtip'  // Chỉ hiển thị table, paging, info, processing (không có search box và length menu)
         });
     },
 
     // Bind events
     bindEvents: function() {
         var self = this;
+
+        // Search functionality
+        $('#searchInput').on('keyup', function() {
+            self.customerTable.search(this.value).draw();
+        });
 
         // Add customer button
         $(document).on('click', '#addCustomerBtn', function() {
@@ -137,7 +130,7 @@ window.CustomerManagement = {
                         self.populateViewModal(response.data);
                         $('#viewCustomerModal').modal('show');
                     } else {
-                        GarageApp.showError(response.message || 'Error loading customer');
+                        GarageApp.showError(GarageApp.parseErrorMessage(response) || 'Error loading customer');
                     }
                 }
             },
@@ -166,7 +159,7 @@ window.CustomerManagement = {
                         self.populateEditModal(response.data);
                         $('#editCustomerModal').modal('show');
                     } else {
-                        GarageApp.showError(response.message || 'Error loading customer');
+                        GarageApp.showError(GarageApp.parseErrorMessage(response) || 'Error loading customer');
                     }
                 }
             },
@@ -203,7 +196,7 @@ window.CustomerManagement = {
                                 GarageApp.showSuccess('Customer deleted successfully!');
                                 self.customerTable.ajax.reload();
                             } else {
-                                GarageApp.showError(response.message || 'Error deleting customer');
+                                GarageApp.showError(GarageApp.parseErrorMessage(response) || 'Error deleting customer');
                             }
                         }
                     },
@@ -243,7 +236,7 @@ window.CustomerManagement = {
                         $('#createCustomerModal').modal('hide');
                         self.customerTable.ajax.reload();
                     } else {
-                        GarageApp.showError(response.message || 'Error creating customer');
+                        GarageApp.showError(GarageApp.parseErrorMessage(response) || 'Error creating customer');
                     }
                 }
             },
@@ -283,7 +276,7 @@ window.CustomerManagement = {
                         $('#editCustomerModal').modal('hide');
                         self.customerTable.ajax.reload();
                     } else {
-                        GarageApp.showError(response.message || 'Error updating customer');
+                        GarageApp.showError(GarageApp.parseErrorMessage(response) || 'Error updating customer');
                     }
                 }
             },

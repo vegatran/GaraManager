@@ -28,7 +28,8 @@ namespace GarageManagementSystem.API.Controllers
         {
             try
             {
-                var transactions = await _unitOfWork.StockTransactions.GetAllAsync();
+                // ✅ SỬA: Sử dụng GetByDateRangeAsync để include Part information
+                var transactions = await _unitOfWork.StockTransactions.GetByDateRangeAsync(DateTime.MinValue, DateTime.MaxValue);
                 return Ok(ApiResponse<List<StockTransactionDto>>.SuccessResult(transactions.Select(MapToDto).ToList()));
             }
             catch (Exception ex)
@@ -250,6 +251,121 @@ namespace GarageManagementSystem.API.Controllers
             {
                 await _unitOfWork.RollbackTransactionAsync();
                 return StatusCode(500, ApiResponse<OpeningBalanceImportResult>.ErrorResult("Lỗi khi import tồn đầu kỳ", ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// ✅ THÊM: Tạo đơn nhập hàng với nhiều phụ tùng
+        /// </summary>
+        [HttpPost("purchase-order")]
+        public async Task<ActionResult<ApiResponse<List<StockTransactionDto>>>> CreatePurchaseOrder(CreatePurchaseOrderDto dto)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
+                    return BadRequest(ApiResponse<List<StockTransactionDto>>.ErrorResult("Dữ liệu không hợp lệ", string.Join(", ", errors)));
+                }
+
+                if (dto.Items == null || dto.Items.Count == 0)
+                {
+                    return BadRequest(ApiResponse<List<StockTransactionDto>>.ErrorResult("Vui lòng thêm ít nhất một phụ tùng vào đơn hàng"));
+                }
+
+                var createdTransactions = new List<StockTransactionDto>();
+                var stockTransactions = new List<Core.Entities.StockTransaction>();
+                var partsToUpdate = new Dictionary<int, Core.Entities.Part>();
+
+                // Bắt đầu transaction để đảm bảo tính toàn vẹn dữ liệu
+                await _unitOfWork.BeginTransactionAsync();
+
+                try
+                {
+                    // ✅ TỐI ƯU: Pre-load tất cả Parts để tránh N+1 query
+                    var partIds = dto.Items.Select(x => x.PartId).ToList();
+                    var parts = await _unitOfWork.Parts.GetByIdsAsync(partIds);
+                    var partsDict = parts.ToDictionary(p => p.Id);
+
+                    foreach (var item in dto.Items)
+                    {
+                        // ✅ TỐI ƯU: Sử dụng pre-loaded parts
+                        if (!partsDict.TryGetValue(item.PartId, out var part))
+                        {
+                            await _unitOfWork.RollbackTransactionAsync();
+                            return BadRequest(ApiResponse<List<StockTransactionDto>>.ErrorResult($"Không tìm thấy phụ tùng với ID: {item.PartId}"));
+                        }
+
+                        var qtyBefore = part.QuantityInStock;
+                        var qtyChange = TransactionTypeHelper.IsIncrease(dto.TransactionType) ? item.Quantity : -item.Quantity;
+                        var qtyAfter = qtyBefore + qtyChange;
+
+                        if (qtyAfter < 0)
+                        {
+                            await _unitOfWork.RollbackTransactionAsync();
+                            return BadRequest(ApiResponse<List<StockTransactionDto>>.ErrorResult($"Không đủ tồn kho cho phụ tùng: {part.PartName}"));
+                        }
+
+                        // Convert string to enum
+                        var transactionType = dto.TransactionType switch
+                        {
+                            "NhapKho" => StockTransactionType.NhapKho,
+                            "XuatKho" => StockTransactionType.XuatKho,
+                            "DieuChinh" => StockTransactionType.DieuChinh,
+                            "TonDauKy" => StockTransactionType.TonDauKy,
+                            _ => StockTransactionType.NhapKho
+                        };
+
+                        var transaction = new Core.Entities.StockTransaction
+                        {
+                            TransactionNumber = await _unitOfWork.StockTransactions.GenerateTransactionNumberAsync(),
+                            PartId = item.PartId,
+                            TransactionType = transactionType,
+                            Quantity = item.Quantity,
+                            QuantityBefore = qtyBefore,
+                            QuantityAfter = qtyAfter,
+                            StockAfter = qtyAfter,
+                            UnitPrice = item.UnitPrice,
+                            TotalAmount = item.Quantity * item.UnitPrice,
+                            TransactionDate = dto.TransactionDate,
+                            ServiceOrderId = null,
+                            SupplierId = dto.SupplierId,
+                            ReferenceNumber = dto.ReferenceNumber,
+                            Notes = $"{dto.Notes} - {part.PartName}",
+                            ProcessedById = null,
+                            CreatedAt = DateTime.Now,
+                            UpdatedAt = DateTime.Now,
+                            IsDeleted = false,
+                            HasInvoice = item.HasInvoice
+                        };
+
+                        // ✅ TỐI ƯU: Collect transactions và parts để bulk update
+                        stockTransactions.Add(transaction);
+                        
+                        // Update part quantity
+                        part.QuantityInStock = qtyAfter;
+                        part.UpdatedAt = DateTime.Now;
+                        partsToUpdate[part.Id] = part;
+
+                        createdTransactions.Add(MapToDto(transaction));
+                    }
+
+                    // ✅ SỬA: Chỉ SaveChangesAsync một lần sau khi xử lý tất cả items
+                    await _unitOfWork.SaveChangesAsync();
+                    await _unitOfWork.CommitTransactionAsync();
+
+                    return Ok(ApiResponse<List<StockTransactionDto>>.SuccessResult(createdTransactions, 
+                        $"Đã tạo đơn nhập hàng thành công với {createdTransactions.Count} phụ tùng"));
+                }
+                catch (Exception ex)
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    throw;
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<List<StockTransactionDto>>.ErrorResult("Lỗi khi tạo đơn nhập hàng", ex.Message));
             }
         }
 

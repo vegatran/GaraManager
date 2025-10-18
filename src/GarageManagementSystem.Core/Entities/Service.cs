@@ -12,7 +12,7 @@ namespace GarageManagementSystem.Core.Entities
         public string? Description { get; set; }
 
         [Required]
-        public decimal Price { get; set; }
+        public decimal Price { get; set; } // Giá dịch vụ tổng (có thể bao gồm vật liệu + công)
 
         [Required]
         public int Duration { get; set; } // Duration in minutes
@@ -34,6 +34,19 @@ namespace GarageManagementSystem.Core.Entities
         public decimal LaborRate { get; set; } = 0; // Đơn giá công/giờ
         
         public decimal TotalLaborCost { get; set; } = 0; // Tổng tiền công = LaborHours × LaborRate
+
+        // Pricing Models - Các mô hình tính giá
+        [StringLength(20)]
+        public string PricingModel { get; set; } = "Combined"; // "Combined", "Separated", "LaborOnly"
+        
+        public decimal MaterialCost { get; set; } = 0; // Chi phí vật liệu (sơn, phụ tùng)
+        
+        public bool IsVATApplicable { get; set; } = true; // Có chịu VAT không
+        
+        public int VATRate { get; set; } = 10; // Tỷ lệ VAT (%)
+        
+        [StringLength(100)]
+        public string? PricingNotes { get; set; } // Ghi chú về cách tính giá
         
         [StringLength(100)]
         public string? RequiredTools { get; set; } // "Cờ lê 12", "Máy nén khí", "Súng sơn"

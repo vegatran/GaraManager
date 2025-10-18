@@ -9,64 +9,64 @@ window.PartsManagement = {
 
     initDataTable: function() {
         var self = this;
-        this.partTable = DataTablesVietnamese.init('#partTable', {
-            ajax: {
-                url: '/PartsManagement/GetParts',
-                type: 'GET',
-                error: function(xhr, status, error) {
-                    if (AuthHandler.isUnauthorized(xhr)) {
-                        AuthHandler.handleUnauthorized(xhr, true);
-                    } else {
-                        console.error('Error loading parts:', error);
-                        GarageApp.showError('Lỗi khi tải danh sách phụ tùng');
-                    }
-                }
+        
+        // Sử dụng DataTablesUtility với style chung
+        var columns = [
+            { data: 'id', title: 'ID', width: '5%' },
+            { data: 'partNumber', title: 'Mã Phụ Tùng', width: '10%' },
+            { data: 'name', title: 'Tên Phụ Tùng', width: '15%' },
+            { data: 'category', title: 'Danh Mục', width: '10%' },
+            { data: 'brand', title: 'Thương Hiệu', width: '10%' },
+            { 
+                data: 'price', 
+                title: 'Giá Bán', 
+                width: '10%',
+                render: DataTablesUtility.renderCurrency
             },
-            columns: [
-                { data: 'id', title: 'ID', width: '5%' },
-                { data: 'partNumber', title: 'Mã Phụ Tùng', width: '10%' },
-                { data: 'name', title: 'Tên Phụ Tùng', width: '15%' },
-                { data: 'category', title: 'Danh Mục', width: '10%' },
-                { data: 'brand', title: 'Thương Hiệu', width: '10%' },
-                { 
-                    data: 'price', 
-                    title: 'Giá Bán', 
-                    width: '10%',
-                    render: function(data) {
-                        return data + ' VNĐ';
-                    }
-                },
-                { data: 'stockQuantity', title: 'Tồn Kho', width: '8%' },
-                { data: 'minStockLevel', title: 'Tồn TT', width: '8%' },
-                { data: 'unit', title: 'Đơn Vị', width: '7%' },
-                { data: 'status', title: 'Trạng Thái', width: '8%' },
-                {
-                    data: null,
-                    title: 'Thao Tác',
-                    width: '9%',
-                    orderable: false,
-                    render: function(data, type, row) {
-                        return `
-                            <button class="btn btn-info btn-xs view-part" data-id="${row.id}" title="Xem chi tiết">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                            <button class="btn btn-warning btn-xs edit-part" data-id="${row.id}" title="Sửa">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="btn btn-danger btn-xs delete-part" data-id="${row.id}" title="Xóa">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        `;
-                    }
+            { data: 'stockQuantity', title: 'Tồn Kho', width: '8%' },
+            { data: 'minStockLevel', title: 'Tồn TT', width: '8%' },
+            { data: 'unit', title: 'Đơn Vị', width: '7%' },
+            { 
+                data: 'status', 
+                title: 'Trạng Thái', 
+                width: '8%',
+                render: DataTablesUtility.renderStatus
+            },
+            {
+                data: null,
+                title: 'Thao Tác',
+                width: '9%',
+                orderable: false,
+                render: function(data, type, row) {
+                    return `
+                        <button class="btn btn-info btn-xs view-part" data-id="${row.id}" title="Xem chi tiết">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="btn btn-warning btn-xs edit-part" data-id="${row.id}" title="Sửa">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-danger btn-xs delete-part" data-id="${row.id}" title="Xóa">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    `;
                 }
-            ],
+            }
+        ];
+        
+        this.partTable = DataTablesUtility.initAjaxTable('#partTable', '/PartsManagement/GetParts', columns, {
             order: [[0, 'desc']],
-            pageLength: 25
+            pageLength: 25,
+            dom: 'rtip'  // Chỉ hiển thị table, paging, info, processing (không có search box và length menu)
         });
     },
 
     bindEvents: function() {
         var self = this;
+
+        // Search functionality
+        $('#searchInput').on('keyup', function() {
+            self.partTable.search(this.value).draw();
+        });
 
         // Create part
         $('#createPartForm').on('submit', function(e) {
@@ -140,7 +140,7 @@ window.PartsManagement = {
                     $('#createPartForm')[0].reset();
                     window.PartsManagement.partTable.ajax.reload();
                 } else {
-                    GarageApp.showError(response.errorMessage || 'Không thể thêm phụ tùng');
+                     GarageApp.showError(GarageApp.parseErrorMessage(response) || 'Không thể thêm phụ tùng');
                 }
             },
             error: function(xhr) {
@@ -224,7 +224,7 @@ window.PartsManagement = {
                     $('#editPartModal').modal('hide');
                     window.PartsManagement.partTable.ajax.reload();
                 } else {
-                    GarageApp.showError(response.errorMessage || 'Không thể cập nhật phụ tùng');
+                    GarageApp.showError(GarageApp.parseErrorMessage(response) || 'Không thể cập nhật phụ tùng');
                 }
             },
             error: function(xhr) {
@@ -297,7 +297,7 @@ window.PartsManagement = {
                             GarageApp.showSuccess('Xóa phụ tùng thành công');
                             window.PartsManagement.partTable.ajax.reload();
                         } else {
-                            GarageApp.showError(response.errorMessage || 'Không thể xóa phụ tùng');
+                            GarageApp.showError(GarageApp.parseErrorMessage(response) || 'Không thể xóa phụ tùng');
                         }
                     },
                     error: function(xhr) {

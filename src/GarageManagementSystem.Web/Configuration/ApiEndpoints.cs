@@ -27,6 +27,18 @@ namespace GarageManagementSystem.Web.Configuration
         }
 
         /// <summary>
+        /// Customer Reception management endpoints
+        /// </summary>
+        public static class CustomerReceptions
+        {
+            public const string GetAll = "CustomerReceptions";
+            public const string GetById = "CustomerReceptions/{0}"; // CustomerReceptions/{id}
+            public const string Create = "CustomerReceptions";
+            public const string Update = "CustomerReceptions/{0}"; // CustomerReceptions/{id}
+            public const string Delete = "CustomerReceptions/{0}"; // CustomerReceptions/{id}
+        }
+
+        /// <summary>
         /// Vehicle management endpoints
         /// </summary>
         public static class Vehicles
@@ -190,6 +202,7 @@ namespace GarageManagementSystem.Web.Configuration
             public const string ImportExcel = "stocktransactions/import-excel";
             public const string ValidateExcel = "stocktransactions/validate-excel";
             public const string DownloadTemplate = "stocktransactions/download-template";
+            public const string CreatePurchaseOrder = "stocktransactions/purchase-order"; // ✅ THÊM
         }
 
         /// <summary>
@@ -281,6 +294,22 @@ namespace GarageManagementSystem.Web.Configuration
             {
                 return string.Format(template, parameters);
             }
+        }
+
+        /// <summary>
+        /// Print Template management endpoints
+        /// </summary>
+        public static class PrintTemplates
+        {
+            public const string GetAll = "printtemplates";
+            public const string GetById = "printtemplates/{0}"; // printtemplates/{id}
+            public const string GetDefault = "printtemplates/default/{0}"; // printtemplates/default/{templateType}
+            public const string GetByType = "printtemplates/type/{0}"; // printtemplates/type/{templateType}
+            public const string Create = "printtemplates";
+            public const string Update = "printtemplates/{0}"; // printtemplates/{id}
+            public const string Delete = "printtemplates/{0}"; // printtemplates/{id}
+            public const string SetDefault = "printtemplates/{0}/set-default"; // printtemplates/{id}/set-default
+            public const string CreateDefaultQuotation = "printtemplates/create-default-quotation";
         }
     }
 }

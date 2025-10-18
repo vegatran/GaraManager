@@ -38,6 +38,9 @@ namespace GarageManagementSystem.Core.Entities
         public int? QuotationId { get; set; } // Alias for ServiceQuotationId (API compatibility)
         public int? InsuranceClaimId { get; set; } // Link to insurance claim
         
+        // Reference to Customer Reception (for workflow tracking)
+        public int? CustomerReceptionId { get; set; }
+        
         [StringLength(1000)]
         public string? Description { get; set; } // Description of work
         
@@ -60,6 +63,7 @@ namespace GarageManagementSystem.Core.Entities
         public virtual Vehicle Vehicle { get; set; } = null!;
         public virtual VehicleInspection? VehicleInspection { get; set; }
         public virtual ServiceQuotation? ServiceQuotation { get; set; }
+        public virtual CustomerReception? CustomerReception { get; set; }
         public virtual Employee? PrimaryTechnician { get; set; }
         public virtual ICollection<ServiceOrderItem> ServiceOrderItems { get; set; } = new List<ServiceOrderItem>();
         public virtual ICollection<ServiceOrderPart> ServiceOrderParts { get; set; } = new List<ServiceOrderPart>();

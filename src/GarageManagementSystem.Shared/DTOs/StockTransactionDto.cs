@@ -48,6 +48,30 @@ namespace GarageManagementSystem.Shared.DTOs
     }
 
     /// <summary>
+    /// ✅ THÊM: DTO để tạo đơn nhập hàng với nhiều phụ tùng
+    /// </summary>
+    public class CreatePurchaseOrderDto
+    {
+        [Required] public string TransactionType { get; set; } = "NhapKho";
+        [Required] public int? SupplierId { get; set; }
+        [Required] public string ReferenceNumber { get; set; } = string.Empty;
+        [Required] public DateTime TransactionDate { get; set; }
+        public string? Notes { get; set; }
+        [Required] public List<PurchaseOrderItemDto> Items { get; set; } = new List<PurchaseOrderItemDto>();
+    }
+
+    /// <summary>
+    /// ✅ THÊM: DTO cho từng item trong đơn nhập hàng
+    /// </summary>
+    public class PurchaseOrderItemDto
+    {
+        [Required] public int PartId { get; set; }
+        [Required] [Range(1, int.MaxValue)] public int Quantity { get; set; }
+        [Required] [Range(0, double.MaxValue)] public decimal UnitPrice { get; set; }
+        public bool HasInvoice { get; set; } = true;
+    }
+
+    /// <summary>
     /// Helper methods cho TransactionType
     /// </summary>
     public static class TransactionTypeHelper

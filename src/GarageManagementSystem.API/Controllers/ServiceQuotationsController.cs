@@ -1,5 +1,8 @@
 using AutoMapper;
+using GarageManagementSystem.Core.Entities;
+using GarageManagementSystem.Core.Enums;
 using GarageManagementSystem.Core.Interfaces;
+using GarageManagementSystem.Core.Services;
 using GarageManagementSystem.Shared.DTOs;
 using GarageManagementSystem.Shared.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -29,31 +32,54 @@ namespace GarageManagementSystem.API.Controllers
                 var quotations = await _unitOfWork.ServiceQuotations.GetAllWithDetailsAsync();
                 var quotationDtos = quotations.Select(MapToDto).ToList();
                 
+                // ✅ DEBUG: Log totals for QT2025002
+                var qt2025002 = quotationDtos.FirstOrDefault(q => q.QuotationNumber == "QT2025002");
+                if (qt2025002 != null)
+                {
+                    Console.WriteLine($"DEBUG: QT2025002 in list - TotalAmount: {qt2025002.TotalAmount}, SubTotal: {qt2025002.SubTotal}, TaxAmount: {qt2025002.TaxAmount}");
+                }
+                
                 return Ok(ApiResponse<List<ServiceQuotationDto>>.SuccessResult(quotationDtos));
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ApiResponse<List<ServiceQuotationDto>>.ErrorResult("Error retrieving quotations", ex.Message));
+                return StatusCode(500, ApiResponse<List<ServiceQuotationDto>>.ErrorResult("Lỗi khi lấy danh sách báo giá", ex.Message));
             }
         }
 
-        [HttpGet("{id}")]
+        [HttpGet("{id:int}")]
         public async Task<ActionResult<ApiResponse<ServiceQuotationDto>>> GetQuotation(int id)
         {
             try
             {
+                // ✅ DEBUG: Log request
+                Console.WriteLine($"DEBUG: GetQuotation called with id = {id}");
+                
                 var quotation = await _unitOfWork.ServiceQuotations.GetByIdWithDetailsAsync(id);
                 if (quotation == null)
                 {
-                    return NotFound(ApiResponse<ServiceQuotationDto>.ErrorResult("Quotation not found"));
+                    Console.WriteLine($"DEBUG: Quotation with id {id} not found");
+                    return NotFound(ApiResponse<ServiceQuotationDto>.ErrorResult("Không tìm thấy báo giá"));
                 }
 
+                // ✅ DEBUG: Log entity data
+                Console.WriteLine($"DEBUG: Quotation found - Number: {quotation.QuotationNumber}, Customer: {quotation.Customer?.Name}, Vehicle: {quotation.Vehicle?.LicensePlate}");
+                Console.WriteLine($"DEBUG: Entity totals - SubTotal: {quotation.SubTotal}, TaxAmount: {quotation.TaxAmount}, TotalAmount: {quotation.TotalAmount}");
+                Console.WriteLine($"DEBUG: Items count: {quotation.Items?.Count ?? 0}");
+
                 var quotationDto = MapToDto(quotation);
+                
+                // ✅ DEBUG: Log DTO data
+                Console.WriteLine($"DEBUG: DTO mapped - Number: {quotationDto.QuotationNumber}, Customer: {quotationDto.Customer?.Name}, Vehicle: {quotationDto.Vehicle?.LicensePlate}");
+                Console.WriteLine($"DEBUG: DTO totals - SubTotal: {quotationDto.SubTotal}, TaxAmount: {quotationDto.TaxAmount}, TotalAmount: {quotationDto.TotalAmount}");
+                Console.WriteLine($"DEBUG: DTO Items count: {quotationDto.Items?.Count ?? 0}");
+                
                 return Ok(ApiResponse<ServiceQuotationDto>.SuccessResult(quotationDto));
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ApiResponse<ServiceQuotationDto>.ErrorResult("Error retrieving quotation", ex.Message));
+                Console.WriteLine($"DEBUG: Exception in GetQuotation: {ex.Message}");
+                return StatusCode(500, ApiResponse<ServiceQuotationDto>.ErrorResult("Lỗi khi lấy thông tin báo giá", ex.Message));
             }
         }
 
@@ -69,7 +95,40 @@ namespace GarageManagementSystem.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ApiResponse<List<ServiceQuotationDto>>.ErrorResult("Error retrieving quotations", ex.Message));
+                return StatusCode(500, ApiResponse<List<ServiceQuotationDto>>.ErrorResult("Lỗi khi lấy danh sách báo giá", ex.Message));
+            }
+        }
+
+
+        [HttpGet("vehicle/{vehicleId}/can-create")]
+        public async Task<ActionResult<ApiResponse<object>>> CanCreateQuotationForVehicle(int vehicleId)
+        {
+            try
+            {
+                // Kiểm tra xe có đang trong quy trình sửa chữa không
+                var vehicle = await _unitOfWork.Vehicles.GetByIdAsync(vehicleId);
+                if (vehicle == null)
+                {
+                    return Ok(ApiResponse<object>.ErrorResult("Không tìm thấy xe"));
+                }
+
+                // Kiểm tra có báo giá "Approved" hoặc "Sent" chưa được chuyển thành Service Order không
+                var quotations = await _unitOfWork.ServiceQuotations.GetByVehicleIdAsync(vehicleId);
+                var activeQuotations = quotations.Where(q => 
+                    (q.Status == "Approved" || q.Status == "Sent") && 
+                    q.ValidUntil >= DateTime.Now).ToList();
+
+                if (activeQuotations.Any())
+                {
+                    var quotationNumbers = string.Join(", ", activeQuotations.Select(q => q.QuotationNumber));
+                    return Ok(ApiResponse<object>.ErrorResult($"Xe đã có báo giá đang hiệu lực: {quotationNumbers}. Không thể tạo báo giá mới"));
+                }
+
+                return Ok(ApiResponse<object>.SuccessResult(null, "Có thể tạo báo giá mới"));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<object>.ErrorResult("Lỗi khi kiểm tra khả năng tạo báo giá", ex.Message));
             }
         }
 
@@ -85,7 +144,7 @@ namespace GarageManagementSystem.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ApiResponse<List<ServiceQuotationDto>>.ErrorResult("Error retrieving quotations", ex.Message));
+                return StatusCode(500, ApiResponse<List<ServiceQuotationDto>>.ErrorResult("Lỗi khi lấy danh sách báo giá", ex.Message));
             }
         }
 
@@ -101,7 +160,7 @@ namespace GarageManagementSystem.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ApiResponse<List<ServiceQuotationDto>>.ErrorResult("Error retrieving quotations", ex.Message));
+                return StatusCode(500, ApiResponse<List<ServiceQuotationDto>>.ErrorResult("Lỗi khi lấy danh sách báo giá", ex.Message));
             }
         }
 
@@ -117,7 +176,7 @@ namespace GarageManagementSystem.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ApiResponse<List<ServiceQuotationDto>>.ErrorResult("Error retrieving quotations", ex.Message));
+                return StatusCode(500, ApiResponse<List<ServiceQuotationDto>>.ErrorResult("Lỗi khi lấy danh sách báo giá", ex.Message));
             }
         }
 
@@ -129,20 +188,61 @@ namespace GarageManagementSystem.API.Controllers
                 if (!ModelState.IsValid)
                 {
                     var errors = ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage)).ToList();
-                    return BadRequest(ApiResponse<ServiceQuotationDto>.ErrorResult("Invalid data", errors));
+                    return BadRequest(ApiResponse<ServiceQuotationDto>.ErrorResult("Dữ liệu không hợp lệ", errors));
+                }
+
+                // Business Rule: Kiểm tra xem có VehicleInspectionId không
+                if (createDto.VehicleInspectionId.HasValue)
+                {
+                    var inspection = await _unitOfWork.VehicleInspections.GetByIdAsync(createDto.VehicleInspectionId.Value);
+                    if (inspection == null)
+                    {
+                        return BadRequest(ApiResponse<ServiceQuotationDto>.ErrorResult("Không tìm thấy kiểm tra xe"));
+                    }
+
+                    // Business Rule: Chỉ cho phép tạo báo giá từ VehicleInspection đã hoàn thành
+                    if (inspection.Status != "Completed")
+                    {
+                        return BadRequest(ApiResponse<ServiceQuotationDto>.ErrorResult(
+                            $"Không thể tạo báo giá. Kiểm tra xe phải ở trạng thái 'Đã Hoàn Thành'. Trạng thái hiện tại: {inspection.Status}"));
+                    }
+
+                    // Business Rule: Kiểm tra xem đã có báo giá cho VehicleInspection này chưa
+                    var existingQuotation = await _unitOfWork.ServiceQuotations.GetByVehicleInspectionIdAsync(createDto.VehicleInspectionId.Value);
+                    if (existingQuotation != null)
+                    {
+                        return BadRequest(ApiResponse<ServiceQuotationDto>.ErrorResult("Đã tồn tại báo giá cho kiểm tra xe này"));
+                    }
+                }
+
+                // Business Rule: Kiểm tra xem có CustomerReceptionId không
+                if (createDto.CustomerReceptionId.HasValue)
+                {
+                    var reception = await _unitOfWork.CustomerReceptions.GetByIdAsync(createDto.CustomerReceptionId.Value);
+                    if (reception == null)
+                    {
+                        return BadRequest(ApiResponse<ServiceQuotationDto>.ErrorResult("Không tìm thấy phiếu tiếp đón"));
+                    }
+
+                    // Business Rule: Chỉ cho phép tạo báo giá từ CustomerReception đã hoàn thành kiểm tra
+                    if (reception.Status != ReceptionStatus.Completed)
+                    {
+                        return BadRequest(ApiResponse<ServiceQuotationDto>.ErrorResult(
+                            $"Không thể tạo báo giá. Phiếu tiếp đón phải ở trạng thái 'Đã Hoàn Thành'. Trạng thái hiện tại: {reception.Status}"));
+                    }
                 }
 
                 // Validate vehicle and customer exist
                 var vehicle = await _unitOfWork.Vehicles.GetByIdAsync(createDto.VehicleId);
                 if (vehicle == null)
                 {
-                    return BadRequest(ApiResponse<ServiceQuotationDto>.ErrorResult("Vehicle not found"));
+                    return BadRequest(ApiResponse<ServiceQuotationDto>.ErrorResult("Không tìm thấy xe"));
                 }
 
                 var customer = await _unitOfWork.Customers.GetByIdAsync(createDto.CustomerId);
                 if (customer == null)
                 {
-                    return BadRequest(ApiResponse<ServiceQuotationDto>.ErrorResult("Customer not found"));
+                    return BadRequest(ApiResponse<ServiceQuotationDto>.ErrorResult("Không tìm thấy khách hàng"));
                 }
 
                 // Create quotation bằng AutoMapper
@@ -152,7 +252,7 @@ namespace GarageManagementSystem.API.Controllers
                 quotation.ValidUntil = createDto.ValidUntil ?? DateTime.Now.AddDays(7); // Default 7 days
                 quotation.Status = "Draft";
 
-                // Add items and calculate totals
+                // Add items and calculate totals with pricing models
                 decimal subTotal = 0;
                 foreach (var itemDto in createDto.Items)
                 {
@@ -164,18 +264,43 @@ namespace GarageManagementSystem.API.Controllers
                         Description = itemDto.Description,
                         Quantity = itemDto.Quantity,
                         UnitPrice = itemDto.UnitPrice,
-                        TotalPrice = itemDto.UnitPrice * itemDto.Quantity,
                         IsOptional = itemDto.IsOptional,
                         IsApproved = false,
-                        Notes = itemDto.Notes
+                        Notes = itemDto.Notes,
+                        ItemType = itemDto.ServiceType ?? "Service",
+                        ItemCategory = itemDto.ItemCategory ?? "Material"  // ✅ THÊM ItemCategory
                     };
 
+                    // Apply pricing model from Service
+                    if (itemDto.ServiceId.HasValue)
+                    {
+                        var service = await _unitOfWork.Services.GetByIdAsync(itemDto.ServiceId.Value);
+                        if (service != null)
+                        {
+                            PricingService.ApplyPricingToQuotationItem(item, service);
+                        }
+                        else
+                        {
+                            // Fallback to manual pricing
+                            item.TotalPrice = itemDto.UnitPrice * itemDto.Quantity;
+                        }
+                    }
+                    else
+                    {
+                        // Manual pricing (no service)
+                        item.TotalPrice = itemDto.UnitPrice * itemDto.Quantity;
+                    }
+
                     quotation.Items.Add(item);
-                    subTotal += item.TotalPrice;
+                    subTotal += item.UnitPrice * item.Quantity; // ✅ SỬA: SubTotal = UnitPrice × Quantity (không bao gồm VAT)
                 }
 
                 quotation.SubTotal = subTotal;
-                quotation.TaxAmount = subTotal * (quotation.TaxRate / 100);
+                
+                // ✅ SỬA: Chỉ tính VAT trên các items có IsVATApplicable = true
+                var vatApplicableItems = quotation.Items.Where(item => item.IsVATApplicable).ToList();
+                quotation.TaxAmount = vatApplicableItems.Sum(item => item.UnitPrice * item.Quantity * item.VATRate / 100);
+                
                 quotation.TotalAmount = quotation.SubTotal + quotation.TaxAmount - quotation.DiscountAmount;
 
                 // Bắt đầu transaction để đảm bảo tính toàn vẹn dữ liệu
@@ -196,16 +321,24 @@ namespace GarageManagementSystem.API.Controllers
                     throw;
                 }
 
+                // Business Rule: CustomerReception status remains "Completed" after quotation creation
+                // No need to update status as it's already in final state after inspection
+                if (createDto.CustomerReceptionId.HasValue)
+                {
+                    // CustomerReception status is already "Completed" after inspection
+                    // Quotation is a separate workflow step
+                }
+
                 // Reload with details
                 quotation = await _unitOfWork.ServiceQuotations.GetByIdWithDetailsAsync(quotation.Id);
                 var quotationDto = MapToDto(quotation!);
 
                 return CreatedAtAction(nameof(GetQuotation), new { id = quotation.Id }, 
-                    ApiResponse<ServiceQuotationDto>.SuccessResult(quotationDto, "Quotation created successfully"));
+                    ApiResponse<ServiceQuotationDto>.SuccessResult(quotationDto, "Tạo báo giá thành công"));
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ApiResponse<ServiceQuotationDto>.ErrorResult("Error creating quotation", ex.Message));
+                return StatusCode(500, ApiResponse<ServiceQuotationDto>.ErrorResult("Lỗi khi tạo báo giá", ex.Message));
             }
         }
 
@@ -222,39 +355,89 @@ namespace GarageManagementSystem.API.Controllers
                 if (!ModelState.IsValid)
                 {
                     var errors = ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage)).ToList();
-                    return BadRequest(ApiResponse<ServiceQuotationDto>.ErrorResult("Invalid data", errors));
+                    return BadRequest(ApiResponse<ServiceQuotationDto>.ErrorResult("Dữ liệu không hợp lệ", errors));
                 }
 
                 var quotation = await _unitOfWork.ServiceQuotations.GetByIdAsync(id);
                 if (quotation == null)
                 {
-                    return NotFound(ApiResponse<ServiceQuotationDto>.ErrorResult("Quotation not found"));
+                    return NotFound(ApiResponse<ServiceQuotationDto>.ErrorResult("Không tìm thấy báo giá"));
                 }
 
-                // Update quotation
-                quotation.ValidUntil = updateDto.ValidUntil;
-                quotation.Description = updateDto.Description;
-                quotation.Terms = updateDto.Terms;
-                quotation.TaxRate = updateDto.TaxRate;
-                quotation.DiscountAmount = updateDto.DiscountAmount;
-                quotation.CustomerNotes = updateDto.CustomerNotes;
-                quotation.RejectionReason = updateDto.RejectionReason;
-
-                if (!string.IsNullOrEmpty(updateDto.Status))
-                {
-                    quotation.Status = updateDto.Status;
-                }
-
-                // Recalculate totals
-                quotation.TaxAmount = quotation.SubTotal * (quotation.TaxRate / 100);
-                quotation.TotalAmount = quotation.SubTotal + quotation.TaxAmount - quotation.DiscountAmount;
+                // Update quotation using AutoMapper
+                _mapper.Map(updateDto, quotation);
 
                 // Bắt đầu transaction để đảm bảo tính toàn vẹn dữ liệu
                 await _unitOfWork.BeginTransactionAsync();
 
                 try
                 {
+                    // Update quotation first
                     await _unitOfWork.ServiceQuotations.UpdateAsync(quotation);
+
+                    // Update Items if provided
+                    if (updateDto.Items != null && updateDto.Items.Any())
+                    {
+                        // Remove existing items (hard delete để tránh duplicate)
+                        var existingItems = await _unitOfWork.ServiceQuotationItems.GetAllAsync();
+                        var itemsToDelete = existingItems.Where(i => i.ServiceQuotationId == id).ToList();
+                        foreach (var item in itemsToDelete)
+                        {
+                            // Hard delete thay vì soft delete để tránh duplicate
+                            await _unitOfWork.ServiceQuotationItems.DeleteAsync(item);
+                        }
+
+                        // Add new items with pricing models
+                        foreach (var itemDto in updateDto.Items)
+                        {
+                            // ✅ DEBUG: Xem data nhận được từ client
+                            Console.WriteLine($"🔍 DEBUG API - ItemDto: {itemDto.ItemName}, HasInvoice: {itemDto.HasInvoice}");
+                            
+                            var newItem = _mapper.Map<QuotationItem>(itemDto);
+                            newItem.ServiceQuotationId = id;
+                            newItem.CreatedAt = DateTime.Now;
+                            newItem.UpdatedAt = DateTime.Now;
+                            
+                            // ✅ DEBUG: Xem data sau khi map
+                            Console.WriteLine($"🔍 DEBUG API - After Map: {newItem.ItemName}, HasInvoice: {newItem.HasInvoice}");
+
+                            // Apply pricing model from Service
+                            if (newItem.ServiceId.HasValue)
+                            {
+                                var service = await _unitOfWork.Services.GetByIdAsync(newItem.ServiceId.Value);
+                                if (service != null)
+                                {
+                                    PricingService.ApplyPricingToQuotationItem(newItem, service);
+                                }
+                                else
+                                {
+                                    // Fallback to manual pricing
+                                    newItem.TotalPrice = newItem.Quantity * newItem.UnitPrice;
+                                }
+                            }
+                            else
+                            {
+                                // Manual pricing (no service)
+                                newItem.TotalPrice = newItem.Quantity * newItem.UnitPrice;
+                            }
+
+                            await _unitOfWork.ServiceQuotationItems.AddAsync(newItem);
+                        }
+                    }
+
+                    // ✅ SỬA: Recalculate totals từ items mới
+                    // Reload quotation với items mới
+                    quotation = await _unitOfWork.ServiceQuotations.GetByIdWithDetailsAsync(id);
+                    
+                    // Cập nhật SubTotal từ items
+                    quotation.SubTotal = quotation.Items.Where(x => !x.IsDeleted).Sum(item => item.UnitPrice * item.Quantity);
+                    
+                    // Chỉ tính VAT trên các items có IsVATApplicable = true
+                    var vatApplicableItems = quotation.Items.Where(item => item.IsVATApplicable && !item.IsDeleted).ToList();
+                    quotation.TaxAmount = vatApplicableItems.Sum(item => item.UnitPrice * item.Quantity * item.VATRate / 100);
+                    quotation.TotalAmount = quotation.SubTotal + quotation.TaxAmount - quotation.DiscountAmount;
+
+                    // Save all changes
                     await _unitOfWork.SaveChangesAsync();
 
                     // Commit transaction nếu thành công
@@ -413,7 +596,7 @@ namespace GarageManagementSystem.API.Controllers
                 var quotation = await _unitOfWork.ServiceQuotations.GetByIdAsync(id);
                 if (quotation == null)
                 {
-                    return NotFound(ApiResponse<ServiceQuotationDto>.ErrorResult("Quotation not found"));
+                    return NotFound(ApiResponse<ServiceQuotationDto>.ErrorResult("Không tìm thấy báo giá"));
                 }
 
                 quotation.Status = "Rejected";
@@ -443,12 +626,12 @@ namespace GarageManagementSystem.API.Controllers
                 var quotation = await _unitOfWork.ServiceQuotations.GetByIdAsync(id);
                 if (quotation == null)
                 {
-                    return NotFound(ApiResponse<ServiceQuotationDto>.ErrorResult("Quotation not found"));
+                    return NotFound(ApiResponse<ServiceQuotationDto>.ErrorResult("Không tìm thấy báo giá"));
                 }
 
                 if (quotation.Status != "Draft")
                 {
-                    return BadRequest(ApiResponse<ServiceQuotationDto>.ErrorResult("Only draft quotations can be sent"));
+                    return BadRequest(ApiResponse<ServiceQuotationDto>.ErrorResult("Chỉ có thể gửi báo giá ở trạng thái 'Nháp'"));
                 }
 
                 quotation.Status = "Sent";
@@ -498,6 +681,7 @@ namespace GarageManagementSystem.API.Controllers
 
         private ServiceQuotationDto MapToDto(Core.Entities.ServiceQuotation quotation)
         {
+            // Use AutoMapper for consistent mapping
             return _mapper.Map<ServiceQuotationDto>(quotation);
         }
 
@@ -576,7 +760,10 @@ namespace GarageManagementSystem.API.Controllers
                     TotalPrice = item.TotalPrice,
                     IsOptional = item.IsOptional,
                     IsApproved = item.IsApproved,
+                    HasInvoice = item.HasInvoice,
+                    IsVATApplicable = item.IsVATApplicable,
                     Notes = item.Notes,
+                    ServiceType = item.ItemType,
                     Service = item.Service != null ? new ServiceDto
                     {
                         Id = item.Service.Id,
@@ -623,7 +810,7 @@ namespace GarageManagementSystem.API.Controllers
                 var quotation = await _unitOfWork.ServiceQuotations.GetByIdAsync(id);
                 if (quotation == null)
                 {
-                    return NotFound(ApiResponse<ServiceQuotationDto>.ErrorResult("Quotation not found"));
+                    return NotFound(ApiResponse<ServiceQuotationDto>.ErrorResult("Không tìm thấy báo giá"));
                 }
 
                 if (quotation.QuotationType != "Insurance")
@@ -703,7 +890,7 @@ namespace GarageManagementSystem.API.Controllers
                 var quotation = await _unitOfWork.ServiceQuotations.GetByIdAsync(id);
                 if (quotation == null)
                 {
-                    return NotFound(ApiResponse<ServiceQuotationDto>.ErrorResult("Quotation not found"));
+                    return NotFound(ApiResponse<ServiceQuotationDto>.ErrorResult("Không tìm thấy báo giá"));
                 }
 
                 if (quotation.QuotationType != "Company")

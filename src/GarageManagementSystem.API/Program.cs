@@ -123,6 +123,11 @@ builder.Services.AddScoped<ISupplierRepository, SupplierRepository>();
 builder.Services.AddScoped<IStockTransactionRepository, StockTransactionRepository>();
 builder.Services.AddScoped<IPaymentTransactionRepository, PaymentTransactionRepository>();
 builder.Services.AddScoped<IAppointmentRepository, AppointmentRepository>();
+builder.Services.AddScoped<IPrintTemplateRepository, PrintTemplateRepository>();
+builder.Services.AddScoped<ICustomerReceptionRepository, CustomerReceptionRepository>();
+
+// Services
+builder.Services.AddScoped<GarageManagementSystem.Core.Interfaces.IPrintTemplateService, GarageManagementSystem.Core.Services.PrintTemplateService>();
 
 // Excel Import Service
 builder.Services.AddScoped<GarageManagementSystem.Core.Services.IExcelImportService, GarageManagementSystem.Infrastructure.Services.ExcelImportService>();

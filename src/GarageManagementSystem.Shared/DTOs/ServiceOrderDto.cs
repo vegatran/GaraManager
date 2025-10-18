@@ -29,6 +29,9 @@ namespace GarageManagementSystem.Shared.DTOs
         [Required(ErrorMessage = "Xe là bắt buộc")]
         public int VehicleId { get; set; }
 
+        public int? ServiceQuotationId { get; set; }
+        public int? CustomerReceptionId { get; set; }
+
         public DateTime? ScheduledDate { get; set; }
 
         [StringLength(5000, ErrorMessage = "Ghi chú không được vượt quá 5000 ký tự")]

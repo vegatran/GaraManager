@@ -1,0 +1,122 @@
+<!-- Create Part Modal -->
+<div class="modal fade" id="createPartModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">Thêm Phụ Tùng Mới</h4>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form id="createPartForm">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createPartNumber">Mã Phụ Tùng <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control form-control-sm" id="createPartNumber" name="PartNumber" required maxlength="50">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createPartName">Tên Phụ Tùng <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control form-control-sm" id="createPartName" name="PartName" required maxlength="200">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label for="createDescription">Mô Tả</label>
+                                <textarea class="form-control form-control-sm" id="createDescription" name="Description" rows="2" maxlength="1000"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createCategory">Danh Mục</label>
+                                <input type="text" class="form-control form-control-sm" id="createCategory" name="Category" maxlength="100">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createBrand">Thương Hiệu</label>
+                                <input type="text" class="form-control form-control-sm" id="createBrand" name="Brand" maxlength="100">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createCostPrice">Giá Vốn <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control form-control-sm" id="createCostPrice" name="CostPrice" required min="0" step="1000">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createSellPrice">Giá Bán <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control form-control-sm" id="createSellPrice" name="SellPrice" required min="0" step="1000">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="createQuantityInStock">Số Lượng Tồn <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control form-control-sm" id="createQuantityInStock" name="QuantityInStock" required min="0" value="0">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="createMinimumStock">Tồn Kho Tối Thiểu <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control form-control-sm" id="createMinimumStock" name="MinimumStock" required min="0" value="0">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="createReorderLevel">Mức Đặt Lại</label>
+                                <input type="number" class="form-control form-control-sm" id="createReorderLevel" name="ReorderLevel" min="0">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createUnit">Đơn Vị Tính</label>
+                                <input type="text" class="form-control form-control-sm" id="createUnit" name="Unit" maxlength="20" placeholder="VD: Cái, Bộ, Lít...">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createLocation">Vị Trí Kho</label>
+                                <input type="text" class="form-control form-control-sm" id="createLocation" name="Location" maxlength="100">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label for="createCompatibleVehicles">Xe Tương Thích</label>
+                                <textarea class="form-control form-control-sm" id="createCompatibleVehicles" name="CompatibleVehicles" rows="2" maxlength="500" placeholder="VD: Toyota Camry 2015-2020, Honda Civic..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="custom-control custom-checkbox">
+                                <input type="checkbox" class="custom-control-input" id="createIsActive" name="IsActive" checked>
+                                <label class="custom-control-label" for="createIsActive">Đang Hoạt Động</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary btn-sm">Lưu Phụ Tùng</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
