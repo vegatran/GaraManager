@@ -202,7 +202,22 @@ namespace GarageManagementSystem.Web.Configuration
             public const string ImportExcel = "stocktransactions/import-excel";
             public const string ValidateExcel = "stocktransactions/validate-excel";
             public const string DownloadTemplate = "stocktransactions/download-template";
-            public const string CreatePurchaseOrder = "stocktransactions/purchase-order"; // ✅ THÊM
+            public const string CreatePurchaseOrder = "stocktransactions/purchase-order";
+        }
+
+        /// <summary>
+        /// Purchase Orders endpoints
+        /// </summary>
+        public static class PurchaseOrders
+        {
+            public const string GetAll = "purchaseorders";
+            public const string GetById = "purchaseorders/{0}";
+            public const string Create = "purchaseorders";
+            public const string Update = "purchaseorders/{0}";
+            public const string Delete = "purchaseorders/{0}";
+            public const string ReceiveOrder = "purchaseorders/{0}/receive";
+            public const string GetBySupplier = "purchaseorders?supplierId={0}";
+            public const string GetByStatus = "purchaseorders?status={0}";
         }
 
         /// <summary>

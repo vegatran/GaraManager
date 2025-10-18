@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using GarageManagementSystem.Core.Entities;
 using GarageManagementSystem.Core.Interfaces;
+using GarageManagementSystem.Shared.DTOs;
 
 namespace GarageManagementSystem.API.Controllers
 {
@@ -32,18 +33,76 @@ namespace GarageManagementSystem.API.Controllers
                 if (!string.IsNullOrEmpty(status))
                     orders = orders.Where(o => o.Status == status);
 
-                var result = orders.Select(o => new
+                // Map to DTO with supplier information
+                var result = new List<PurchaseOrderDto>();
+                
+                foreach (var order in orders.OrderByDescending(o => o.CreatedAt))
                 {
-                    o.Id,
-                    o.OrderNumber,
-                    o.SupplierId,
-                    o.OrderDate,
-                    o.ExpectedDeliveryDate,
-                    o.Status,
-                    o.TotalAmount,
-                    o.Notes,
-                    o.CreatedAt
-                }).OrderByDescending(o => o.CreatedAt).ToList();
+                    // Get supplier information
+                    var supplier = await _unitOfWork.Repository<Supplier>().GetByIdAsync(order.SupplierId);
+                    
+                    // Get purchase order items
+                    var items = await _unitOfWork.Repository<PurchaseOrderItem>().GetAllAsync();
+                    var orderItems = items.Where(i => i.PurchaseOrderId == order.Id).ToList();
+                    
+                    var orderDto = new PurchaseOrderDto
+                    {
+                        Id = order.Id,
+                        OrderNumber = order.OrderNumber,
+                        SupplierId = order.SupplierId,
+                        SupplierName = supplier?.SupplierName ?? "N/A",
+                        OrderDate = order.OrderDate,
+                        ExpectedDeliveryDate = order.ExpectedDeliveryDate,
+                        ActualDeliveryDate = order.ActualDeliveryDate,
+                        Status = order.Status,
+                        SupplierOrderNumber = order.SupplierOrderNumber,
+                        ContactPerson = order.ContactPerson,
+                        ContactPhone = order.ContactPhone,
+                        ContactEmail = order.ContactEmail,
+                        DeliveryAddress = order.DeliveryAddress,
+                        PaymentTerms = order.PaymentTerms,
+                        DeliveryTerms = order.DeliveryTerms,
+                        Currency = order.Currency,
+                        SubTotal = order.SubTotal,
+                        TaxAmount = order.TaxAmount,
+                        ShippingCost = order.ShippingCost,
+                        TotalAmount = order.TotalAmount,
+                        EmployeeId = order.EmployeeId,
+                        ApprovedBy = order.ApprovedBy,
+                        ApprovedDate = order.ApprovedDate,
+                        Notes = order.Notes,
+                        IsApproved = order.IsApproved,
+                        ItemCount = orderItems.Count,
+                        Items = orderItems.Select(item => new PurchaseOrderItemDto
+                        {
+                            Id = item.Id,
+                            PurchaseOrderId = item.PurchaseOrderId,
+                            PartId = item.PartId,
+                            PartName = item.PartName,
+                            QuantityOrdered = item.QuantityOrdered,
+                            QuantityReceived = item.QuantityReceived,
+                            UnitPrice = item.UnitPrice,
+                            TotalPrice = item.TotalPrice,
+                            SupplierPartNumber = item.SupplierPartNumber,
+                            PartDescription = item.PartDescription,
+                            Unit = item.Unit,
+                            ExpectedDeliveryDate = item.ExpectedDeliveryDate,
+                            Notes = item.Notes,
+                            IsReceived = item.IsReceived,
+                            ReceivedDate = item.ReceivedDate,
+                            CreatedAt = item.CreatedAt,
+                            CreatedBy = item.CreatedBy,
+                            UpdatedAt = item.UpdatedAt,
+                            UpdatedBy = item.UpdatedBy
+                        }).ToList(),
+                        CreatedAt = order.CreatedAt,
+                        CreatedBy = order.CreatedBy,
+                        UpdatedAt = order.UpdatedAt,
+                        UpdatedBy = order.UpdatedBy
+                    };
+                    
+                    result.Add(orderDto);
+                }
 
                 return Ok(new { success = true, data = result });
             }
@@ -63,7 +122,70 @@ namespace GarageManagementSystem.API.Controllers
                 if (order == null)
                     return NotFound(new { success = false, message = "Không tìm thấy đơn mua hàng" });
 
-                return Ok(new { success = true, data = order });
+                // Get supplier information
+                var supplier = await _unitOfWork.Repository<Supplier>().GetByIdAsync(order.SupplierId);
+                
+                // Get purchase order items
+                var items = await _unitOfWork.Repository<PurchaseOrderItem>().GetAllAsync();
+                var orderItems = items.Where(i => i.PurchaseOrderId == order.Id).ToList();
+                
+                var orderDto = new PurchaseOrderDto
+                {
+                    Id = order.Id,
+                    OrderNumber = order.OrderNumber,
+                    SupplierId = order.SupplierId,
+                    SupplierName = supplier?.SupplierName ?? "N/A",
+                    OrderDate = order.OrderDate,
+                    ExpectedDeliveryDate = order.ExpectedDeliveryDate,
+                    ActualDeliveryDate = order.ActualDeliveryDate,
+                    Status = order.Status,
+                    SupplierOrderNumber = order.SupplierOrderNumber,
+                    ContactPerson = order.ContactPerson,
+                    ContactPhone = order.ContactPhone,
+                    ContactEmail = order.ContactEmail,
+                    DeliveryAddress = order.DeliveryAddress,
+                    PaymentTerms = order.PaymentTerms,
+                    DeliveryTerms = order.DeliveryTerms,
+                    Currency = order.Currency,
+                    SubTotal = order.SubTotal,
+                    TaxAmount = order.TaxAmount,
+                    ShippingCost = order.ShippingCost,
+                    TotalAmount = order.TotalAmount,
+                    EmployeeId = order.EmployeeId,
+                    ApprovedBy = order.ApprovedBy,
+                    ApprovedDate = order.ApprovedDate,
+                    Notes = order.Notes,
+                    IsApproved = order.IsApproved,
+                    ItemCount = orderItems.Count,
+                    Items = orderItems.Select(item => new PurchaseOrderItemDto
+                    {
+                        Id = item.Id,
+                        PurchaseOrderId = item.PurchaseOrderId,
+                        PartId = item.PartId,
+                        PartName = item.PartName,
+                        QuantityOrdered = item.QuantityOrdered,
+                        QuantityReceived = item.QuantityReceived,
+                        UnitPrice = item.UnitPrice,
+                        TotalPrice = item.TotalPrice,
+                        SupplierPartNumber = item.SupplierPartNumber,
+                        PartDescription = item.PartDescription,
+                        Unit = item.Unit,
+                        ExpectedDeliveryDate = item.ExpectedDeliveryDate,
+                        Notes = item.Notes,
+                        IsReceived = item.IsReceived,
+                        ReceivedDate = item.ReceivedDate,
+                        CreatedAt = item.CreatedAt,
+                        CreatedBy = item.CreatedBy,
+                        UpdatedAt = item.UpdatedAt,
+                        UpdatedBy = item.UpdatedBy
+                    }).ToList(),
+                    CreatedAt = order.CreatedAt,
+                    CreatedBy = order.CreatedBy,
+                    UpdatedAt = order.UpdatedAt,
+                    UpdatedBy = order.UpdatedBy
+                };
+
+                return Ok(new { success = true, data = orderDto });
             }
             catch (Exception ex)
             {

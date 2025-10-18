@@ -1,0 +1,48 @@
+<!-- Confirm Receipt Modal -->
+<div class="modal fade" id="confirmReceiptModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">Xác Nhận Nhập Kho</h4>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <form id="confirmReceiptForm">
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Hướng dẫn:</strong> Kiểm tra hàng hóa thực tế và nhập số lượng thực nhập cho từng mặt hàng.
+                    </div>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-bordered" id="receiptItemsTable">
+                            <thead>
+                                <tr>
+                                    <th>Phụ Tùng</th>
+                                    <th>Số Lượng Đặt</th>
+                                    <th>Đơn Giá</th>
+                                    <th>Thành Tiền</th>
+                                    <th>Số Lượng Thực Nhập</th>
+                                    <th>Ghi Chú</th>
+                                </tr>
+                            </thead>
+                            <tbody id="receiptItemsBody">
+                                <!-- Items will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="receiptNotes">Ghi Chú Nhập Kho</label>
+                        <textarea class="form-control" id="receiptNotes" name="Notes" rows="3" placeholder="Ghi chú về quá trình nhập kho..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-success">Xác Nhận Nhập Kho</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

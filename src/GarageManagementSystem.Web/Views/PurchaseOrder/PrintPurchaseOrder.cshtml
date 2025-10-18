@@ -1,0 +1,286 @@
+@{
+    ViewData["Title"] = "In Phiếu Nhập Hàng";
+    Layout = null; // No layout for printing
+}
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Phiếu Nhập Hàng - @ViewBag.ReferenceNumber</title>
+    <style>
+        body {
+            font-family: 'Times New Roman', serif;
+            font-size: 12pt;
+            line-height: 1.4;
+            margin: 0;
+            padding: 20px;
+            color: #000;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #000;
+            padding-bottom: 20px;
+        }
+        
+        .company-name {
+            font-size: 18pt;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .company-address {
+            font-size: 10pt;
+            margin-bottom: 5px;
+        }
+        
+        .document-title {
+            font-size: 16pt;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+        
+        .purchase-order-info {
+            margin-bottom: 20px;
+        }
+        
+        .info-row {
+            display: flex;
+            margin-bottom: 8px;
+        }
+        
+        .info-label {
+            font-weight: bold;
+            width: 150px;
+            flex-shrink: 0;
+        }
+        
+        .info-value {
+            flex: 1;
+        }
+        
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        
+        .items-table th,
+        .items-table td {
+            border: 1px solid #000;
+            padding: 8px;
+            text-align: left;
+        }
+        
+        .items-table th {
+            background-color: #f0f0f0;
+            font-weight: bold;
+            text-align: center;
+        }
+        
+        .items-table .text-center {
+            text-align: center;
+        }
+        
+        .items-table .text-right {
+            text-align: right;
+        }
+        
+        .total-section {
+            margin-top: 20px;
+            text-align: right;
+        }
+        
+        .total-row {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 5px;
+        }
+        
+        .total-label {
+            font-weight: bold;
+            width: 150px;
+            text-align: right;
+            margin-right: 10px;
+        }
+        
+        .total-value {
+            font-weight: bold;
+            width: 120px;
+            text-align: right;
+        }
+        
+        .signature-section {
+            margin-top: 40px;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .signature-box {
+            text-align: center;
+            width: 200px;
+        }
+        
+        .signature-line {
+            border-top: 1px solid #000;
+            margin-top: 60px;
+            padding-top: 5px;
+        }
+        
+        .print-date {
+            margin-top: 20px;
+            text-align: right;
+            font-style: italic;
+        }
+        
+        @@media print {
+            body {
+                margin: 0;
+                padding: 15px;
+            }
+            
+            .no-print {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="company-name">CÔNG TY TNHH GARAGE ABC</div>
+        <div class="company-address">Địa chỉ: 123 Đường ABC, Quận XYZ, TP.HCM</div>
+        <div class="company-address">Điện thoại: (028) 1234-5678 | Email: info@garageabc.com</div>
+        <div class="company-address">Mã số thuế: 0123456789</div>
+        
+        <div class="document-title">PHIẾU NHẬP HÀNG</div>
+    </div>
+
+    <div class="purchase-order-info" id="purchaseOrderInfo">
+        <div class="info-row">
+            <div class="info-label">Số phiếu:</div>
+            <div class="info-value" id="referenceNumber">@ViewBag.ReferenceNumber</div>
+        </div>
+        <div class="info-row">
+            <div class="info-label">Ngày tạo:</div>
+            <div class="info-value" id="transactionDate">-</div>
+        </div>
+        <div class="info-row">
+            <div class="info-label">Nhà cung cấp:</div>
+            <div class="info-value" id="supplierName">-</div>
+        </div>
+        <div class="info-row">
+            <div class="info-label">Người tạo:</div>
+            <div class="info-value" id="createdBy">-</div>
+        </div>
+    </div>
+
+    <table class="items-table" id="itemsTable">
+        <thead>
+            <tr>
+                <th style="width: 5%;">STT</th>
+                <th style="width: 35%;">Tên Phụ Tùng</th>
+                <th style="width: 15%;">Mã Phụ Tùng</th>
+                <th style="width: 10%;">Số Lượng</th>
+                <th style="width: 15%;">Đơn Giá (VNĐ)</th>
+                <th style="width: 15%;">Thành Tiền (VNĐ)</th>
+                <th style="width: 5%;">Có HĐ</th>
+            </tr>
+        </thead>
+        <tbody id="itemsTableBody">
+            <!-- Items will be loaded here -->
+        </tbody>
+    </table>
+
+    <div class="total-section">
+        <div class="total-row">
+            <div class="total-label">Tổng cộng:</div>
+            <div class="total-value" id="totalAmount">0 VNĐ</div>
+        </div>
+    </div>
+
+    <div class="signature-section">
+        <div class="signature-box">
+            <div class="signature-line">Người lập phiếu</div>
+        </div>
+        <div class="signature-box">
+            <div class="signature-line">Người nhận hàng</div>
+        </div>
+        <div class="signature-box">
+            <div class="signature-line">Thủ kho</div>
+        </div>
+        <div class="signature-box">
+            <div class="signature-line">Kế toán</div>
+        </div>
+    </div>
+
+    <div class="print-date">
+        In ngày: <span id="printDate"></span>
+    </div>
+
+    <div class="no-print" style="margin-top: 30px; text-align: center;">
+        <button onclick="window.print()" style="padding: 10px 20px; font-size: 14px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">
+            In Phiếu Nhập Hàng
+        </button>
+        <button onclick="window.close()" style="padding: 10px 20px; font-size: 14px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 10px;">
+            Đóng
+        </button>
+    </div>
+
+    <script>
+        // Load purchase order details when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            loadPurchaseOrderDetails();
+            setPrintDate();
+        });
+
+        function loadPurchaseOrderDetails() {
+            var referenceNumber = '@ViewBag.ReferenceNumber';
+            
+            fetch('/PurchaseOrder/GetPurchaseOrderDetails/' + encodeURIComponent(referenceNumber))
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.data) {
+                        var purchaseOrder = data.data;
+                        
+                        // Fill purchase order info
+                        document.getElementById('transactionDate').textContent = new Date(purchaseOrder.transactionDate).toLocaleDateString('vi-VN');
+                        document.getElementById('supplierName').textContent = purchaseOrder.supplierName;
+                        document.getElementById('createdBy').textContent = 'Hệ thống'; // Default value
+                        
+                        // Fill items table
+                        var tbody = document.getElementById('itemsTableBody');
+                        tbody.innerHTML = '';
+                        
+                        purchaseOrder.items.forEach((item, index) => {
+                            var row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td class="text-center">${index + 1}</td>
+                                <td>${item.partName}</td>
+                                <td>${item.partNumber}</td>
+                                <td class="text-center">${item.quantity}</td>
+                                <td class="text-right">${item.unitPrice.toLocaleString('vi-VN')}</td>
+                                <td class="text-right">${item.totalAmount.toLocaleString('vi-VN')}</td>
+                                <td class="text-center">${item.hasInvoice ? 'Có' : 'Không'}</td>
+                            `;
+                            tbody.appendChild(row);
+                        });
+                        
+                        // Fill total amount
+                        document.getElementById('totalAmount').textContent = purchaseOrder.totalAmount.toLocaleString('vi-VN') + ' VNĐ';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading purchase order details:', error);
+                });
+        }
+
+        function setPrintDate() {
+            var now = new Date();
+            document.getElementById('printDate').textContent = now.toLocaleDateString('vi-VN') + ' ' + now.toLocaleTimeString('vi-VN');
+        }
+    </script>
+</body>
+</html>
