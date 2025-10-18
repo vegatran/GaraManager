@@ -54,10 +54,10 @@ window.PaymentManagement = {
                     orderable: false,
                     render: function(data, type, row) {
                         return `
-                            <button class="btn btn-info btn-xs view-payment" data-id="${row.id}" title="Xem chi tiết">
+                            <button class="btn btn-info btn-sm view-payment" data-id="${row.id}" title="Xem chi tiết">
                                 <i class="fas fa-eye"></i>
                             </button>
-                            <button class="btn btn-danger btn-xs delete-payment" data-id="${row.id}" title="Xóa">
+                            <button class="btn btn-danger btn-sm delete-payment" data-id="${row.id}" title="Xóa">
                                 <i class="fas fa-trash"></i>
                             </button>
                         `;

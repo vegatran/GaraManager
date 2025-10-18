@@ -39,14 +39,14 @@
                                     <div class="col-md-6">
                                         <div class="form-group">
                                             <label asp-for="InsuranceCompany">Công ty bảo hiểm <span class="text-danger">*</span></label>
-                                            <input asp-for="InsuranceCompany" class="form-control" placeholder="Nhập tên công ty bảo hiểm" />
+                                            <input asp-for="InsuranceCompany" class="form-control form-control-sm" placeholder="Nhập tên công ty bảo hiểm" />
                                             <span asp-validation-for="InsuranceCompany" class="text-danger"></span>
                                         </div>
                                     </div>
                                     <div class="col-md-6">
                                         <div class="form-group">
                                             <label asp-for="PolicyNumber">Số hợp đồng <span class="text-danger">*</span></label>
-                                            <input asp-for="PolicyNumber" class="form-control" placeholder="Nhập số hợp đồng" />
+                                            <input asp-for="PolicyNumber" class="form-control form-control-sm" placeholder="Nhập số hợp đồng" />
                                             <span asp-validation-for="PolicyNumber" class="text-danger"></span>
                                         </div>
                                     </div>
@@ -56,14 +56,14 @@
                                     <div class="col-md-6">
                                         <div class="form-group">
                                             <label asp-for="ClaimNumber">Số yêu cầu bồi thường <span class="text-danger">*</span></label>
-                                            <input asp-for="ClaimNumber" class="form-control" placeholder="Nhập số yêu cầu bồi thường" />
+                                            <input asp-for="ClaimNumber" class="form-control form-control-sm" placeholder="Nhập số yêu cầu bồi thường" />
                                             <span asp-validation-for="ClaimNumber" class="text-danger"></span>
                                         </div>
                                     </div>
                                     <div class="col-md-6">
                                         <div class="form-group">
                                             <label asp-for="AccidentDate">Ngày xảy ra tai nạn <span class="text-danger">*</span></label>
-                                            <input asp-for="AccidentDate" type="datetime-local" class="form-control" />
+                                            <input asp-for="AccidentDate" type="datetime-local" class="form-control form-control-sm" />
                                             <span asp-validation-for="AccidentDate" class="text-danger"></span>
                                         </div>
                                     </div>
@@ -73,14 +73,14 @@
                                     <div class="col-md-6">
                                         <div class="form-group">
                                             <label asp-for="LicensePlate">Biển số xe <span class="text-danger">*</span></label>
-                                            <input asp-for="LicensePlate" class="form-control" placeholder="Nhập biển số xe" />
+                                            <input asp-for="LicensePlate" class="form-control form-control-sm" placeholder="Nhập biển số xe" />
                                             <span asp-validation-for="LicensePlate" class="text-danger"></span>
                                         </div>
                                     </div>
                                     <div class="col-md-6">
                                         <div class="form-group">
                                             <label asp-for="VehicleModel">Loại xe <span class="text-danger">*</span></label>
-                                            <input asp-for="VehicleModel" class="form-control" placeholder="Nhập loại xe" />
+                                            <input asp-for="VehicleModel" class="form-control form-control-sm" placeholder="Nhập loại xe" />
                                             <span asp-validation-for="VehicleModel" class="text-danger"></span>
                                         </div>
                                     </div>
@@ -88,13 +88,13 @@
 
                                 <div class="form-group">
                                     <label asp-for="AccidentLocation">Địa điểm xảy ra tai nạn <span class="text-danger">*</span></label>
-                                    <input asp-for="AccidentLocation" class="form-control" placeholder="Nhập địa điểm xảy ra tai nạn" />
+                                    <input asp-for="AccidentLocation" class="form-control form-control-sm" placeholder="Nhập địa điểm xảy ra tai nạn" />
                                     <span asp-validation-for="AccidentLocation" class="text-danger"></span>
                                 </div>
 
                                 <div class="form-group">
                                     <label asp-for="Notes">Ghi chú</label>
-                                    <textarea asp-for="Notes" class="form-control" rows="3" placeholder="Nhập ghi chú (nếu có)"></textarea>
+                                    <textarea asp-for="Notes" class="form-control form-control-sm" rows="3" placeholder="Nhập ghi chú (nếu có)"></textarea>
                                     <span asp-validation-for="Notes" class="text-danger"></span>
                                 </div>
                             </div>
@@ -119,13 +119,13 @@
                                                 <div class="col-md-4">
                                                     <div class="form-group">
                                                         <label>Tên hạng mục <span class="text-danger">*</span></label>
-                                                        <input name="Items[@i].ItemName" value="@Model.Items[i].ItemName" class="form-control" placeholder="Nhập tên hạng mục" />
+                                                        <input name="Items[@i].ItemName" value="@Model.Items[i].ItemName" class="form-control form-control-sm" placeholder="Nhập tên hạng mục" />
                                                     </div>
                                                 </div>
                                                 <div class="col-md-2">
                                                     <div class="form-group">
                                                         <label>Loại <span class="text-danger">*</span></label>
-                                                        <select name="Items[@i].ItemType" class="form-control">
+                                                        <select name="Items[@i].ItemType" class="form-control form-control-sm">
                                                             <option value="Thay thế" selected="@(Model.Items[i].ItemType == "Thay thế")">Thay thế</option>
                                                             <option value="Sửa chữa" selected="@(Model.Items[i].ItemType == "Sửa chữa")">Sửa chữa</option>
                                                             <option value="Sơn" selected="@(Model.Items[i].ItemType == "Sơn")">Sơn</option>
@@ -148,7 +148,7 @@
                                                     <div class="form-group">
                                                         <label>Ghi chú</label>
                                                         <div class="input-group">
-                                                            <input name="Items[@i].Notes" value="@Model.Items[i].Notes" class="form-control" placeholder="Ghi chú" />
+                                                            <input name="Items[@i].Notes" value="@Model.Items[i].Notes" class="form-control form-control-sm" placeholder="Ghi chú" />
                                                             <div class="input-group-append">
                                                                 <button type="button" class="btn btn-danger btn-sm" onclick="removeInvoiceItem(this)">
                                                                     <i class="fas fa-trash"></i>
@@ -174,27 +174,27 @@
                             <div class="card-body">
                                 <div class="form-group">
                                     <label asp-for="TotalApprovedAmount">Tổng tiền duyệt công nhận giá</label>
-                                    <input asp-for="TotalApprovedAmount" type="number" class="form-control" readonly />
+                                    <input asp-for="TotalApprovedAmount" type="number" class="form-control form-control-sm" readonly />
                                 </div>
 
                                 <div class="form-group">
                                     <label asp-for="CustomerResponsibility">Trách nhiệm khách hàng</label>
-                                    <input asp-for="CustomerResponsibility" type="number" class="form-control" readonly />
+                                    <input asp-for="CustomerResponsibility" type="number" class="form-control form-control-sm" readonly />
                                 </div>
 
                                 <div class="form-group">
                                     <label asp-for="InsuranceResponsibility">Trách nhiệm bảo hiểm</label>
-                                    <input asp-for="InsuranceResponsibility" type="number" class="form-control" readonly />
+                                    <input asp-for="InsuranceResponsibility" type="number" class="form-control form-control-sm" readonly />
                                 </div>
 
                                 <div class="form-group">
                                     <label asp-for="VatAmount">Thuế VAT (10%)</label>
-                                    <input asp-for="VatAmount" type="number" class="form-control" readonly />
+                                    <input asp-for="VatAmount" type="number" class="form-control form-control-sm" readonly />
                                 </div>
 
                                 <div class="form-group">
                                     <label asp-for="FinalAmount">Tổng tiền thanh toán</label>
-                                    <input asp-for="FinalAmount" type="number" class="form-control" readonly />
+                                    <input asp-for="FinalAmount" type="number" class="form-control form-control-sm" readonly />
                                 </div>
 
                                 <div class="form-group">
@@ -225,13 +225,13 @@
                         <div class="col-md-4">
                             <div class="form-group">
                                 <label>Tên hạng mục <span class="text-danger">*</span></label>
-                                <input name="Items[${itemIndex}].ItemName" class="form-control" placeholder="Nhập tên hạng mục" required />
+                                <input name="Items[${itemIndex}].ItemName" class="form-control form-control-sm" placeholder="Nhập tên hạng mục" required />
                             </div>
                         </div>
                         <div class="col-md-2">
                             <div class="form-group">
                                 <label>Loại <span class="text-danger">*</span></label>
-                                <select name="Items[${itemIndex}].ItemType" class="form-control">
+                                <select name="Items[${itemIndex}].ItemType" class="form-control form-control-sm">
                                     <option value="Thay thế">Thay thế</option>
                                     <option value="Sửa chữa">Sửa chữa</option>
                                     <option value="Sơn">Sơn</option>
@@ -254,7 +254,7 @@
                             <div class="form-group">
                                 <label>Ghi chú</label>
                                 <div class="input-group">
-                                    <input name="Items[${itemIndex}].Notes" class="form-control" placeholder="Ghi chú" />
+                                    <input name="Items[${itemIndex}].Notes" class="form-control form-control-sm" placeholder="Ghi chú" />
                                     <div class="input-group-append">
                                         <button type="button" class="btn btn-danger btn-sm" onclick="removeInvoiceItem(this)">
                                             <i class="fas fa-trash"></i>

@@ -39,13 +39,13 @@ window.PartsManagement = {
                 orderable: false,
                 render: function(data, type, row) {
                     return `
-                        <button class="btn btn-info btn-xs view-part" data-id="${row.id}" title="Xem chi tiết">
+                        <button class="btn btn-info btn-sm view-part" data-id="${row.id}" title="Xem chi tiết">
                             <i class="fas fa-eye"></i>
                         </button>
-                        <button class="btn btn-warning btn-xs edit-part" data-id="${row.id}" title="Sửa">
+                        <button class="btn btn-warning btn-sm edit-part" data-id="${row.id}" title="Sửa">
                             <i class="fas fa-edit"></i>
                         </button>
-                        <button class="btn btn-danger btn-xs delete-part" data-id="${row.id}" title="Xóa">
+                        <button class="btn btn-danger btn-sm delete-part" data-id="${row.id}" title="Xóa">
                             <i class="fas fa-trash"></i>
                         </button>
                     `;

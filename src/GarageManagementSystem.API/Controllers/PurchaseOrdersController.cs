@@ -1,27 +1,31 @@
+using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using GarageManagementSystem.Core.Entities;
 using GarageManagementSystem.Core.Interfaces;
 using GarageManagementSystem.Shared.DTOs;
+using GarageManagementSystem.Shared.Models;
 
 namespace GarageManagementSystem.API.Controllers
 {
-    [Authorize]
+    [Authorize(Policy = "ApiScope")]
     [ApiController]
     [Route("api/[controller]")]
     public class PurchaseOrdersController : ControllerBase
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IMapper _mapper;
         private readonly ILogger<PurchaseOrdersController> _logger;
 
-        public PurchaseOrdersController(IUnitOfWork unitOfWork, ILogger<PurchaseOrdersController> logger)
+        public PurchaseOrdersController(IUnitOfWork unitOfWork, IMapper mapper, ILogger<PurchaseOrdersController> logger)
         {
             _unitOfWork = unitOfWork;
+            _mapper = mapper;
             _logger = logger;
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAll([FromQuery] int? supplierId = null, [FromQuery] string? status = null)
+        public async Task<ActionResult<ApiResponse<List<PurchaseOrderDto>>>> GetAll([FromQuery] int? supplierId = null, [FromQuery] string? status = null)
         {
             try
             {
@@ -45,82 +49,31 @@ namespace GarageManagementSystem.API.Controllers
                     var items = await _unitOfWork.Repository<PurchaseOrderItem>().GetAllAsync();
                     var orderItems = items.Where(i => i.PurchaseOrderId == order.Id).ToList();
                     
-                    var orderDto = new PurchaseOrderDto
-                    {
-                        Id = order.Id,
-                        OrderNumber = order.OrderNumber,
-                        SupplierId = order.SupplierId,
-                        SupplierName = supplier?.SupplierName ?? "N/A",
-                        OrderDate = order.OrderDate,
-                        ExpectedDeliveryDate = order.ExpectedDeliveryDate,
-                        ActualDeliveryDate = order.ActualDeliveryDate,
-                        Status = order.Status,
-                        SupplierOrderNumber = order.SupplierOrderNumber,
-                        ContactPerson = order.ContactPerson,
-                        ContactPhone = order.ContactPhone,
-                        ContactEmail = order.ContactEmail,
-                        DeliveryAddress = order.DeliveryAddress,
-                        PaymentTerms = order.PaymentTerms,
-                        DeliveryTerms = order.DeliveryTerms,
-                        Currency = order.Currency,
-                        SubTotal = order.SubTotal,
-                        TaxAmount = order.TaxAmount,
-                        ShippingCost = order.ShippingCost,
-                        TotalAmount = order.TotalAmount,
-                        EmployeeId = order.EmployeeId,
-                        ApprovedBy = order.ApprovedBy,
-                        ApprovedDate = order.ApprovedDate,
-                        Notes = order.Notes,
-                        IsApproved = order.IsApproved,
-                        ItemCount = orderItems.Count,
-                        Items = orderItems.Select(item => new PurchaseOrderItemDto
-                        {
-                            Id = item.Id,
-                            PurchaseOrderId = item.PurchaseOrderId,
-                            PartId = item.PartId,
-                            PartName = item.PartName,
-                            QuantityOrdered = item.QuantityOrdered,
-                            QuantityReceived = item.QuantityReceived,
-                            UnitPrice = item.UnitPrice,
-                            TotalPrice = item.TotalPrice,
-                            SupplierPartNumber = item.SupplierPartNumber,
-                            PartDescription = item.PartDescription,
-                            Unit = item.Unit,
-                            ExpectedDeliveryDate = item.ExpectedDeliveryDate,
-                            Notes = item.Notes,
-                            IsReceived = item.IsReceived,
-                            ReceivedDate = item.ReceivedDate,
-                            CreatedAt = item.CreatedAt,
-                            CreatedBy = item.CreatedBy,
-                            UpdatedAt = item.UpdatedAt,
-                            UpdatedBy = item.UpdatedBy
-                        }).ToList(),
-                        CreatedAt = order.CreatedAt,
-                        CreatedBy = order.CreatedBy,
-                        UpdatedAt = order.UpdatedAt,
-                        UpdatedBy = order.UpdatedBy
-                    };
+                    var orderDto = _mapper.Map<PurchaseOrderDto>(order);
+                    orderDto.SupplierName = supplier?.SupplierName ?? "N/A";
+                    orderDto.ItemCount = orderItems.Count;
+                    orderDto.Items = _mapper.Map<List<PurchaseOrderItemDto>>(orderItems);
                     
                     result.Add(orderDto);
                 }
 
-                return Ok(new { success = true, data = result });
+                return Ok(ApiResponse<List<PurchaseOrderDto>>.SuccessResult(result));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting purchase orders");
-                return StatusCode(500, new { success = false, message = "Lỗi khi lấy danh sách đơn mua hàng" });
+                return StatusCode(500, ApiResponse<List<PurchaseOrderDto>>.ErrorResult("Lỗi khi lấy danh sách đơn mua hàng", ex.Message));
             }
         }
 
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(int id)
+        public async Task<ActionResult<ApiResponse<PurchaseOrderDto>>> GetById(int id)
         {
             try
             {
                 var order = await _unitOfWork.Repository<PurchaseOrder>().GetByIdAsync(id);
                 if (order == null)
-                    return NotFound(new { success = false, message = "Không tìm thấy đơn mua hàng" });
+                    return NotFound(ApiResponse<PurchaseOrderDto>.ErrorResult("Không tìm thấy đơn mua hàng"));
 
                 // Get supplier information
                 var supplier = await _unitOfWork.Repository<Supplier>().GetByIdAsync(order.SupplierId);
@@ -129,76 +82,27 @@ namespace GarageManagementSystem.API.Controllers
                 var items = await _unitOfWork.Repository<PurchaseOrderItem>().GetAllAsync();
                 var orderItems = items.Where(i => i.PurchaseOrderId == order.Id).ToList();
                 
-                var orderDto = new PurchaseOrderDto
-                {
-                    Id = order.Id,
-                    OrderNumber = order.OrderNumber,
-                    SupplierId = order.SupplierId,
-                    SupplierName = supplier?.SupplierName ?? "N/A",
-                    OrderDate = order.OrderDate,
-                    ExpectedDeliveryDate = order.ExpectedDeliveryDate,
-                    ActualDeliveryDate = order.ActualDeliveryDate,
-                    Status = order.Status,
-                    SupplierOrderNumber = order.SupplierOrderNumber,
-                    ContactPerson = order.ContactPerson,
-                    ContactPhone = order.ContactPhone,
-                    ContactEmail = order.ContactEmail,
-                    DeliveryAddress = order.DeliveryAddress,
-                    PaymentTerms = order.PaymentTerms,
-                    DeliveryTerms = order.DeliveryTerms,
-                    Currency = order.Currency,
-                    SubTotal = order.SubTotal,
-                    TaxAmount = order.TaxAmount,
-                    ShippingCost = order.ShippingCost,
-                    TotalAmount = order.TotalAmount,
-                    EmployeeId = order.EmployeeId,
-                    ApprovedBy = order.ApprovedBy,
-                    ApprovedDate = order.ApprovedDate,
-                    Notes = order.Notes,
-                    IsApproved = order.IsApproved,
-                    ItemCount = orderItems.Count,
-                    Items = orderItems.Select(item => new PurchaseOrderItemDto
-                    {
-                        Id = item.Id,
-                        PurchaseOrderId = item.PurchaseOrderId,
-                        PartId = item.PartId,
-                        PartName = item.PartName,
-                        QuantityOrdered = item.QuantityOrdered,
-                        QuantityReceived = item.QuantityReceived,
-                        UnitPrice = item.UnitPrice,
-                        TotalPrice = item.TotalPrice,
-                        SupplierPartNumber = item.SupplierPartNumber,
-                        PartDescription = item.PartDescription,
-                        Unit = item.Unit,
-                        ExpectedDeliveryDate = item.ExpectedDeliveryDate,
-                        Notes = item.Notes,
-                        IsReceived = item.IsReceived,
-                        ReceivedDate = item.ReceivedDate,
-                        CreatedAt = item.CreatedAt,
-                        CreatedBy = item.CreatedBy,
-                        UpdatedAt = item.UpdatedAt,
-                        UpdatedBy = item.UpdatedBy
-                    }).ToList(),
-                    CreatedAt = order.CreatedAt,
-                    CreatedBy = order.CreatedBy,
-                    UpdatedAt = order.UpdatedAt,
-                    UpdatedBy = order.UpdatedBy
-                };
+                var orderDto = _mapper.Map<PurchaseOrderDto>(order);
+                orderDto.SupplierName = supplier?.SupplierName ?? "N/A";
+                orderDto.ItemCount = orderItems.Count;
+                orderDto.Items = _mapper.Map<List<PurchaseOrderItemDto>>(orderItems);
 
-                return Ok(new { success = true, data = orderDto });
+                return Ok(ApiResponse<PurchaseOrderDto>.SuccessResult(orderDto));
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting purchase order");
-                return StatusCode(500, new { success = false, message = "Lỗi khi lấy thông tin đơn mua hàng" });
+                _logger.LogError(ex, "Error getting purchase order by id: {Id}", id);
+                return StatusCode(500, ApiResponse<PurchaseOrderDto>.ErrorResult("Lỗi khi lấy thông tin đơn mua hàng", ex.Message));
             }
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] PurchaseOrder order)
+        public async Task<ActionResult<ApiResponse<PurchaseOrderDto>>> Create([FromBody] CreatePurchaseOrderDto createDto)
         {
             try
             {
+                var order = _mapper.Map<PurchaseOrder>(createDto);
+                
                 // Generate PO number
                 var count = (await _unitOfWork.Repository<PurchaseOrder>().GetAllAsync()).Count();
                 order.OrderNumber = $"PO-{DateTime.Now:yyyyMMdd}-{(count + 1):D4}";
@@ -207,12 +111,14 @@ namespace GarageManagementSystem.API.Controllers
                 await _unitOfWork.Repository<PurchaseOrder>().AddAsync(order);
                 await _unitOfWork.SaveChangesAsync();
 
-                return Ok(new { success = true, data = order, message = "Tạo đơn mua hàng thành công" });
+                var orderDto = _mapper.Map<PurchaseOrderDto>(order);
+                return CreatedAtAction(nameof(GetById), new { id = order.Id }, 
+                    ApiResponse<PurchaseOrderDto>.SuccessResult(orderDto, "Tạo đơn mua hàng thành công"));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error creating purchase order");
-                return StatusCode(500, new { success = false, message = "Lỗi khi tạo đơn mua hàng" });
+                return StatusCode(500, ApiResponse<PurchaseOrderDto>.ErrorResult("Lỗi khi tạo đơn mua hàng", ex.Message));
             }
         }
 

@@ -297,7 +297,7 @@ namespace GarageManagementSystem.API.Controllers
                         }
 
                         var qtyBefore = part.QuantityInStock;
-                        var qtyChange = TransactionTypeHelper.IsIncrease(dto.TransactionType) ? item.Quantity : -item.Quantity;
+                        var qtyChange = TransactionTypeHelper.IsIncrease("NhapKho") ? item.QuantityOrdered : -item.QuantityOrdered;
                         var qtyAfter = qtyBefore + qtyChange;
 
                         if (qtyAfter < 0)
@@ -306,37 +306,30 @@ namespace GarageManagementSystem.API.Controllers
                             return BadRequest(ApiResponse<List<StockTransactionDto>>.ErrorResult($"Không đủ tồn kho cho phụ tùng: {part.PartName}"));
                         }
 
-                        // Convert string to enum
-                        var transactionType = dto.TransactionType switch
-                        {
-                            "NhapKho" => StockTransactionType.NhapKho,
-                            "XuatKho" => StockTransactionType.XuatKho,
-                            "DieuChinh" => StockTransactionType.DieuChinh,
-                            "TonDauKy" => StockTransactionType.TonDauKy,
-                            _ => StockTransactionType.NhapKho
-                        };
+                        // Convert string to enum - Default to NhapKho for purchase orders
+                        var transactionType = StockTransactionType.NhapKho;
 
                         var transaction = new Core.Entities.StockTransaction
                         {
                             TransactionNumber = await _unitOfWork.StockTransactions.GenerateTransactionNumberAsync(),
                             PartId = item.PartId,
                             TransactionType = transactionType,
-                            Quantity = item.Quantity,
+                            Quantity = item.QuantityOrdered,
                             QuantityBefore = qtyBefore,
                             QuantityAfter = qtyAfter,
                             StockAfter = qtyAfter,
                             UnitPrice = item.UnitPrice,
-                            TotalAmount = item.Quantity * item.UnitPrice,
-                            TransactionDate = dto.TransactionDate,
+                            TotalAmount = item.QuantityOrdered * item.UnitPrice,
+                            TransactionDate = dto.OrderDate,
                             ServiceOrderId = null,
                             SupplierId = dto.SupplierId,
-                            ReferenceNumber = dto.ReferenceNumber,
+                            ReferenceNumber = $"PO-{DateTime.Now:yyyyMMdd}-{DateTime.Now.Ticks}",
                             Notes = $"{dto.Notes} - {part.PartName}",
                             ProcessedById = null,
                             CreatedAt = DateTime.Now,
                             UpdatedAt = DateTime.Now,
                             IsDeleted = false,
-                            HasInvoice = item.HasInvoice
+                            HasInvoice = true
                         };
 
                         // ✅ TỐI ƯU: Collect transactions và parts để bulk update
