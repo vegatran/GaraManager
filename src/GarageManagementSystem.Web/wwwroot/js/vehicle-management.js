@@ -49,10 +49,9 @@ window.VehicleManagement = {
             }
         ];
         
-        this.vehicleTable = DataTablesUtility.initAjaxTable('#vehicleTable', '/VehicleManagement/GetVehicles', columns, {
+        this.vehicleTable = DataTablesUtility.initServerSideTable('#vehicleTable', '/api/vehicles', columns, {
             order: [[0, 'desc']],
-            pageLength: 25,
-            dom: 'rtip'  // Chỉ hiển thị table, paging, info, processing (không có search box và length menu)
+            pageLength: 10
         });
     },
 
@@ -71,11 +70,9 @@ window.VehicleManagement = {
                     });
                     $('#createCustomerId, #editCustomerId').html(options);
                 } else {
-                    console.error('Invalid customer data format:', response);
                 }
             },
             error: function(xhr, status, error) {
-                console.error('Error loading customers:', error);
             }
         });
     },
@@ -84,10 +81,6 @@ window.VehicleManagement = {
     bindEvents: function() {
         var self = this;
 
-        // Search functionality
-        $('#searchInput').on('keyup', function() {
-            self.vehicleTable.search(this.value).draw();
-        });
 
         // Add vehicle button - using data-target selector
         $(document).on('click', '[data-target="#createVehicleModal"]', function() {

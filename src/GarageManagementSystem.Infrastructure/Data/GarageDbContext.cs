@@ -39,6 +39,7 @@ namespace GarageManagementSystem.Infrastructure.Data
         public DbSet<InspectionPhoto> InspectionPhotos { get; set; }
         public DbSet<ServiceQuotation> ServiceQuotations { get; set; }
         public DbSet<QuotationItem> QuotationItems { get; set; }
+        public DbSet<QuotationAttachment> QuotationAttachments { get; set; }
         public DbSet<Part> Parts { get; set; }
         public DbSet<Supplier> Suppliers { get; set; }
         public DbSet<StockTransaction> StockTransactions { get; set; }

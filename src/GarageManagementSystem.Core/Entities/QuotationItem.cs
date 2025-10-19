@@ -74,6 +74,13 @@ namespace GarageManagementSystem.Core.Entities
         
         public bool IsVATApplicable { get; set; } = true; // Có chịu VAT không
         
+        // Insurance approved pricing - Giá bảo hiểm duyệt
+        public decimal? InsuranceApprovedUnitPrice { get; set; }
+        public decimal? InsuranceApprovedSubTotal { get; set; }
+        public decimal? InsuranceApprovedVATAmount { get; set; }
+        public decimal? InsuranceApprovedTotalAmount { get; set; }
+        public string? InsuranceApprovalNotes { get; set; }
+        
         [StringLength(1500)]
         public string? PricingBreakdown { get; set; } // Chi tiết phân tích giá (JSON)
 

@@ -50,6 +50,7 @@ namespace GarageManagementSystem.API.Profiles
                 .ForMember(dest => dest.ServiceType, opt => opt.MapFrom(src => src.ItemType))
                 .ForMember(dest => dest.HasInvoice, opt => opt.MapFrom(src => src.HasInvoice))
                 .ForMember(dest => dest.IsVATApplicable, opt => opt.MapFrom(src => src.IsVATApplicable))
+                .ForMember(dest => dest.VATRate, opt => opt.MapFrom(src => src.VATRate)) // ✅ THÊM: Map VATRate từ entity
                 .ForMember(dest => dest.ItemCategory, opt => opt.MapFrom(src => src.ItemCategory));
 
             CreateMap<CreateQuotationItemDto, QuotationItem>()
@@ -58,6 +59,8 @@ namespace GarageManagementSystem.API.Profiles
                 .ForMember(dest => dest.Service, opt => opt.Ignore())
                 .ForMember(dest => dest.ItemType, opt => opt.MapFrom(src => src.ServiceType ?? "Service"))
                 .ForMember(dest => dest.HasInvoice, opt => opt.MapFrom(src => src.HasInvoice))
+                .ForMember(dest => dest.IsVATApplicable, opt => opt.MapFrom(src => src.IsVATApplicable)) // ✅ THÊM: Map IsVATApplicable
+                .ForMember(dest => dest.VATRate, opt => opt.MapFrom(src => src.VATRate)) // ✅ THÊM: Map VATRate
                 .ForMember(dest => dest.ItemCategory, opt => opt.MapFrom(src => src.ItemCategory ?? "Material"))
                 .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
                 .ForMember(dest => dest.CreatedBy, opt => opt.Ignore())

@@ -1,8 +1,10 @@
 using AutoMapper;
 using GarageManagementSystem.Core.Enums;
+using GarageManagementSystem.Core.Extensions;
 using GarageManagementSystem.Core.Interfaces;
 using GarageManagementSystem.Shared.DTOs;
 using GarageManagementSystem.Shared.Models;
+using GarageManagementSystem.API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -15,26 +17,64 @@ namespace GarageManagementSystem.API.Controllers
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
+        private readonly ICacheService _cacheService;
 
-        public VehicleInspectionsController(IUnitOfWork unitOfWork, IMapper mapper)
+        public VehicleInspectionsController(IUnitOfWork unitOfWork, IMapper mapper, ICacheService cacheService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+            _cacheService = cacheService;
         }
 
         [HttpGet]
-        public async Task<ActionResult<ApiResponse<List<VehicleInspectionDto>>>> GetInspections()
+        public async Task<ActionResult<PagedResponse<VehicleInspectionDto>>> GetInspections(
+            [FromQuery] int pageNumber = 1, 
+            [FromQuery] int pageSize = 10,
+            [FromQuery] string? searchTerm = null,
+            [FromQuery] string? status = null,
+            [FromQuery] int? customerId = null)
         {
             try
             {
                 var inspections = await _unitOfWork.VehicleInspections.GetAllWithDetailsAsync();
-                var inspectionDtos = inspections.Select(MapToDto).ToList();
+                var query = inspections.AsQueryable();
                 
-                return Ok(ApiResponse<List<VehicleInspectionDto>>.SuccessResult(inspectionDtos));
+                // Apply search filter if provided
+                if (!string.IsNullOrEmpty(searchTerm))
+                {
+                    query = query.Where(i => 
+                        i.VehiclePlate.Contains(searchTerm) || 
+                        i.CustomerName.Contains(searchTerm) || 
+                        i.InspectionNumber.Contains(searchTerm));
+                }
+                
+                // Apply status filter if provided
+                if (!string.IsNullOrEmpty(status))
+                {
+                    query = query.Where(i => i.Status == status);
+                }
+                
+                // Apply customer filter if provided
+                if (customerId.HasValue)
+                {
+                    query = query.Where(i => i.CustomerId == customerId.Value);
+                }
+
+                query = query.OrderByDescending(i => i.InspectionDate);
+
+                // Get total count
+                var totalCount = await query.GetTotalCountAsync();
+                
+                // Apply pagination
+                var pagedInspections = query.ApplyPagination(pageNumber, pageSize).ToList();
+                var inspectionDtos = pagedInspections.Select(MapToDto).ToList();
+                
+                return Ok(PagedResponse<VehicleInspectionDto>.CreateSuccessResult(
+                    inspectionDtos, pageNumber, pageSize, totalCount, "Vehicle inspections retrieved successfully"));
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ApiResponse<List<VehicleInspectionDto>>.ErrorResult("Lỗi khi lấy danh sách kiểm tra xe", ex.Message));
+                return StatusCode(500, PagedResponse<VehicleInspectionDto>.CreateErrorResult("Lỗi khi lấy danh sách kiểm tra xe"));
             }
         }
 

@@ -97,10 +97,9 @@ window.StockManagement = {
             }
         ];
         
-        this.stockTable = DataTablesUtility.initAjaxTable('#stockTransactionsTable', '/StockManagement/GetStockTransactions', columns, {
+        this.stockTable = DataTablesUtility.initServerSideTable('#stockTransactionsTable', '/api/stocktransactions', columns, {
             order: [[0, 'desc']],
-            pageLength: 25,
-            dom: 'rtip'  // Chỉ hiển thị table, paging, info, processing (không có search box và length menu)
+            pageLength: 10
         });
     },
 
@@ -108,10 +107,6 @@ window.StockManagement = {
     bindEvents: function() {
         var self = this;
 
-        // Search functionality
-        $('#searchInput').on('keyup', function() {
-            self.stockTable.search(this.value).draw();
-        });
 
         // Create transaction form
         $(document).on('submit', '#createTransactionForm', function(e) {
@@ -214,7 +209,6 @@ window.StockManagement = {
             url: '/StockManagement/GetAvailableParts',
             type: 'GET',
             success: function(response) {
-                console.log('🔍 Parts API Response:', response);
                 
                 if (response.success && response.data) {
                     // Clear existing options
@@ -236,7 +230,6 @@ window.StockManagement = {
                 }
             },
             error: function(xhr, status, error) {
-                console.error('Error loading parts:', error);
                 if (AuthHandler && AuthHandler.isUnauthorized && AuthHandler.isUnauthorized(xhr)) {
                     AuthHandler.handleUnauthorized(xhr, true);
                 }
@@ -252,7 +245,6 @@ window.StockManagement = {
             url: '/StockManagement/GetTransactionTypes',
             type: 'GET',
             success: function(response) {
-                console.log('🔍 Transaction Types API Response:', response);
                 
                 if (response.success && response.data) {
                     // Clear existing options
@@ -267,7 +259,6 @@ window.StockManagement = {
                 }
             },
             error: function(xhr, status, error) {
-                console.error('Error loading transaction types:', error);
             }
         });
     },
@@ -280,7 +271,6 @@ window.StockManagement = {
             url: '/StockManagement/GetAvailableSuppliers',
             type: 'GET',
             success: function(response) {
-                console.log('🔍 Suppliers API Response:', response);
                 
                 if (response.success && response.data) {
                     // Clear existing options
@@ -302,7 +292,6 @@ window.StockManagement = {
                 }
             },
             error: function(xhr, status, error) {
-                console.error('Error loading suppliers:', error);
                 if (AuthHandler && AuthHandler.isUnauthorized && AuthHandler.isUnauthorized(xhr)) {
                     AuthHandler.handleUnauthorized(xhr, true);
                 }
@@ -654,7 +643,6 @@ window.StockManagement = {
                         }
                     },
                     error: function(xhr, status, error) {
-                        console.error('Error searching parts:', error);
                         process([]);
                     }
                 });

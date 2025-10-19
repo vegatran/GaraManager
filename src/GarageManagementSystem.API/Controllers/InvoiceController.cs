@@ -1,8 +1,11 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using GarageManagementSystem.Core.Entities;
+using GarageManagementSystem.Core.Extensions;
 using GarageManagementSystem.Core.Interfaces;
 using GarageManagementSystem.Core.Services;
+using GarageManagementSystem.Shared.Models;
+using GarageManagementSystem.API.Services;
 
 namespace GarageManagementSystem.API.Controllers
 {
@@ -14,45 +17,72 @@ namespace GarageManagementSystem.API.Controllers
         private readonly IUnitOfWork _unitOfWork;
         private readonly IConfigurationService _configService;
         private readonly ILogger<InvoiceController> _logger;
+        private readonly GarageManagementSystem.API.Services.ICacheService _cacheService;
 
         public InvoiceController(
             IUnitOfWork unitOfWork, 
             IConfigurationService configService,
-            ILogger<InvoiceController> logger)
+            ILogger<InvoiceController> logger,
+            GarageManagementSystem.API.Services.ICacheService cacheService)
         {
             _unitOfWork = unitOfWork;
             _configService = configService;
             _logger = logger;
+            _cacheService = cacheService;
         }
 
         /// <summary>
         /// Lấy danh sách hóa đơn
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> GetInvoices([FromQuery] string? status = null, [FromQuery] DateTime? fromDate = null, [FromQuery] DateTime? toDate = null)
+        public async Task<IActionResult> GetInvoices(
+            [FromQuery] int pageNumber = 1, 
+            [FromQuery] int pageSize = 10,
+            [FromQuery] string? searchTerm = null,
+            [FromQuery] string? status = null, 
+            [FromQuery] DateTime? fromDate = null, 
+            [FromQuery] DateTime? toDate = null)
         {
             try
             {
                 var invoices = await _unitOfWork.Invoices.GetAllAsync();
+                var query = invoices.AsQueryable();
+                
+                // Apply search filter if provided
+                if (!string.IsNullOrEmpty(searchTerm))
+                {
+                    query = query.Where(i => 
+                        i.InvoiceNumber.Contains(searchTerm) || 
+                        i.CustomerName.Contains(searchTerm) || 
+                        i.VehiclePlate.Contains(searchTerm));
+                }
                 
                 // Filter by status
                 if (!string.IsNullOrEmpty(status))
                 {
-                    invoices = invoices.Where(i => i.Status == status);
+                    query = query.Where(i => i.Status == status);
                 }
                 
                 // Filter by date range
                 if (fromDate.HasValue)
                 {
-                    invoices = invoices.Where(i => i.InvoiceDate >= fromDate.Value);
+                    query = query.Where(i => i.InvoiceDate >= fromDate.Value);
                 }
                 
                 if (toDate.HasValue)
                 {
-                    invoices = invoices.Where(i => i.InvoiceDate <= toDate.Value);
+                    query = query.Where(i => i.InvoiceDate <= toDate.Value);
                 }
 
-                var result = invoices.Select(i => new
+                query = query.OrderByDescending(i => i.InvoiceDate);
+
+                // Get total count
+                var totalCount = await query.GetTotalCountAsync();
+                
+                // Apply pagination
+                var pagedInvoices = query.ApplyPagination(pageNumber, pageSize).ToList();
+
+                var result = pagedInvoices.Select(i => new
                 {
                     i.Id,
                     i.InvoiceNumber,
@@ -71,12 +101,13 @@ namespace GarageManagementSystem.API.Controllers
                     i.CreatedAt
                 }).ToList();
 
-                return Ok(new { success = true, data = result });
+                return Ok(PagedResponse<object>.CreateSuccessResult(
+                    result, pageNumber, pageSize, totalCount, "Invoices retrieved successfully"));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting invoices");
-                return StatusCode(500, new { success = false, message = "Lỗi khi lấy danh sách hóa đơn" });
+                return StatusCode(500, PagedResponse<object>.CreateErrorResult("Lỗi khi lấy danh sách hóa đơn"));
             }
         }
 

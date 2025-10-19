@@ -42,6 +42,8 @@ namespace GarageManagementSystem.API.Profiles
                 .ForMember(dest => dest.VehicleId, opt => opt.Ignore())
                 .ForMember(dest => dest.ReceptionDate, opt => opt.Ignore())
                 .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.AssignedTechnicianId.HasValue ? ReceptionStatus.Assigned : src.Status))
+                .ForMember(dest => dest.InspectionStartDate, opt => opt.MapFrom(src => src.InspectionStartDate))
+                .ForMember(dest => dest.InspectionCompletedDate, opt => opt.MapFrom(src => src.InspectionCompletedDate))
                 .ForMember(dest => dest.UpdatedDate, opt => opt.MapFrom(src => DateTime.Now))
                 .ForMember(dest => dest.CreatedDate, opt => opt.Ignore())
                 .ForMember(dest => dest.IsDeleted, opt => opt.Ignore())

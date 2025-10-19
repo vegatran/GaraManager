@@ -19,6 +19,7 @@ namespace GarageManagementSystem.Web.Configuration
         public static class Customers
         {
             public const string GetAll = "customers";
+            public const string GetAllForDropdown = "customers/dropdown";
             public const string GetById = "customers/{0}"; // customers/{id}
             public const string Create = "customers";
             public const string Update = "customers/{0}"; // customers/{id}
@@ -32,6 +33,8 @@ namespace GarageManagementSystem.Web.Configuration
         public static class CustomerReceptions
         {
             public const string GetAll = "CustomerReceptions";
+            public const string GetAllForDropdown = "CustomerReceptions/dropdown";
+            public const string GetInspectionEligibleForDropdown = "CustomerReceptions/dropdown/inspection-eligible";
             public const string GetById = "CustomerReceptions/{0}"; // CustomerReceptions/{id}
             public const string Create = "CustomerReceptions";
             public const string Update = "CustomerReceptions/{0}"; // CustomerReceptions/{id}
@@ -44,6 +47,7 @@ namespace GarageManagementSystem.Web.Configuration
         public static class Vehicles
         {
             public const string GetAll = "vehicles";
+            public const string GetAllForDropdown = "vehicles/dropdown";
             public const string GetById = "vehicles/{0}"; // vehicles/{id}
             public const string Create = "vehicles";
             public const string Update = "vehicles/{0}"; // vehicles/{id}
@@ -132,6 +136,7 @@ namespace GarageManagementSystem.Web.Configuration
         public static class ServiceQuotations
         {
             public const string GetAll = "servicequotations";
+            public const string GetAllForDropdown = "servicequotations/dropdown";
             public const string GetById = "servicequotations/{0}";
             public const string GetByVehicle = "servicequotations/vehicle/{0}";
             public const string GetByCustomer = "servicequotations/customer/{0}";
@@ -143,6 +148,18 @@ namespace GarageManagementSystem.Web.Configuration
             public const string Approve = "servicequotations/{0}/approve";
             public const string Reject = "servicequotations/{0}/reject";
             public const string Send = "servicequotations/{0}/send";
+        }
+
+        /// <summary>
+        /// Quotation Attachments endpoints
+        /// </summary>
+        public static class QuotationAttachments
+        {
+            public const string GetByQuotationId = "quotationattachments/quotation/{0}";
+            public const string GetInsuranceDocumentsByQuotationId = "quotationattachments/quotation/{0}/insurance";
+            public const string Upload = "quotationattachments/upload";
+            public const string Download = "quotationattachments/{0}/download";
+            public const string Delete = "quotationattachments/{0}";
         }
 
         /// <summary>

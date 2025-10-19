@@ -1,6 +1,8 @@
 using GarageManagementSystem.Core.Interfaces;
+using GarageManagementSystem.Core.Extensions;
 using GarageManagementSystem.Shared.DTOs;
 using GarageManagementSystem.Shared.Models;
+using GarageManagementSystem.API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -13,38 +15,54 @@ namespace GarageManagementSystem.API.Controllers
     public class SuppliersController : ControllerBase
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly ICacheService _cacheService;
 
-        public SuppliersController(IUnitOfWork unitOfWork)
+        public SuppliersController(IUnitOfWork unitOfWork, ICacheService cacheService)
         {
             _unitOfWork = unitOfWork;
+            _cacheService = cacheService;
         }
 
         [HttpGet]
-        public async Task<ActionResult<ApiResponse<List<SupplierDto>>>> GetSuppliers()
+        public async Task<ActionResult<PagedResponse<SupplierDto>>> GetSuppliers(
+            [FromQuery] int pageNumber = 1, 
+            [FromQuery] int pageSize = 10,
+            [FromQuery] string? searchTerm = null,
+            [FromQuery] string? category = null)
         {
             try
             {
-                // Debug: Log user claims
-                Console.WriteLine("🔍 User Claims Debug:");
-                if (User?.Identity?.IsAuthenticated == true)
-                {
-                    Console.WriteLine($"✅ User is authenticated: {User.Identity.Name}");
-                    foreach (var claim in User.Claims)
-                    {
-                        Console.WriteLine($"  {claim.Type}: {claim.Value}");
-                    }
-                }
-                else
-                {
-                    Console.WriteLine("❌ User is NOT authenticated");
-                }
-
                 var suppliers = await _unitOfWork.Suppliers.GetAllAsync();
-                return Ok(ApiResponse<List<SupplierDto>>.SuccessResult(suppliers.Select(MapToDto).ToList()));
+                var query = suppliers.AsQueryable();
+                
+                // Apply search filter if provided
+                if (!string.IsNullOrEmpty(searchTerm))
+                {
+                    query = query.Where(s => 
+                        s.SupplierName.Contains(searchTerm) || 
+                        s.ContactPerson.Contains(searchTerm) || 
+                        s.Email.Contains(searchTerm) ||
+                        s.Phone.Contains(searchTerm));
+                }
+                
+                // Apply category filter if provided (removed - Supplier doesn't have Category property)
+
+                query = query.OrderBy(s => s.SupplierName);
+
+                // Get total count
+                var totalCount = await query.GetTotalCountAsync();
+                
+                // Apply pagination
+                var pagedSuppliers = query.ApplyPagination(pageNumber, pageSize).ToList();
+                var supplierDtos = pagedSuppliers.Select(MapToDto).ToList();
+                
+                return Ok(PagedResponse<SupplierDto>.CreateSuccessResult(
+                    supplierDtos, pageNumber, pageSize, totalCount, "Suppliers retrieved successfully"));
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ApiResponse<List<SupplierDto>>.ErrorResult("Error", ex.Message));
+                Console.WriteLine($"❌ Error retrieving suppliers: {ex}");
+                return StatusCode(500, PagedResponse<SupplierDto>.CreateErrorResult("Error retrieving suppliers"));
             }
         }
 

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using GarageManagementSystem.Web.Services;
 using GarageManagementSystem.Web.Configuration;
 using GarageManagementSystem.Web.Models;
+using GarageManagementSystem.Shared.Models;
 
 namespace GarageManagementSystem.Web.Controllers
 {
@@ -31,41 +32,67 @@ namespace GarageManagementSystem.Web.Controllers
         }
 
         /// <summary>
-        /// Lấy danh sách tất cả báo giá cho DataTable thông qua API
+        /// Lấy danh sách báo giá với phân trang cho DataTable thông qua API
         /// </summary>
         [HttpGet("GetQuotations")]
-        public async Task<IActionResult> GetQuotations()
+        public async Task<IActionResult> GetQuotations(
+            int pageNumber = 1, 
+            int pageSize = 10, 
+            string? searchTerm = null,
+            string? status = null)
         {
-            var response = await _apiService.GetAsync<List<ServiceQuotationDto>>(ApiEndpoints.ServiceQuotations.GetAll);
-            
-            if (response.Success)
+            try
             {
-                var quotationList = new List<object>();
+                var queryParams = new List<string>();
+                queryParams.Add($"pageNumber={pageNumber}");
+                queryParams.Add($"pageSize={pageSize}");
                 
-                if (response.Data != null)
+                if (!string.IsNullOrEmpty(searchTerm))
+                    queryParams.Add($"searchTerm={Uri.EscapeDataString(searchTerm)}");
+                if (!string.IsNullOrEmpty(status))
+                    queryParams.Add($"status={Uri.EscapeDataString(status)}");
+                
+                var queryString = string.Join("&", queryParams);
+                var endpoint = $"{ApiEndpoints.ServiceQuotations.GetAll}?{queryString}";
+                
+                var response = await _apiService.GetAsync<PagedResponse<ServiceQuotationDto>>(endpoint);
+                
+                if (response.Success && response.Data != null)
                 {
-                    quotationList = response.Data.Select(q => new
+                    var quotationList = response.Data.Data.Select(q => new
                     {
                         id = q.Id,
                         quotationNumber = q.QuotationNumber,
                         vehicleInfo = $"{q.Vehicle?.Brand} {q.Vehicle?.Model} - {q.Vehicle?.LicensePlate}",
                         customerName = q.Customer?.Name ?? "N/A",
-                        totalAmount = q.TotalAmount.ToString("N0"),
+                        // ✅ SỬA: Tính lại totalAmount từ SubTotal + TaxAmount - DiscountAmount
+                        totalAmount = (q.SubTotal + q.TaxAmount - q.DiscountAmount).ToString("N0"),
                         status = TranslateQuotationStatus(q.Status),
-                        validUntil = q.ValidUntil,
+                        validUntil = q.ValidUntil?.ToString("yyyy-MM-dd") ?? "",
                         createdDate = q.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss")
-                    }).Cast<object>().ToList();
-                }
+                    }).ToList();
 
-                return Json(new { 
-                    success = true,
-                    data = quotationList,
-                    message = "Lấy danh sách báo giá thành công"
-                });
+                    return Json(new { 
+                        success = true,
+                        data = quotationList,
+                        totalCount = response.Data.TotalCount,
+                        message = "Lấy danh sách báo giá thành công"
+                    });
+                }
+                else
+                {
+                    return Json(new { 
+                        success = false,
+                        message = response.ErrorMessage ?? "Lỗi khi lấy danh sách báo giá"
+                    });
+                }
             }
-            else
+            catch (Exception ex)
             {
-                return Json(new { error = response.ErrorMessage });
+                return Json(new { 
+                    success = false,
+                    message = "Lỗi khi lấy danh sách báo giá: " + ex.Message
+                });
             }
         }
 
@@ -75,11 +102,70 @@ namespace GarageManagementSystem.Web.Controllers
         [HttpGet("GetQuotation/{id}")]
         public async Task<IActionResult> GetQuotation(int id)
         {
-            var response = await _apiService.GetAsync<ServiceQuotationDto>(
-                ApiEndpoints.Builder.WithId(ApiEndpoints.ServiceQuotations.GetById, id)
-            );
-            
-            return Json(response);
+            try
+            {
+                var response = await _apiService.GetAsync<ApiResponse<ServiceQuotationDto>>(
+                    ApiEndpoints.Builder.WithId(ApiEndpoints.ServiceQuotations.GetById, id)
+                );
+                
+                if (response.Success && response.Data != null)
+                {
+                    var quotation = response.Data.Data;
+                    var quotationData = new
+                    {
+                        id = quotation.Id,
+                        quotationNumber = quotation.QuotationNumber,
+                        customerId = quotation.CustomerId,
+                        vehicleId = quotation.VehicleId,
+                        vehicleInspectionId = quotation.VehicleInspectionId,
+                        totalAmount = quotation.TotalAmount,
+                        status = quotation.Status,
+                        validUntil = quotation.ValidUntil?.ToString("yyyy-MM-dd") ?? "",
+                        notes = quotation.CustomerNotes ?? "",
+                        customerName = quotation.Customer?.Name ?? "",
+                        vehicleInfo = $"{quotation.Vehicle?.Brand} {quotation.Vehicle?.Model} - {quotation.Vehicle?.LicensePlate}",
+                        inspectionNumber = quotation.VehicleInspection?.InspectionNumber ?? "",
+                        // ✅ THÊM: Trả về discountAmount và các field tài chính
+                        discountAmount = quotation.DiscountAmount,
+                        subTotal = quotation.SubTotal,
+                        taxAmount = quotation.TaxAmount,
+                        taxRate = quotation.TaxRate,
+                        // ✅ THÊM: Trả về items cho JavaScript
+                        items = quotation.Items?.Select(item => new
+                        {
+                            id = item.Id,
+                            serviceId = item.ServiceId,
+                            itemName = item.ItemName,
+                            quantity = item.Quantity,
+                            unitPrice = item.UnitPrice,
+                            totalPrice = item.TotalPrice,
+                            isOptional = item.IsOptional,
+                            hasInvoice = item.HasInvoice,
+                            isVATApplicable = item.IsVATApplicable,
+                            notes = item.Notes,
+                            serviceType = item.ServiceType,
+                            itemCategory = item.ItemCategory,
+                            vatRate = item.VATRate,
+                            service = item.Service != null ? new
+                            {
+                                id = item.Service.Id,
+                                name = item.Service.Name,
+                                price = item.Service.Price
+                            } : null
+                        }).ToList()
+                    };
+                    
+                    return Json(new { success = true, data = quotationData });
+                }
+                else
+                {
+                    return Json(new { success = false, error = response.ErrorMessage ?? "Không tìm thấy báo giá" });
+                }
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, error = "Lỗi khi lấy thông tin báo giá: " + ex.Message });
+            }
         }
 
         /// <summary>
@@ -88,17 +174,32 @@ namespace GarageManagementSystem.Web.Controllers
         [HttpPost("CreateQuotation")]
         public async Task<IActionResult> CreateQuotation([FromBody] CreateServiceQuotationDto quotationDto)
         {
-            if (!ModelState.IsValid)
+            try
             {
-                return BadRequest(new { success = false, errorMessage = "Dữ liệu không hợp lệ" });
+                if (!ModelState.IsValid)
+                {
+                    var errors = ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage)).ToList();
+                    return BadRequest(new { success = false, error = "Dữ liệu không hợp lệ: " + string.Join(", ", errors) });
+                }
+
+                var response = await _apiService.PostAsync<ApiResponse<ServiceQuotationDto>>(
+                    ApiEndpoints.ServiceQuotations.Create,
+                    quotationDto
+                );
+
+                if (response.Success)
+                {
+                    return Json(new { success = true, message = "Tạo báo giá thành công" });
+                }
+                else
+                {
+                    return Json(new { success = false, error = response.ErrorMessage ?? "Lỗi khi tạo báo giá" });
+                }
             }
-
-            var response = await _apiService.PostAsync<ServiceQuotationDto>(
-                ApiEndpoints.ServiceQuotations.Create,
-                quotationDto
-            );
-
-            return Json(response);
+            catch (Exception ex)
+            {
+                return Json(new { success = false, error = "Lỗi khi tạo báo giá: " + ex.Message });
+            }
         }
 
         /// <summary>
@@ -107,22 +208,37 @@ namespace GarageManagementSystem.Web.Controllers
         [HttpPut("UpdateQuotation/{id}")]
         public async Task<IActionResult> UpdateQuotation(int id, [FromBody] UpdateServiceQuotationDto quotationDto)
         {
-            if (!ModelState.IsValid)
+            try
             {
-                return BadRequest(new { success = false, errorMessage = "Dữ liệu không hợp lệ" });
-            }
+                if (!ModelState.IsValid)
+                {
+                    var errors = ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage)).ToList();
+                    return BadRequest(new { success = false, error = "Dữ liệu không hợp lệ: " + string.Join(", ", errors) });
+                }
 
-            if (id != quotationDto.Id)
+                if (id != quotationDto.Id)
+                {
+                    return BadRequest(new { success = false, error = "ID không khớp" });
+                }
+
+                var response = await _apiService.PutAsync<ApiResponse<ServiceQuotationDto>>(
+                    ApiEndpoints.Builder.WithId(ApiEndpoints.ServiceQuotations.Update, id),
+                    quotationDto
+                );
+
+                if (response.Success)
+                {
+                    return Json(new { success = true, message = "Cập nhật báo giá thành công" });
+                }
+                else
+                {
+                    return Json(new { success = false, error = response.ErrorMessage ?? "Lỗi khi cập nhật báo giá" });
+                }
+            }
+            catch (Exception ex)
             {
-                return BadRequest(new { success = false, errorMessage = "ID không khớp" });
+                return Json(new { success = false, error = "Lỗi khi cập nhật báo giá: " + ex.Message });
             }
-
-            var response = await _apiService.PutAsync<ServiceQuotationDto>(
-                ApiEndpoints.Builder.WithId(ApiEndpoints.ServiceQuotations.Update, id),
-                quotationDto
-            );
-
-            return Json(response);
         }
 
         /// <summary>
@@ -131,11 +247,25 @@ namespace GarageManagementSystem.Web.Controllers
         [HttpDelete("DeleteQuotation/{id}")]
         public async Task<IActionResult> DeleteQuotation(int id)
         {
-            var response = await _apiService.DeleteAsync<ServiceQuotationDto>(
-                ApiEndpoints.Builder.WithId(ApiEndpoints.ServiceQuotations.Delete, id)
-            );
+            try
+            {
+                var response = await _apiService.DeleteAsync<ApiResponse<bool>>(
+                    ApiEndpoints.Builder.WithId(ApiEndpoints.ServiceQuotations.Delete, id)
+                );
 
-            return Json(response);
+                if (response.Success)
+                {
+                    return Json(new { success = true, message = "Xóa báo giá thành công" });
+                }
+                else
+                {
+                    return Json(new { success = false, error = response.ErrorMessage ?? "Lỗi khi xóa báo giá" });
+                }
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, error = "Lỗi khi xóa báo giá: " + ex.Message });
+            }
         }
 
         /// <summary>
@@ -172,28 +302,35 @@ namespace GarageManagementSystem.Web.Controllers
         [HttpGet("GetAvailableInspections")]
         public async Task<IActionResult> GetAvailableInspections()
         {
-            var response = await _apiService.GetAsync<List<VehicleInspectionDto>>(ApiEndpoints.VehicleInspections.GetAll);
-            
-            if (response.Success && response.Data != null)
+            try
             {
-                // Chỉ lấy những inspection đã hoàn thành và chưa có báo giá
-                var availableInspections = response.Data
-                    .Where(i => i.Status == "Completed")
-                    .Select(i => new
-                    {
-                        value = i.Id.ToString(),
-                        text = $"{i.InspectionNumber} - {i.Vehicle?.Brand} {i.Vehicle?.Model} ({i.Vehicle?.LicensePlate}) - {i.Customer?.Name}",
-                        vehicleId = i.VehicleId,
-                        customerId = i.CustomerId,
-                        vehicleInfo = $"{i.Vehicle?.Brand} {i.Vehicle?.Model} - {i.Vehicle?.LicensePlate}",
-                        customerName = i.Customer?.Name ?? "Không xác định",
-                        inspectionDate = i.InspectionDate
-                    }).Cast<object>().ToList();
+                var response = await _apiService.GetAsync<PagedResponse<VehicleInspectionDto>>(ApiEndpoints.VehicleInspections.GetAll);
                 
-                return Json(availableInspections);
-            }
+                if (response.Success && response.Data != null)
+                {
+                    // Chỉ lấy những inspection đã hoàn thành và chưa có báo giá
+                    var availableInspections = response.Data.Data
+                        .Where(i => i.Status == "Completed")
+                        .Select(i => new
+                        {
+                            value = i.Id.ToString(),
+                            text = $"{i.InspectionNumber} - {i.Vehicle?.Brand} {i.Vehicle?.Model} ({i.Vehicle?.LicensePlate}) - {i.Customer?.Name}",
+                            vehicleId = i.VehicleId,
+                            customerId = i.CustomerId,
+                            vehicleInfo = $"{i.Vehicle?.Brand} {i.Vehicle?.Model} - {i.Vehicle?.LicensePlate}",
+                            customerName = i.Customer?.Name ?? "Không xác định",
+                            inspectionDate = i.InspectionDate.ToString("yyyy-MM-dd")
+                        }).ToList();
+                    
+                    return Json(availableInspections);
+                }
 
-            return Json(new List<object>());
+                return Json(new List<object>());
+            }
+            catch (Exception ex)
+            {
+                return Json(new List<object>());
+            }
         }
 
         /// <summary>
@@ -202,20 +339,27 @@ namespace GarageManagementSystem.Web.Controllers
         [HttpGet("GetAvailableVehicles")]
         public async Task<IActionResult> GetAvailableVehicles()
         {
-            var response = await _apiService.GetAsync<List<VehicleDto>>(ApiEndpoints.Vehicles.GetAll);
-            
-            if (response.Success && response.Data != null)
+            try
             {
-                var vehicles = response.Data.Select(v => new
-                {
-                    value = v.Id.ToString(),
-                    text = $"{v.Brand} {v.Model} - {v.LicensePlate}"
-                }).Cast<object>().ToList();
+                var response = await _apiService.GetAsync<List<VehicleDto>>(ApiEndpoints.Vehicles.GetAllForDropdown);
                 
-                return Json(vehicles);
-            }
+                if (response.Success && response.Data != null)
+                {
+                    var vehicles = response.Data.Select(v => new
+                    {
+                        value = v.Id.ToString(),
+                        text = $"{v.Brand} {v.Model} - {v.LicensePlate}"
+                    }).ToList();
+                    
+                    return Json(vehicles);
+                }
 
-            return Json(new List<object>());
+                return Json(new List<object>());
+            }
+            catch (Exception ex)
+            {
+                return Json(new List<object>());
+            }
         }
 
         /// <summary>
@@ -224,20 +368,27 @@ namespace GarageManagementSystem.Web.Controllers
         [HttpGet("GetAvailableCustomers")]
         public async Task<IActionResult> GetAvailableCustomers()
         {
-            var response = await _apiService.GetAsync<List<CustomerDto>>(ApiEndpoints.Customers.GetAll);
-            
-            if (response.Success && response.Data != null)
+            try
             {
-                var customers = response.Data.Select(c => new
-                {
-                    value = c.Id.ToString(),
-                    text = c.Name
-                }).Cast<object>().ToList();
+                var response = await _apiService.GetAsync<List<CustomerDto>>(ApiEndpoints.Customers.GetAllForDropdown);
                 
-                return Json(customers);
-            }
+                if (response.Success && response.Data != null)
+                {
+                    var customers = response.Data.Select(c => new
+                    {
+                        value = c.Id.ToString(),
+                        text = c.Name
+                    }).ToList();
+                    
+                    return Json(customers);
+                }
 
-            return Json(new List<object>());
+                return Json(new List<object>());
+            }
+            catch (Exception ex)
+            {
+                return Json(new List<object>());
+            }
         }
 
         /// <summary>
@@ -345,6 +496,115 @@ namespace GarageManagementSystem.Web.Controllers
                 "Converted" => "Đã Chuyển Đổi",
                 _ => status
             };
+        }
+
+        /// <summary>
+        /// Lấy danh sách file đính kèm của báo giá
+        /// </summary>
+        [HttpGet("GetAttachments/{quotationId}")]
+        public async Task<IActionResult> GetAttachments(int quotationId)
+        {
+            try
+            {
+                var response = await _apiService.GetAsync<List<QuotationAttachmentDto>>(
+                    string.Format(ApiEndpoints.QuotationAttachments.GetByQuotationId, quotationId));
+                
+                if (response.Success)
+                {
+                    return Json(new { success = true, data = response.Data });
+                }
+                
+                return Json(new { success = false, message = response.Message });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Lỗi không xác định" });
+            }
+        }
+
+        /// <summary>
+        /// Lấy danh sách tài liệu bảo hiểm của báo giá
+        /// </summary>
+        [HttpGet("GetInsuranceDocuments/{quotationId}")]
+        public async Task<IActionResult> GetInsuranceDocuments(int quotationId)
+        {
+            try
+            {
+                var response = await _apiService.GetAsync<List<QuotationAttachmentDto>>(
+                    string.Format(ApiEndpoints.QuotationAttachments.GetInsuranceDocumentsByQuotationId, quotationId));
+                
+                if (response.Success)
+                {
+                    return Json(new { success = true, data = response.Data });
+                }
+                
+                return Json(new { success = false, message = response.Message });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Lỗi không xác định" });
+            }
+        }
+
+        /// <summary>
+        /// Upload file đính kèm cho báo giá
+        /// </summary>
+        [HttpPost("UploadAttachment")]
+        public async Task<IActionResult> UploadAttachment(int quotationId, IFormFile file, string attachmentType = "General", string description = "", bool isInsuranceDocument = false)
+        {
+            try
+            {
+                if (file == null || file.Length == 0)
+                {
+                    return Json(new { success = false, message = "File không được để trống" });
+                }
+
+                var createDto = new CreateQuotationAttachmentDto
+                {
+                    ServiceQuotationId = quotationId,
+                    AttachmentType = attachmentType,
+                    Description = description,
+                    IsInsuranceDocument = isInsuranceDocument
+                };
+
+                var response = await _apiService.PostFormAsync<QuotationAttachmentDto>(
+                    ApiEndpoints.QuotationAttachments.Upload, createDto, file);
+                
+                if (response.Success)
+                {
+                    return Json(new { success = true, data = response.Data, message = "Upload file thành công" });
+                }
+                
+                return Json(new { success = false, message = response.Message });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Lỗi không xác định" });
+            }
+        }
+
+        /// <summary>
+        /// Xóa file đính kèm
+        /// </summary>
+        [HttpDelete("DeleteAttachment/{attachmentId}")]
+        public async Task<IActionResult> DeleteAttachment(int attachmentId)
+        {
+            try
+            {
+                var response = await _apiService.DeleteAsync<bool>(
+                    string.Format(ApiEndpoints.QuotationAttachments.Delete, attachmentId));
+                
+                if (response.Success)
+                {
+                    return Json(new { success = true, message = "Xóa file thành công" });
+                }
+                
+                return Json(new { success = false, message = response.Message });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Lỗi không xác định" });
+            }
         }
     }
 }

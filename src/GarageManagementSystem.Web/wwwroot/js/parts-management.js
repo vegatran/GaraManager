@@ -53,20 +53,15 @@ window.PartsManagement = {
             }
         ];
         
-        this.partTable = DataTablesUtility.initAjaxTable('#partTable', '/PartsManagement/GetParts', columns, {
+        this.partTable = DataTablesUtility.initServerSideTable('#partTable', '/api/parts', columns, {
             order: [[0, 'desc']],
-            pageLength: 25,
-            dom: 'rtip'  // Chỉ hiển thị table, paging, info, processing (không có search box và length menu)
+            pageLength: 10
         });
     },
 
     bindEvents: function() {
         var self = this;
 
-        // Search functionality
-        $('#searchInput').on('keyup', function() {
-            self.partTable.search(this.value).draw();
-        });
 
         // Create part
         $('#createPartForm').on('submit', function(e) {
@@ -98,10 +93,6 @@ window.PartsManagement = {
             self.deletePart(partId);
         });
 
-        // Search
-        $('#searchInput').on('keyup', function() {
-            self.partTable.search(this.value).draw();
-        });
     },
 
     createPart: function() {

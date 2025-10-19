@@ -23,20 +23,21 @@ window.CustomerReceptionManagement = (function() {
      * Initialize DataTable
      */
     function initializeDataTable() {
-        // Sử dụng DataTablesUtility với style chung
         var columns = [
-            { data: 'id', visible: false },
-            { data: 'receptionNumber' },
-            { data: 'customerName' },
-            { data: 'vehiclePlate' },
-            { data: 'vehicleInfo' },
+            { data: 'id', title: 'ID', width: '60px' },
+            { data: 'receptionNumber', title: 'Số Phiếu' },
+            { data: 'customerName', title: 'Khách Hàng' },
+            { data: 'vehiclePlate', title: 'Biển Số' },
+            { data: 'vehicleInfo', title: 'Xe' },
             { 
-                data: 'receptionDate',
+                data: 'receptionDate', 
+                title: 'Ngày Tiếp Đón',
                 render: DataTablesUtility.renderDate
             },
-            { data: 'technicianName' },
+            { data: 'technicianName', title: 'Kỹ Thuật Viên' },
             { 
-                data: 'status',
+                data: 'status', 
+                title: 'Trạng Thái',
                 render: function(data, type, row) {
                     const statusClass = getStatusClass(data);
                     const statusText = translateReceptionStatus(data);
@@ -44,45 +45,40 @@ window.CustomerReceptionManagement = (function() {
                 }
             },
             { 
-                data: 'priority',
+                data: 'priority', 
+                title: 'Ưu Tiên',
                 render: function(data, type, row) {
                     const priorityClass = getPriorityClass(data);
                     return `<span class="badge badge-${priorityClass}">${data}</span>`;
                 }
             },
-            { data: 'serviceType' },
+            { data: 'serviceType', title: 'Loại Dịch Vụ' },
             {
                 data: null,
+                title: 'Thao Tác',
                 orderable: false,
+                searchable: false,
                 render: function(data, type, row) {
                     let actions = `
-                        <button class="btn btn-info btn-sm" onclick="CustomerReceptionManagement.viewReception(${row.id})" title="Xem">
+                        <button class="btn btn-info btn-sm view-reception" data-id="${row.id}">
                             <i class="fas fa-eye"></i>
                         </button>
                     `;
 
-                    // Chỉ cho phép sửa nếu chưa hoàn thành
-                    if (row.status !== 3 && row.status !== 4) { // ReceptionStatus.Completed && ReceptionStatus.Cancelled
+                    if (row.status !== 3 && row.status !== 4) {
                         actions += `
-                            <button class="btn btn-warning btn-sm" onclick="CustomerReceptionManagement.editReception(${row.id})" title="Sửa">
+                            <button class="btn btn-warning btn-sm edit-reception" data-id="${row.id}">
                                 <i class="fas fa-edit"></i>
                             </button>
-                        `;
-                    }
-
-                    // Chỉ cho phép xóa nếu chưa hoàn thành
-                    if (row.status !== 3 && row.status !== 4) { // ReceptionStatus.Completed && ReceptionStatus.Cancelled
-                        actions += `
-                            <button class="btn btn-danger btn-sm" onclick="CustomerReceptionManagement.deleteReception(${row.id})" title="Xóa">
+                            <button class="btn btn-danger btn-sm delete-reception" data-id="${row.id}">
                                 <i class="fas fa-trash"></i>
                             </button>
                         `;
                     }
 
-                    // Nút phân công kỹ thuật viên - chỉ hiển thị khi chưa có kỹ thuật viên
                     if (row.status === 0 || (row.status === 1 && (!row.technicianName || row.technicianName === 'Chưa phân công'))) {
                         actions += `
-                            <button class="btn btn-success btn-sm" onclick="CustomerReceptionManagement.assignTechnician(${row.id})" title="Phân Công">
+                            <button class="btn btn-success btn-sm assign-technician" data-id="${row.id}">
                                 <i class="fas fa-user-plus"></i>
                             </button>
                         `;
@@ -93,22 +89,9 @@ window.CustomerReceptionManagement = (function() {
             }
         ];
         
-        receptionTable = DataTablesUtility.initAjaxTable('#receptionTable', '/CustomerReception/GetReceptions', columns, {
-            dataSrc: function(json) {
-                if (json.success && json.data) {
-                    return json.data;
-                } else {
-                    GarageApp.showError(json.error || 'Lỗi khi tải dữ liệu');
-                    return [];
-                }
-            },
-            dom: 'Brtip',  // Ẩn search input (f) và length menu (l), chỉ hiển thị buttons, table, paging, info
-            buttons: [
-                'copy', 'csv', 'excel', 'pdf', 'print'
-            ],
-            responsive: true,
-            pageLength: 25,
-            order: [[1, 'desc']] // Sort by reception number descending
+        receptionTable = DataTablesUtility.initServerSideTable('#receptionTable', '/CustomerReception/GetReceptions', columns, {
+            order: [[0, 'desc']],
+            pageLength: 10
         });
     }
 
@@ -243,19 +226,44 @@ window.CustomerReceptionManagement = (function() {
      * Bind events
      */
     function bindEvents() {
-        // Search functionality
-        $('#searchInput').on('keyup', function() {
-            receptionTable.search(this.value).draw();
+
+        // Add reception button
+        $(document).on('click', '#addReceptionBtn', function() {
+            showCreateModal();
+        });
+
+        // View reception
+        $(document).on('click', '.view-reception', function() {
+            var id = $(this).data('id');
+            viewReception(id);
+        });
+
+        // Edit reception
+        $(document).on('click', '.edit-reception', function() {
+            var id = $(this).data('id');
+            editReception(id);
+        });
+
+        // Delete reception
+        $(document).on('click', '.delete-reception', function() {
+            var id = $(this).data('id');
+            deleteReception(id);
+        });
+
+        // Assign technician
+        $(document).on('click', '.assign-technician', function() {
+            var id = $(this).data('id');
+            assignTechnician(id);
         });
 
         // Create form submission
-        $('#createReceptionForm').on('submit', function(e) {
+        $(document).on('submit', '#createReceptionForm', function(e) {
             e.preventDefault();
             createReception();
         });
 
         // Edit form submission
-        $('#editReceptionForm').on('submit', function(e) {
+        $(document).on('submit', '#editReceptionForm', function(e) {
             e.preventDefault();
             updateReception();
         });
@@ -299,8 +307,8 @@ window.CustomerReceptionManagement = (function() {
             serviceType: $('#createServiceType').val(),
             priority: $('#createPriority').val(),
             assignedTechnicianId: $('#createTechnicianSelect').val() ? parseInt($('#createTechnicianSelect').val()) : null,
-            inspectionStartDate: $('#createInspectionStartDate').val() ? new Date($('#createInspectionStartDate').val()) : null,
-            inspectionCompletedDate: $('#createInspectionCompletedDate').val() ? new Date($('#createInspectionCompletedDate').val()) : null,
+            inspectionStartDate: $('#createInspectionStartDate').val() ? $('#createInspectionStartDate').val() : null,
+            inspectionCompletedDate: $('#createInspectionCompletedDate').val() ? $('#createInspectionCompletedDate').val() : null,
             customerRequest: $('#createCustomerRequest').val(),
             customerComplaints: $('#createCustomerComplaints').val(),
             insuranceCompany: $('#createInsuranceCompany').val(),
@@ -320,7 +328,6 @@ window.CustomerReceptionManagement = (function() {
                 if (response.success) {
                     GarageApp.showSuccess('Tạo phiếu tiếp đón thành công');
                     $('#createReceptionModal').modal('hide');
-                    clearCreateForm();
                     receptionTable.ajax.reload();
                 } else {
                     GarageApp.showError(GarageApp.parseErrorMessage(response));
@@ -357,12 +364,20 @@ window.CustomerReceptionManagement = (function() {
      * Edit reception
      */
     function editReception(id) {
+        // Đảm bảo vehicles đã được load trước khi populate
+        if (vehicles.length === 0) {
+            loadVehicles();
+        }
+        
         $.ajax({
             url: `/CustomerReception/GetReception/${id}`,
             type: 'GET',
             success: function(response) {
                 if (response.success && response.data) {
-                    populateEditModal(response.data);
+                    // Đợi một chút để đảm bảo vehicles dropdown đã được populate
+                    setTimeout(function() {
+                        populateEditModal(response.data);
+                    }, 100);
                     $('#editReceptionModal').modal('show');
                 } else {
                     GarageApp.showError(GarageApp.parseErrorMessage(response) || 'Lỗi khi tải thông tin phiếu tiếp đón');
@@ -392,8 +407,8 @@ window.CustomerReceptionManagement = (function() {
             assignedTechnicianId: assignedTechnicianId,
             // ✅ Tính toán status dựa trên assignedTechnicianId
             status: assignedTechnicianId ? 1 : 0, // ReceptionStatus.Assigned : ReceptionStatus.Pending
-            inspectionStartDate: $('#editInspectionStartDate').val() ? new Date($('#editInspectionStartDate').val()) : null,
-            inspectionCompletedDate: $('#editInspectionCompletedDate').val() ? new Date($('#editInspectionCompletedDate').val()) : null,
+            inspectionStartDate: $('#editInspectionStartDate').val() ? $('#editInspectionStartDate').val() : null,
+            inspectionCompletedDate: $('#editInspectionCompletedDate').val() ? $('#editInspectionCompletedDate').val() : null,
             customerRequest: $('#editCustomerRequest').val(),
             customerComplaints: $('#editCustomerComplaints').val(),
             insuranceCompany: $('#editInsuranceCompany').val(),
@@ -597,16 +612,44 @@ window.CustomerReceptionManagement = (function() {
         $('#editReceptionId').val(data.id);
         $('#editReceptionNumber').val(data.receptionNumber);
         
-        // ✅ Chỉ set giá trị hiển thị cho customer và vehicle (đã disable)
-        // KHÔNG trigger change vì field đã disabled
+        // Populate customer dropdown
         $('#editCustomerSelect').val(data.customerId);
-        $('#editVehicleSelect').val(data.vehicleId);
+        
+        // Populate vehicle dropdown - đảm bảo vehicle options đã có
+        if (data.vehicleId) {
+            // Kiểm tra xem vehicle có trong dropdown không
+            const vehicleOption = $(`#editVehicleSelect option[value="${data.vehicleId}"]`);
+            if (vehicleOption.length > 0) {
+                $('#editVehicleSelect').val(data.vehicleId);
+            } else {
+                // Nếu không có, thêm option mới từ data
+                const vehicleText = data.vehicle ? 
+                    `${data.vehicle.licensePlate} - ${data.vehicle.brand} ${data.vehicle.model}` :
+                    `${data.vehicleMake} ${data.vehicleModel} - ${data.vehiclePlate}`;
+                
+                $('#editVehicleSelect').append(`<option value="${data.vehicleId}" selected>${vehicleText}</option>`);
+            }
+        }
         
         $('#editServiceType').val(data.serviceType);
         $('#editPriority').val(data.priority);
         $('#editTechnicianSelect').val(data.assignedTechnicianId || '');
-        $('#editInspectionStartDate').val(data.inspectionStartDate ? new Date(data.inspectionStartDate).toISOString().slice(0, 16) : '');
-        $('#editInspectionCompletedDate').val(data.inspectionCompletedDate ? new Date(data.inspectionCompletedDate).toISOString().slice(0, 10) : '');
+        $('#editInspectionStartDate').val(data.inspectionStartDate ? (() => {
+            const date = new Date(data.inspectionStartDate);
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            return `${year}-${month}-${day}T${hours}:${minutes}`;
+        })() : '');
+        $('#editInspectionCompletedDate').val(data.inspectionCompletedDate ? (() => {
+            const date = new Date(data.inspectionCompletedDate);
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        })() : '');
         $('#editCustomerRequest').val(data.customerRequest || '');
         $('#editCustomerComplaints').val(data.customerComplaints || '');
         $('#editInsuranceCompany').val(data.insuranceCompany || '');
@@ -618,10 +661,53 @@ window.CustomerReceptionManagement = (function() {
     }
 
     /**
-     * Clear create form
+     * Show create modal with reset
      */
-    function clearCreateForm() {
-        $('#createReceptionForm')[0].reset();
+    function showCreateModal() {
+        $('#createReceptionModal').modal('show');
+        
+        // Reset form when modal is fully shown
+        $('#createReceptionModal').on('shown.bs.modal', function() {
+            $('#createReceptionForm')[0].reset();
+            
+            // Reset dropdowns
+            $('#createCustomerSelect').val('').trigger('change');
+            $('#createVehicleSelect').val('').trigger('change');
+            $('#createTechnicianSelect').val('').trigger('change');
+            $('#createPriority').val('Normal');
+            
+            // Set default dates
+            const now = new Date();
+            const tomorrow = new Date(now);
+            tomorrow.setDate(now.getDate() + 1);
+            const nextWeek = new Date(now);
+            nextWeek.setDate(now.getDate() + 7);
+            
+            // Set default inspection start date (tomorrow at 9:00 AM)
+            const inspectionStartDate = new Date(tomorrow);
+            inspectionStartDate.setHours(9, 0, 0, 0);
+            const inspectionStartDateStr = (() => {
+                const year = inspectionStartDate.getFullYear();
+                const month = String(inspectionStartDate.getMonth() + 1).padStart(2, '0');
+                const day = String(inspectionStartDate.getDate()).padStart(2, '0');
+                const hours = String(inspectionStartDate.getHours()).padStart(2, '0');
+                const minutes = String(inspectionStartDate.getMinutes()).padStart(2, '0');
+                return `${year}-${month}-${day}T${hours}:${minutes}`;
+            })();
+            $('#createInspectionStartDate').val(inspectionStartDateStr);
+            
+            // Set default completion date (next week)
+            const completionDateStr = (() => {
+                const year = nextWeek.getFullYear();
+                const month = String(nextWeek.getMonth() + 1).padStart(2, '0');
+                const day = String(nextWeek.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            })();
+            $('#createInspectionCompletedDate').val(completionDateStr);
+            
+            // Remove the event listener to prevent multiple bindings
+            $('#createReceptionModal').off('shown.bs.modal');
+        });
     }
 
 
@@ -696,6 +782,7 @@ window.CustomerReceptionManagement = (function() {
     // Public API
     return {
         init: init,
+        showCreateModal: showCreateModal,
         viewReception: viewReception,
         editReception: editReception,
         deleteReception: deleteReception,

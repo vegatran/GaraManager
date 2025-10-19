@@ -273,7 +273,6 @@ $(document).ready(function() {
              '<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>'
     });
 
-    console.log('🇻🇳 DataTables Vietnamese language configured for all tables');
 });
 
 // Export cho sử dụng global

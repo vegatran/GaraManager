@@ -23,7 +23,6 @@ window.Dashboard = {
                 }
             },
             error: function(xhr, status, error) {
-                console.error('Error loading statistics:', error);
             }
         });
     },
@@ -48,7 +47,6 @@ window.Dashboard = {
                 }
             },
             error: function(xhr, status, error) {
-                console.error('Error loading recent orders:', error);
             }
         });
     },
@@ -85,7 +83,6 @@ window.Dashboard = {
                 }
             },
             error: function(xhr, status, error) {
-                console.error('Error loading appointments:', error);
             }
         });
     },

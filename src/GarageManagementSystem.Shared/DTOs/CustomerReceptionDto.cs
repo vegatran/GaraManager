@@ -77,6 +77,8 @@ namespace GarageManagementSystem.Shared.DTOs
         public string? ReceptionNotes { get; set; }
         public int? AssignedTechnicianId { get; set; }
         public ReceptionStatus Status { get; set; } = ReceptionStatus.Pending;
+        public DateTime? InspectionStartDate { get; set; }
+        public DateTime? InspectionCompletedDate { get; set; }
         public string Priority { get; set; } = "Normal";
         public string ServiceType { get; set; } = "General";
         public bool IsInsuranceClaim { get; set; } = false;

@@ -21,6 +21,7 @@ namespace GarageManagementSystem.Core.Interfaces
         IAppointmentRepository Appointments { get; }
         IPrintTemplateRepository PrintTemplates { get; }
         ICustomerReceptionRepository CustomerReceptions { get; }
+        IQuotationAttachmentRepository QuotationAttachments { get; }
         
         // Phase 1 - New repositories
         IGenericRepository<Invoice> Invoices { get; }

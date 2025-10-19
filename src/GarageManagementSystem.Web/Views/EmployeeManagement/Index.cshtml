@@ -28,18 +28,12 @@
                     <div class="card-header">
                         <h3 class="card-title">Danh Sách Nhân Viên</h3>
                         <div class="card-tools">
-                            <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#createEmployeeModal">
+                            <button type="button" class="btn btn-primary btn-sm" id="addEmployeeBtn">
                                 <i class="fas fa-plus"></i> Thêm Nhân Viên
                             </button>
                         </div>
                     </div>
                     <div class="card-body">
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label for="searchInput">Tìm kiếm:</label>
-                                <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Tìm theo tên nhân viên, chức vụ, bộ phận...">
-                            </div>
-                        </div>
                         <table id="employeeTable" class="table table-bordered table-striped">
                             <thead>
                                 <tr>

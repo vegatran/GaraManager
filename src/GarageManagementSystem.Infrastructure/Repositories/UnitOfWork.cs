@@ -30,6 +30,7 @@ namespace GarageManagementSystem.Infrastructure.Repositories
             Appointments = new AppointmentRepository(_context);
             PrintTemplates = new PrintTemplateRepository(_context);
             CustomerReceptions = new CustomerReceptionRepository(_context);
+            QuotationAttachments = new QuotationAttachmentRepository(_context);
             
             // Phase 1 - New repositories
             Invoices = new GenericRepository<Invoice>(_context);
@@ -56,6 +57,7 @@ namespace GarageManagementSystem.Infrastructure.Repositories
         public IAppointmentRepository Appointments { get; private set; }
         public IPrintTemplateRepository PrintTemplates { get; private set; }
         public ICustomerReceptionRepository CustomerReceptions { get; private set; }
+        public IQuotationAttachmentRepository QuotationAttachments { get; private set; }
         
         // Phase 1 - New repositories
         public IGenericRepository<Invoice> Invoices { get; private set; }

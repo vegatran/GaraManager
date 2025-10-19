@@ -33,12 +33,7 @@ window.AjaxUtility = {
 
     // Standard error callback
     handleError: function(xhr, status, error) {
-        console.error('AJAX Error:', {
-            status: xhr.status,
-            statusText: xhr.statusText,
-            responseText: xhr.responseText,
-            error: error
-        });
+        // Error handling logic can be added here if needed
 
         var errorMessage = 'An error occurred';
         

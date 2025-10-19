@@ -78,10 +78,9 @@ window.OrderManagement = {
             }
         ];
         
-        this.orderTable = DataTablesUtility.initAjaxTable('#orderTable', '/OrderManagement/GetOrders', columns, {
+        this.orderTable = DataTablesUtility.initServerSideTable('#orderTable', '/api/serviceorders', columns, {
             order: [[0, 'desc']],
-            pageLength: 25,
-            dom: 'rtip'  // Chỉ hiển thị table, paging, info, processing (không có search box và length menu)
+            pageLength: 10
         });
     },
 
@@ -305,7 +304,6 @@ window.OrderManagement = {
                 });
             },
             error: function(xhr, status, error) {
-                console.error('Error loading quotations:', error);
                 GarageApp.showError('Lỗi khi tải danh sách báo giá');
             }
         });
@@ -331,7 +329,6 @@ window.OrderManagement = {
                 }
             },
             error: function(xhr, status, error) {
-                console.error('Error loading customers:', error);
             }
         });
     },
@@ -365,7 +362,6 @@ window.OrderManagement = {
             $('#createCustomerId').val(customerId).trigger('change');
             
             // Hiển thị thông tin đã chọn
-            console.log('Selected Quotation:', {
                 vehicleId: vehicleId,
                 customerId: customerId,
                 vehicleInfo: vehicleInfo,

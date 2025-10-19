@@ -91,7 +91,6 @@ window.DataTablesUtility = {
                     } else if (window.GarageApp) {
                         GarageApp.showError('Lỗi khi tải dữ liệu');
                     } else {
-                        console.error('Error loading data:', error);
                     }
                 }
             },
@@ -123,6 +122,76 @@ window.DataTablesUtility = {
         
         var finalConfig = $.extend(true, {}, ajaxConfig, config);
         return this.initStandardTable(selector, finalConfig);
+    },
+
+    // Khởi tạo DataTable với Server-Side Pagination
+    initServerSideTable: function(selector, ajaxUrl, columns, config) {
+        var self = this;
+        
+        // Destroy existing DataTable if it exists
+        if ($.fn.DataTable.isDataTable(selector)) {
+            $(selector).DataTable().destroy();
+        }
+        
+        var serverSideConfig = {
+            processing: true,
+            serverSide: true,
+            responsive: true,
+            autoWidth: false,
+            pageLength: 10,
+            lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+            dom: "<'row'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6'f>>" +
+                 "<'row'<'col-sm-12'tr>>" +
+                 "<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
+            language: this.defaultConfig.language,
+            columns: columns,
+            ajax: {
+                url: ajaxUrl,
+                type: 'GET',
+                data: function(d) {
+                    // Convert DataTables parameters to API parameters
+                    var params = {
+                        pageNumber: (d.start / d.length) + 1,
+                        pageSize: d.length,
+                        searchTerm: d.search.value
+                    };
+                    
+                    // Add custom filters if provided
+                    if (config && config.customFilters) {
+                        $.extend(params, config.customFilters);
+                    }
+                    
+                    return params;
+                },
+                dataSrc: function(json) {
+                    // Handle PagedResponse from API
+                    if (json.success && json.data) {
+                        // Set pagination info for DataTables
+                        json.recordsTotal = json.totalCount || 0;
+                        json.recordsFiltered = json.totalCount || 0;
+                        // Return data array for table rendering
+                        return json.data;
+                    }
+                    return [];
+                },
+                error: function(xhr, status, error) {
+                    if (window.AuthHandler && AuthHandler.isUnauthorized(xhr)) {
+                        AuthHandler.handleUnauthorized(xhr, true);
+                    } else if (window.GarageApp) {
+                        GarageApp.showError('Lỗi khi tải dữ liệu');
+                    } else {
+                    }
+                }
+            }
+        };
+        
+        // Merge with custom config
+        var finalConfig = $.extend(true, {}, serverSideConfig, config);
+        
+        // Remove customFilters from final config as it's not a DataTables option
+        delete finalConfig.customFilters;
+        
+        return $(selector).DataTable(finalConfig);
     },
 
     // Reload table data
@@ -173,7 +242,6 @@ window.DataTablesUtility = {
         if (table) {
             var data = table.buttons.exportData();
             // Implementation for Excel export would go here
-            console.log('Exporting to Excel:', filename, data);
         }
     },
 
@@ -182,7 +250,6 @@ window.DataTablesUtility = {
         if (table) {
             var data = table.buttons.exportData();
             // Implementation for PDF export would go here
-            console.log('Exporting to PDF:', filename, data);
         }
     },
 
@@ -207,7 +274,14 @@ window.DataTablesUtility = {
 
     renderCurrency: function(data, type, row) {
         if (data) {
-            return parseFloat(data).toLocaleString('vi-VN') + ' VNĐ';
+            // ✅ SỬA: Xử lý string đã được format từ API
+            var numericValue = typeof data === 'string' ? 
+                parseFloat(data.replace(/[^\d]/g, '')) : 
+                parseFloat(data);
+            
+            if (!isNaN(numericValue)) {
+                return numericValue.toLocaleString('vi-VN') + ' VNĐ';
+            }
         }
         return '0 VNĐ';
     },
@@ -237,3 +311,15 @@ window.DataTablesUtility = {
 
 // jQuery plugin wrapper
 $.fn.dataTable.ext.errMode = 'throw';
+
+// Debounce utility for search
+$.debounce = function(delay, fn) {
+    var timer = null;
+    return function() {
+        var context = this, args = arguments;
+        clearTimeout(timer);
+        timer = setTimeout(function() {
+            fn.apply(context, args);
+        }, delay);
+    };
+};

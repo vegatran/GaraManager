@@ -175,4 +175,25 @@ namespace GarageManagementSystem.Core.Enums
         /// </summary>
         Inspection = 4
     }
+
+    /// <summary>
+    /// Loại báo giá
+    /// </summary>
+    public enum QuotationType
+    {
+        /// <summary>
+        /// Cá nhân - Không cần gửi bảo hiểm duyệt
+        /// </summary>
+        Personal = 0,
+        
+        /// <summary>
+        /// Bảo hiểm - Cần gửi bảo hiểm duyệt
+        /// </summary>
+        Insurance = 1,
+        
+        /// <summary>
+        /// Công ty - Cần gửi công ty duyệt
+        /// </summary>
+        Company = 2
+    }
 }

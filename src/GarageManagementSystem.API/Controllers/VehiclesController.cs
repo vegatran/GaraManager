@@ -1,7 +1,9 @@
 using AutoMapper;
 using GarageManagementSystem.Core.Interfaces;
+using GarageManagementSystem.Core.Extensions;
 using GarageManagementSystem.Shared.DTOs;
 using GarageManagementSystem.Shared.Models;
+using GarageManagementSystem.API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -14,26 +16,82 @@ namespace GarageManagementSystem.API.Controllers
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
+        private readonly ICacheService _cacheService;
 
-        public VehiclesController(IUnitOfWork unitOfWork, IMapper mapper)
+        public VehiclesController(IUnitOfWork unitOfWork, IMapper mapper, ICacheService cacheService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+            _cacheService = cacheService;
         }
 
         [HttpGet]
-        public async Task<ActionResult<ApiResponse<List<VehicleDto>>>> GetVehicles()
+        public async Task<ActionResult<PagedResponse<VehicleDto>>> GetVehicles(
+            [FromQuery] int pageNumber = 1, 
+            [FromQuery] int pageSize = 10,
+            [FromQuery] string? searchTerm = null,
+            [FromQuery] string? brand = null,
+            [FromQuery] int? customerId = null)
+        {
+            try
+            {
+                var vehicles = await _unitOfWork.Vehicles.GetAllWithCustomerAsync();
+                var query = vehicles.AsQueryable();
+                
+                // Apply search filter if provided
+                if (!string.IsNullOrEmpty(searchTerm))
+                {
+                    query = query.Where(v => 
+                        v.LicensePlate.Contains(searchTerm) || 
+                        v.VIN.Contains(searchTerm) || 
+                        v.Model.Contains(searchTerm));
+                }
+                
+                // Apply brand filter if provided
+                if (!string.IsNullOrEmpty(brand))
+                {
+                    query = query.Where(v => v.Brand == brand);
+                }
+                
+                // Apply customer filter if provided
+                if (customerId.HasValue)
+                {
+                    query = query.Where(v => v.CustomerId == customerId.Value);
+                }
+
+                // Get total count
+                var totalCount = await query.GetTotalCountAsync();
+                
+                // Apply pagination
+                var pagedVehicles = query.ApplyPagination(pageNumber, pageSize).ToList();
+                var vehicleDtos = pagedVehicles.Select(v => _mapper.Map<VehicleDto>(v)).ToList();
+                
+                return Ok(PagedResponse<VehicleDto>.CreateSuccessResult(
+                    vehicleDtos, pageNumber, pageSize, totalCount, "Vehicles retrieved successfully"));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, PagedResponse<VehicleDto>.CreateErrorResult("Error retrieving vehicles"));
+            }
+        }
+
+        /// <summary>
+        /// Lấy danh sách tất cả xe cho dropdown (không phân trang)
+        /// </summary>
+        [HttpGet("dropdown")]
+        public async Task<ActionResult<List<VehicleDto>>> GetAllForDropdown()
         {
             try
             {
                 var vehicles = await _unitOfWork.Vehicles.GetAllWithCustomerAsync();
                 var vehicleDtos = vehicles.Select(v => _mapper.Map<VehicleDto>(v)).ToList();
                 
-                return Ok(ApiResponse<List<VehicleDto>>.SuccessResult(vehicleDtos));
+                return Ok(vehicleDtos);
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ApiResponse<List<VehicleDto>>.ErrorResult("Error retrieving vehicles", ex.Message));
+                Console.WriteLine($"❌ Error getting vehicles for dropdown: {ex}");
+                return StatusCode(500, new { message = "Internal server error" });
             }
         }
 

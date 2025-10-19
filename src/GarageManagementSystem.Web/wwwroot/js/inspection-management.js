@@ -20,18 +20,17 @@ window.InspectionManagement = {
     initDataTable: function() {
         var self = this;
         
-        // Sử dụng DataTablesUtility với style chung
+        // Sử dụng DataTablesUtility với server-side pagination
         var columns = [
             { data: 'id', title: 'ID', width: '5%' },
             { data: 'inspectionNumber', title: 'Số Kiểm Tra', width: '10%' },
-            { data: 'vehicleInfo', title: 'Thông Tin Xe', width: '15%' },
+            { data: 'vehiclePlate', title: 'Biển Số Xe', width: '12%' },
             { data: 'customerName', title: 'Khách Hàng', width: '12%' },
             { data: 'inspectorName', title: 'Kỹ Thuật Viên', width: '12%' },
             { 
                 data: 'inspectionDate', 
                 title: 'Ngày Kiểm Tra', 
-                width: '10%',
-                render: DataTablesUtility.renderDate
+                width: '12%',
             },
             { 
                 data: 'status', 
@@ -114,20 +113,15 @@ window.InspectionManagement = {
             }
         ];
         
-        this.inspectionTable = DataTablesUtility.initAjaxTable('#inspectionTable', '/InspectionManagement/GetInspections', columns, {
+        this.inspectionTable = DataTablesUtility.initServerSideTable('#inspectionTable', '/VehicleManagement/GetInspections', columns, {
             order: [[0, 'desc']],
-            pageLength: 25,
-            dom: 'rtip'  // Chỉ hiển thị table, paging, info, processing (không có search box và length menu)
+            pageLength: 10,
         });
     },
 
     bindEvents: function() {
         var self = this;
 
-        // Search functionality
-        $('#searchInput').on('keyup', function() {
-            self.inspectionTable.search(this.value).draw();
-        });
 
         // Add inspection button
         $(document).on('click', '[data-target="#createInspectionModal"]', function() {
@@ -185,19 +179,15 @@ window.InspectionManagement = {
 
     loadReceptions: function() {
         var self = this;
-        console.log('Loading receptions...');
         $.ajax({
-            url: '/InspectionManagement/GetAvailableReceptions',
+            url: '/VehicleManagement/GetAvailableReceptions',
             type: 'GET',
             success: function(data) {
-                console.log('API Response:', data);
                 var $select = $('#createCustomerReceptionId');
-                console.log('Select element:', $select.length > 0 ? 'Found' : 'Not found');
                 
                 $select.empty().append('<option value="">Chọn phiếu tiếp đón</option>');
                 
                 if (data && data.length > 0) {
-                    console.log('Processing', data.length, 'receptions');
                     $.each(data, function(index, item) {
                         $select.append(`<option value="${item.value}" 
                             data-customer-id="${item.customerId}" 
@@ -207,17 +197,14 @@ window.InspectionManagement = {
                             data-assigned-technician-id="${item.assignedTechnicianId}">${item.text}</option>`);
                     });
                 } else {
-                    console.log('No receptions found');
                 }
                 
                 $select.select2({
                     placeholder: 'Chọn phiếu tiếp đón',
-                    allowClear: true
+                    allowClear: true,
                 });
             },
             error: function(xhr, status, error) {
-                console.error('Error loading receptions:', error);
-                console.error('Response:', xhr.responseText);
                 GarageApp.showError('Lỗi khi tải danh sách phiếu tiếp đón');
             }
         });
@@ -244,12 +231,11 @@ window.InspectionManagement = {
             $('#createInspectorId').val(assignedTechnicianId).trigger('change');
             
             // Hiển thị thông tin đã chọn
-            console.log('Selected Reception:', {
                 customerId: customerId,
                 vehicleId: vehicleId,
                 customerName: customerName,
                 vehicleInfo: vehicleInfo,
-                assignedTechnicianId: assignedTechnicianId
+                assignedTechnicianId: assignedTechnicianId,
             });
         } else {
             // Reset các field khi không chọn reception
@@ -262,7 +248,7 @@ window.InspectionManagement = {
     loadVehicles: function() {
         var self = this;
         $.ajax({
-            url: '/InspectionManagement/GetAvailableVehicles',
+            url: '/VehicleManagement/GetAvailableVehicles',
             type: 'GET',
             success: function(response) {
                 if (response && Array.isArray(response)) {
@@ -276,11 +262,9 @@ window.InspectionManagement = {
                     // Thêm event handler khi chọn xe
                     self.setupVehicleChangeHandler();
                 } else {
-                    console.error('Invalid vehicle data format:', response);
                 }
             },
             error: function(xhr, status, error) {
-                console.error('Error loading vehicles:', error);
             }
         });
     },
@@ -314,7 +298,7 @@ window.InspectionManagement = {
 
     loadCustomers: function() {
         $.ajax({
-            url: '/InspectionManagement/GetAvailableCustomers',
+            url: '/VehicleManagement/GetAvailableCustomers',
             type: 'GET',
             success: function(response) {
                 if (response && Array.isArray(response)) {
@@ -325,18 +309,16 @@ window.InspectionManagement = {
                     });
                     $('#createCustomerId, #editCustomerId').html(options);
                 } else {
-                    console.error('Invalid customer data format:', response);
                 }
             },
             error: function(xhr, status, error) {
-                console.error('Error loading customers:', error);
             }
         });
     },
 
     loadEmployees: function() {
         $.ajax({
-            url: '/InspectionManagement/GetAvailableEmployees',
+            url: '/VehicleManagement/GetAvailableEmployees',
             type: 'GET',
             success: function(response) {
                 if (response && Array.isArray(response)) {
@@ -347,11 +329,9 @@ window.InspectionManagement = {
                     });
                     $('#createInspectorId, #editInspectorId').html(options);
                 } else {
-                    console.error('Invalid employee data format:', response);
                 }
             },
             error: function(xhr, status, error) {
-                console.error('Error loading employees:', error);
             }
         });
     },
@@ -363,8 +343,15 @@ window.InspectionManagement = {
         // Reset trạng thái dropdown khách hàng
         $('#createCustomerId').prop('disabled', true).val('').trigger('change');
         
-        // Đợi modal hiển thị xong rồi mới load data
+        // Đợi modal hiển thị xong rồi mới load data và set default values
         $('#createInspectionModal').on('shown.bs.modal', function() {
+            // Set default inspection date to current date only (no time)
+            var now = new Date();
+            var localDate = now.getFullYear() + '-' + 
+                String(now.getMonth() + 1).padStart(2, '0') + '-' + 
+                String(now.getDate()).padStart(2, '0');
+            $('#createInspectionDate').val(localDate);
+            
             InspectionManagement.loadReceptions();
         });
     },
@@ -372,7 +359,7 @@ window.InspectionManagement = {
     viewInspection: function(id) {
         var self = this;
         $.ajax({
-            url: '/InspectionManagement/GetInspection/' + id,
+            url: '/VehicleManagement/GetInspection/' + id,
             type: 'GET',
             success: function(response) {
                 if (AuthHandler.validateApiResponse(response)) {
@@ -398,7 +385,7 @@ window.InspectionManagement = {
     editInspection: function(id) {
         var self = this;
         $.ajax({
-            url: '/InspectionManagement/GetInspection/' + id,
+            url: '/VehicleManagement/GetInspection/' + id,
             type: 'GET',
             success: function(response) {
                 if (AuthHandler.validateApiResponse(response)) {
@@ -461,7 +448,7 @@ window.InspectionManagement = {
         }
 
         $.ajax({
-            url: '/InspectionManagement/CreateInspection',
+            url: '/VehicleManagement/CreateInspection',
             type: 'POST',
             contentType: 'application/json',
             data: JSON.stringify(formData),
@@ -472,7 +459,33 @@ window.InspectionManagement = {
                         $('#createInspectionModal').modal('hide');
                         self.inspectionTable.ajax.reload();
                     } else {
-                        GarageApp.showError(GarageApp.parseErrorMessage(response) || 'Lỗi khi tạo kiểm tra xe');
+                        // Parse error message from server response
+                        var errorMessage = 'Lỗi khi tạo kiểm tra xe';
+                        try {
+                            if (response.error) {
+                                var errorText = response.error;
+                                
+                                // Check if error contains nested JSON (API Error format)
+                                if (errorText.includes('API Error: BadRequest - ')) {
+                                    var jsonStart = errorText.indexOf('{');
+                                    if (jsonStart !== -1) {
+                                        var nestedJson = errorText.substring(jsonStart);
+                                        var nestedResponse = JSON.parse(nestedJson);
+                                        if (nestedResponse.message) {
+                                            errorMessage = nestedResponse.message;
+                                        } else {
+                                            errorMessage = errorText;
+                                        }
+                                    } else {
+                                        errorMessage = errorText;
+                                    }
+                                } else {
+                                    errorMessage = errorText;
+                                }
+                            }
+                        } catch (e) {
+                        }
+                        GarageApp.showError(errorMessage);
                     }
                 }
             },
@@ -480,7 +493,38 @@ window.InspectionManagement = {
                 if (AuthHandler.isUnauthorized(xhr)) {
                     AuthHandler.handleUnauthorized(xhr, true);
                 } else {
-                    GarageApp.showError('Lỗi khi tạo kiểm tra xe');
+                    // Parse error message from server response
+                    var errorMessage = 'Lỗi khi tạo kiểm tra xe';
+                    try {
+                        if (xhr.responseJSON && xhr.responseJSON.error) {
+                            var errorText = xhr.responseJSON.error;
+                            
+                            // Check if error contains nested JSON (API Error format)
+                            if (errorText.includes('API Error: BadRequest - ')) {
+                                var jsonStart = errorText.indexOf('{');
+                                if (jsonStart !== -1) {
+                                    var nestedJson = errorText.substring(jsonStart);
+                                    var nestedResponse = JSON.parse(nestedJson);
+                                    if (nestedResponse.message) {
+                                        errorMessage = nestedResponse.message;
+                                    } else {
+                                        errorMessage = errorText;
+                                    }
+                                } else {
+                                    errorMessage = errorText;
+                                }
+                            } else {
+                                errorMessage = errorText;
+                            }
+                        } else if (xhr.responseText) {
+                            var response = JSON.parse(xhr.responseText);
+                            if (response.error) {
+                                errorMessage = response.error;
+                            }
+                        }
+                    } catch (e) {
+                    }
+                    GarageApp.showError(errorMessage);
                 }
             }
         });
@@ -524,7 +568,7 @@ window.InspectionManagement = {
         }
 
         $.ajax({
-            url: '/InspectionManagement/UpdateInspection/' + inspectionId,
+            url: '/VehicleManagement/UpdateInspection/' + inspectionId,
             type: 'PUT',
             contentType: 'application/json',
             data: JSON.stringify(formData),
@@ -535,7 +579,33 @@ window.InspectionManagement = {
                         $('#editInspectionModal').modal('hide');
                         self.inspectionTable.ajax.reload();
                     } else {
-                        GarageApp.showError(GarageApp.parseErrorMessage(response) || 'Lỗi khi cập nhật kiểm tra xe');
+                        // Parse error message from server response
+                        var errorMessage = 'Lỗi khi cập nhật kiểm tra xe';
+                        try {
+                            if (response.error) {
+                                var errorText = response.error;
+                                
+                                // Check if error contains nested JSON (API Error format)
+                                if (errorText.includes('API Error: BadRequest - ')) {
+                                    var jsonStart = errorText.indexOf('{');
+                                    if (jsonStart !== -1) {
+                                        var nestedJson = errorText.substring(jsonStart);
+                                        var nestedResponse = JSON.parse(nestedJson);
+                                        if (nestedResponse.message) {
+                                            errorMessage = nestedResponse.message;
+                                        } else {
+                                            errorMessage = errorText;
+                                        }
+                                    } else {
+                                        errorMessage = errorText;
+                                    }
+                                } else {
+                                    errorMessage = errorText;
+                                }
+                            }
+                        } catch (e) {
+                        }
+                        GarageApp.showError(errorMessage);
                     }
                 }
             },
@@ -543,7 +613,38 @@ window.InspectionManagement = {
                 if (AuthHandler.isUnauthorized(xhr)) {
                     AuthHandler.handleUnauthorized(xhr, true);
                 } else {
-                    GarageApp.showError('Lỗi khi cập nhật kiểm tra xe');
+                    // Parse error message from server response
+                    var errorMessage = 'Lỗi khi cập nhật kiểm tra xe';
+                    try {
+                        if (xhr.responseJSON && xhr.responseJSON.error) {
+                            var errorText = xhr.responseJSON.error;
+                            
+                            // Check if error contains nested JSON (API Error format)
+                            if (errorText.includes('API Error: BadRequest - ')) {
+                                var jsonStart = errorText.indexOf('{');
+                                if (jsonStart !== -1) {
+                                    var nestedJson = errorText.substring(jsonStart);
+                                    var nestedResponse = JSON.parse(nestedJson);
+                                    if (nestedResponse.message) {
+                                        errorMessage = nestedResponse.message;
+                                    } else {
+                                        errorMessage = errorText;
+                                    }
+                                } else {
+                                    errorMessage = errorText;
+                                }
+                            } else {
+                                errorMessage = errorText;
+                            }
+                        } else if (xhr.responseText) {
+                            var response = JSON.parse(xhr.responseText);
+                            if (response.error) {
+                                errorMessage = response.error;
+                            }
+                        }
+                    } catch (e) {
+                    }
+                    GarageApp.showError(errorMessage);
                 }
             }
         });
@@ -560,11 +661,11 @@ window.InspectionManagement = {
             confirmButtonColor: '#d33',
             cancelButtonColor: '#3085d6',
             confirmButtonText: 'Có, xóa!',
-            cancelButtonText: 'Hủy'
+            cancelButtonText: 'Hủy',
         }).then((result) => {
             if (result.isConfirmed) {
                 $.ajax({
-                    url: '/InspectionManagement/DeleteInspection/' + id,
+                    url: '/VehicleManagement/DeleteInspection/' + id,
                     type: 'DELETE',
                     success: function(response) {
                         if (AuthHandler.validateApiResponse(response)) {
@@ -580,7 +681,38 @@ window.InspectionManagement = {
                         if (AuthHandler.isUnauthorized(xhr)) {
                             AuthHandler.handleUnauthorized(xhr, true);
                         } else {
-                            GarageApp.showError('Lỗi khi xóa kiểm tra xe');
+                            // Parse error message from server response
+                            var errorMessage = 'Lỗi khi xóa kiểm tra xe';
+                            try {
+                                if (xhr.responseJSON && xhr.responseJSON.error) {
+                                    var errorText = xhr.responseJSON.error;
+                                    
+                                    // Check if error contains nested JSON (API Error format)
+                                    if (errorText.includes('API Error: BadRequest - ')) {
+                                        var jsonStart = errorText.indexOf('{');
+                                        if (jsonStart !== -1) {
+                                            var nestedJson = errorText.substring(jsonStart);
+                                            var nestedResponse = JSON.parse(nestedJson);
+                                            if (nestedResponse.message) {
+                                                errorMessage = nestedResponse.message;
+                                            } else {
+                                                errorMessage = errorText;
+                                            }
+                                        } else {
+                                            errorMessage = errorText;
+                                        }
+                                    } else {
+                                        errorMessage = errorText;
+                                    }
+                                } else if (xhr.responseText) {
+                                    var response = JSON.parse(xhr.responseText);
+                                    if (response.error) {
+                                        errorMessage = response.error;
+                                    }
+                                }
+                            } catch (e) {
+                            }
+                            GarageApp.showError(errorMessage);
                         }
                     }
                 });
@@ -653,11 +785,11 @@ window.InspectionManagement = {
             confirmButtonColor: '#28a745',
             cancelButtonColor: '#6c757d',
             confirmButtonText: 'Hoàn thành',
-            cancelButtonText: 'Hủy'
+            cancelButtonText: 'Hủy',
         }).then((result) => {
             if (result.isConfirmed) {
                 $.ajax({
-                    url: '/InspectionManagement/CompleteInspection/' + id,
+                    url: '/VehicleManagement/CompleteInspection/' + id,
                     type: 'POST',
                     success: function(response) {
                         if (response.success) {
@@ -666,7 +798,7 @@ window.InspectionManagement = {
                                 text: 'Đã hoàn thành kiểm tra xe',
                                 icon: 'success',
                                 timer: 2000,
-                                showConfirmButton: false
+                                showConfirmButton: false,
                             });
                             self.dataTable.ajax.reload();
                         } else {
@@ -674,7 +806,6 @@ window.InspectionManagement = {
                         }
                     },
                     error: function(xhr, status, error) {
-                        console.error('Error completing inspection:', error);
                         var errorMessage = 'Lỗi khi hoàn thành kiểm tra xe';
                         if (xhr.responseJSON && xhr.responseJSON.message) {
                             errorMessage = xhr.responseJSON.message;

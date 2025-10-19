@@ -59,10 +59,9 @@ window.SupplierManagement = {
             }
         ];
 
-        this.supplierTable = DataTablesUtility.initAjaxTable('#suppliersTable', '/SupplierManagement/GetSuppliers', columns, {
+        this.supplierTable = DataTablesUtility.initServerSideTable('#suppliersTable', '/api/suppliers', columns, {
             order: [[0, 'desc']],
-            pageLength: 25,
-            dom: 'rtip'
+            pageLength: 10
         });
     },
 
@@ -70,10 +69,6 @@ window.SupplierManagement = {
     bindEvents: function() {
         var self = this;
 
-        // Search functionality
-        $('#searchInput').on('keyup', function() {
-            self.supplierTable.search(this.value).draw();
-        });
 
         // Create supplier form
         $(document).on('submit', '#createSupplierForm', function(e) {

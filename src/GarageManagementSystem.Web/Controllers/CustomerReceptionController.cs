@@ -1,4 +1,5 @@
 using GarageManagementSystem.Shared.DTOs;
+using GarageManagementSystem.Shared.Models;
 using GarageManagementSystem.Core.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -31,45 +32,76 @@ namespace GarageManagementSystem.Web.Controllers
         }
 
         /// <summary>
-        /// Lấy danh sách tất cả phiếu tiếp đón cho DataTable thông qua API
+        /// Lấy danh sách phiếu tiếp đón với pagination cho DataTable thông qua API
         /// </summary>
         [HttpGet("GetReceptions")]
-        public async Task<IActionResult> GetReceptions()
+        public async Task<IActionResult> GetReceptions(
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 10,
+            [FromQuery] string? searchTerm = null,
+            [FromQuery] string? status = null)
         {
-            var response = await _apiService.GetAsync<List<CustomerReceptionDto>>("CustomerReceptions");
-            
-            if (response.Success)
+            try
             {
-                var receptionList = new List<object>();
-                
-                if (response.Data != null)
+                var queryParams = new List<string>
                 {
-                    receptionList = response.Data.Select(r => new
+                    $"pageNumber={pageNumber}",
+                    $"pageSize={pageSize}"
+                };
+
+                if (!string.IsNullOrEmpty(searchTerm))
+                    queryParams.Add($"searchTerm={Uri.EscapeDataString(searchTerm)}");
+
+                if (!string.IsNullOrEmpty(status))
+                    queryParams.Add($"status={Uri.EscapeDataString(status)}");
+
+                var queryString = string.Join("&", queryParams);
+                var endpoint = $"{ApiEndpoints.CustomerReceptions.GetAll}?{queryString}";
+
+                var response = await _apiService.GetAsync<PagedResponse<CustomerReceptionDto>>(endpoint);
+
+                if (response.Success && response.Data != null)
+                {
+                    var receptionList = response.Data.Data.Select(r => new
                     {
                         id = r.Id,
                         receptionNumber = r.ReceptionNumber,
                         customerName = r.CustomerName ?? "N/A",
                         vehiclePlate = r.VehiclePlate ?? "N/A",
-                        vehicleInfo = !string.IsNullOrEmpty(r.VehicleMake) && !string.IsNullOrEmpty(r.VehicleModel) 
-                            ? $"{r.VehicleMake} {r.VehicleModel} ({r.VehicleYear})" 
+                        vehicleInfo = !string.IsNullOrEmpty(r.VehicleMake) && !string.IsNullOrEmpty(r.VehicleModel)
+                            ? $"{r.VehicleMake} {r.VehicleModel} ({r.VehicleYear})"
                             : "N/A",
-                        receptionDate = r.ReceptionDate,
+                        receptionDate = r.ReceptionDate.ToString("yyyy-MM-dd HH:mm"),
                         technicianName = r.AssignedTechnician?.Name ?? "Chưa phân công",
                         status = TranslateReceptionStatus(r.Status),
                         priority = TranslatePriority(r.Priority),
                         serviceType = TranslateServiceType(r.ServiceType)
-                    }).Cast<object>().ToList();
-                }
+                    }).ToList();
 
-                return Json(new { 
-                    success = true,
-                    data = receptionList,
-                    message = "Lấy danh sách phiếu tiếp đón thành công"
-                });
+                    return Json(new
+                    {
+                        success = true,
+                        data = receptionList,
+                        totalCount = response.Data.TotalCount,
+                        message = "Lấy danh sách phiếu tiếp đón thành công"
+                    });
+                }
+                else
+                {
+                    return Json(new
+                    {
+                        success = false,
+                        error = response.ErrorMessage ?? "Lỗi khi lấy danh sách phiếu tiếp đón"
+                    });
+                }
             }
-            else
+            catch (Exception ex)
             {
-                return Json(new { error = response.ErrorMessage });
+                return Json(new
+                {
+                    success = false,
+                    error = "Lỗi khi lấy danh sách phiếu tiếp đón: " + ex.Message
+                });
             }
         }
 
@@ -79,13 +111,13 @@ namespace GarageManagementSystem.Web.Controllers
         [HttpGet("GetReception/{id}")]
         public async Task<IActionResult> GetReception(int id)
         {
-            var response = await _apiService.GetAsync<CustomerReceptionDto>($"CustomerReceptions/{id}");
+            var response = await _apiService.GetAsync<ApiResponse<CustomerReceptionDto>>($"CustomerReceptions/{id}");
             
             if (response.Success && response.Data != null)
             {
                 return Json(new { 
                     success = true,
-                    data = response.Data,
+                    data = response.Data.Data,
                     message = "Lấy thông tin phiếu tiếp đón thành công"
                 });
             }
@@ -169,11 +201,11 @@ namespace GarageManagementSystem.Web.Controllers
         [HttpGet("GetAvailableCustomers")]
         public async Task<IActionResult> GetAvailableCustomers()
         {
-            var response = await _apiService.GetAsync<List<CustomerDto>>(ApiEndpoints.Customers.GetAll);
+            var response = await _apiService.GetAsync< ApiResponse<List<CustomerDto>>>(ApiEndpoints.Customers.GetAll);
             
             if (response.Success && response.Data != null)
             {
-                var customers = response.Data.Select(c => new
+                var customers = response.Data.Data.Select(c => new
                 {
                     value = c.Id.ToString(),
                     text = c.Name + " - " + (c.Phone ?? "")
@@ -191,11 +223,11 @@ namespace GarageManagementSystem.Web.Controllers
         [HttpGet("GetAvailableVehicles")]
         public async Task<IActionResult> GetAvailableVehicles()
         {
-            var response = await _apiService.GetAsync<List<VehicleDto>>(ApiEndpoints.Vehicles.GetAll);
+            var response = await _apiService.GetAsync<ApiResponse<List<VehicleDto>>>(ApiEndpoints.Vehicles.GetAll);
             
             if (response.Success && response.Data != null)
             {
-                var vehicles = response.Data.Select(v => new
+                var vehicles = response.Data.Data.Select(v => new
                 {
                     value = v.Id.ToString(),
                     text = $"{v.LicensePlate} - {v.Brand} {v.Model}",
@@ -214,12 +246,12 @@ namespace GarageManagementSystem.Web.Controllers
         [HttpGet("GetAvailableTechnicians")]
         public async Task<IActionResult> GetAvailableTechnicians()
         {
-            var response = await _apiService.GetAsync<List<EmployeeDto>>(ApiEndpoints.Employees.GetActive);
+            var response = await _apiService.GetAsync<ApiResponse<List<EmployeeDto>>>(ApiEndpoints.Employees.GetActive);
             
             if (response.Success && response.Data != null)
             {
                 // Debug: Log all employees to see what we have
-                var allEmployees = response.Data.ToList();
+                var allEmployees = response.Data.Data.ToList();
                 
                 // More flexible filter - include any employee that could be a technician
                 var technicians = allEmployees

@@ -175,6 +175,12 @@ builder.Services.AddCors(options =>
 // Add AutoMapper
 builder.Services.AddAutoMapper(typeof(Program));
 
+// Add Memory Cache
+builder.Services.AddMemoryCache();
+
+// Add Cache Service
+builder.Services.AddScoped<GarageManagementSystem.API.Services.ICacheService, GarageManagementSystem.API.Services.CacheService>();
+
 var app = builder.Build();
 
 // Configure custom middleware

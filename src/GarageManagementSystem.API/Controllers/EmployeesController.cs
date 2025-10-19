@@ -1,7 +1,9 @@
 using AutoMapper;
 using GarageManagementSystem.Core.Interfaces;
+using GarageManagementSystem.Core.Extensions;
 using GarageManagementSystem.Shared.DTOs;
 using GarageManagementSystem.Shared.Models;
+using GarageManagementSystem.API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -14,26 +16,55 @@ namespace GarageManagementSystem.API.Controllers
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
+        private readonly ICacheService _cacheService;
 
-        public EmployeesController(IUnitOfWork unitOfWork, IMapper mapper)
+        public EmployeesController(IUnitOfWork unitOfWork, IMapper mapper, ICacheService cacheService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+            _cacheService = cacheService;
         }
 
         [HttpGet]
-        public async Task<ActionResult<ApiResponse<List<EmployeeDto>>>> GetEmployees()
+        public async Task<ActionResult<PagedResponse<EmployeeDto>>> GetEmployees(
+            [FromQuery] int pageNumber = 1, 
+            [FromQuery] int pageSize = 10,
+            [FromQuery] string? searchTerm = null,
+            [FromQuery] string? department = null)
         {
             try
             {
                 var employees = await _unitOfWork.Employees.GetAllWithNavigationAsync();
-                var employeeDtos = employees.Select(e => _mapper.Map<EmployeeDto>(e)).ToList();
+                var query = employees.AsQueryable();
                 
-                return Ok(ApiResponse<List<EmployeeDto>>.SuccessResult(employeeDtos));
+                // Apply search filter if provided
+                if (!string.IsNullOrEmpty(searchTerm))
+                {
+                    query = query.Where(e => 
+                        e.Name.Contains(searchTerm) || 
+                        e.Email.Contains(searchTerm) || 
+                        e.Phone.Contains(searchTerm));
+                }
+                
+                // Apply department filter if provided
+                if (!string.IsNullOrEmpty(department))
+                {
+                    query = query.Where(e => e.Department == department);
+                }
+
+                // Get total count
+                var totalCount = await query.GetTotalCountAsync();
+                
+                // Apply pagination
+                var pagedEmployees = query.ApplyPagination(pageNumber, pageSize).ToList();
+                var employeeDtos = pagedEmployees.Select(e => _mapper.Map<EmployeeDto>(e)).ToList();
+                
+                return Ok(PagedResponse<EmployeeDto>.CreateSuccessResult(
+                    employeeDtos, pageNumber, pageSize, totalCount, "Employees retrieved successfully"));
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ApiResponse<List<EmployeeDto>>.ErrorResult("Error retrieving employees", ex.Message));
+                return StatusCode(500, PagedResponse<EmployeeDto>.CreateErrorResult("Error retrieving employees"));
             }
         }
 

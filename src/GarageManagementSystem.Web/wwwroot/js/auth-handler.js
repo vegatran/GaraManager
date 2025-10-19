@@ -43,7 +43,6 @@ window.AuthHandler = {
      * Handle 401 Unauthorized response
      */
     handleUnauthorized: function(response, showMessage = true) {
-        console.log('🔒 Handling unauthorized response:', response);
         
         // Clear any existing alerts
         if (Swal.isVisible()) {
@@ -74,7 +73,6 @@ window.AuthHandler = {
      * Redirect to login page
      */
     redirectToLogin: function() {
-        console.log('🔄 Redirecting directly to login page...');
         
         // Clear local storage/session storage if needed
         localStorage.clear();
@@ -84,9 +82,6 @@ window.AuthHandler = {
         var currentUrl = encodeURIComponent(window.location.href);
         var loginUrl = '/Home/Login?returnUrl=' + currentUrl;
         
-        console.log('🔗 Redirecting to login URL:', loginUrl);
-        console.log('🔗 Current URL:', window.location.href);
-        console.log('🔗 Encoded return URL:', currentUrl);
         
         window.location.href = loginUrl;
     },
@@ -101,7 +96,6 @@ window.AuthHandler = {
         this.loadConfig().then(function() {
             $(document).ajaxError(function(event, xhr, settings, error) {
                 if (self.isUnauthorized(xhr)) {
-                    console.log('🔒 401 Unauthorized detected in global handler');
                     self.handleUnauthorized(xhr, true);
                     return false; // Prevent default error handling
                 }

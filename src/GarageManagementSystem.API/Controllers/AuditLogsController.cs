@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using GarageManagementSystem.Core.Services;
+using GarageManagementSystem.Shared.Models;
+using GarageManagementSystem.Core.Extensions;
 
 namespace GarageManagementSystem.API.Controllers
 {
@@ -27,16 +29,30 @@ namespace GarageManagementSystem.API.Controllers
             [FromQuery] DateTime? toDate = null,
             [FromQuery] string? entityName = null,
             [FromQuery] string? userId = null,
-            [FromQuery] int page = 1,
-            [FromQuery] int pageSize = 50)
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 50,
+            [FromQuery] string? searchTerm = null)
         {
             try
             {
                 var logs = await _auditLogService.GetLogsAsync(fromDate, toDate, entityName, userId);
                 
-                var totalCount = logs.Count();
-                var pagedLogs = logs
-                    .Skip((page - 1) * pageSize)
+                // Apply search filter if provided
+                if (!string.IsNullOrEmpty(searchTerm))
+                {
+                    logs = logs.Where(l => 
+                        l.EntityName.Contains(searchTerm) || 
+                        l.UserName.Contains(searchTerm) || 
+                        l.Action.Contains(searchTerm) ||
+                        (l.Details != null && l.Details.Contains(searchTerm)));
+                }
+
+                var query = logs.AsQueryable();
+                var totalCount = query.Count();
+                
+                var pagedLogs = query
+                    .OrderByDescending(l => l.Timestamp)
+                    .Skip((pageNumber - 1) * pageSize)
                     .Take(pageSize)
                     .Select(l => new
                     {
@@ -49,24 +65,17 @@ namespace GarageManagementSystem.API.Controllers
                         l.Timestamp,
                         l.IpAddress,
                         l.Severity,
-                        Details = l.Details?.Length > 200 ? l.Details.Substring(0, 200) + "..." : l.Details
+                        Details = l.Details != null && l.Details.Length > 200 ? l.Details.Substring(0, 200) + "..." : l.Details
                     })
                     .ToList();
 
-                return Ok(new
-                {
-                    success = true,
-                    data = pagedLogs,
-                    totalCount,
-                    page,
-                    pageSize,
-                    totalPages = (int)Math.Ceiling(totalCount / (double)pageSize)
-                });
+                return Ok(PagedResponse<object>.CreateSuccessResult(
+                    pagedLogs, pageNumber, pageSize, totalCount, "Audit logs retrieved successfully"));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error retrieving audit logs");
-                return StatusCode(500, new { success = false, message = "Lỗi khi lấy nhật ký audit" });
+                return StatusCode(500, PagedResponse<object>.CreateErrorResult("Lỗi khi lấy nhật ký audit"));
             }
         }
 

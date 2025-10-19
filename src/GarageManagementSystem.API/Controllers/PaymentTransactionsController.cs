@@ -1,6 +1,8 @@
 using GarageManagementSystem.Core.Interfaces;
+using GarageManagementSystem.Core.Extensions;
 using GarageManagementSystem.Shared.DTOs;
 using GarageManagementSystem.Shared.Models;
+using GarageManagementSystem.API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -12,23 +14,58 @@ namespace GarageManagementSystem.API.Controllers
     public class PaymentTransactionsController : ControllerBase
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly ICacheService _cacheService;
 
-        public PaymentTransactionsController(IUnitOfWork unitOfWork)
+        public PaymentTransactionsController(IUnitOfWork unitOfWork, ICacheService cacheService)
         {
             _unitOfWork = unitOfWork;
+            _cacheService = cacheService;
         }
 
         [HttpGet]
-        public async Task<ActionResult<ApiResponse<List<PaymentTransactionDto>>>> GetPaymentTransactions()
+        public async Task<ActionResult<PagedResponse<PaymentTransactionDto>>> GetPaymentTransactions(
+            [FromQuery] int pageNumber = 1, 
+            [FromQuery] int pageSize = 10,
+            [FromQuery] string? searchTerm = null,
+            [FromQuery] string? paymentMethod = null,
+            [FromQuery] string? status = null)
         {
             try
             {
                 var payments = await _unitOfWork.PaymentTransactions.GetAllAsync();
-                return Ok(ApiResponse<List<PaymentTransactionDto>>.SuccessResult(payments.Select(MapToDto).ToList()));
+                var query = payments.AsQueryable();
+                
+                // Apply search filter if provided
+                if (!string.IsNullOrEmpty(searchTerm))
+                {
+                    query = query.Where(p => 
+                        p.TransactionReference.Contains(searchTerm) || 
+                        p.Notes.Contains(searchTerm));
+                }
+                
+                // Apply payment method filter if provided
+                if (!string.IsNullOrEmpty(paymentMethod))
+                {
+                    query = query.Where(p => p.PaymentMethod == paymentMethod);
+                }
+                
+                // Apply status filter if provided (removed - PaymentTransaction doesn't have Status property)
+
+                query = query.OrderByDescending(p => p.CreatedAt);
+
+                // Get total count
+                var totalCount = await query.GetTotalCountAsync();
+                
+                // Apply pagination
+                var pagedPayments = query.ApplyPagination(pageNumber, pageSize).ToList();
+                var paymentDtos = pagedPayments.Select(MapToDto).ToList();
+                
+                return Ok(PagedResponse<PaymentTransactionDto>.CreateSuccessResult(
+                    paymentDtos, pageNumber, pageSize, totalCount, "Payment transactions retrieved successfully"));
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ApiResponse<List<PaymentTransactionDto>>.ErrorResult("Lỗi khi lấy danh sách giao dịch thanh toán", ex.Message));
+                return StatusCode(500, PagedResponse<PaymentTransactionDto>.CreateErrorResult("Lỗi khi lấy danh sách giao dịch thanh toán"));
             }
         }
 

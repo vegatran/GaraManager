@@ -4,6 +4,8 @@ using GarageManagementSystem.Core.Enums;
 using GarageManagementSystem.Core.Interfaces;
 using GarageManagementSystem.Shared.DTOs;
 using GarageManagementSystem.Shared.Models;
+using GarageManagementSystem.Core.Extensions;
+using GarageManagementSystem.API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.ComponentModel.DataAnnotations;
@@ -19,46 +21,129 @@ namespace GarageManagementSystem.API.Controllers
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly ILogger<CustomerReceptionsController> _logger;
+        private readonly ICacheService _cacheService;
 
         public CustomerReceptionsController(
             ICustomerReceptionRepository repository,
             IUnitOfWork unitOfWork,
             IMapper mapper,
-            ILogger<CustomerReceptionsController> logger)
+            ILogger<CustomerReceptionsController> logger,
+            ICacheService cacheService)
         {
             _repository = repository;
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _logger = logger;
+            _cacheService = cacheService;
         }
 
         /// <summary>
-        /// Lấy danh sách tất cả phiếu tiếp đón
+        /// Lấy danh sách phiếu tiếp đón với pagination
         /// </summary>
         [HttpGet]
-        public async Task<ActionResult<ApiResponse<IEnumerable<CustomerReceptionDto>>>> GetAll()
+        public async Task<ActionResult<PagedResponse<CustomerReceptionDto>>> GetAll(
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 10,
+            [FromQuery] string? searchTerm = null,
+            [FromQuery] string? status = null)
         {
             try
             {
                 var receptions = await _repository.GetAllWithDetailsAsync();
-                var receptionDtos = _mapper.Map<IEnumerable<CustomerReceptionDto>>(receptions);
+                var query = receptions.AsQueryable();
 
-                return Ok(new ApiResponse<IEnumerable<CustomerReceptionDto>>
+                // Apply search filter
+                if (!string.IsNullOrEmpty(searchTerm))
+                {
+                    query = query.Where(r =>
+                        (r.ReceptionNumber != null && r.ReceptionNumber.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) ||
+                        (r.Customer != null && r.Customer.Name != null && r.Customer.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) ||
+                        (r.Vehicle != null && r.Vehicle.LicensePlate != null && r.Vehicle.LicensePlate.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)));
+                }
+
+                // Apply status filter
+                if (!string.IsNullOrEmpty(status))
+                {
+                    query = query.Where(r => r.Status.ToString().Equals(status, StringComparison.OrdinalIgnoreCase));
+                }
+
+                // Get total count before pagination
+                var totalCount = query.Count();
+
+                // Apply pagination
+                var receptionsList = query
+                    .Skip((pageNumber - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToList();
+
+                var receptionDtos = receptionsList.Select(r => _mapper.Map<CustomerReceptionDto>(r)).ToList();
+
+                return Ok(new PagedResponse<CustomerReceptionDto>
                 {
                     Success = true,
                     Data = receptionDtos,
+                    TotalCount = totalCount,
+                    PageNumber = pageNumber,
+                    PageSize = pageSize,
                     Message = "Lấy danh sách phiếu tiếp đón thành công"
                 });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Lỗi khi lấy danh sách phiếu tiếp đón");
-                return StatusCode(500, new ApiResponse<IEnumerable<CustomerReceptionDto>>
+                return StatusCode(500, new PagedResponse<CustomerReceptionDto>
                 {
                     Success = false,
-                    Message = "Lỗi khi lấy danh sách phiếu tiếp đón",
-                    ErrorMessage = ex.Message
+                    Message = "Lỗi khi lấy danh sách phiếu tiếp đón"
                 });
+            }
+        }
+
+        /// <summary>
+        /// Lấy danh sách tất cả phiếu tiếp đón cho dropdown (không phân trang)
+        /// </summary>
+        [HttpGet("dropdown")]
+        public async Task<ActionResult<List<CustomerReceptionDto>>> GetAllForDropdown()
+        {
+            try
+            {
+                var receptions = await _repository.GetAllWithDetailsAsync();
+                var receptionDtos = receptions.Select(r => _mapper.Map<CustomerReceptionDto>(r)).ToList();
+                
+                return Ok(receptionDtos);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting customer receptions for dropdown");
+                return StatusCode(500, new { message = "Internal server error" });
+            }
+        }
+
+        /// <summary>
+        /// Lấy danh sách phiếu tiếp đón có thể tạo kiểm tra xe cho dropdown (không phân trang)
+        /// Chỉ lấy những phiếu ở trạng thái Pending, Assigned, InProgress
+        /// </summary>
+        [HttpGet("dropdown/inspection-eligible")]
+        public async Task<ActionResult<List<CustomerReceptionDto>>> GetInspectionEligibleForDropdown()
+        {
+            try
+            {
+                var receptions = await _repository.GetAllWithDetailsAsync();
+                
+                // Filter chỉ những phiếu tiếp đón có thể tạo kiểm tra được
+                var eligibleReceptions = receptions.Where(r => 
+                    r.Status == ReceptionStatus.Pending || 
+                    r.Status == ReceptionStatus.Assigned || 
+                    r.Status == ReceptionStatus.InProgress).ToList();
+                
+                var receptionDtos = eligibleReceptions.Select(r => _mapper.Map<CustomerReceptionDto>(r)).ToList();
+                
+                return Ok(receptionDtos);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting inspection-eligible customer receptions for dropdown");
+                return StatusCode(500, new { message = "Internal server error" });
             }
         }
 

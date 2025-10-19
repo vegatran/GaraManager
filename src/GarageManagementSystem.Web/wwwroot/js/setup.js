@@ -37,7 +37,6 @@ window.Setup = {
                 }
             },
             error: function(xhr, status, error) {
-                console.error('Error loading settings:', error);
             }
         });
     },

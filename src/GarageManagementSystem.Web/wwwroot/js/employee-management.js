@@ -59,10 +59,9 @@ window.EmployeeManagement = {
             }
         ];
         
-        this.employeeTable = DataTablesUtility.initAjaxTable('#employeeTable', '/EmployeeManagement/GetEmployees', columns, {
+        this.employeeTable = DataTablesUtility.initServerSideTable('#employeeTable', '/EmployeeManagement/GetEmployees', columns, {
             order: [[0, 'desc']],
-            pageLength: 25,
-            dom: 'rtip'  // Chỉ hiển thị table, paging, info, processing (không có search box và length menu)
+            pageLength: 10
         });
     },
 
@@ -70,10 +69,6 @@ window.EmployeeManagement = {
     bindEvents: function() {
         var self = this;
 
-        // Search functionality
-        $('#searchInput').on('keyup', function() {
-            self.employeeTable.search(this.value).draw();
-        });
 
         // Add employee button
         $(document).on('click', '#addEmployeeBtn', function() {
@@ -125,7 +120,6 @@ window.EmployeeManagement = {
             url: '/EmployeeManagement/GetAvailablePositions',
             type: 'GET',
             success: function(response) {
-                console.log('🔍 Positions API Response:', response);
                 
                 // Clear existing options
                 $('#editPosition, #createPosition').empty();
@@ -142,7 +136,6 @@ window.EmployeeManagement = {
                 }
             },
             error: function(xhr, status, error) {
-                console.error('Error loading positions:', error);
                 if (AuthHandler.isUnauthorized(xhr)) {
                     AuthHandler.handleUnauthorized(xhr, true);
                 }
@@ -158,7 +151,6 @@ window.EmployeeManagement = {
             url: '/EmployeeManagement/GetAvailableDepartments',
             type: 'GET',
             success: function(response) {
-                console.log('🔍 Departments API Response:', response);
                 
                 // Clear existing options
                 $('#editDepartment, #createDepartment').empty();
@@ -175,7 +167,6 @@ window.EmployeeManagement = {
                 }
             },
             error: function(xhr, status, error) {
-                console.error('Error loading departments:', error);
                 if (AuthHandler.isUnauthorized(xhr)) {
                     AuthHandler.handleUnauthorized(xhr, true);
                 }
@@ -186,7 +177,27 @@ window.EmployeeManagement = {
     // Show create modal
     showCreateModal: function() {
         $('#createEmployeeModal').modal('show');
-        $('#createEmployeeForm')[0].reset();
+        
+        // Reset form when modal is fully shown
+        $('#createEmployeeModal').on('shown.bs.modal', function() {
+            // Reset form fields
+            $('#createEmployeeForm')[0].reset();
+            
+            // Set default hire date to today
+            var today = new Date();
+            var todayString = today.getFullYear() + '-' + 
+                             String(today.getMonth() + 1).padStart(2, '0') + '-' + 
+                             String(today.getDate()).padStart(2, '0');
+            $('#createHireDate').val(todayString);
+            
+            // Reset dropdowns to default
+            $('#createPosition').val('').trigger('change');
+            $('#createDepartment').val('').trigger('change');
+            $('#createStatus').val('Active');
+            
+            // Remove the event listener to prevent multiple bindings
+            $('#createEmployeeModal').off('shown.bs.modal');
+        });
     },
 
     // View employee
@@ -197,10 +208,8 @@ window.EmployeeManagement = {
             url: '/EmployeeManagement/GetEmployee/' + id,
             type: 'GET',
             success: function(response) {
-                console.log('🔍 View Employee API Response:', response);
                 if (AuthHandler.validateApiResponse(response)) {
                     if (response.success) {
-                        console.log('🔍 Employee Data:', response.data);
                         self.populateViewModal(response.data);
                         $('#viewEmployeeModal').modal('show');
                     } else {
@@ -226,12 +235,21 @@ window.EmployeeManagement = {
             url: '/EmployeeManagement/GetEmployee/' + id,
             type: 'GET',
             success: function(response) {
-                console.log('🔍 Edit Employee API Response:', response);
                 if (AuthHandler.validateApiResponse(response)) {
                     if (response.success) {
-                        console.log('🔍 Employee Data:', response.data);
-                        self.populateEditModal(response.data);
+                        
+                        // Store employee data and show modal
+                        var employeeData = response.data;
                         $('#editEmployeeModal').modal('show');
+                        
+                        // Populate form when modal is fully shown
+                        $('#editEmployeeModal').on('shown.bs.modal', function() {
+                            // Reset form first
+                            $('#editEmployeeForm')[0].reset();
+                            self.populateEditModal(employeeData);
+                            // Remove the event listener to prevent multiple bindings
+                            $('#editEmployeeModal').off('shown.bs.modal');
+                        });
                     } else {
                         GarageApp.showError(GarageApp.parseErrorMessage(response) || 'Error loading employee');
                     }
@@ -294,13 +312,15 @@ window.EmployeeManagement = {
             Email: $('#createEmail').val(),
             Phone: $('#createPhone').val(),
             Address: $('#createAddress').val(),
-            Position: $('#createPosition').val(),
-            Department: $('#createDepartment').val(),
-            HireDate: $('#createHireDate').val(),
-            Salary: parseFloat($('#createSalary').val()) || 0,
-            Status: $('#createStatus').val(),
+            PositionId: parseInt($('#createPosition').val()) || null,
+            DepartmentId: parseInt($('#createDepartment').val()) || null,
+            HireDate: $('#createHireDate').val() || null,
+            Salary: parseFloat($('#createSalary').val()) || null,
+            Status: $('#createStatus').val() || 'Active',
             Skills: $('#createSkills').val()
         };
+
+        // Debug: Log form data
 
         $.ajax({
             url: '/EmployeeManagement/CreateEmployee',
@@ -338,10 +358,10 @@ window.EmployeeManagement = {
             Email: $('#editEmail').val(),
             Phone: $('#editPhone').val(),
             Address: $('#editAddress').val(),
-            PositionId: $('#editPosition').val(),
-            DepartmentId: $('#editDepartment').val(),
+            PositionId: parseInt($('#editPosition').val()) || null,
+            DepartmentId: parseInt($('#editDepartment').val()) || null,
             HireDate: $('#editHireDate').val() != "" ? $('#editHireDate').val() : null,
-            Salary: parseFloat($('#editSalary').val()) || 0,
+            Salary: parseFloat($('#editSalary').val()) || null,
             Status: $('#editStatus').val(),
             Skills: $('#editSkills').val()
         };
@@ -388,7 +408,9 @@ window.EmployeeManagement = {
 
     // Populate edit modal
     populateEditModal: function(employee) {
-        console.log('🔍 Employee data for edit:', employee);
+        
+        // Reset form first
+        $('#editEmployeeForm')[0].reset();
         
         $('#editId').val(employee.id);
         $('#editName').val(employee.name);
@@ -397,12 +419,26 @@ window.EmployeeManagement = {
         $('#editAddress').val(employee.address);
         
         // Use positionId/departmentId for dropdown values, fallback to names
-        $('#editPosition').val(employee.positionId || employee.position);
-        $('#editDepartment').val(employee.departmentId || employee.department);
+        $('#editPosition').val(employee.positionId || employee.position).trigger('change');
+        $('#editDepartment').val(employee.departmentId || employee.department).trigger('change');
         
-        $('#editHireDate').val(employee.hireDate);
+        // Format hire date for HTML input type="date"
+        if (employee.hireDate) {
+            // If hireDate is already in YYYY-MM-DD format, use it directly
+            if (employee.hireDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                $('#editHireDate').val(employee.hireDate);
+            } else {
+                // Convert from other formats to YYYY-MM-DD
+                var date = new Date(employee.hireDate);
+                var formattedDate = date.getFullYear() + '-' + 
+                                   String(date.getMonth() + 1).padStart(2, '0') + '-' + 
+                                   String(date.getDate()).padStart(2, '0');
+                $('#editHireDate').val(formattedDate);
+            }
+        }
+        
         $('#editSalary').val(employee.salary);
-        $('#editStatus').val(employee.status);
+        $('#editStatus').val(employee.status || 'Active');
         $('#editSkills').val(employee.skills);
     }
 };

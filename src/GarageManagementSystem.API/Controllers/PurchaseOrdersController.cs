@@ -3,8 +3,10 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using GarageManagementSystem.Core.Entities;
 using GarageManagementSystem.Core.Interfaces;
+using GarageManagementSystem.Core.Extensions;
 using GarageManagementSystem.Shared.DTOs;
 using GarageManagementSystem.Shared.Models;
+using GarageManagementSystem.API.Services;
 
 namespace GarageManagementSystem.API.Controllers
 {
@@ -16,53 +18,84 @@ namespace GarageManagementSystem.API.Controllers
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly ILogger<PurchaseOrdersController> _logger;
+        private readonly ICacheService _cacheService;
 
-        public PurchaseOrdersController(IUnitOfWork unitOfWork, IMapper mapper, ILogger<PurchaseOrdersController> logger)
+        public PurchaseOrdersController(IUnitOfWork unitOfWork, IMapper mapper, ILogger<PurchaseOrdersController> logger, ICacheService cacheService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _logger = logger;
+            _cacheService = cacheService;
         }
 
         [HttpGet]
-        public async Task<ActionResult<ApiResponse<List<PurchaseOrderDto>>>> GetAll([FromQuery] int? supplierId = null, [FromQuery] string? status = null)
+        public async Task<ActionResult<PagedResponse<PurchaseOrderDto>>> GetAll(
+            [FromQuery] int pageNumber = 1, 
+            [FromQuery] int pageSize = 10,
+            [FromQuery] int? supplierId = null, 
+            [FromQuery] string? status = null)
         {
             try
             {
-                var orders = await _unitOfWork.Repository<PurchaseOrder>().GetAllAsync();
+                var purchaseOrders = await _unitOfWork.Repository<PurchaseOrder>().GetAllAsync();
+                var query = purchaseOrders.AsQueryable();
                 
                 if (supplierId.HasValue)
-                    orders = orders.Where(o => o.SupplierId == supplierId.Value);
+                    query = query.Where(o => o.SupplierId == supplierId.Value);
                 
                 if (!string.IsNullOrEmpty(status))
-                    orders = orders.Where(o => o.Status == status);
+                    query = query.Where(o => o.Status == status);
 
-                // Map to DTO with supplier information
-                var result = new List<PurchaseOrderDto>();
+                query = query.OrderByDescending(o => o.CreatedAt);
+
+                // Get total count
+                var totalCount = await query.GetTotalCountAsync();
                 
-                foreach (var order in orders.OrderByDescending(o => o.CreatedAt))
+                // Apply pagination
+                var orders = query.ApplyPagination(pageNumber, pageSize).ToList();
+                var purchaseOrderDtos = _mapper.Map<List<PurchaseOrderDto>>(orders);
+                
+                // OPTIMIZED: Load suppliers and items in batch to avoid N+1 queries
+                var orderIds = purchaseOrderDtos.Select(dto => dto.Id).ToList();
+                var supplierIds = purchaseOrderDtos.Select(dto => dto.SupplierId).Distinct().ToList();
+                
+                // Load suppliers from cache (they change rarely)
+                var suppliers = await _cacheService.GetOrSetAsync($"suppliers_{string.Join(",", supplierIds)}", 
+                    async () =>
+                    {
+                        var allSuppliers = await _unitOfWork.Repository<Supplier>().GetAllAsync();
+                        return allSuppliers.Where(s => supplierIds.Contains(s.Id)).ToList();
+                    }, 
+                    TimeSpan.FromMinutes(30)); // Cache for 30 minutes
+                
+                // Load all items for all orders at once
+                var allItems = await _unitOfWork.Repository<PurchaseOrderItem>().GetAllAsync();
+                var itemsByOrderId = allItems.Where(i => orderIds.Contains(i.PurchaseOrderId))
+                                           .GroupBy(i => i.PurchaseOrderId)
+                                           .ToDictionary(g => g.Key, g => g.ToList());
+                
+                // Map supplier names and item counts efficiently
+                foreach (var dto in purchaseOrderDtos)
                 {
-                    // Get supplier information
-                    var supplier = await _unitOfWork.Repository<Supplier>().GetByIdAsync(order.SupplierId);
+                    var supplier = suppliers.FirstOrDefault(s => s.Id == dto.SupplierId);
+                    if (supplier != null)
+                    {
+                        dto.SupplierName = supplier.SupplierName;
+                    }
                     
-                    // Get purchase order items
-                    var items = await _unitOfWork.Repository<PurchaseOrderItem>().GetAllAsync();
-                    var orderItems = items.Where(i => i.PurchaseOrderId == order.Id).ToList();
-                    
-                    var orderDto = _mapper.Map<PurchaseOrderDto>(order);
-                    orderDto.SupplierName = supplier?.SupplierName ?? "N/A";
-                    orderDto.ItemCount = orderItems.Count;
-                    orderDto.Items = _mapper.Map<List<PurchaseOrderItemDto>>(orderItems);
-                    
-                    result.Add(orderDto);
+                    if (itemsByOrderId.TryGetValue(dto.Id, out var orderItems))
+                    {
+                        dto.ItemCount = orderItems.Count;
+                    }
                 }
 
-                return Ok(ApiResponse<List<PurchaseOrderDto>>.SuccessResult(result));
+                return Ok(PagedResponse<PurchaseOrderDto>.CreateSuccessResult(
+                    purchaseOrderDtos, pageNumber, pageSize, totalCount, "Purchase orders retrieved successfully"));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting purchase orders");
-                return StatusCode(500, ApiResponse<List<PurchaseOrderDto>>.ErrorResult("Lỗi khi lấy danh sách đơn mua hàng", ex.Message));
+                return StatusCode(500, PagedResponse<PurchaseOrderDto>.CreateErrorResult("Lỗi khi lấy danh sách đơn mua hàng"));
             }
         }
 
@@ -82,10 +115,14 @@ namespace GarageManagementSystem.API.Controllers
                 var items = await _unitOfWork.Repository<PurchaseOrderItem>().GetAllAsync();
                 var orderItems = items.Where(i => i.PurchaseOrderId == order.Id).ToList();
                 
+                _logger.LogInformation($"Purchase Order {id} has {orderItems.Count} items");
+                
                 var orderDto = _mapper.Map<PurchaseOrderDto>(order);
                 orderDto.SupplierName = supplier?.SupplierName ?? "N/A";
                 orderDto.ItemCount = orderItems.Count;
                 orderDto.Items = _mapper.Map<List<PurchaseOrderItemDto>>(orderItems);
+                
+                _logger.LogInformation($"Mapped {orderDto.Items.Count} items to DTO");
 
                 return Ok(ApiResponse<PurchaseOrderDto>.SuccessResult(orderDto));
             }

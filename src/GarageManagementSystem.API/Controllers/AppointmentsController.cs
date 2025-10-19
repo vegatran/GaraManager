@@ -1,7 +1,9 @@
 using AutoMapper;
 using GarageManagementSystem.Core.Interfaces;
+using GarageManagementSystem.Core.Extensions;
 using GarageManagementSystem.Shared.DTOs;
 using GarageManagementSystem.Shared.Models;
+using GarageManagementSystem.API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -14,24 +16,62 @@ namespace GarageManagementSystem.API.Controllers
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
+        private readonly ICacheService _cacheService;
 
-        public AppointmentsController(IUnitOfWork unitOfWork, IMapper mapper)
+        public AppointmentsController(IUnitOfWork unitOfWork, IMapper mapper, ICacheService cacheService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+            _cacheService = cacheService;
         }
 
         [HttpGet]
-        public async Task<ActionResult<ApiResponse<List<AppointmentDto>>>> GetAllAppointments()
+        public async Task<ActionResult<PagedResponse<AppointmentDto>>> GetAllAppointments(
+            [FromQuery] int pageNumber = 1, 
+            [FromQuery] int pageSize = 10,
+            [FromQuery] string? searchTerm = null,
+            [FromQuery] string? status = null,
+            [FromQuery] int? customerId = null)
         {
             try
             {
                 var appointments = await _unitOfWork.Appointments.GetAllWithDetailsAsync();
-                return Ok(ApiResponse<List<AppointmentDto>>.SuccessResult(appointments.Select(MapToDto).ToList()));
+                var query = appointments.AsQueryable();
+                
+                // Apply search filter if provided
+                if (!string.IsNullOrEmpty(searchTerm))
+                {
+                    query = query.Where(a => 
+                        a.CustomerNotes.Contains(searchTerm));
+                }
+                
+                // Apply status filter if provided
+                if (!string.IsNullOrEmpty(status))
+                {
+                    query = query.Where(a => a.Status == status);
+                }
+                
+                // Apply customer filter if provided
+                if (customerId.HasValue)
+                {
+                    query = query.Where(a => a.CustomerId == customerId.Value);
+                }
+
+                query = query.OrderByDescending(a => a.ScheduledDateTime);
+
+                // Get total count
+                var totalCount = await query.GetTotalCountAsync();
+                
+                // Apply pagination
+                var pagedAppointments = query.ApplyPagination(pageNumber, pageSize).ToList();
+                var appointmentDtos = pagedAppointments.Select(MapToDto).ToList();
+                
+                return Ok(PagedResponse<AppointmentDto>.CreateSuccessResult(
+                    appointmentDtos, pageNumber, pageSize, totalCount, "Appointments retrieved successfully"));
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ApiResponse<List<AppointmentDto>>.ErrorResult("Error", ex.Message));
+                return StatusCode(500, PagedResponse<AppointmentDto>.CreateErrorResult("Error retrieving appointments"));
             }
         }
 

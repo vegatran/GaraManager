@@ -1,4 +1,5 @@
 using GarageManagementSystem.Shared.DTOs;
+using GarageManagementSystem.Shared.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using GarageManagementSystem.Web.Services;
@@ -30,20 +31,38 @@ namespace GarageManagementSystem.Web.Controllers
         }
 
         /// <summary>
-        /// Lấy danh sách tất cả nhân viên cho DataTable thông qua API
+        /// Lấy danh sách tất cả nhân viên cho DataTable thông qua API với pagination
         /// </summary>
         [HttpGet("GetEmployees")]
-        public async Task<IActionResult> GetEmployees()
+        public async Task<IActionResult> GetEmployees(
+            [FromQuery] int pageNumber = 1, 
+            [FromQuery] int pageSize = 10,
+            [FromQuery] string? searchTerm = null,
+            [FromQuery] string? department = null)
         {
-            var response = await _apiService.GetAsync<List<EmployeeDto>>(ApiEndpoints.Employees.GetAll);
-            
-            if (response.Success)
+            try
             {
-                var employeeList = new List<object>();
-                
-                if (response.Data != null)
+                // Build query parameters
+                var queryParams = new List<string>
                 {
-                    employeeList = response.Data.Select(e => new
+                    $"pageNumber={pageNumber}",
+                    $"pageSize={pageSize}"
+                };
+                
+                if (!string.IsNullOrEmpty(searchTerm))
+                    queryParams.Add($"searchTerm={Uri.EscapeDataString(searchTerm)}");
+                
+                if (!string.IsNullOrEmpty(department))
+                    queryParams.Add($"department={Uri.EscapeDataString(department)}");
+
+                var queryString = string.Join("&", queryParams);
+                var endpoint = $"{ApiEndpoints.Employees.GetAll}?{queryString}";
+
+                var response = await _apiService.GetAsync<PagedResponse<EmployeeDto>>(endpoint);
+                
+                if (response.Success && response.Data != null)
+                {
+                    var employeeList = response.Data.Data.Select(e => new
                     {
                         id = e.Id,
                         name = e.Name,
@@ -53,20 +72,31 @@ namespace GarageManagementSystem.Web.Controllers
                         departmentId = e.DepartmentId,
                         phone = e.Phone ?? "N/A",
                         email = e.Email ?? "N/A",
-                        hireDate = e.HireDate,
+                        hireDate = e.HireDate?.ToString("yyyy-MM-dd"),
                         status = TranslateEmployeeStatus(e.Status ?? "Active")
-                    }).Cast<object>().ToList();
-                }
+                    }).ToList();
 
-                return Json(new { 
-                    success = true,
-                    data = employeeList,
-                    message = "Lấy danh sách nhân viên thành công"
-                });
+                    return Json(new { 
+                        success = true,
+                        data = employeeList,
+                        totalCount = response.Data.TotalCount,
+                        message = "Lấy danh sách nhân viên thành công"
+                    });
+                }
+                else
+                {
+                    return Json(new { 
+                        success = false,
+                        error = response.ErrorMessage ?? "Lỗi khi lấy danh sách nhân viên"
+                    });
+                }
             }
-            else
+            catch (Exception ex)
             {
-                return Json(new { error = response.ErrorMessage });
+                return Json(new { 
+                    success = false,
+                    error = "Lỗi khi lấy danh sách nhân viên: " + ex.Message
+                });
             }
         }
 
@@ -76,11 +106,34 @@ namespace GarageManagementSystem.Web.Controllers
         [HttpGet("GetEmployee/{id}")]
         public async Task<IActionResult> GetEmployee(int id)
         {
-            var response = await _apiService.GetAsync<EmployeeDto>(
+            var response = await _apiService.GetAsync<ApiResponse<EmployeeDto>>(
                 ApiEndpoints.Builder.WithId(ApiEndpoints.Employees.GetById, id)
             );
             
-            return Json(response);
+            if (response.Success && response.Data != null)
+            {
+                var employee = response.Data.Data;
+                var employeeData = new
+                {
+                    id = employee.Id,
+                    name = employee.Name,
+                    position = employee.PositionName ?? employee.Position ?? "N/A",
+                    department = employee.DepartmentName ?? employee.Department ?? "N/A",
+                    positionId = employee.PositionId,
+                    departmentId = employee.DepartmentId,
+                    address =employee.Address,
+                    phone = employee.Phone ?? "N/A",
+                    email = employee.Email ?? "N/A",
+                    hireDate = employee.HireDate?.ToString("yyyy-MM-dd"),
+                    salary = employee.Salary,
+                    status = employee.Status,//TranslateEmployeeStatus( ?? "Active"),
+                    skills = employee.Skills
+                };
+                
+                return Json(new ApiResponse { Data = employeeData, Success=true, StatusCode=System.Net.HttpStatusCode.OK } );
+            }
+            
+            return Json(new { success = false, error = "Employee not found" });
         }
 
         /// <summary>
@@ -90,17 +143,35 @@ namespace GarageManagementSystem.Web.Controllers
         [Route("CreateEmployee")]
         public async Task<IActionResult> CreateEmployee([FromBody] CreateEmployeeDto employeeDto)
         {
-            if (!ModelState.IsValid)
+            try
             {
-                return BadRequest(new { success = false, errorMessage = "Dữ liệu không hợp lệ" });
+                // Log input data for debugging
+                Console.WriteLine($"DEBUG: CreateEmployee input: {System.Text.Json.JsonSerializer.Serialize(employeeDto)}");
+
+                if (!ModelState.IsValid)
+                {
+                    var errors = ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage)).ToList();
+                    Console.WriteLine($"DEBUG: ModelState errors: {string.Join(", ", errors)}");
+                    return BadRequest(new { success = false, errorMessage = "Dữ liệu không hợp lệ", errors = errors });
+                }
+
+                var response = await _apiService.PostAsync<EmployeeDto>(
+                    ApiEndpoints.Employees.Create,
+                    employeeDto
+                );
+
+                if (!response.Success)
+                {
+                    Console.WriteLine($"DEBUG: API Response Error: {response.ErrorMessage}");
+                }
+
+                return Json(response);
             }
-
-            var response = await _apiService.PostAsync<EmployeeDto>(
-                ApiEndpoints.Employees.Create,
-                employeeDto
-            );
-
-            return Json(response);
+            catch (Exception ex)
+            {
+                Console.WriteLine($"DEBUG: Exception in CreateEmployee: {ex.Message}");
+                return BadRequest(new { success = false, errorMessage = ex.Message });
+            }
         }
 
         /// <summary>
@@ -146,11 +217,11 @@ namespace GarageManagementSystem.Web.Controllers
         [HttpGet("GetActiveEmployees")]
         public async Task<IActionResult> GetActiveEmployees()
         {
-            var response = await _apiService.GetAsync<List<EmployeeDto>>(ApiEndpoints.Employees.GetActive);
+            var response = await _apiService.GetAsync<ApiResponse<List<EmployeeDto>>>(ApiEndpoints.Employees.GetActive);
             
-            if (response.Success && response.Data != null)
+            if (response.Success && response.Data != null && response.Data.Data != null)
             {
-                var employeeList = response.Data.Select(e => new
+                var employeeList = response.Data.Data.Select(e => new
                 {
                     id = e.Id,
                     text = e.Name + " - " + (e.Position ?? "")
@@ -168,11 +239,11 @@ namespace GarageManagementSystem.Web.Controllers
         [HttpGet("GetAvailableDepartments")]
         public async Task<IActionResult> GetAvailableDepartments()
         {
-            var response = await _apiService.GetAsync<List<DepartmentDto>>(ApiEndpoints.Departments.GetAll);
+            var response = await _apiService.GetAsync<ApiResponse<List<DepartmentDto>>>(ApiEndpoints.Departments.GetAll);
             
-            if (response.Success && response.Data != null)
+            if (response.Success && response.Data != null && response.Data.Data != null)
             {
-                var departments = response.Data.Select(d => new
+                var departments = response.Data.Data.Select(d => new
                 {
                     value = d.Id.ToString(),
                     text = d.Name
@@ -201,11 +272,11 @@ namespace GarageManagementSystem.Web.Controllers
         [HttpGet("GetAvailablePositions")]
         public async Task<IActionResult> GetAvailablePositions()
         {
-            var response = await _apiService.GetAsync<List<PositionDto>>(ApiEndpoints.Positions.GetAll);
+            var response = await _apiService.GetAsync<ApiResponse<List<PositionDto>>>(ApiEndpoints.Positions.GetAll);
             
-            if (response.Success && response.Data != null)
+            if (response.Success && response.Data != null && response.Data.Data != null)
             {
-                var positions = response.Data.Select(p => new
+                var positions = response.Data.Data.Select(p => new
                 {
                     value = p.Id.ToString(),
                     text = p.Name

@@ -50,8 +50,8 @@
                         </div>
                         <div class="col-md-4">
                             <div class="form-group">
-                                <label for="editTaxRate">Thuế VAT (%)</label>
-                                <input type="number" class="form-control form-control-sm" id="editTaxRate" name="TaxRate" min="0" max="100" step="0.1">
+                                <label for="editDiscountAmount">Giảm Giá (VNĐ)</label>
+                                <input type="number" class="form-control form-control-sm" id="editDiscountAmount" name="DiscountAmount" min="0" step="1000">
                             </div>
                         </div>
                         <div class="col-md-4">
@@ -115,11 +115,12 @@
                                             <table class="table table-bordered table-sm">
                                                 <thead class="thead-light">
                                                     <tr>
-                                                        <th width="25%">Tên Phụ Tùng</th>
-                                                        <th width="10%">Số Lượng</th>
-                                                        <th width="15%">Đơn Giá (VNĐ)</th>
-                                                        <th width="15%">Thành Tiền (VNĐ)</th>
-                                                        <th width="10%">Có Hóa Đơn</th>
+                                                        <th width="20%">Tên Phụ Tùng</th>
+                                                        <th width="8%">Số Lượng</th>
+                                                        <th width="12%">Đơn Giá (VNĐ)</th>
+                                                        <th width="8%">VAT (%)</th>
+                                                        <th width="12%">Thành Tiền (VNĐ)</th>
+                                                        <th width="8%">Có Hóa Đơn</th>
                                                         <th width="10%">Thao Tác</th>
                                                     </tr>
                                                 </thead>
@@ -147,11 +148,12 @@
                                             <table class="table table-bordered table-sm">
                                                 <thead class="thead-light">
                                                     <tr>
-                                                        <th width="25%">Tên Dịch Vụ</th>
-                                                        <th width="10%">Số Lượng</th>
-                                                        <th width="15%">Đơn Giá (VNĐ)</th>
-                                                        <th width="15%">Thành Tiền (VNĐ)</th>
-                                                        <th width="10%">Có Hóa Đơn</th>
+                                                        <th width="20%">Tên Dịch Vụ</th>
+                                                        <th width="8%">Số Lượng</th>
+                                                        <th width="12%">Đơn Giá (VNĐ)</th>
+                                                        <th width="8%">VAT (%)</th>
+                                                        <th width="12%">Thành Tiền (VNĐ)</th>
+                                                        <th width="8%">Có Hóa Đơn</th>
                                                         <th width="10%">Thao Tác</th>
                                                     </tr>
                                                 </thead>
@@ -179,11 +181,12 @@
                                             <table class="table table-bordered table-sm">
                                                 <thead class="thead-light">
                                                     <tr>
-                                                        <th width="25%">Tên Dịch Vụ</th>
-                                                        <th width="10%">Số Lượng</th>
-                                                        <th width="15%">Đơn Giá (VNĐ)</th>
-                                                        <th width="15%">Thành Tiền (VNĐ)</th>
-                                                        <th width="10%">Có Hóa Đơn</th>
+                                                        <th width="20%">Tên Dịch Vụ</th>
+                                                        <th width="8%">Số Lượng</th>
+                                                        <th width="12%">Đơn Giá (VNĐ)</th>
+                                                        <th width="8%">VAT (%)</th>
+                                                        <th width="12%">Thành Tiền (VNĐ)</th>
+                                                        <th width="8%">Có Hóa Đơn</th>
                                                         <th width="10%">Thao Tác</th>
                                                     </tr>
                                                 </thead>
@@ -216,4 +219,43 @@
         </div>
     </div>
 </div>
+
+<style>
+/* ✅ THÊM: Format hiển thị số tiền trong input */
+.total-input {
+    text-align: right;
+    font-weight: bold;
+    color: #28a745;
+}
+
+/* ✅ THÊM: Format hiển thị số tiền khi focus out */
+.total-input:not(:focus) {
+    background-color: #f8f9fa;
+}
+
+/* ✅ THÊM: Format hiển thị số tiền với comma separator */
+.total-input::after {
+    content: " VNĐ";
+    color: #6c757d;
+    font-weight: normal;
+}
+</style>
+
+<script>
+$(document).ready(function() {
+    // ✅ THÊM: Format số tiền khi input mất focus
+    $(document).on('blur', '.total-input', function() {
+        var value = parseFloat($(this).val()) || 0;
+        if (value > 0) {
+            $(this).val(value.toLocaleString('vi-VN'));
+        }
+    });
+    
+    // ✅ THÊM: Clear format khi input được focus
+    $(document).on('focus', '.total-input', function() {
+        var value = $(this).val().replace(/[^\d]/g, '');
+        $(this).val(value);
+    });
+});
+</script>
 

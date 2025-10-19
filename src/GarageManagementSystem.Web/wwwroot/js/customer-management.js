@@ -57,10 +57,9 @@ window.CustomerManagement = {
             }
         ];
         
-        this.customerTable = DataTablesUtility.initAjaxTable('#customerTable', '/CustomerManagement/GetCustomers', columns, {
+        this.customerTable = DataTablesUtility.initServerSideTable('#customerTable', '/api/customers', columns, {
             order: [[0, 'desc']],
-            pageLength: 25,
-            dom: 'rtip'  // Chỉ hiển thị table, paging, info, processing (không có search box và length menu)
+            pageLength: 10
         });
     },
 
@@ -68,10 +67,6 @@ window.CustomerManagement = {
     bindEvents: function() {
         var self = this;
 
-        // Search functionality
-        $('#searchInput').on('keyup', function() {
-            self.customerTable.search(this.value).draw();
-        });
 
         // Add customer button
         $(document).on('click', '#addCustomerBtn', function() {
@@ -123,10 +118,8 @@ window.CustomerManagement = {
             url: '/CustomerManagement/GetCustomer/' + id,
             type: 'GET',
             success: function(response) {
-                console.log('🔍 View Customer API Response:', response);
                 if (AuthHandler.validateApiResponse(response)) {
                     if (response.success) {
-                        console.log('🔍 Customer Data:', response.data);
                         self.populateViewModal(response.data);
                         $('#viewCustomerModal').modal('show');
                     } else {
@@ -152,10 +145,8 @@ window.CustomerManagement = {
             url: '/CustomerManagement/GetCustomer/' + id,
             type: 'GET',
             success: function(response) {
-                console.log('🔍 Edit Customer API Response:', response);
                 if (AuthHandler.validateApiResponse(response)) {
                     if (response.success) {
-                        console.log('🔍 Customer Data:', response.data);
                         self.populateEditModal(response.data);
                         $('#editCustomerModal').modal('show');
                     } else {

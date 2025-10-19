@@ -1,8 +1,10 @@
 using AutoMapper;
 using GarageManagementSystem.Core.Enums;
 using GarageManagementSystem.Core.Interfaces;
+using GarageManagementSystem.Core.Extensions;
 using GarageManagementSystem.Shared.DTOs;
 using GarageManagementSystem.Shared.Models;
+using GarageManagementSystem.API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -15,26 +17,62 @@ namespace GarageManagementSystem.API.Controllers
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
+        private readonly ICacheService _cacheService;
 
-        public ServiceOrdersController(IUnitOfWork unitOfWork, IMapper mapper)
+        public ServiceOrdersController(IUnitOfWork unitOfWork, IMapper mapper, ICacheService cacheService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+            _cacheService = cacheService;
         }
 
         [HttpGet]
-        public async Task<ActionResult<ApiResponse<List<ServiceOrderDto>>>> GetServiceOrders()
+        public async Task<ActionResult<PagedResponse<ServiceOrderDto>>> GetServiceOrders(
+            [FromQuery] int pageNumber = 1, 
+            [FromQuery] int pageSize = 10,
+            [FromQuery] string? searchTerm = null,
+            [FromQuery] string? status = null,
+            [FromQuery] int? customerId = null)
         {
             try
             {
-                var orders = await _unitOfWork.ServiceOrders.GetAllWithDetailsAsync();
+                var serviceOrders = await _unitOfWork.ServiceOrders.GetAllWithDetailsAsync();
+                var query = serviceOrders.AsQueryable();
+                
+                // Apply search filter if provided
+                if (!string.IsNullOrEmpty(searchTerm))
+                {
+                    query = query.Where(so => 
+                        so.OrderNumber.Contains(searchTerm));
+                }
+                
+                // Apply status filter if provided
+                if (!string.IsNullOrEmpty(status))
+                {
+                    query = query.Where(so => so.Status == status);
+                }
+                
+                // Apply customer filter if provided
+                if (customerId.HasValue)
+                {
+                    query = query.Where(so => so.CustomerId == customerId.Value);
+                }
+
+                query = query.OrderByDescending(so => so.OrderDate);
+
+                // Get total count
+                var totalCount = await query.GetTotalCountAsync();
+                
+                // Apply pagination
+                var orders = query.ApplyPagination(pageNumber, pageSize).ToList();
                 var orderDtos = orders.Select(MapToDto).ToList();
                 
-                return Ok(ApiResponse<List<ServiceOrderDto>>.SuccessResult(orderDtos));
+                return Ok(PagedResponse<ServiceOrderDto>.CreateSuccessResult(
+                    orderDtos, pageNumber, pageSize, totalCount, "Service orders retrieved successfully"));
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ApiResponse<List<ServiceOrderDto>>.ErrorResult("Lỗi khi lấy danh sách phiếu sửa chữa", ex.Message));
+                return StatusCode(500, PagedResponse<ServiceOrderDto>.CreateErrorResult("Lỗi khi lấy danh sách phiếu sửa chữa"));
             }
         }
 

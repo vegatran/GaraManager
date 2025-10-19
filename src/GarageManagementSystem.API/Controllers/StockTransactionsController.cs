@@ -1,9 +1,11 @@
 using GarageManagementSystem.Core.Interfaces;
 using GarageManagementSystem.Core.Enums;
+using GarageManagementSystem.Core.Extensions;
 using GarageManagementSystem.Core.Services;
 using GarageManagementSystem.Core.DTOs;
 using GarageManagementSystem.Shared.DTOs;
 using GarageManagementSystem.Shared.Models;
+using GarageManagementSystem.API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -16,25 +18,64 @@ namespace GarageManagementSystem.API.Controllers
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IExcelImportService _excelImportService;
+        private readonly GarageManagementSystem.API.Services.ICacheService _cacheService;
 
-        public StockTransactionsController(IUnitOfWork unitOfWork, IExcelImportService excelImportService)
+        public StockTransactionsController(IUnitOfWork unitOfWork, IExcelImportService excelImportService, GarageManagementSystem.API.Services.ICacheService cacheService)
         {
             _unitOfWork = unitOfWork;
             _excelImportService = excelImportService;
+            _cacheService = cacheService;
         }
 
         [HttpGet]
-        public async Task<ActionResult<ApiResponse<List<StockTransactionDto>>>> GetStockTransactions()
+        public async Task<ActionResult<PagedResponse<StockTransactionDto>>> GetStockTransactions(
+            [FromQuery] int pageNumber = 1, 
+            [FromQuery] int pageSize = 10,
+            [FromQuery] string? searchTerm = null,
+            [FromQuery] string? transactionType = null,
+            [FromQuery] int? partId = null)
         {
             try
             {
                 // ✅ SỬA: Sử dụng GetByDateRangeAsync để include Part information
-                var transactions = await _unitOfWork.StockTransactions.GetByDateRangeAsync(DateTime.MinValue, DateTime.MaxValue);
-                return Ok(ApiResponse<List<StockTransactionDto>>.SuccessResult(transactions.Select(MapToDto).ToList()));
+                var allTransactions = await _unitOfWork.StockTransactions.GetByDateRangeAsync(DateTime.MinValue, DateTime.MaxValue);
+                var query = allTransactions.AsQueryable();
+                
+                // Apply search filter if provided
+                if (!string.IsNullOrEmpty(searchTerm))
+                {
+                    query = query.Where(t => 
+                        t.ReferenceNumber.Contains(searchTerm) || 
+                        t.Notes.Contains(searchTerm));
+                }
+                
+                // Apply transaction type filter if provided
+                if (!string.IsNullOrEmpty(transactionType))
+                {
+                    query = query.Where(t => t.TransactionType.ToString() == transactionType);
+                }
+                
+                // Apply part filter if provided
+                if (partId.HasValue)
+                {
+                    query = query.Where(t => t.PartId == partId.Value);
+                }
+
+                query = query.OrderByDescending(t => t.TransactionDate);
+
+                // Get total count
+                var totalCount = query.Count();
+                
+                // Apply pagination
+                var transactions = query.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToList();
+                var transactionDtos = transactions.Select(MapToDto).ToList();
+                
+                return Ok(PagedResponse<StockTransactionDto>.CreateSuccessResult(
+                    transactionDtos, pageNumber, pageSize, totalCount, "Stock transactions retrieved successfully"));
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ApiResponse<List<StockTransactionDto>>.ErrorResult("Lỗi khi lấy danh sách giao dịch kho", ex.Message));
+                return StatusCode(500, PagedResponse<StockTransactionDto>.CreateErrorResult("Lỗi khi lấy danh sách giao dịch kho"));
             }
         }
 

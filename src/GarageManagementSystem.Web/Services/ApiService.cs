@@ -71,20 +71,33 @@ namespace GarageManagementSystem.Web.Services
                 
                 if (response.IsSuccessStatusCode)
                 {
-                    // API trả về ApiResponse<T>, cần deserialize đúng cách với camelCase support
+                    // API trả về T trực tiếp (có thể là ApiResponse<T> hoặc PagedResponse<T>)
                     var options = new JsonSerializerOptions
                     {
                         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
                         PropertyNameCaseInsensitive = true
                     };
                     
+                    // Thử deserialize thành T trực tiếp trước
+                    var directResponse = JsonSerializer.Deserialize<T>(content, options);
+                    if (directResponse != null)
+                    {
+                        return new ApiResponse<T>
+                        {
+                            Success = true,
+                            Data = directResponse,
+                            StatusCode = response.StatusCode
+                        };
+                    }
+                    
+                    // Fallback: thử deserialize thành ApiResponse<T>
                     var apiResponse = JsonSerializer.Deserialize<Shared.Models.ApiResponse<T>>(content, options);
                     if (apiResponse != null)
                     {
                         return new ApiResponse<T>
                         {
                             Success = apiResponse.Success,
-                            Data = apiResponse.Data,  // apiResponse.Data chính là T (ví dụ: List<CustomerDto>)
+                            Data = apiResponse.Data,
                             Message = apiResponse.Message,
                             StatusCode = response.StatusCode
                         };
@@ -402,6 +415,102 @@ namespace GarageManagementSystem.Web.Services
                         ErrorMessage = "Không thể parse response từ API",
                         StatusCode = response.StatusCode
                     };
+                }
+                else
+                {
+                    return new ApiResponse<T>
+                    {
+                        Success = false,
+                        ErrorMessage = $"API Error: {response.StatusCode} - {responseContent}",
+                        StatusCode = response.StatusCode
+                    };
+                }
+            }
+            catch (Exception ex)
+            {
+                return new ApiResponse<T>
+                {
+                    Success = false,
+                    ErrorMessage = ex.Message,
+                    StatusCode = System.Net.HttpStatusCode.InternalServerError
+                };
+            }
+        }
+
+        /// <summary>
+        /// Post form data with file upload
+        /// </summary>
+        public async Task<ApiResponse<T>> PostFormAsync<T>(string endpoint, object data, IFormFile file)
+        {
+            try
+            {
+                using var httpClient = _httpClient;
+                using var formData = new MultipartFormDataContent();
+
+                // Add file
+                if (file != null)
+                {
+                    var fileContent = new StreamContent(file.OpenReadStream());
+                    fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType);
+                    formData.Add(fileContent, "file", file.FileName);
+                }
+
+                // Add other form data
+                foreach (var prop in data.GetType().GetProperties())
+                {
+                    var value = prop.GetValue(data);
+                    if (value != null)
+                    {
+                        formData.Add(new StringContent(value.ToString()), prop.Name);
+                    }
+                }
+
+                var response = await httpClient.PostAsync($"{ApiConfiguration.BaseUrl}{endpoint}", formData);
+                var responseContent = await response.Content.ReadAsStringAsync();
+
+                if (response.IsSuccessStatusCode)
+                {
+                    try
+                    {
+                        var result = JsonSerializer.Deserialize<T>(responseContent, new JsonSerializerOptions
+                        {
+                            PropertyNameCaseInsensitive = true,
+                            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+                        });
+                        return new ApiResponse<T>
+                        {
+                            Success = true,
+                            Data = result,
+                            StatusCode = response.StatusCode
+                        };
+                    }
+                    catch (JsonException)
+                    {
+                        // Try to deserialize as ApiResponse<T>
+                        try
+                        {
+                            var apiResponse = JsonSerializer.Deserialize<ApiResponse<T>>(responseContent, new JsonSerializerOptions
+                            {
+                                PropertyNameCaseInsensitive = true,
+                                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+                            });
+                            return apiResponse ?? new ApiResponse<T>
+                            {
+                                Success = false,
+                                ErrorMessage = "Invalid response format",
+                                StatusCode = response.StatusCode
+                            };
+                        }
+                        catch (JsonException)
+                        {
+                            return new ApiResponse<T>
+                            {
+                                Success = false,
+                                ErrorMessage = "Invalid response format",
+                                StatusCode = response.StatusCode
+                            };
+                        }
+                    }
                 }
                 else
                 {

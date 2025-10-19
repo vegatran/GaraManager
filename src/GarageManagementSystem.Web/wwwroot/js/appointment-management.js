@@ -88,10 +88,9 @@ window.AppointmentManagement = {
             }
         ];
         
-        this.appointmentTable = DataTablesUtility.initAjaxTable('#appointmentTable', '/AppointmentManagement/GetAppointments', columns, {
+        this.appointmentTable = DataTablesUtility.initServerSideTable('#appointmentTable', '/api/appointments', columns, {
             order: [[0, 'desc']],
-            pageLength: 25,
-            dom: 'rtip'  // Chỉ hiển thị table, paging, info, processing (không có search box và length menu)
+            pageLength: 10
         });
     },
 
@@ -117,11 +116,9 @@ window.AppointmentManagement = {
                     });
                     $('#createCustomerId, #editCustomerId').html(options);
                 } else {
-                    console.error('Invalid customer data format:', response);
                 }
             },
             error: function(xhr, status, error) {
-                console.error('Error loading customers:', error);
             }
         });
     },
@@ -140,11 +137,9 @@ window.AppointmentManagement = {
                     });
                     $('#createAssignedEmployeeId, #editAssignedEmployeeId').html(options);
                 } else {
-                    console.error('Invalid employee data format:', response);
                 }
             },
             error: function(xhr, status, error) {
-                console.error('Error loading employees:', error);
             }
         });
     },
@@ -163,11 +158,9 @@ window.AppointmentManagement = {
                     });
                     $('#createServiceType, #editServiceType').html(options);
                 } else {
-                    console.error('Invalid appointment types data format:', response);
                 }
             },
             error: function(xhr, status, error) {
-                console.error('Error loading appointment types:', error);
             }
         });
     },
@@ -192,12 +185,10 @@ window.AppointmentManagement = {
                         self.setupVehicleChangeHandler(targetSelect);
                     }
                 } else {
-                    console.error('Invalid vehicle data format:', response);
                     $(targetSelect).html('<option value="">-- Chọn Xe --</option>');
                 }
             },
             error: function(xhr, status, error) {
-                console.error('Error loading available vehicles:', error);
                 $(targetSelect).html('<option value="">-- Chọn Xe --</option>');
             }
         });
@@ -249,12 +240,10 @@ window.AppointmentManagement = {
                     });
                     $(targetSelect).html(options);
                 } else {
-                    console.error('Invalid vehicle data format:', response);
                     $(targetSelect).html('<option value="">-- Chọn Xe --</option>');
                 }
             },
             error: function(xhr, status, error) {
-                console.error('Error loading vehicles:', error);
                 $(targetSelect).html('<option value="">-- Chọn Xe --</option>');
             }
         });

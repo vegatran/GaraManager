@@ -40,6 +40,13 @@ namespace GarageManagementSystem.Shared.DTOs
         public string? CompanyApprovedBy { get; set; }
         public string? CompanyApprovalNotes { get; set; }
         public string? CompanyContactPerson { get; set; }
+        
+        // Insurance pricing - Giá bảo hiểm duyệt
+        public decimal? InsuranceApprovedSubTotal { get; set; }
+        public decimal? InsuranceApprovedTaxAmount { get; set; }
+        public decimal? InsuranceApprovedDiscountAmount { get; set; }
+        public decimal? InsuranceApprovedTotalAmount { get; set; }
+        
         public string Status { get; set; } = string.Empty;
         public DateTime? SentDate { get; set; }
         public DateTime? ApprovedDate { get; set; }
@@ -54,6 +61,7 @@ namespace GarageManagementSystem.Shared.DTOs
         public VehicleDto? Vehicle { get; set; }
         public EmployeeDto? PreparedBy { get; set; }
         public List<QuotationItemDto> Items { get; set; } = new();
+        public List<QuotationAttachmentDto> Attachments { get; set; } = new();
     }
 
     public class CreateServiceQuotationDto
@@ -138,6 +146,14 @@ namespace GarageManagementSystem.Shared.DTOs
         public bool HasInvoice { get; set; }
         public bool IsVATApplicable { get; set; }
         public decimal? VATRate { get; set; } // ✅ THÊM VATRate
+        
+        // Insurance approved pricing - Giá bảo hiểm duyệt
+        public decimal? InsuranceApprovedUnitPrice { get; set; }
+        public decimal? InsuranceApprovedSubTotal { get; set; }
+        public decimal? InsuranceApprovedVATAmount { get; set; }
+        public decimal? InsuranceApprovedTotalAmount { get; set; }
+        public string? InsuranceApprovalNotes { get; set; }
+        
         public string? Notes { get; set; }
         public string? ServiceType { get; set; } // parts, repair, paint
         public string? ItemCategory { get; set; } = "Material"; // Material, Service, Labor
@@ -177,6 +193,37 @@ namespace GarageManagementSystem.Shared.DTOs
         
         [StringLength(50)]
         public string? ItemCategory { get; set; } = "Material"; // Material, Service, Labor
+
+        public bool IsVATApplicable { get; set; } = false; // ✅ THÊM: VAT áp dụng
+        
+        [Range(0, 100)]
+        public decimal VATRate { get; set; } = 10; // ✅ THÊM: VAT rate
+    }
+
+    public class QuotationAttachmentDto
+    {
+        public int Id { get; set; }
+        public int ServiceQuotationId { get; set; }
+        public string FileName { get; set; } = string.Empty;
+        public string FilePath { get; set; } = string.Empty;
+        public string? FileType { get; set; }
+        public long FileSize { get; set; }
+        public string AttachmentType { get; set; } = "General";
+        public string? Description { get; set; }
+        public string? Notes { get; set; }
+        public bool IsInsuranceDocument { get; set; } = false;
+        public DateTime UploadedDate { get; set; }
+        public int? UploadedById { get; set; }
+        public EmployeeDto? UploadedBy { get; set; }
+    }
+
+    public class CreateQuotationAttachmentDto
+    {
+        public int ServiceQuotationId { get; set; }
+        public string AttachmentType { get; set; } = "General";
+        public string? Description { get; set; }
+        public string? Notes { get; set; }
+        public bool IsInsuranceDocument { get; set; } = false;
     }
 }
 

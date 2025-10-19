@@ -87,28 +87,38 @@ namespace GarageManagementSystem.Web.Controllers
 
                 if (purchaseOrder != null)
                 {
-                    var purchaseOrderDetails = new
-                    {
-                        referenceNumber = purchaseOrder.OrderNumber,
-                        transactionDate = purchaseOrder.OrderDate,
-                        supplierId = purchaseOrder.SupplierId,
-                        supplierName = purchaseOrder.SupplierName ?? "Chưa có nhà cung cấp",
-                        totalAmount = purchaseOrder.TotalAmount,
-                        itemCount = purchaseOrder.ItemCount,
-                        items = purchaseOrder.Items.Select(item => new
-                        {
-                            id = item.Id,
-                            partName = item.PartName ?? "N/A",
-                            partNumber = item.SupplierPartNumber ?? "N/A",
-                            quantity = item.QuantityOrdered,
-                            unitPrice = item.UnitPrice,
-                            totalAmount = item.TotalPrice,
-                            hasInvoice = true,
-                            notes = item.Notes
-                        }).ToList()
-                    };
+                    // Get detailed information including items by ID
+                    var detailResponse = await _apiService.GetAsync<PurchaseOrderDto>(
+                        ApiEndpoints.Builder.WithId(ApiEndpoints.PurchaseOrders.GetById, purchaseOrder.Id)
+                    );
 
-                    return Json(new { success = true, data = purchaseOrderDetails });
+                    if (detailResponse.Success && detailResponse.Data != null)
+                    {
+                        var detailedOrder = detailResponse.Data;
+                        
+                        var purchaseOrderDetails = new
+                        {
+                            referenceNumber = detailedOrder.OrderNumber,
+                            transactionDate = detailedOrder.OrderDate,
+                            supplierId = detailedOrder.SupplierId,
+                            supplierName = detailedOrder.SupplierName ?? "Chưa có nhà cung cấp",
+                            totalAmount = detailedOrder.TotalAmount,
+                            itemCount = detailedOrder.ItemCount,
+                            items = detailedOrder.Items?.Select(item => (object)new
+                            {
+                                id = item.Id,
+                                partName = item.PartName ?? "N/A",
+                                partNumber = item.SupplierPartNumber ?? "N/A",
+                                quantity = item.QuantityOrdered,
+                                unitPrice = item.UnitPrice,
+                                totalAmount = item.TotalPrice,
+                                hasInvoice = true,
+                                notes = item.Notes
+                            }).ToList() ?? new List<object>()
+                        };
+
+                        return Json(new { success = true, data = purchaseOrderDetails });
+                    }
                 }
             }
 

@@ -9,7 +9,30 @@
                 </button>
             </div>
             <div class="modal-body">
-                <!-- Thông tin cơ bản -->
+                <!-- Tab Navigation -->
+                <ul class="nav nav-tabs" id="viewQuotationTabs" role="tablist">
+                    <li class="nav-item">
+                        <a class="nav-link active" id="basic-info-tab" data-toggle="tab" href="#basic-info" role="tab">
+                            <i class="fas fa-info-circle mr-1"></i>Thông Tin Cơ Bản
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="service-items-tab" data-toggle="tab" href="#service-items" role="tab">
+                            <i class="fas fa-list mr-1"></i>Chi Tiết Dịch Vụ
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="attachments-tab" data-toggle="tab" href="#attachments" role="tab">
+                            <i class="fas fa-paperclip mr-1"></i>File Đính Kèm
+                        </a>
+                    </li>
+                </ul>
+
+                <!-- Tab Content -->
+                <div class="tab-content" id="viewQuotationTabContent">
+                    <!-- Basic Info Tab -->
+                    <div class="tab-pane fade show active" id="basic-info" role="tabpanel">
+                        <!-- Thông tin cơ bản -->
                 <div class="mb-4 p-3 border rounded bg-light">
                     <h6 class="text-primary font-weight-bold mb-3">
                         <i class="fas fa-info-circle mr-2"></i>Thông Tin Cơ Bản
@@ -123,11 +146,94 @@
                         </table>
                     </div>
                 </div>
+                    </div>
+
+                    <!-- Service Items Tab -->
+                    <div class="tab-pane fade" id="service-items" role="tabpanel">
+                        <!-- Chi tiết dịch vụ sẽ được thêm ở đây -->
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle mr-2"></i>
+                            Chi tiết dịch vụ sẽ được hiển thị ở đây
+                        </div>
+                    </div>
+
+                    <!-- Attachments Tab -->
+                    <div class="tab-pane fade" id="attachments" role="tabpanel">
+                        <div class="mb-3">
+                            <button type="button" class="btn btn-primary btn-sm" id="uploadAttachmentBtn">
+                                <i class="fas fa-upload mr-1"></i>Upload File
+                            </button>
+                        </div>
+                        
+                        <!-- File đính kèm -->
+                        <div id="attachmentsList">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle mr-2"></i>
+                                Chưa có file đính kèm nào
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Đóng</button>
                 <button type="button" class="btn btn-primary btn-sm print-quotation" data-id="" title="In Báo Giá">
                     <i class="fas fa-print"></i> In Báo Giá
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Upload Attachment Modal -->
+<div class="modal fade" id="uploadAttachmentModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Upload File Đính Kèm</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="uploadAttachmentForm" enctype="multipart/form-data">
+                    <input type="hidden" id="uploadQuotationId" name="quotationId" />
+                    
+                    <div class="form-group">
+                        <label for="attachmentFile">Chọn File:</label>
+                        <input type="file" class="form-control-file" id="attachmentFile" name="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.xlsx,.xls" required>
+                        <small class="form-text text-muted">Hỗ trợ: PDF, DOC, DOCX, JPG, PNG, XLSX (Tối đa 10MB)</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="attachmentType">Loại File:</label>
+                        <select class="form-control" id="attachmentType" name="attachmentType">
+                            <option value="General">Tổng Quát</option>
+                            <option value="InsuranceApproval">Duyệt Bảo Hiểm</option>
+                            <option value="CustomerDocument">Tài Liệu Khách Hàng</option>
+                            <option value="TechnicalReport">Báo Cáo Kỹ Thuật</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="attachmentDescription">Mô Tả:</label>
+                        <textarea class="form-control" id="attachmentDescription" name="description" rows="3" placeholder="Mô tả về file..."></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="isInsuranceDocument" name="isInsuranceDocument">
+                            <label class="form-check-label" for="isInsuranceDocument">
+                                Đây là tài liệu bảo hiểm
+                            </label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-primary" id="saveAttachmentBtn">
+                    <i class="fas fa-upload mr-1"></i>Upload
                 </button>
             </div>
         </div>

@@ -18,7 +18,6 @@ window.PaymentManagement = {
                     if (AuthHandler.isUnauthorized(xhr)) {
                         AuthHandler.handleUnauthorized(xhr, true);
                     } else {
-                        console.error('Error loading payments:', error);
                         GarageApp.showError('Lỗi khi tải danh sách thanh toán');
                     }
                 }
@@ -110,7 +109,6 @@ window.PaymentManagement = {
                 }
             },
             error: function(xhr) {
-                console.error('Error loading service orders:', xhr);
             }
         });
     },

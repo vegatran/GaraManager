@@ -20,7 +20,7 @@ window.QuotationManagement = {
     initDataTable: function() {
         var self = this;
         
-        // Sử dụng DataTablesUtility với style chung
+        // Sử dụng DataTablesUtility với server-side pagination
         var columns = [
             { data: 'id', title: 'ID', width: '5%' },
             { data: 'quotationNumber', title: 'Số Báo Giá', width: '12%' },
@@ -30,7 +30,7 @@ window.QuotationManagement = {
                 data: 'totalAmount', 
                 title: 'Tổng Tiền', 
                 width: '12%',
-                render: DataTablesUtility.renderCurrency
+                render: DataTablesUtility.renderCurrency,
             },
             { 
                 data: 'status', 
@@ -52,7 +52,7 @@ window.QuotationManagement = {
                 data: 'validUntil', 
                 title: 'Có Hiệu Lực Đến', 
                 width: '12%',
-                render: DataTablesUtility.renderDate
+                render: DataTablesUtility.renderDate,
             },
             {
                 data: null,
@@ -109,23 +109,17 @@ window.QuotationManagement = {
             }
         ];
         
-        this.quotationTable = DataTablesUtility.initAjaxTable('#quotationTable', '/QuotationManagement/GetQuotations', columns, {
+        this.quotationTable = DataTablesUtility.initServerSideTable('#quotationTable', '/QuotationManagement/GetQuotations', columns, {
             order: [[0, 'desc']],
-            pageLength: 25,
-            dom: 'rtip'  // Chỉ hiển thị table, paging, info, processing (không có search box)
+            pageLength: 10,
         });
     },
 
     bindEvents: function() {
         var self = this;
 
-        // Search functionality
-        $('#searchInput').on('keyup', function() {
-            self.quotationTable.search(this.value).draw();
-        });
-
         // Add quotation button
-        $(document).on('click', '[data-target="#createQuotationModal"]', function() {
+        $(document).on('click', '#addQuotationBtn', function() {
             self.showCreateModal();
         });
 
@@ -133,6 +127,29 @@ window.QuotationManagement = {
         $(document).on('click', '.view-quotation', function() {
             var id = $(this).data('id');
             self.viewQuotation(id);
+        });
+
+        // ✅ THÊM: Attachment Management Events
+        // Upload Attachment button
+        $(document).on('click', '#uploadAttachmentBtn', function() {
+            $('#uploadAttachmentModal').modal('show');
+        });
+
+        // Save Attachment button
+        $(document).on('click', '#saveAttachmentBtn', function() {
+            self.uploadAttachment();
+        });
+
+        // Download Attachment button
+        $(document).on('click', '.download-attachment', function() {
+            var attachmentId = $(this).data('id');
+            self.downloadAttachment(attachmentId);
+        });
+
+        // Delete Attachment button
+        $(document).on('click', '.delete-attachment', function() {
+            var attachmentId = $(this).data('id');
+            self.deleteAttachment(attachmentId);
         });
 
         // Print quotation
@@ -247,7 +264,6 @@ window.QuotationManagement = {
             var tabId = targetTab.replace('#', ''); // edit-parts, edit-repair, edit-paint
             
             currentActiveTab = tabId; // ✅ LƯU tab active hiện tại
-            console.log('🎯 Tab activated:', tabId, '(stored as currentActiveTab)');
         });
         
         // ✅ THÊM: Event handler cho checkbox - sử dụng currentActiveTab
@@ -257,17 +273,13 @@ window.QuotationManagement = {
             var row = $(this).closest('.service-item-row');
             var isChecked = $(this).is(':checked');
             
-            console.log('✅ Checkbox changed in CURRENT ACTIVE tab:', currentActiveTab, 'checked:', isChecked);
             
             // ✅ XỬ LÝ THEO TAB ACTIVE HIỆN TẠI
             if (currentActiveTab === 'edit-parts') {
-                console.log('Processing Parts tab checkbox change');
                 // Logic xử lý cho Parts tab
             } else if (currentActiveTab === 'edit-repair') {
-                console.log('Processing Repair tab checkbox change');
                 // Logic xử lý cho Repair tab
             } else if (currentActiveTab === 'edit-paint') {
-                console.log('Processing Paint tab checkbox change');
                 // Logic xử lý cho Paint tab
             }
             
@@ -286,19 +298,12 @@ window.QuotationManagement = {
             
             var total = self.calculateTotalWithVAT(price, quantity, isChecked, vatRate);
             row.find('.total-input').val(total.toLocaleString() + ' VNĐ');
-            console.log('✅ Recalculated total after checkbox change:', price, 'x', quantity, '=', total, '(VAT:', isChecked, ')');
             
             // ✅ FORCE UPDATE: Đảm bảo checkbox UI hiển thị đúng state
             var checkbox = $(this);
-            console.log('🔧 Before force update - checkbox checked:', checkbox.is(':checked'));
             checkbox.prop('checked', isChecked);
-            console.log('🔧 After force update - checkbox checked:', checkbox.is(':checked'));
             
             // ✅ DEBUG: Xem có attribute nào can thiệp không
-            console.log('🔧 Checkbox attributes:');
-            console.log('  - disabled:', checkbox.prop('disabled'));
-            console.log('  - readonly:', checkbox.prop('readonly'));
-            console.log('  - class:', checkbox.attr('class'));
             
             // Có thể thêm logic xử lý khi checkbox thay đổi ở đây
             // Ví dụ: update VAT calculation, etc.
@@ -334,11 +339,10 @@ window.QuotationManagement = {
                 
                 $select.select2({
                     placeholder: 'Chọn kiểm tra xe',
-                    allowClear: true
+                    allowClear: true,
                 });
             },
             error: function(xhr, status, error) {
-                console.error('Error loading inspections:', error);
                 GarageApp.showError('Lỗi khi tải danh sách kiểm tra xe');
             }
         });
@@ -362,13 +366,6 @@ window.QuotationManagement = {
             $('#createCustomerId').val(customerId).trigger('change');
             
             // Hiển thị thông tin đã chọn
-            console.log('Selected Inspection:', {
-                vehicleId: vehicleId,
-                customerId: customerId,
-                vehicleInfo: vehicleInfo,
-                customerName: customerName,
-                inspectionDate: inspectionDate
-            });
         } else {
             // Reset các field khi không chọn inspection
             $('#createVehicleId').val('').trigger('change');
@@ -389,11 +386,9 @@ window.QuotationManagement = {
                     });
                     $('#createVehicleId, #editVehicleId').html(options);
                 } else {
-                    console.error('Invalid vehicle data format:', response);
                 }
             },
             error: function(xhr, status, error) {
-                console.error('Error loading vehicles:', error);
             }
         });
     },
@@ -411,11 +406,9 @@ window.QuotationManagement = {
                     });
                     $('#createCustomerId, #editCustomerId').html(options);
                 } else {
-                    console.error('Invalid customer data format:', response);
                 }
             },
             error: function(xhr, status, error) {
-                console.error('Error loading customers:', error);
             }
         });
     },
@@ -433,11 +426,9 @@ window.QuotationManagement = {
                     });
                     $('#createServiceId, #editServiceId').html(options);
                 } else {
-                    console.error('Invalid service data format:', response);
                 }
             },
             error: function(xhr, status, error) {
-                console.error('Error loading services:', error);
             }
         });
     },
@@ -555,7 +546,6 @@ window.QuotationManagement = {
                 }
             },
             error: function(xhr, status, error) {
-                console.error('Error loading services:', error);
                 GarageApp.showError('Lỗi khi tải danh sách dịch vụ');
             }
         });
@@ -588,7 +578,6 @@ window.QuotationManagement = {
                 if (price > 0 && quantity > 0) {
                     var total = self.calculateTotalWithVAT(price, quantity, isVATApplicable, vatRate);
                     row.find('.total-input').val(total.toLocaleString() + ' VNĐ');
-                    console.log('✅ Recalculated total for loaded item:', price, 'x', quantity, '=', total, '(VAT:', isVATApplicable, ')');
                 }
             });
         });
@@ -715,6 +704,11 @@ window.QuotationManagement = {
                            value="${itemData.unitPrice || 0}" placeholder="0" readonly title="Đơn giá">
                 </td>
                 <td>
+                    <input type="number" class="form-control form-control-sm vat-rate-input text-right" 
+                           value="${itemData.vatRate || itemData.VATRate || 10}" min="0" max="100" step="0.1" 
+                           placeholder="10" title="VAT (%)">
+                </td>
+                <td>
                     <input type="text" class="form-control form-control-sm total-input text-right" 
                            value="${itemData.totalPrice || 0}" placeholder="0" readonly title="Thành tiền">
                 </td>
@@ -749,6 +743,65 @@ window.QuotationManagement = {
         self.bindServiceItemEvents(prefix);
     },
 
+    // ✅ THÊM: Function tính toán thành tiền cho từng item
+    calculateItemTotal: function($row) {
+        var quantity = parseFloat($row.find('.quantity-input').val()) || 0;
+        var unitPrice = parseFloat($row.find('.unit-price-input').val()) || 0;
+        var vatRate = parseFloat($row.find('.vat-rate-input').val()) || 0;
+        var isVATApplicable = $row.find('.invoice-checkbox').is(':checked');
+
+        var itemSubtotal = quantity * unitPrice;
+        var itemTotalPrice = itemSubtotal;
+
+        if (isVATApplicable) {
+            itemTotalPrice += itemSubtotal * (vatRate / 100);
+        }
+
+        // ✅ SỬA: Lưu giá trị thô, hiển thị format
+        $row.find('.total-input').val(itemTotalPrice.toFixed(0));
+        this.formatTotalInputForDisplay($row.find('.total-input')); // ✅ THÊM: Format hiển thị ngay lập tức
+        this.calculateOverallTotals();
+    },
+
+    // ✅ THÊM: Function tính tổng cộng
+    calculateOverallTotals: function() {
+        var subtotal = 0;
+        var taxAmount = 0;
+        var discountAmount = parseFloat($('#editDiscountAmount').val()) || 0;
+
+        $('#editPartsItems tr, #editRepairItems tr, #editPaintItems tr').each(function() {
+            var $row = $(this);
+            var quantity = parseFloat($row.find('.quantity-input').val()) || 0;
+            var unitPrice = parseFloat($row.find('.unit-price-input').val()) || 0;
+            var vatRate = parseFloat($row.find('.vat-rate-input').val()) || 0;
+            var isVATApplicable = $row.find('.invoice-checkbox').is(':checked');
+
+            var itemSubtotal = quantity * unitPrice;
+            subtotal += itemSubtotal;
+
+            if (isVATApplicable) {
+                taxAmount += itemSubtotal * (vatRate / 100);
+            }
+        });
+
+        var totalAmount = subtotal + taxAmount - discountAmount;
+
+        // Update display (nếu có các element này)
+        if ($('#editSubTotal').length) $('#editSubTotal').text(subtotal.toLocaleString());
+        if ($('#editTaxAmount').length) $('#editTaxAmount').text(taxAmount.toLocaleString());
+        if ($('#editTotalAmount').length) $('#editTotalAmount').text(totalAmount.toLocaleString());
+    },
+
+    // ✅ THÊM: Function để format hiển thị số tiền trong input
+    formatTotalInputForDisplay: function($input) {
+        var value = parseFloat($input.val()) || 0;
+        if (value > 0) {
+            $input.val(value.toLocaleString('vi-VN') + ' VNĐ');
+        } else {
+            $input.val('0 VNĐ');
+        }
+    },
+
     initializeServiceTypeahead: function(input, prefix) {
         var self = this;
         
@@ -764,7 +817,7 @@ window.QuotationManagement = {
                                 return {
                                     id: service.value,
                                     name: service.text,
-                                    price: service.price || 0
+                                    price: service.price || 0,
                                 };
                             });
                             process(services);
@@ -773,7 +826,6 @@ window.QuotationManagement = {
                         }
                     },
                     error: function(xhr, status, error) {
-                        console.error('Error searching services:', error);
                         process([]);
                     }
                 });
@@ -795,7 +847,7 @@ window.QuotationManagement = {
                 // Set input value
                 input.val(item.name);
             },
-            delay: 300
+            delay: 300,
         });
     },
 
@@ -811,7 +863,6 @@ window.QuotationManagement = {
             var total = price * quantity;
             
             lastRow.find('.total-input').val(total.toLocaleString() + ' VNĐ');
-            console.log('✅ Calculated labor item total:', price, 'x', quantity, '=', total);
         }
     },
 
@@ -821,30 +872,25 @@ window.QuotationManagement = {
         // Quantity change
         $(document).off('change', '#' + prefix + 'PartsItems .quantity-input, #' + prefix + 'RepairItems .quantity-input, #' + prefix + 'PaintItems .quantity-input').on('change', '#' + prefix + 'PartsItems .quantity-input, #' + prefix + 'RepairItems .quantity-input, #' + prefix + 'PaintItems .quantity-input', function() {
             var row = $(this).closest('.service-item-row');
-            var priceText = row.find('.unit-price-input').val() || '';
-            var price = parseFloat(priceText.replace(/[^\d]/g, '')) || 0;
-            var quantity = parseFloat($(this).val()) || 1;
-            var isVATApplicable = row.find('.invoice-checkbox').is(':checked');
-            var vatRate = 10; // Default VAT rate
-            
-            // ✅ SỬA: Tính thành tiền bao gồm VAT
-            var total = self.calculateTotalWithVAT(price, quantity, isVATApplicable, vatRate);
-            row.find('.total-input').val(total.toLocaleString() + ' VNĐ');
+            self.calculateItemTotal(row);
         });
 
         // Price change (for labor items)
         $(document).off('input', '#' + prefix + 'PartsItems .unit-price-input, #' + prefix + 'RepairItems .unit-price-input, #' + prefix + 'PaintItems .unit-price-input').on('input', '#' + prefix + 'PartsItems .unit-price-input, #' + prefix + 'RepairItems .unit-price-input, #' + prefix + 'PaintItems .unit-price-input', function() {
             var row = $(this).closest('.service-item-row');
-            var priceText = $(this).val() || '';
-            var price = parseFloat(priceText.replace(/[^\d]/g, '')) || 0;
-            var quantity = parseFloat(row.find('.quantity-input').val()) || 1;
-            var isVATApplicable = row.find('.invoice-checkbox').is(':checked');
-            var vatRate = 10; // Default VAT rate
-            
-            // ✅ SỬA: Tính thành tiền bao gồm VAT
-            var total = self.calculateTotalWithVAT(price, quantity, isVATApplicable, vatRate);
-            row.find('.total-input').val(total.toLocaleString() + ' VNĐ');
-            console.log('✅ Price changed:', priceText, '→', price, 'x', quantity, '=', total, '(VAT:', isVATApplicable, ')');
+            self.calculateItemTotal(row);
+        });
+
+        // ✅ THÊM: VAT rate change
+        $(document).off('change input', '#' + prefix + 'PartsItems .vat-rate-input, #' + prefix + 'RepairItems .vat-rate-input, #' + prefix + 'PaintItems .vat-rate-input').on('change input', '#' + prefix + 'PartsItems .vat-rate-input, #' + prefix + 'RepairItems .vat-rate-input, #' + prefix + 'PaintItems .vat-rate-input', function() {
+            var row = $(this).closest('.service-item-row');
+            self.calculateItemTotal(row);
+        });
+
+        // ✅ THÊM: Invoice checkbox change
+        $(document).off('change', '#' + prefix + 'PartsItems .invoice-checkbox, #' + prefix + 'RepairItems .invoice-checkbox, #' + prefix + 'PaintItems .invoice-checkbox').on('change', '#' + prefix + 'PartsItems .invoice-checkbox, #' + prefix + 'RepairItems .invoice-checkbox, #' + prefix + 'PaintItems .invoice-checkbox', function() {
+            var row = $(this).closest('.service-item-row');
+            self.calculateItemTotal(row);
         });
         
         // Clear typeahead when input is cleared
@@ -868,6 +914,8 @@ window.QuotationManagement = {
                     if (response.success && response.data) {
                         var quotation = response.data;
                         self.populateViewModal(quotation);
+                        // ✅ THÊM: Load attachments khi mở view modal
+                        self.loadAttachments(id);
                         $('#viewQuotationModal').modal('show');
                     } else {
                         GarageApp.showError(GarageApp.parseErrorMessage(response) || 'Lỗi khi tải thông tin báo giá');
@@ -925,7 +973,6 @@ window.QuotationManagement = {
             var unitPriceText = row.find('.unit-price-input').val() || '';
             var unitPrice = parseFloat(unitPriceText.replace(/[^\d]/g, '')) || 0;
             var hasInvoice = row.find('.invoice-checkbox').is(':checked');
-            console.log('🔍 DEBUG - Collecting hasInvoice:', hasInvoice, 'from checkbox:', row.find('.invoice-checkbox')[0]);
             var itemCategory = row.find('.item-category-input').val() || 'Material';
             
             if (serviceName && serviceName.trim() !== '') {
@@ -938,7 +985,7 @@ window.QuotationManagement = {
                     HasInvoice: hasInvoice,
                     Notes: hasInvoice ? 'Có hóa đơn' : 'Không có hóa đơn',
                     ServiceType: 'parts',
-                    ItemCategory: itemCategory  // ✅ THÊM ItemCategory
+                    ItemCategory: itemCategory,  // ✅ THÊM ItemCategory
                 });
             }
         });
@@ -952,7 +999,6 @@ window.QuotationManagement = {
             var unitPriceText = row.find('.unit-price-input').val() || '';
             var unitPrice = parseFloat(unitPriceText.replace(/[^\d]/g, '')) || 0;
             var hasInvoice = row.find('.invoice-checkbox').is(':checked');
-            console.log('🔍 DEBUG - Repair tab collecting hasInvoice:', hasInvoice);
             var itemCategory = row.find('.item-category-input').val() || 'Material';
             
             if (serviceName && serviceName.trim() !== '') { // ✅ SỬA: Chỉ cần có tên dịch vụ
@@ -965,7 +1011,7 @@ window.QuotationManagement = {
                     HasInvoice: hasInvoice, // ✅ THÊM HasInvoice
                     Notes: 'Giá có thể thay đổi tùy theo mức độ hư hại',
                     ServiceType: 'repair',
-                    ItemCategory: itemCategory  // ✅ THÊM ItemCategory
+                    ItemCategory: itemCategory,  // ✅ THÊM ItemCategory
                 });
             }
         });
@@ -979,7 +1025,6 @@ window.QuotationManagement = {
             var unitPriceText = row.find('.unit-price-input').val() || '';
             var unitPrice = parseFloat(unitPriceText.replace(/[^\d]/g, '')) || 0;
             var hasInvoice = row.find('.invoice-checkbox').is(':checked');
-            console.log('🔍 DEBUG - Paint tab collecting hasInvoice:', hasInvoice);
             var itemCategory = row.find('.item-category-input').val() || 'Material';
             
             if (serviceName && serviceName.trim() !== '') { // ✅ SỬA: Chỉ cần có tên dịch vụ
@@ -992,7 +1037,7 @@ window.QuotationManagement = {
                     HasInvoice: hasInvoice, // ✅ THÊM HasInvoice
                     Notes: 'Giá có thể thay đổi tùy theo kích thước vùng bị trầy xước',
                     ServiceType: 'paint',
-                    ItemCategory: itemCategory  // ✅ THÊM ItemCategory
+                    ItemCategory: itemCategory,  // ✅ THÊM ItemCategory
                 });
             }
         });
@@ -1005,7 +1050,7 @@ window.QuotationManagement = {
             ValidUntil: $('#createValidUntil').val() || null,
             TaxRate: parseFloat($('#createTaxRate').val()) || 0,
             DiscountAmount: parseFloat($('#createDiscountAmount').val()) || 0,
-            Items: items
+            Items: items,
         };
 
         // Validate required fields
@@ -1056,8 +1101,8 @@ window.QuotationManagement = {
             var unitPriceText = row.find('.unit-price-input').val() || '';
             var unitPrice = parseFloat(unitPriceText.replace(/[^\d]/g, '')) || 0;
             var hasInvoice = row.find('.invoice-checkbox').is(':checked');
-            console.log('🔍 DEBUG - Collecting hasInvoice:', hasInvoice, 'from checkbox:', row.find('.invoice-checkbox')[0]);
             var itemCategory = row.find('.item-category-input').val() || 'Material';
+            var vatRate = parseFloat(row.find('.vat-rate-input').val()) || 10; // ✅ THÊM: Lấy VAT rate từ input
             
             if (serviceName && serviceName.trim() !== '') {
                 items.push({
@@ -1067,9 +1112,11 @@ window.QuotationManagement = {
                     UnitPrice: unitPrice,
                     IsOptional: false,
                     HasInvoice: hasInvoice,
+                    IsVATApplicable: hasInvoice, // ✅ THÊM: VAT áp dụng nếu có hóa đơn
+                    VATRate: vatRate, // ✅ THÊM: VAT rate
                     Notes: hasInvoice ? 'Có hóa đơn' : 'Không có hóa đơn',
                     ServiceType: 'parts',
-                    ItemCategory: itemCategory  // ✅ THÊM ItemCategory
+                    ItemCategory: itemCategory,
                 });
             }
         });
@@ -1083,8 +1130,8 @@ window.QuotationManagement = {
             var unitPriceText = row.find('.unit-price-input').val() || '';
             var unitPrice = parseFloat(unitPriceText.replace(/[^\d]/g, '')) || 0;
             var hasInvoice = row.find('.invoice-checkbox').is(':checked');
-            console.log('🔍 DEBUG - Edit Repair tab collecting hasInvoice:', hasInvoice);
             var itemCategory = row.find('.item-category-input').val() || 'Material';
+            var vatRate = parseFloat(row.find('.vat-rate-input').val()) || 10; // ✅ THÊM: Lấy VAT rate từ input
             
             if (serviceName && serviceName.trim() !== '') {
                 items.push({
@@ -1093,10 +1140,12 @@ window.QuotationManagement = {
                     Quantity: quantity,
                     UnitPrice: unitPrice,
                     IsOptional: false,
-                    HasInvoice: hasInvoice, // ✅ THÊM HasInvoice
+                    HasInvoice: hasInvoice,
+                    IsVATApplicable: hasInvoice, // ✅ THÊM: VAT áp dụng nếu có hóa đơn
+                    VATRate: vatRate, // ✅ THÊM: VAT rate
                     Notes: 'Giá có thể thay đổi tùy theo mức độ hư hại',
                     ServiceType: 'repair',
-                    ItemCategory: itemCategory  // ✅ THÊM ItemCategory
+                    ItemCategory: itemCategory,
                 });
             }
         });
@@ -1110,8 +1159,8 @@ window.QuotationManagement = {
             var unitPriceText = row.find('.unit-price-input').val() || '';
             var unitPrice = parseFloat(unitPriceText.replace(/[^\d]/g, '')) || 0;
             var hasInvoice = row.find('.invoice-checkbox').is(':checked');
-            console.log('🔍 DEBUG - Edit Paint tab collecting hasInvoice:', hasInvoice);
             var itemCategory = row.find('.item-category-input').val() || 'Material';
+            var vatRate = parseFloat(row.find('.vat-rate-input').val()) || 10; // ✅ THÊM: Lấy VAT rate từ input
             
             if (serviceName && serviceName.trim() !== '') {
                 items.push({
@@ -1120,10 +1169,12 @@ window.QuotationManagement = {
                     Quantity: quantity,
                     UnitPrice: unitPrice,
                     IsOptional: false,
-                    HasInvoice: hasInvoice, // ✅ THÊM HasInvoice
+                    HasInvoice: hasInvoice,
+                    IsVATApplicable: hasInvoice, // ✅ THÊM: VAT áp dụng nếu có hóa đơn
+                    VATRate: vatRate, // ✅ THÊM: VAT rate
                     Notes: 'Giá có thể thay đổi tùy theo kích thước vùng bị trầy xước',
                     ServiceType: 'paint',
-                    ItemCategory: itemCategory  // ✅ THÊM ItemCategory
+                    ItemCategory: itemCategory,
                 });
             }
         });
@@ -1135,17 +1186,14 @@ window.QuotationManagement = {
             ValidUntil: $('#editValidUntil').val() || null,
             TaxRate: parseFloat($('#editTaxRate').val()) || 0,
             DiscountAmount: parseFloat($('#editDiscountAmount').val()) || 0,
-            Items: items
+            Items: items,
         };
         
         // ✅ DEBUG: Log items count
-        console.log('✅ DEBUG: Sending items count:', items.length);
         items.forEach(function(item, index) {
-            console.log(`✅ DEBUG: Item ${index + 1}:`, item.ItemName, 'Category:', item.ItemCategory, 'ServiceId:', item.ServiceId, 'HasInvoice:', item.HasInvoice);
         });
         
         // ✅ DEBUG: Log toàn bộ formData
-        console.log('🔍 DEBUG: Full formData being sent:', JSON.stringify(formData, null, 2));
 
         // Validate required fields
         if (items.length === 0) {
@@ -1190,7 +1238,7 @@ window.QuotationManagement = {
             confirmButtonColor: '#28a745',
             cancelButtonColor: '#6c757d',
             confirmButtonText: 'Có, duyệt!',
-            cancelButtonText: 'Hủy'
+            cancelButtonText: 'Hủy',
         }).then((result) => {
             if (result.isConfirmed) {
                 $.ajax({
@@ -1229,7 +1277,7 @@ window.QuotationManagement = {
             confirmButtonColor: '#dc3545',
             cancelButtonColor: '#6c757d',
             confirmButtonText: 'Có, từ chối!',
-            cancelButtonText: 'Hủy'
+            cancelButtonText: 'Hủy',
         }).then((result) => {
             if (result.isConfirmed) {
                 $.ajax({
@@ -1270,7 +1318,7 @@ window.QuotationManagement = {
             confirmButtonColor: '#d33',
             cancelButtonColor: '#3085d6',
             confirmButtonText: 'Có, xóa!',
-            cancelButtonText: 'Hủy'
+            cancelButtonText: 'Hủy',
         }).then((result) => {
             if (result.isConfirmed) {
                 $.ajax({
@@ -1309,33 +1357,39 @@ window.QuotationManagement = {
         
         // ✅ SỬA: Handle both camelCase and PascalCase from API
         $('#viewQuotationNumber').text(quotation.quotationNumber || quotation.QuotationNumber || '');
-        $('#viewVehicleInfo').text(quotation.vehicle ? `${quotation.vehicle.brand} ${quotation.vehicle.model} - ${quotation.vehicle.licensePlate}` : '');
-        $('#viewCustomerName').text(quotation.customer ? quotation.customer.name : '');
+        $('#viewVehicle').text(quotation.vehicleInfo || quotation.VehicleInfo || '');
+        $('#viewCustomer').text(quotation.customerName || quotation.CustomerName || '');
         $('#viewStatus').text(quotation.status || quotation.Status || '');
         
         // ✅ SỬA: Thêm các trường bị thiếu
-        $('#viewQuotationType').text(quotation.quotationType || quotation.QuotationType || '');
-        $('#viewQuotationDate').text(quotation.quotationDate || quotation.QuotationDate ? new Date(quotation.quotationDate || quotation.QuotationDate).toLocaleDateString('vi-VN') : '');
+        $('#viewQuotationType').text(quotation.quotationType || quotation.QuotationType || 'Personal');
+        $('#viewQuotationDate').text(quotation.quotationDate || quotation.QuotationDate ? new Date(quotation.quotationDate || quotation.QuotationDate).toLocaleDateString('vi-VN') : new Date().toLocaleDateString('vi-VN'));
         
         $('#viewValidUntil').text(quotation.validUntil || quotation.ValidUntil ? new Date(quotation.validUntil || quotation.ValidUntil).toLocaleDateString('vi-VN') : '');
         $('#viewDescription').text(quotation.description || quotation.Description || '');
+        $('#viewTerms').text(quotation.terms || quotation.Terms || '');
         
         // Calculate and populate financial fields
         var subtotal = 0;
+        var taxAmount = 0;
+        var vatRate = 10; // VAT rate 10%
+        
         if (quotation.items && quotation.items.length > 0) {
             quotation.items.forEach(function(item) {
-                // ✅ SỬA: Tính SubTotal từ UnitPrice × Quantity (chưa VAT)
-                subtotal += (item.unitPrice || 0) * (item.quantity || 1);
+                var itemSubtotal = (item.unitPrice || 0) * (item.quantity || 1);
+                subtotal += itemSubtotal;
+                
+                // ✅ SỬA: Tính thuế VAT cho items có hóa đơn
+                if (item.isVATApplicable || item.IsVATApplicable) {
+                    taxAmount += itemSubtotal * vatRate / 100;
+                }
             });
         }
         
-        var taxRate = quotation.taxRate || quotation.TaxRate || 0;
-        
-        // ✅ SỬA: Sử dụng taxAmount từ API thay vì tính lại
-        var taxAmount = quotation.taxAmount || quotation.TaxAmount || 0;
-        
+        var taxRate = taxAmount > 0 ? vatRate : 0; // Hiển thị 10% nếu có thuế
         var discountAmount = quotation.discountAmount || quotation.DiscountAmount || 0;
-        // ✅ SỬA: Luôn tính lại totalAmount để đảm bảo đúng
+        
+        // ✅ SỬA: Tính lại TotalAmount từ SubTotal để đảm bảo tính toán đúng
         var totalAmount = subtotal + taxAmount - discountAmount;
         
         $('#viewSubTotal').text(subtotal.toLocaleString());
@@ -1346,6 +1400,7 @@ window.QuotationManagement = {
         
         // Populate service items
         $('#viewServiceItems').empty();
+        
         if (quotation.items && quotation.items.length > 0) {
             // Add table header
             var headerHtml = `
@@ -1400,12 +1455,12 @@ window.QuotationManagement = {
         
         // Populate basic fields
         $('#editId').val(quotation.id);
-        $('#editVehicleId').val(quotation.vehicleId).trigger('change');
-        $('#editCustomerId').val(quotation.customerId).trigger('change');
-        $('#editDescription').val(quotation.description || '');
-        $('#editValidUntil').val(quotation.validUntil ? new Date(quotation.validUntil).toISOString().split('T')[0] : '');
-        $('#editTaxRate').val(quotation.taxRate || 0);
-        $('#editDiscountAmount').val(quotation.discountAmount || 0);
+        $('#editVehicleId').val(quotation.vehicleId || quotation.VehicleId).trigger('change');
+        $('#editCustomerId').val(quotation.customerId || quotation.CustomerId).trigger('change');
+        $('#editDescription').val(quotation.description || quotation.Description || '');
+        $('#editValidUntil').val(quotation.validUntil || quotation.ValidUntil ? new Date(quotation.validUntil || quotation.ValidUntil).toISOString().split('T')[0] : '');
+        // ✅ XÓA: Không còn field VAT chung, mỗi item có VAT riêng
+        $('#editDiscountAmount').val(quotation.discountAmount || quotation.DiscountAmount || 0);
         
         // Load service items if they exist
         if (quotation.items && quotation.items.length > 0) {
@@ -1419,6 +1474,154 @@ window.QuotationManagement = {
                 self.recalculateAllTotalsWithVAT('edit', quotation.taxRate || 10);
             }, 100); // Delay để đảm bảo DOM đã được render
         }
+    },
+
+    // ✅ THÊM: File Attachment Management
+    currentQuotationId: null,
+
+    // Load attachments for a quotation
+    loadAttachments: function(quotationId) {
+        var self = this;
+        self.currentQuotationId = quotationId;
+        
+        $.ajax({
+            url: '/QuotationManagement/GetAttachments/' + quotationId,
+            type: 'GET',
+            success: function(response) {
+                if (response.success) {
+                    self.displayAttachments(response.data);
+                } else {
+                    $('#attachmentsList').html('<div class="alert alert-warning">Không thể tải danh sách file đính kèm</div>');
+                }
+            },
+            error: function() {
+                $('#attachmentsList').html('<div class="alert alert-danger">Lỗi khi tải danh sách file đính kèm</div>');
+            }
+        });
+    },
+
+    // Display attachments list
+    displayAttachments: function(attachments) {
+        var html = '';
+        
+        if (attachments && attachments.length > 0) {
+            html += '<div class="table-responsive">';
+            html += '<table class="table table-sm table-hover">';
+            html += '<thead class="thead-light">';
+            html += '<tr><th>Tên File</th><th>Loại</th><th>Kích Thước</th><th>Ngày Upload</th><th>Thao Tác</th></tr>';
+            html += '</thead><tbody>';
+            
+            attachments.forEach(function(attachment) {
+                var fileSize = self.formatFileSize(attachment.fileSize);
+                var uploadDate = new Date(attachment.uploadedDate).toLocaleDateString('vi-VN');
+                var badgeClass = attachment.isInsuranceDocument ? 'badge-warning' : 'badge-secondary';
+                var badgeText = attachment.isInsuranceDocument ? 'Bảo Hiểm' : 'Thường';
+                
+                html += '<tr>';
+                html += '<td><i class="fas fa-file mr-2"></i>' + attachment.fileName + '</td>';
+                html += '<td><span class="badge ' + badgeClass + '">' + badgeText + '</span></td>';
+                html += '<td>' + fileSize + '</td>';
+                html += '<td>' + uploadDate + '</td>';
+                html += '<td>';
+                html += '<button class="btn btn-sm btn-info mr-1 download-attachment" data-id="' + attachment.id + '" title="Download">';
+                html += '<i class="fas fa-download"></i></button>';
+                html += '<button class="btn btn-sm btn-danger delete-attachment" data-id="' + attachment.id + '" title="Xóa">';
+                html += '<i class="fas fa-trash"></i></button>';
+                html += '</td>';
+                html += '</tr>';
+            });
+            
+            html += '</tbody></table></div>';
+        } else {
+            html = '<div class="alert alert-info"><i class="fas fa-info-circle mr-2"></i>Chưa có file đính kèm nào</div>';
+        }
+        
+        $('#attachmentsList').html(html);
+    },
+
+    // Format file size
+    formatFileSize: function(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        var k = 1024;
+        var sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        var i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    },
+
+    // Upload attachment
+    uploadAttachment: function() {
+        var self = this;
+        var formData = new FormData();
+        var file = $('#attachmentFile')[0].files[0];
+        
+        if (!file) {
+            Swal.fire('Lỗi', 'Vui lòng chọn file', 'error');
+            return;
+        }
+        
+        formData.append('quotationId', self.currentQuotationId);
+        formData.append('file', file);
+        formData.append('attachmentType', $('#attachmentType').val());
+        formData.append('description', $('#attachmentDescription').val());
+        formData.append('isInsuranceDocument', $('#isInsuranceDocument').is(':checked'));
+        
+        $.ajax({
+            url: '/QuotationManagement/UploadAttachment',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                if (response.success) {
+                    Swal.fire('Thành công', 'Upload file thành công', 'success');
+                    $('#uploadAttachmentModal').modal('hide');
+                    self.loadAttachments(self.currentQuotationId);
+                    $('#uploadAttachmentForm')[0].reset();
+                } else {
+                    Swal.fire('Lỗi', response.message || 'Upload file thất bại', 'error');
+                }
+            },
+            error: function() {
+                Swal.fire('Lỗi', 'Upload file thất bại', 'error');
+            }
+        });
+    },
+
+    // Delete attachment
+    deleteAttachment: function(attachmentId) {
+        var self = this;
+        
+        Swal.fire({
+            title: 'Xác nhận xóa',
+            text: 'Bạn có chắc chắn muốn xóa file này?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Xóa',
+            cancelButtonText: 'Hủy'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: '/QuotationManagement/DeleteAttachment/' + attachmentId,
+                    type: 'DELETE',
+                    success: function(response) {
+                        if (response.success) {
+                            Swal.fire('Thành công', 'Xóa file thành công', 'success');
+                            self.loadAttachments(self.currentQuotationId);
+                        } else {
+                            Swal.fire('Lỗi', response.message || 'Xóa file thất bại', 'error');
+                        }
+                    },
+                    error: function() {
+                        Swal.fire('Lỗi', 'Xóa file thất bại', 'error');
+                    }
+                });
+            }
+        });
+    },
+
+    // Download attachment
+    downloadAttachment: function(attachmentId) {
+        window.open('/api/quotationattachments/' + attachmentId + '/download', '_blank');
     }
 };
 

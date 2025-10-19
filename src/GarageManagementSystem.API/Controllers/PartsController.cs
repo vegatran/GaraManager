@@ -1,7 +1,9 @@
 using AutoMapper;
 using GarageManagementSystem.Core.Interfaces;
+using GarageManagementSystem.Core.Extensions;
 using GarageManagementSystem.Shared.DTOs;
 using GarageManagementSystem.Shared.Models;
+using GarageManagementSystem.API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -14,25 +16,55 @@ namespace GarageManagementSystem.API.Controllers
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
+        private readonly ICacheService _cacheService;
 
-        public PartsController(IUnitOfWork unitOfWork, IMapper mapper)
+        public PartsController(IUnitOfWork unitOfWork, IMapper mapper, ICacheService cacheService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+            _cacheService = cacheService;
         }
 
         [HttpGet]
-        public async Task<ActionResult<ApiResponse<List<PartDto>>>> GetParts()
+        public async Task<ActionResult<PagedResponse<PartDto>>> GetParts(
+            [FromQuery] int pageNumber = 1, 
+            [FromQuery] int pageSize = 10,
+            [FromQuery] string? searchTerm = null,
+            [FromQuery] string? category = null)
         {
             try
             {
                 var parts = await _unitOfWork.Parts.GetAllAsync();
-                var partDtos = parts.Select(MapToDto).ToList();
-                return Ok(ApiResponse<List<PartDto>>.SuccessResult(partDtos));
+                var query = parts.AsQueryable();
+                
+                // Apply search filter if provided
+                if (!string.IsNullOrEmpty(searchTerm))
+                {
+                    query = query.Where(p => 
+                        p.PartName.Contains(searchTerm) || 
+                        p.PartNumber.Contains(searchTerm) || 
+                        p.Description.Contains(searchTerm));
+                }
+                
+                // Apply category filter if provided
+                if (!string.IsNullOrEmpty(category))
+                {
+                    query = query.Where(p => p.Category == category);
+                }
+
+                // Get total count
+                var totalCount = await query.GetTotalCountAsync();
+                
+                // Apply pagination
+                var pagedParts = query.ApplyPagination(pageNumber, pageSize).ToList();
+                var partDtos = pagedParts.Select(MapToDto).ToList();
+                
+                return Ok(PagedResponse<PartDto>.CreateSuccessResult(
+                    partDtos, pageNumber, pageSize, totalCount, "Parts retrieved successfully"));
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ApiResponse<List<PartDto>>.ErrorResult("Error retrieving parts", ex.Message));
+                return StatusCode(500, PagedResponse<PartDto>.CreateErrorResult("Error retrieving parts"));
             }
         }
 

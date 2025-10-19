@@ -75,10 +75,9 @@ window.PurchaseOrderManagement = {
             }
         ];
 
-        this.purchaseOrderTable = DataTablesUtility.initAjaxTable('#purchaseOrdersTable', '/PurchaseOrder/GetPurchaseOrders', columns, {
+        this.purchaseOrderTable = DataTablesUtility.initServerSideTable('#purchaseOrdersTable', '/api/purchaseorders', columns, {
             order: [[1, 'desc']], // Sort by date desc
-            pageLength: 25,
-            dom: 'rtip'
+            pageLength: 10
         });
     },
 

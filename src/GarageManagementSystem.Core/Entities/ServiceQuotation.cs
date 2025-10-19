@@ -49,6 +49,12 @@ namespace GarageManagementSystem.Core.Entities
         public decimal? InsuranceApprovedAmount { get; set; }
         public string? InsuranceApprovalNotes { get; set; }
         public string? InsuranceAdjusterContact { get; set; }
+        
+        // Insurance pricing - Giá bảo hiểm duyệt
+        public decimal? InsuranceApprovedSubTotal { get; set; }
+        public decimal? InsuranceApprovedTaxAmount { get; set; }
+        public decimal? InsuranceApprovedDiscountAmount { get; set; }
+        public decimal? InsuranceApprovedTotalAmount { get; set; }
 
         // Company specific fields (nullable)
         public string? PONumber { get; set; }
@@ -110,6 +116,7 @@ namespace GarageManagementSystem.Core.Entities
         public virtual CustomerReception? CustomerReception { get; set; }
         public virtual ServiceOrder? ServiceOrder { get; set; }
         public virtual ICollection<QuotationItem> Items { get; set; } = new List<QuotationItem>();
+        public virtual ICollection<QuotationAttachment> Attachments { get; set; } = new List<QuotationAttachment>();
     }
 }
 

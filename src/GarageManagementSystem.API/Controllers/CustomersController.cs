@@ -1,5 +1,6 @@
 using AutoMapper;
 using GarageManagementSystem.Core.Interfaces;
+using GarageManagementSystem.Core.Extensions;
 using GarageManagementSystem.Shared.DTOs;
 using GarageManagementSystem.Shared.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -22,19 +23,59 @@ namespace GarageManagementSystem.API.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<ApiResponse<List<CustomerDto>>>> GetCustomers()
+        public async Task<ActionResult<PagedResponse<CustomerDto>>> GetCustomers(
+            [FromQuery] int pageNumber = 1, 
+            [FromQuery] int pageSize = 10,
+            [FromQuery] string? searchTerm = null)
+        {
+            try
+            {
+                var customers = await _unitOfWork.Customers.GetAllAsync();
+                var query = customers.AsQueryable();
+                
+                // Apply search filter if provided
+                if (!string.IsNullOrEmpty(searchTerm))
+                {
+                    query = query.Where(c => 
+                        c.Name.Contains(searchTerm) || 
+                        c.Email.Contains(searchTerm) || 
+                        c.Phone.Contains(searchTerm));
+                }
+
+                // Get total count
+                var totalCount = await query.GetTotalCountAsync();
+                
+                // Apply pagination
+                var pagedCustomers = query.ApplyPagination(pageNumber, pageSize).ToList();
+                var customerDtos = pagedCustomers.Select(c => _mapper.Map<CustomerDto>(c)).ToList();
+                
+                return Ok(PagedResponse<CustomerDto>.CreateSuccessResult(
+                    customerDtos, pageNumber, pageSize, totalCount, "Customers retrieved successfully"));
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Error retrieving customers: {ex}");
+                return StatusCode(500, PagedResponse<CustomerDto>.CreateErrorResult("Error retrieving customers"));
+            }
+        }
+
+        /// <summary>
+        /// Lấy danh sách tất cả khách hàng cho dropdown (không phân trang)
+        /// </summary>
+        [HttpGet("dropdown")]
+        public async Task<ActionResult<List<CustomerDto>>> GetAllForDropdown()
         {
             try
             {
                 var customers = await _unitOfWork.Customers.GetAllAsync();
                 var customerDtos = customers.Select(c => _mapper.Map<CustomerDto>(c)).ToList();
                 
-                return Ok(ApiResponse<List<CustomerDto>>.SuccessResult(customerDtos));
+                return Ok(customerDtos);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Error retrieving customers: {ex}");
-                return StatusCode(500, ApiResponse<List<CustomerDto>>.ErrorResult("Error retrieving customers", ex, includeStackTrace: true));
+                Console.WriteLine($"❌ Error getting customers for dropdown: {ex}");
+                return StatusCode(500, new { message = "Internal server error" });
             }
         }
 
