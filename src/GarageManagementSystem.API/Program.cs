@@ -141,7 +141,6 @@ builder.Services.AddScoped<GarageManagementSystem.Core.Services.IConfigurationSe
 // Cache Service
 builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<GarageManagementSystem.Core.Services.ICacheService, GarageManagementSystem.Core.Services.CacheService>();
-
 // Audit Log Service
 builder.Services.AddScoped<GarageManagementSystem.Core.Services.IAuditLogService, GarageManagementSystem.Core.Services.AuditLogService>();
 

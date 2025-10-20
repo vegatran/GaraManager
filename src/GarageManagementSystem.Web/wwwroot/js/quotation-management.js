@@ -2301,6 +2301,20 @@ window.QuotationManagement = {
             $('#approvedAmount').val(pricing.approvedAmount);
             $('#customerCoPayment').val(pricing.customerCoPayment);
             $('#approvalNotes').val(pricing.approvalNotes);
+            
+            // Show current file if exists
+            if (pricing.insuranceFilePath) {
+                var fileName = pricing.insuranceFilePath.split('/').pop();
+                $('#currentFileName').text(fileName);
+                $('#downloadCurrentFile').attr('href', pricing.insuranceFilePath);
+                // Ensure both container and alert are visible and use flex for row
+                $('#currentFileRow').css('display', 'flex');
+                $('#currentFileRow .alert').css('display', 'block');
+            } else {
+                $('#currentFileRow').hide();
+                $('#currentFileRow .alert').hide();
+            }
+            
             if (pricing.approvedItems && pricing.approvedItems.length > 0) {
                 self.populateInsuranceItemsTable(pricing.approvedItems);
             } else if (quotationData && quotationData.items && quotationData.items.length > 0) {
@@ -2324,6 +2338,18 @@ window.QuotationManagement = {
                     $('#approvedAmount').val(pricing.approvedAmount);
                     $('#customerCoPayment').val(pricing.customerCoPayment);
                     $('#approvalNotes').val(pricing.approvalNotes);
+                    
+                    // Show current file if exists (from API)
+                    if (pricing.insuranceFilePath) {
+                        var fileName = pricing.insuranceFilePath.split('/').pop();
+                        $('#currentFileName').text(fileName);
+                        $('#downloadCurrentFile').attr('href', pricing.insuranceFilePath);
+                        $('#currentFileRow').css('display', 'flex');
+                        $('#currentFileRow .alert').css('display', 'block');
+                    } else {
+                        $('#currentFileRow').hide();
+                        $('#currentFileRow .alert').hide();
+                    }
                     
                     // Kiểm tra nếu approvedItems empty thì load từ quotation
                     if (pricing.approvedItems && pricing.approvedItems.length > 0) {
@@ -2530,6 +2556,30 @@ $(document).ready(function() {
         $('#insuranceFile').val('');
         $('#filePreviewRow').hide();
         $('#insuranceFile').next('.custom-file-label').text('Chọn file...');
+        // Đừng ẩn file hiện tại khi chỉ clear file mới chọn
+        if ($('#downloadCurrentFile').attr('href')) {
+            $('#currentFileRow').css('display', 'flex');
+            $('#currentFileRow .alert').css('display', 'block');
+        }
+    });
+
+    // Remove current file
+    $(document).on('click', '#removeCurrentFile', function() {
+        Swal.fire({
+            title: 'Xác nhận',
+            text: 'Bạn có chắc muốn xóa file hiện tại?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Xóa',
+            cancelButtonText: 'Hủy'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Chỉ ẩn khi thực sự xóa (ở phiên bản sau sẽ gọi API xóa file)
+                $('#currentFileRow').hide();
+                $('#currentFileName').text('');
+                $('#downloadCurrentFile').attr('href', '');
+            }
+        });
     });
 
     $(document).on('click', '#viewFileBtn', function() {

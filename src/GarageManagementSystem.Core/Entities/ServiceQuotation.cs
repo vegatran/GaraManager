@@ -48,6 +48,7 @@ namespace GarageManagementSystem.Core.Entities
         public DateTime? InsuranceApprovalDate { get; set; }
         public decimal? InsuranceApprovedAmount { get; set; }
         public string? InsuranceApprovalNotes { get; set; }
+        public string? InsuranceFilePath { get; set; } // ✅ THÊM: Đường dẫn file bảo hiểm
 
         // Corporate specific fields (nullable)
         public string? ContractNumber { get; set; }

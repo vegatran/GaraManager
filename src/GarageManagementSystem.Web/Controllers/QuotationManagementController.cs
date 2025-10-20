@@ -112,6 +112,15 @@ namespace GarageManagementSystem.Web.Controllers
                 if (response.Success && response.Data != null)
                 {
                     var quotation = response.Data.Data;
+                    // Lấy thông tin bảo hiểm (nếu có) để trả thêm insuranceFilePath
+                    string? insuranceFilePath = null;
+                    if (string.Equals(quotation.QuotationType, "Insurance", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var insuranceRes = await _apiService.GetAsync<ApiResponse<InsuranceApprovedPricingDto>>(
+                            ApiEndpoints.Builder.WithId(ApiEndpoints.ServiceQuotations.GetInsuranceApprovedPricing, id)
+                        );
+                        insuranceFilePath = insuranceRes?.Data?.Data?.InsuranceFilePath;
+                    }
                     var quotationData = new
                     {
                         id = quotation.Id,
@@ -131,6 +140,7 @@ namespace GarageManagementSystem.Web.Controllers
                         quotationDate = quotation.QuotationDate.ToString("yyyy-MM-dd"),
                         description = quotation.Description ?? "",
                         terms = quotation.Terms ?? "",
+                        insuranceFilePath = insuranceFilePath,
                         discountAmount = quotation.DiscountAmount,
                         subTotal = quotation.SubTotal,
                         taxAmount = quotation.TaxAmount,
@@ -660,7 +670,10 @@ namespace GarageManagementSystem.Web.Controllers
                         await insuranceFile.CopyToAsync(stream);
                     }
 
-                    // Lưu thông tin file vào database
+                    // Lưu đường dẫn file public để API persist và UI hiển thị/tải xuống
+                    var publicPath = $"/uploads/insurance-files/{fileName}";
+                    pricingData.InsuranceFilePath = publicPath;
+                    // Ghi chú bổ sung (không bắt buộc)
                     pricingData.ApprovalNotes += $"\n\nFile đối chứng: {fileName}";
                 }
 
@@ -671,7 +684,17 @@ namespace GarageManagementSystem.Web.Controllers
 
                 if (response.Success)
                 {
-                    return Json(new { success = true, message = "Cập nhật bảng giá duyệt của bảo hiểm thành công" });
+                    // Lấy lại dữ liệu insurance pricing mới nhất để trả về client
+                    var latestPricing = await _apiService.GetAsync<InsuranceApprovedPricingDto>(
+                        ApiEndpoints.Builder.WithId(ApiEndpoints.ServiceQuotations.GetInsuranceApprovedPricing, quotationId)
+                    );
+
+                    return Json(new
+                    {
+                        success = true,
+                        message = "Cập nhật bảng giá duyệt của bảo hiểm thành công",
+                        data = latestPricing?.Data
+                    });
                 }
                 else
                 {
@@ -692,13 +715,13 @@ namespace GarageManagementSystem.Web.Controllers
         {
             try
             {
-                var response = await _apiService.GetAsync<InsuranceApprovedPricingDto>(
+                var response = await _apiService.GetAsync<ApiResponse<InsuranceApprovedPricingDto>>(
                     ApiEndpoints.Builder.WithId(ApiEndpoints.ServiceQuotations.GetInsuranceApprovedPricing, quotationId)
                 );
 
                 if (response.Success)
                 {
-                    return Json(new { success = true, data = response.Data });
+                    return Json(new { success = true, data = response.Data?.Data });
                 }
                 else
                 {

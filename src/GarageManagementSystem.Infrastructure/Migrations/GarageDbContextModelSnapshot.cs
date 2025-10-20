@@ -4328,6 +4328,9 @@ namespace GarageManagementSystem.Infrastructure.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("varchar(1000)");
 
+                    b.Property<string>("InsuranceFilePath")
+                        .HasColumnType("longtext");
+
                     b.Property<decimal?>("InsuranceApprovedAmount")
                         .HasColumnType("decimal(18,2)");
 

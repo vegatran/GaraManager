@@ -239,6 +239,7 @@ namespace GarageManagementSystem.Shared.DTOs
         public decimal ApprovedAmount { get; set; }
         public decimal CustomerCoPayment { get; set; }
         public string? ApprovalNotes { get; set; }
+        public string? InsuranceFilePath { get; set; } // ✅ THÊM: Đường dẫn file bảo hiểm
         public List<InsuranceApprovedItemDto> ApprovedItems { get; set; } = new List<InsuranceApprovedItemDto>();
     }
 

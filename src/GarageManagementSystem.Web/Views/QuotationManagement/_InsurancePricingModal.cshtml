@@ -142,6 +142,27 @@
                                     </div>
                                 </div>
                             </div>
+                            
+                            <!-- Current File Display -->
+                            <div class="row" id="currentFileRow" style="display: none;">
+                                <div class="col-md-12">
+                                    <div class="alert alert-success">
+                                        <i class="fas fa-file-check"></i>
+                                        <strong>File hiện tại:</strong> <span id="currentFileName"></span>
+                                        <br>
+                                        <div class="mt-2">
+                                            <a href="#" id="downloadCurrentFile" class="btn btn-sm btn-outline-primary" target="_blank">
+                                                <i class="fas fa-download"></i> Tải xuống
+                                            </a>
+                                            <button type="button" class="btn btn-sm btn-outline-danger" id="removeCurrentFile">
+                                                <i class="fas fa-trash"></i> Xóa file
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- New File Preview -->
                             <div class="row" id="filePreviewRow" style="display: none;">
                                 <div class="col-md-12">
                                     <div class="alert alert-info">

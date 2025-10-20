@@ -1118,6 +1118,8 @@ namespace GarageManagementSystem.API.Controllers
                 quotation.InsuranceApprovalDate = pricingData.ApprovalDate;
                 quotation.InsuranceApprovedAmount = pricingData.ApprovedAmount;
                 quotation.InsuranceApprovalNotes = pricingData.ApprovalNotes;
+                // Save uploaded insurance verification file path (if provided)
+                quotation.InsuranceFilePath = pricingData.InsuranceFilePath;
                 quotation.UpdatedAt = DateTime.Now;
 
                 // ✅ THÊM: Tự động chuyển trạng thái thành "Approved" khi cập nhật bảng giá bảo hiểm
@@ -1182,6 +1184,7 @@ namespace GarageManagementSystem.API.Controllers
                     ApprovedAmount = quotation.InsuranceApprovedAmount ?? 0,
                     CustomerCoPayment = 0, // Not available in entity
                     ApprovalNotes = quotation.InsuranceApprovalNotes ?? "",
+                    InsuranceFilePath = quotation.InsuranceFilePath, // ✅ THÊM: Đường dẫn file bảo hiểm
                     ApprovedItems = quotation.Items?.Where(x => !x.IsDeleted).Select(item => new InsuranceApprovedItemDto
                     {
                         QuotationItemId = item.Id,
