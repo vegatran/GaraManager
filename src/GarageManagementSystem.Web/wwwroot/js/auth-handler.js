@@ -23,7 +23,7 @@ window.AuthHandler = {
             .fail(function(xhr, status, error) {
                 
                 self._config = {
-                    IdentityServerAuthority: 'https://localhost:44333',
+                    IdentityServerAuthority: 'https://ids.ladtechs.com',
                     ApiBaseUrl: 'https://localhost:44303/api/'
                 };
             });

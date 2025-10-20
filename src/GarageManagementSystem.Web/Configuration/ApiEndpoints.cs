@@ -148,6 +148,11 @@ namespace GarageManagementSystem.Web.Configuration
             public const string Approve = "servicequotations/{0}/approve";
             public const string Reject = "servicequotations/{0}/reject";
             public const string Send = "servicequotations/{0}/send";
+            public const string UpdateInsuranceApprovedPricing = "servicequotations/{0}/insurance-approved-pricing";
+            public const string GetInsuranceApprovedPricing = "servicequotations/{0}/insurance-approved-pricing";
+            public const string UpdateCorporateApprovedPricing = "servicequotations/{0}/corporate-approved-pricing";
+            public const string GetCorporateApprovedPricing = "servicequotations/{0}/corporate-approved-pricing";
+            public const string UpdateStatus = "servicequotations/{0}/status";
         }
 
         /// <summary>

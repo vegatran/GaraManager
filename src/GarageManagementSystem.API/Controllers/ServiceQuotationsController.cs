@@ -426,39 +426,31 @@ namespace GarageManagementSystem.API.Controllers
                             await _unitOfWork.ServiceQuotationItems.DeleteAsync(item);
                         }
 
-                        // Add new items with pricing models
+                        // Add new items - dùng AutoMapper để map tất cả properties
                         foreach (var itemDto in updateDto.Items)
                         {
-                            // ✅ DEBUG: Xem data nhận được từ client
-                            Console.WriteLine($"🔍 DEBUG API - ItemDto: {itemDto.ItemName}, HasInvoice: {itemDto.HasInvoice}");
-                            
+                            // ✅ SỬA: Dùng AutoMapper để map tất cả properties từ DTO sang Entity
                             var newItem = _mapper.Map<QuotationItem>(itemDto);
                             newItem.ServiceQuotationId = id;
                             newItem.CreatedAt = DateTime.Now;
                             newItem.UpdatedAt = DateTime.Now;
                             
-                            // ✅ DEBUG: Xem data sau khi map
-                            Console.WriteLine($"🔍 DEBUG API - After Map: {newItem.ItemName}, HasInvoice: {newItem.HasInvoice}");
-
-                            // Apply pricing model from Service
-                            if (newItem.ServiceId.HasValue)
+                            // ✅ SỬA: Chỉ tính toán lại những field cần thiết, giữ nguyên VATRate từ user
+                            newItem.SubTotal = newItem.Quantity * newItem.UnitPrice;
+                            
+                            // Tính VATAmount dựa trên VATRate từ user input
+                            if (newItem.IsVATApplicable && newItem.VATRate > 0)
                             {
-                                var service = await _unitOfWork.Services.GetByIdAsync(newItem.ServiceId.Value);
-                                if (service != null)
-                                {
-                                    PricingService.ApplyPricingToQuotationItem(newItem, service);
-                                }
-                                else
-                                {
-                                    // Fallback to manual pricing
-                                    newItem.TotalPrice = newItem.Quantity * newItem.UnitPrice;
-                                }
+                                newItem.VATAmount = newItem.SubTotal * (newItem.VATRate / 100);
                             }
                             else
                             {
-                                // Manual pricing (no service)
-                                newItem.TotalPrice = newItem.Quantity * newItem.UnitPrice;
+                                newItem.VATAmount = 0;
                             }
+                            
+                            // Tính TotalPrice (bao gồm VAT)
+                            newItem.TotalPrice = newItem.SubTotal + newItem.VATAmount;
+                            newItem.TotalAmount = newItem.TotalPrice - newItem.DiscountAmount;
 
                             await _unitOfWork.ServiceQuotationItems.AddAsync(newItem);
                         }
@@ -468,12 +460,9 @@ namespace GarageManagementSystem.API.Controllers
                     // Reload quotation với items mới
                     quotation = await _unitOfWork.ServiceQuotations.GetByIdWithDetailsAsync(id);
                     
-                    // Cập nhật SubTotal từ items
-                    quotation.SubTotal = quotation.Items.Where(x => !x.IsDeleted).Sum(item => item.UnitPrice * item.Quantity);
-                    
-                    // Chỉ tính VAT trên các items có IsVATApplicable = true
-                    var vatApplicableItems = quotation.Items.Where(item => item.IsVATApplicable && !item.IsDeleted).ToList();
-                    quotation.TaxAmount = vatApplicableItems.Sum(item => item.UnitPrice * item.Quantity * item.VATRate / 100);
+                    // ✅ SỬA: Sử dụng SubTotal và VATAmount đã tính từ từng item
+                    quotation.SubTotal = quotation.Items.Where(x => !x.IsDeleted).Sum(item => item.SubTotal);
+                    quotation.TaxAmount = quotation.Items.Where(x => !x.IsDeleted).Sum(item => item.VATAmount);
                     quotation.TotalAmount = quotation.SubTotal + quotation.TaxAmount - quotation.DiscountAmount;
 
                     // Save all changes
@@ -1110,6 +1099,326 @@ namespace GarageManagementSystem.API.Controllers
             catch (Exception ex)
             {
                 return StatusCode(500, ApiResponse<List<ServiceQuotationDto>>.ErrorResult("Error retrieving quotations by type", ex.Message));
+            }
+        }
+
+        [HttpPost("{id}/insurance-approved-pricing")]
+        [Authorize(Policy = "ApiScope")]
+        public async Task<ActionResult<ApiResponse<ServiceQuotationDto>>> UpdateInsuranceApprovedPricing(int id, [FromBody] InsuranceApprovedPricingDto pricingData)
+        {
+            try
+            {
+                var quotation = await _unitOfWork.ServiceQuotations.GetByIdAsync(id);
+                if (quotation == null)
+                {
+                    return NotFound(ApiResponse<ServiceQuotationDto>.ErrorResult("Quotation not found"));
+                }
+
+                // Update quotation with insurance pricing data
+                quotation.InsuranceApprovalDate = pricingData.ApprovalDate;
+                quotation.InsuranceApprovedAmount = pricingData.ApprovedAmount;
+                quotation.InsuranceApprovalNotes = pricingData.ApprovalNotes;
+                quotation.UpdatedAt = DateTime.Now;
+
+                // ✅ THÊM: Tự động chuyển trạng thái thành "Approved" khi cập nhật bảng giá bảo hiểm
+                if (quotation.QuotationType == "Insurance" && quotation.Status == "Pending")
+                {
+                    quotation.Status = "Approved";
+                }
+
+                await _unitOfWork.ServiceQuotations.UpdateAsync(quotation);
+
+                // Update individual items if provided
+                if (pricingData.ApprovedItems != null && pricingData.ApprovedItems.Any())
+                {
+                    foreach (var approvedItem in pricingData.ApprovedItems)
+                    {
+                        var item = await _unitOfWork.ServiceQuotationItems.GetByIdAsync(approvedItem.QuotationItemId);
+                        if (item != null)
+                        {
+                            item.InsuranceApprovedUnitPrice = approvedItem.ApprovedPrice;
+                            item.InsuranceApprovedSubTotal = approvedItem.ApprovedPrice * item.Quantity;
+                            item.InsuranceApprovalNotes = approvedItem.ApprovalNotes;
+                            item.UpdatedAt = DateTime.Now;
+
+                            await _unitOfWork.ServiceQuotationItems.UpdateAsync(item);
+                        }
+                    }
+                }
+
+                await _unitOfWork.SaveChangesAsync();
+
+                var result = await _unitOfWork.ServiceQuotations.GetByIdWithDetailsAsync(id);
+                var quotationDto = _mapper.Map<ServiceQuotationDto>(result);
+
+                return Ok(ApiResponse<ServiceQuotationDto>.SuccessResult(quotationDto));
+            }
+            catch (Exception ex)
+            {
+                // Log error
+                return StatusCode(500, ApiResponse<ServiceQuotationDto>.ErrorResult("Error updating insurance approved pricing", ex.Message));
+            }
+        }
+
+        [HttpGet("{id}/insurance-approved-pricing")]
+        [Authorize(Policy = "ApiScope")]
+        public async Task<ActionResult<ApiResponse<InsuranceApprovedPricingDto>>> GetInsuranceApprovedPricing(int id)
+        {
+            try
+            {
+                var quotation = await _unitOfWork.ServiceQuotations.GetByIdWithDetailsAsync(id);
+                if (quotation == null)
+                {
+                    return NotFound(ApiResponse<InsuranceApprovedPricingDto>.ErrorResult("Quotation not found"));
+                }
+
+                var pricingData = new InsuranceApprovedPricingDto
+                {
+                    QuotationId = id,
+                    InsuranceCompany = "", // Not available in entity
+                    TaxCode = "", // Not available in entity
+                    PolicyNumber = "", // Not available in entity
+                    ApprovalDate = quotation.InsuranceApprovalDate,
+                    ApprovedAmount = quotation.InsuranceApprovedAmount ?? 0,
+                    CustomerCoPayment = 0, // Not available in entity
+                    ApprovalNotes = quotation.InsuranceApprovalNotes ?? "",
+                    ApprovedItems = quotation.Items?.Where(x => !x.IsDeleted).Select(item => new InsuranceApprovedItemDto
+                    {
+                        QuotationItemId = item.Id,
+                        ItemName = item.ItemName,
+                        Quantity = item.Quantity,
+                        OriginalPrice = item.UnitPrice,
+                        ApprovedPrice = item.InsuranceApprovedUnitPrice ?? item.UnitPrice,
+                        CustomerCoPayment = 0, // Not available in entity
+                        IsApproved = true, // Default to true
+                        ApprovalNotes = item.InsuranceApprovalNotes ?? ""
+                    }).ToList() ?? new List<InsuranceApprovedItemDto>()
+                };
+
+                return Ok(ApiResponse<InsuranceApprovedPricingDto>.SuccessResult(pricingData));
+            }
+            catch (Exception ex)
+            {
+                // Log error
+                return StatusCode(500, ApiResponse<InsuranceApprovedPricingDto>.ErrorResult("Error getting insurance approved pricing", ex.Message));
+            }
+        }
+
+        [HttpPost("{id}/corporate-approved-pricing")]
+        [Authorize(Policy = "ApiScope")]
+        public async Task<ActionResult<ApiResponse<ServiceQuotationDto>>> UpdateCorporateApprovedPricing(int id, [FromBody] CorporateApprovedPricingDto pricingData)
+        {
+            try
+            {
+                var quotation = await _unitOfWork.ServiceQuotations.GetByIdAsync(id);
+                if (quotation == null)
+                {
+                    return NotFound(ApiResponse<ServiceQuotationDto>.ErrorResult("Quotation not found"));
+                }
+
+                // Update quotation with corporate pricing data
+                quotation.CorporateApprovalDate = pricingData.ApprovalDate;
+                quotation.CorporateApprovedAmount = pricingData.ApprovedAmount;
+                quotation.CorporateApprovalNotes = pricingData.ApprovalNotes;
+                quotation.UpdatedAt = DateTime.Now;
+
+                // ✅ THÊM: Tự động chuyển trạng thái thành "Approved" khi cập nhật bảng giá công ty
+                if (quotation.QuotationType == "Corporate" && quotation.Status == "Pending")
+                {
+                    quotation.Status = "Approved";
+                }
+
+                await _unitOfWork.ServiceQuotations.UpdateAsync(quotation);
+
+                // Update individual items if provided
+                if (pricingData.ApprovedItems != null && pricingData.ApprovedItems.Any())
+                {
+                    foreach (var approvedItem in pricingData.ApprovedItems)
+                    {
+                        var quotationItem = await _unitOfWork.Repository<QuotationItem>().GetByIdAsync(approvedItem.QuotationItemId);
+                        if (quotationItem != null)
+                        {
+                            quotationItem.CorporateApprovedUnitPrice = approvedItem.ApprovedPrice;
+                            quotationItem.CorporateApprovedSubTotal = approvedItem.ApprovedPrice * quotationItem.Quantity;
+                            quotationItem.CorporateApprovalNotes = approvedItem.ApprovalNotes;
+                            quotationItem.UpdatedAt = DateTime.Now;
+
+                            await _unitOfWork.Repository<QuotationItem>().UpdateAsync(quotationItem);
+                        }
+                    }
+                }
+
+                await _unitOfWork.SaveChangesAsync();
+
+                var result = await _unitOfWork.ServiceQuotations.GetByIdWithDetailsAsync(id);
+                var quotationDto = _mapper.Map<ServiceQuotationDto>(result);
+
+                return Ok(ApiResponse<ServiceQuotationDto>.SuccessResult(quotationDto));
+            }
+            catch (Exception ex)
+            {
+                // Log error
+                return StatusCode(500, ApiResponse<ServiceQuotationDto>.ErrorResult("Error updating corporate approved pricing", ex.Message));
+            }
+        }
+
+        [HttpGet("{id}/corporate-approved-pricing")]
+        [Authorize(Policy = "ApiScope")]
+        public async Task<ActionResult<ApiResponse<CorporateApprovedPricingDto>>> GetCorporateApprovedPricing(int id)
+        {
+            try
+            {
+                var quotation = await _unitOfWork.ServiceQuotations.GetByIdWithDetailsAsync(id);
+                if (quotation == null)
+                {
+                    return NotFound(ApiResponse<CorporateApprovedPricingDto>.ErrorResult("Quotation not found"));
+                }
+
+                var pricing = new CorporateApprovedPricingDto
+                {
+                    QuotationId = quotation.Id,
+                    CompanyName = quotation.CorporateApprovalNotes ?? "",
+                    TaxCode = "",
+                    ContractNumber = quotation.ContractNumber ?? "",
+                    ApprovalDate = quotation.CorporateApprovalDate,
+                    ApprovedAmount = quotation.CorporateApprovedAmount ?? 0,
+                    CustomerCoPayment = 0,
+                    ApprovalNotes = quotation.CorporateApprovalNotes ?? "",
+                    ApprovedItems = quotation.Items?.Select(item => new CorporateApprovedItemDto
+                    {
+                        QuotationItemId = item.Id,
+                        ItemName = item.ItemName,
+                        Quantity = item.Quantity,
+                        OriginalPrice = item.UnitPrice,
+                        ApprovedPrice = item.CorporateApprovedUnitPrice ?? item.UnitPrice,
+                        CustomerCoPayment = 0,
+                        IsApproved = true,
+                        ApprovalNotes = item.CorporateApprovalNotes
+                    }).ToList() ?? new List<CorporateApprovedItemDto>()
+                };
+
+                return Ok(ApiResponse<CorporateApprovedPricingDto>.SuccessResult(pricing));
+            }
+            catch (Exception ex)
+            {
+                // Log error
+                return StatusCode(500, ApiResponse<CorporateApprovedPricingDto>.ErrorResult("Error getting corporate approved pricing", ex.Message));
+            }
+        }
+
+        [HttpPost("demo-seed")]
+        [AllowAnonymous]
+        public async Task<ActionResult<ApiResponse<string>>> CreateDemoQuotations()
+        {
+            try
+            {
+                // Try to find any existing customer and vehicle; if none, bail out with message
+                var customers = await _unitOfWork.Customers.GetAllAsync();
+                var vehicles = await _unitOfWork.Vehicles.GetAllAsync();
+                var anyCustomer = customers.FirstOrDefault();
+                var anyVehicle = vehicles.FirstOrDefault();
+                if (anyCustomer == null || anyVehicle == null)
+                {
+                    return BadRequest(ApiResponse<string>.ErrorResult("Thiếu dữ liệu khách hàng/xe để tạo demo. Hãy tạo ít nhất 1 khách hàng và 1 xe."));
+                }
+
+                async Task<int> CreateOne(string quotationType, string numberSuffix)
+                {
+                    var now = DateTime.Now;
+                    var quotation = new ServiceQuotation
+                    {
+                        QuotationNumber = $"QT{now:yyyyMMddHHmmss}{numberSuffix}",
+                        CustomerId = anyCustomer.Id,
+                        VehicleId = anyVehicle.Id,
+                        QuotationDate = now,
+                        ValidUntil = now.AddDays(30),
+                        QuotationType = quotationType,
+                        Status = "Pending",
+                        SubTotal = 0,
+                        VATAmount = 0,
+                        TotalAmount = 0,
+                        CreatedAt = now,
+                        UpdatedAt = now
+                    };
+
+                    await _unitOfWork.ServiceQuotations.AddAsync(quotation);
+                    await _unitOfWork.SaveChangesAsync();
+
+                    // Add one demo item
+                    var item = new QuotationItem
+                    {
+                        ServiceQuotationId = quotation.Id,
+                        ItemName = quotationType == "Personal" ? "Thay nhớt" : quotationType == "Insurance" ? "Sơn cản sau" : "Bảo dưỡng định kỳ",
+                        Quantity = 1,
+                        UnitPrice = quotationType == "Insurance" ? 1500000 : quotationType == "Corporate" ? 1200000 : 500000,
+                        SubTotal = quotationType == "Insurance" ? 1500000 : quotationType == "Corporate" ? 1200000 : 500000,
+                        VATRate = 0.10m,
+                        VATAmount = (quotationType == "Insurance" ? 1500000 : quotationType == "Corporate" ? 1200000 : 500000) * 0.10m,
+                        TotalPrice = (quotationType == "Insurance" ? 1500000 : quotationType == "Corporate" ? 1200000 : 500000) * 1.10m,
+                        TotalAmount = (quotationType == "Insurance" ? 1500000 : quotationType == "Corporate" ? 1200000 : 500000) * 1.10m,
+                        IsVATApplicable = true,
+                        CreatedAt = now,
+                        UpdatedAt = now
+                    };
+                    await _unitOfWork.Repository<QuotationItem>().AddAsync(item);
+
+                    // Update totals
+                    quotation.SubTotal = item.SubTotal;
+                    quotation.VATAmount = item.VATAmount;
+                    quotation.TotalAmount = item.TotalAmount;
+
+                    await _unitOfWork.ServiceQuotations.UpdateAsync(quotation);
+                    await _unitOfWork.SaveChangesAsync();
+                    return quotation.Id;
+                }
+
+                var id1 = await CreateOne("Personal", "01");
+                var id2 = await CreateOne("Insurance", "02");
+                var id3 = await CreateOne("Corporate", "03");
+
+                return Ok(ApiResponse<string>.SuccessResult($"Created demo quotations: {id1}, {id2}, {id3}"));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<string>.ErrorResult("Lỗi khi tạo dữ liệu demo báo giá", ex));
+            }
+        }
+
+        [HttpPut("{id}/status")]
+        [Authorize(Policy = "ApiScope")]
+        public async Task<ActionResult<ApiResponse<ServiceQuotationDto>>> UpdateQuotationStatus(int id, [FromBody] UpdateQuotationStatusDto statusDto)
+        {
+            try
+            {
+                var quotation = await _unitOfWork.ServiceQuotations.GetByIdAsync(id);
+                if (quotation == null)
+                {
+                    return NotFound(ApiResponse<ServiceQuotationDto>.ErrorResult("Quotation not found"));
+                }
+
+                // ✅ THÊM: Chỉ cho phép chuyển trạng thái xe cá nhân từ Pending sang Approved
+                if (quotation.QuotationType == "Personal" && quotation.Status == "Pending" && statusDto.Status == "Approved")
+                {
+                    quotation.Status = statusDto.Status;
+                    quotation.UpdatedAt = DateTime.Now;
+                    
+                    await _unitOfWork.ServiceQuotations.UpdateAsync(quotation);
+                    await _unitOfWork.SaveChangesAsync();
+
+                    var result = await _unitOfWork.ServiceQuotations.GetByIdWithDetailsAsync(id);
+                    var quotationDto = _mapper.Map<ServiceQuotationDto>(result);
+
+                    return Ok(ApiResponse<ServiceQuotationDto>.SuccessResult(quotationDto));
+                }
+                else
+                {
+                    return BadRequest(ApiResponse<ServiceQuotationDto>.ErrorResult("Không thể chuyển trạng thái này"));
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log error
+                return StatusCode(500, ApiResponse<ServiceQuotationDto>.ErrorResult("Error updating quotation status", ex.Message));
             }
         }
 

@@ -5,6 +5,7 @@
  * CRUD operations for service quotations
  */
 
+// ✅ SỬA: Định nghĩa module trước, sau đó wrap trong document ready
 window.QuotationManagement = {
     // DataTable instance
     quotationTable: null,
@@ -38,14 +39,44 @@ window.QuotationManagement = {
                 width: '10%',
                 render: function(data, type, row) {
                     var badgeClass = 'badge-secondary';
+                    var displayText = data;
+                    
+                    // Translate status to Vietnamese
                     switch(data) {
-                        case 'Draft': badgeClass = 'badge-light'; break;
-                        case 'Sent': badgeClass = 'badge-info'; break;
-                        case 'Approved': badgeClass = 'badge-success'; break;
-                        case 'Rejected': badgeClass = 'badge-danger'; break;
-                        case 'Expired': badgeClass = 'badge-warning'; break;
+                        case 'Draft': 
+                            badgeClass = 'badge-light'; 
+                            displayText = 'Nháp';
+                            break;
+                        case 'Pending': 
+                            badgeClass = 'badge-warning'; 
+                            displayText = 'Chờ Duyệt';
+                            break;
+                        case 'Sent': 
+                            badgeClass = 'badge-info'; 
+                            displayText = 'Đã Gửi';
+                            break;
+                        case 'Accepted': 
+                            badgeClass = 'badge-success'; 
+                            displayText = 'Đã Chấp Nhận';
+                            break;
+                        case 'Approved': 
+                            badgeClass = 'badge-success'; 
+                            displayText = 'Đã Duyệt';
+                            break;
+                        case 'Rejected': 
+                            badgeClass = 'badge-danger'; 
+                            displayText = 'Đã Từ Chối';
+                            break;
+                        case 'Expired': 
+                            badgeClass = 'badge-warning'; 
+                            displayText = 'Hết Hạn';
+                            break;
+                        case 'Converted': 
+                            badgeClass = 'badge-primary'; 
+                            displayText = 'Đã Chuyển Đổi';
+                            break;
                     }
-                    return `<span class="badge ${badgeClass}">${data}</span>`;
+                    return `<span class="badge ${badgeClass}">${displayText}</span>`;
                 }
             },
             { 
@@ -96,6 +127,37 @@ window.QuotationManagement = {
                         buttons += `
                             <button type="button" class="btn btn-danger btn-sm delete-quotation" data-id="${row.id}" title="Xóa">
                                 <i class="fas fa-trash"></i>
+                            </button>
+                        `;
+                    }
+                    
+                    // ✅ THÊM: Button cập nhật bảng giá bảo hiểm (chỉ cho xe bảo hiểm)
+                    if (row.quotationType === 'Insurance') {
+                        var buttonClass = (status === 'Approved' || status === 'Đã duyệt') ? 'btn-success' : 'btn-secondary';
+                        var buttonTitle = (status === 'Approved' || status === 'Đã duyệt') ? 'Đã duyệt bảo hiểm' : 'Cập nhật bảng giá bảo hiểm';
+                        buttons += `
+                            <button type="button" class="btn ${buttonClass} btn-sm insurance-pricing-btn" data-id="${row.id}" title="${buttonTitle}">
+                                <i class="fas fa-shield-alt"></i>
+                            </button>
+                        `;
+                    }
+                    
+                    // ✅ THÊM: Button cập nhật bảng giá công ty (chỉ cho xe công ty)
+                    if (row.quotationType === 'Corporate') {
+                        var buttonClass = (status === 'Approved' || status === 'Đã duyệt') ? 'btn-success' : 'btn-secondary';
+                        var buttonTitle = (status === 'Approved' || status === 'Đã duyệt') ? 'Đã duyệt công ty' : 'Cập nhật bảng giá công ty';
+                        buttons += `
+                            <button type="button" class="btn ${buttonClass} btn-sm corporate-pricing-btn" data-id="${row.id}" title="${buttonTitle}">
+                                <i class="fas fa-building"></i>
+                            </button>
+                        `;
+                    }
+                    
+                    // ✅ THÊM: Button duyệt báo giá (chỉ cho xe cá nhân đang Pending)
+                    if (row.quotationType === 'Personal' && (status === 'Pending' || status === 'Chờ duyệt')) {
+                        buttons += `
+                            <button type="button" class="btn btn-success btn-sm approve-personal-quotation" data-id="${row.id}" title="Duyệt báo giá">
+                                <i class="fas fa-check"></i>
                             </button>
                         `;
                     }
@@ -180,6 +242,24 @@ window.QuotationManagement = {
         $(document).on('click', '.delete-quotation', function() {
             var id = $(this).data('id');
             self.deleteQuotation(id);
+        });
+
+        // Insurance pricing button
+        $(document).on('click', '.insurance-pricing-btn', function() {
+            var id = $(this).data('id');
+            self.showInsurancePricingModal(id);
+        });
+
+        // ✅ THÊM: Approve personal quotation button
+        $(document).on('click', '.approve-personal-quotation', function() {
+            var id = $(this).data('id');
+            self.approvePersonalQuotation(id);
+        });
+
+        // ✅ THÊM: Corporate pricing button
+        $(document).on('click', '.corporate-pricing-btn', function() {
+            var id = $(this).data('id');
+            self.showCorporatePricingModal(id);
         });
 
         // Create quotation form
@@ -272,32 +352,24 @@ window.QuotationManagement = {
             
             var row = $(this).closest('.service-item-row');
             var isChecked = $(this).is(':checked');
+            var vatRateInput = row.find('.vat-rate-input');
+            var vatAmountInput = row.find('.vat-amount-input');
             
-            
-            // ✅ XỬ LÝ THEO TAB ACTIVE HIỆN TẠI
-            if (currentActiveTab === 'edit-parts') {
-                // Logic xử lý cho Parts tab
-            } else if (currentActiveTab === 'edit-repair') {
-                // Logic xử lý cho Repair tab
-            } else if (currentActiveTab === 'edit-paint') {
-                // Logic xử lý cho Paint tab
-            }
-            
-            // ✅ THÊM: Visual feedback - highlight row khi checkbox thay đổi
+            // ✅ SỬA: Disable/enable VAT input và set value về 0 khi uncheck
             if (isChecked) {
+                // Enable VAT input và set default value
+                vatRateInput.prop('disabled', false).val('10');
+                vatAmountInput.prop('disabled', false);
                 row.addClass('table-success');
             } else {
+                // Disable VAT input và set về 0
+                vatRateInput.prop('disabled', true).val('0');
+                vatAmountInput.prop('disabled', true).val('0 VNĐ');
                 row.removeClass('table-success');
             }
             
-            // ✅ THÊM: Recalculate total khi checkbox thay đổi
-            var priceText = row.find('.unit-price-input').val() || '';
-            var price = parseFloat(priceText.replace(/[^\d]/g, '')) || 0;
-            var quantity = parseFloat(row.find('.quantity-input').val()) || 1;
-            var vatRate = 10; // Default VAT rate
-            
-            var total = self.calculateTotalWithVAT(price, quantity, isChecked, vatRate);
-            row.find('.total-input').val(total.toLocaleString() + ' VNĐ');
+            // ✅ THÊM: Recalculate totals
+            self.calculateItemTotal(row);
             
             // ✅ FORCE UPDATE: Đảm bảo checkbox UI hiển thị đúng state
             var checkbox = $(this);
@@ -434,11 +506,98 @@ window.QuotationManagement = {
     },
 
     showCreateModal: function() {
+        // ✅ SỬA: Reset toàn bộ form và modal
         $('#createQuotationForm')[0].reset();
-        $('#createPartsItems').empty(); // Clear existing parts items
-        $('#createRepairItems').empty(); // Clear existing repair items
-        $('#createPaintItems').empty(); // Clear existing paint items
+        
+        // Clear existing service items
+        $('#createPartsItems').empty();
+        $('#createRepairItems').empty();
+        $('#createPaintItems').empty();
+        
+        // ✅ THÊM: Reset các field quan trọng về giá trị mặc định
+        $('#createVehicleInspectionId').val('').trigger('change');
+        $('#createCustomerId').val('').trigger('change');
+        $('#createVehicleId').val('').trigger('change');
+        $('#createQuotationType').val('Personal');
+        $('#createTaxRate').val('10');
+        $('#createDiscountAmount').val('0');
+        $('#createStatus').val('Draft');
+        $('#createDescription').val('');
+        $('#createTerms').val('');
+        
+        // ✅ THÊM: Reset tổng tiền về 0
+        $('#createSubTotal').text('0 VNĐ');
+        $('#createTaxAmount').text('0 VNĐ');
+        $('#createTotalAmount').text('0 VNĐ');
+        
+        // ✅ THÊM: Thêm một hàng mẫu để người dùng thấy cấu trúc VAT
+        this.addSampleRow();
+        
+        // ✅ THÊM: Set default date (30 days from now)
+        var defaultDate = new Date();
+        defaultDate.setDate(defaultDate.getDate() + 30);
+        $('#createValidUntil').val(defaultDate.toISOString().split('T')[0]);
+        
         $('#createQuotationModal').modal('show');
+    },
+
+    // ✅ THÊM: Function thêm hàng mẫu để demo VAT
+    addSampleRow: function() {
+        var sampleHtml = `
+            <tr class="service-item-row">
+                <td>
+                    <input type="text" class="form-control form-control-sm service-typeahead" 
+                           placeholder="Gõ tên phụ tùng..." 
+                           name="Items[0].ServiceName"
+                           data-service-id=""
+                           data-service-type="parts"
+                           autocomplete="off"
+                           value="Phụ tùng mẫu">
+                    <input type="hidden" class="service-id-input" name="Items[0].ServiceId">
+                    <input type="hidden" class="service-type-input" name="Items[0].ServiceType" value="parts">
+                    <input type="hidden" class="item-category-input" name="Items[0].ItemCategory" value="Material">
+                </td>
+                <td>
+                    <input type="number" class="form-control form-control-sm quantity-input text-center" 
+                           name="Items[0].Quantity" value="2" min="1" 
+                           placeholder="1" title="Số lượng">
+                </td>
+                <td>
+                    <input type="text" class="form-control form-control-sm unit-price-input text-right" 
+                           placeholder="0" readonly title="Đơn giá" value="500,000 VNĐ">
+                </td>
+                <td>
+                    <input type="text" class="form-control form-control-sm subtotal-input text-right" 
+                           placeholder="0" readonly title="Thành tiền chưa VAT" value="1,000,000 VNĐ">
+                </td>
+                <td>
+                    <input type="number" class="form-control form-control-sm vat-rate-input text-center" 
+                           name="Items[0].VATRate" value="10" min="0" max="100" step="0.1"
+                           placeholder="10" title="Tỷ lệ VAT (%)">
+                </td>
+                <td>
+                    <input type="text" class="form-control form-control-sm vat-amount-input text-right" 
+                           placeholder="0" readonly title="Tiền VAT" value="100,000 VNĐ">
+                </td>
+                <td class="text-center">
+                    <div class="custom-control custom-checkbox">
+                        <input class="custom-control-input invoice-checkbox" type="checkbox" 
+                               name="Items[0].HasInvoice" id="invoice_create_0" checked>
+                        <label class="custom-control-label" for="invoice_create_0"></label>
+                    </div>
+                </td>
+                <td class="text-center">
+                    <button type="button" class="btn btn-sm btn-outline-danger remove-service-item" title="Xóa">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+        
+        $('#createPartsItems').append(sampleHtml);
+        
+        // Bind events cho hàng mẫu
+        this.bindServiceItemEvents('create');
     },
 
     addServiceItem: function(mode, serviceType) {
@@ -518,8 +677,17 @@ window.QuotationManagement = {
                                        placeholder="0" readonly title="Đơn giá">
                             </td>
                             <td>
-                                <input type="text" class="form-control form-control-sm total-input text-right" 
-                                       placeholder="0" readonly title="Thành tiền">
+                                <input type="text" class="form-control form-control-sm subtotal-input text-right" 
+                                       placeholder="0" readonly title="Thành tiền chưa VAT">
+                            </td>
+                            <td>
+                                <input type="number" class="form-control form-control-sm vat-rate-input text-center" 
+                                       name="Items[${itemIndex}].VATRate" value="10" min="0" max="100" step="0.1"
+                                       placeholder="10" title="Tỷ lệ VAT (%)">
+                            </td>
+                            <td>
+                                <input type="text" class="form-control form-control-sm vat-amount-input text-right" 
+                                       placeholder="0" readonly title="Tiền VAT">
                             </td>
                             <td class="text-center">
                                 <div class="custom-control custom-checkbox">
@@ -537,6 +705,11 @@ window.QuotationManagement = {
                     `;
                     
                     $('#' + containerId).append(serviceItemHtml);
+                    
+                    // ✅ THÊM: Disable VAT input cho item mới (checkbox mặc định unchecked)
+                    var lastRow = $('#' + containerId + ' .service-item-row').last();
+                    lastRow.find('.vat-rate-input').prop('disabled', true).val('0');
+                    lastRow.find('.vat-amount-input').prop('disabled', true).val('0 VNĐ');
                     
                     // Initialize typeahead for new service input
                     self.initializeServiceTypeahead($('#' + containerId + ' .service-typeahead').last(), prefix);
@@ -686,6 +859,33 @@ window.QuotationManagement = {
         
         // ✅ SỬA: Tính itemIndex global cho tất cả tabs
         var itemIndex = $('#editPartsItems .service-item-row, #editRepairItems .service-item-row, #editPaintItems .service-item-row').length;
+        
+        // ✅ DEBUG: Log itemData nhận được
+        console.log('🔍 DEBUG addServiceItemWithData - itemData:', itemData);
+        
+        // ✅ CẬP NHẬT: Tính toán VAT từ dữ liệu
+        var quantity = itemData.quantity || 1;
+        var unitPrice = itemData.unitPrice || 0;
+        var vatRate = itemData.vatRate || itemData.VATRate || 10;
+        var hasInvoice = itemData.hasInvoice || itemData.HasInvoice || false;
+        
+        // ✅ DEBUG: Log các giá trị được parse
+        console.log('🔍 DEBUG addServiceItemWithData - Parsed values:', {
+            quantity: quantity,
+            unitPrice: unitPrice,
+            vatRate: vatRate,
+            hasInvoice: hasInvoice
+        });
+        
+        var subtotal = quantity * unitPrice;
+        var vatAmount = 0;
+        var totalPrice = subtotal;
+        
+        if (hasInvoice && vatRate > 0) {
+            vatAmount = subtotal * (vatRate / 100);
+            totalPrice = subtotal + vatAmount;
+        }
+        
         var serviceItemHtml = `
             <tr class="service-item-row">
                 <td>
@@ -697,20 +897,24 @@ window.QuotationManagement = {
                 </td>
                 <td>
                     <input type="number" class="form-control form-control-sm quantity-input" 
-                           value="${itemData.quantity || 1}" min="1" placeholder="1">
+                           value="${quantity}" min="1" placeholder="1">
                 </td>
                 <td>
                     <input type="text" class="form-control form-control-sm unit-price-input text-right" 
-                           value="${itemData.unitPrice || 0}" placeholder="0" readonly title="Đơn giá">
+                           value="${unitPrice.toLocaleString() + ' VNĐ'}" placeholder="0" readonly title="Đơn giá">
                 </td>
                 <td>
-                    <input type="number" class="form-control form-control-sm vat-rate-input text-right" 
-                           value="${itemData.vatRate || itemData.VATRate || 10}" min="0" max="100" step="0.1" 
+                    <input type="text" class="form-control form-control-sm subtotal-input text-right" 
+                           value="${subtotal.toLocaleString() + ' VNĐ'}" placeholder="0" readonly title="Thành tiền chưa VAT">
+                </td>
+                <td>
+                    <input type="number" class="form-control form-control-sm vat-rate-input text-center" 
+                           value="${vatRate}" min="0" max="100" step="0.1" 
                            placeholder="10" title="VAT (%)">
                 </td>
                 <td>
-                    <input type="text" class="form-control form-control-sm total-input text-right" 
-                           value="${itemData.totalPrice || 0}" placeholder="0" readonly title="Thành tiền">
+                    <input type="text" class="form-control form-control-sm vat-amount-input text-right" 
+                           value="${vatAmount.toLocaleString() + ' VNĐ'}" placeholder="0" readonly title="Tiền VAT">
                 </td>
                 <td class="text-center">
                     <div class="custom-control custom-checkbox">
@@ -736,6 +940,13 @@ window.QuotationManagement = {
             lastRow.find('.service-typeahead').val(itemData.service.name);
         }
         
+        // ✅ THÊM: Disable VAT input nếu checkbox không được check
+        var isInvoiceChecked = lastRow.find('.invoice-checkbox').is(':checked');
+        if (!isInvoiceChecked) {
+            lastRow.find('.vat-rate-input').prop('disabled', true).val('0');
+            lastRow.find('.vat-amount-input').prop('disabled', true).val('0 VNĐ');
+        }
+        
         // Initialize typeahead for new service input
         self.initializeServiceTypeahead($('#' + containerId + ' .service-typeahead').last(), prefix);
         
@@ -743,53 +954,92 @@ window.QuotationManagement = {
         self.bindServiceItemEvents(prefix);
     },
 
+    // ✅ THÊM: Helper function để parse giá trị tiền tệ
+    parseCurrencyValue: function(currencyText) {
+        if (!currencyText) return 0;
+        // Loại bỏ dấu chấm (nghìn), dấu phẩy (thập phân) và ký hiệu tiền tệ ' VNĐ'
+        var cleanedText = currencyText.replace(/\./g, '').replace(/,/g, '').replace(' VNĐ', '');
+        return parseFloat(cleanedText) || 0;
+    },
+
     // ✅ THÊM: Function tính toán thành tiền cho từng item
     calculateItemTotal: function($row) {
         var quantity = parseFloat($row.find('.quantity-input').val()) || 0;
-        var unitPrice = parseFloat($row.find('.unit-price-input').val()) || 0;
+        
+        // ✅ SỬA: Parse đúng giá trị từ input có format "500.000 VNĐ"
+        var unitPriceText = $row.find('.unit-price-input').val() || '';
+        var unitPrice = this.parseCurrencyValue(unitPriceText);
+        
         var vatRate = parseFloat($row.find('.vat-rate-input').val()) || 0;
         var isVATApplicable = $row.find('.invoice-checkbox').is(':checked');
 
         var itemSubtotal = quantity * unitPrice;
+        var vatAmount = 0;
         var itemTotalPrice = itemSubtotal;
 
-        if (isVATApplicable) {
-            itemTotalPrice += itemSubtotal * (vatRate / 100);
+        if (isVATApplicable && vatRate > 0) {
+            vatAmount = itemSubtotal * (vatRate / 100);
+            itemTotalPrice = itemSubtotal + vatAmount;
         }
 
-        // ✅ SỬA: Lưu giá trị thô, hiển thị format
-        $row.find('.total-input').val(itemTotalPrice.toFixed(0));
-        this.formatTotalInputForDisplay($row.find('.total-input')); // ✅ THÊM: Format hiển thị ngay lập tức
+        // ✅ CẬP NHẬT: Hiển thị subtotal, VAT amount và total
+        $row.find('.subtotal-input').val(itemSubtotal.toLocaleString() + ' VNĐ');
+        $row.find('.vat-amount-input').val(vatAmount.toLocaleString() + ' VNĐ');
+        
+        // ✅ THÊM: Cột tổng tiền cuối cùng (nếu cần)
+        if ($row.find('.total-input').length > 0) {
+            $row.find('.total-input').val(itemTotalPrice.toLocaleString() + ' VNĐ');
+        }
+        
         this.calculateOverallTotals();
     },
 
     // ✅ THÊM: Function tính tổng cộng
     calculateOverallTotals: function() {
+        var self = this;
         var subtotal = 0;
         var taxAmount = 0;
-        var discountAmount = parseFloat($('#editDiscountAmount').val()) || 0;
+        var discountAmount = 0;
 
-        $('#editPartsItems tr, #editRepairItems tr, #editPaintItems tr').each(function() {
+        // ✅ CẬP NHẬT: Xử lý cả create và edit modal
+        var containers = ['#createPartsItems', '#createRepairItems', '#createPaintItems', '#editPartsItems', '#editRepairItems', '#editPaintItems'];
+        
+        containers.forEach(function(container) {
+            $(container + ' tr').each(function() {
             var $row = $(this);
             var quantity = parseFloat($row.find('.quantity-input').val()) || 0;
-            var unitPrice = parseFloat($row.find('.unit-price-input').val()) || 0;
+                
+                // ✅ SỬA: Parse đúng giá trị từ input có format "500.000 VNĐ"
+                var unitPriceText = $row.find('.unit-price-input').val() || '';
+                var unitPrice = self.parseCurrencyValue(unitPriceText);
+                
             var vatRate = parseFloat($row.find('.vat-rate-input').val()) || 0;
             var isVATApplicable = $row.find('.invoice-checkbox').is(':checked');
 
             var itemSubtotal = quantity * unitPrice;
             subtotal += itemSubtotal;
 
-            if (isVATApplicable) {
+                if (isVATApplicable && vatRate > 0) {
                 taxAmount += itemSubtotal * (vatRate / 100);
             }
+            });
         });
+
+        // ✅ CẬP NHẬT: Lấy discount từ cả create và edit modal
+        var createDiscount = parseFloat($('#createDiscountAmount').val()) || 0;
+        var editDiscount = parseFloat($('#editDiscountAmount').val()) || 0;
+        discountAmount = createDiscount || editDiscount;
 
         var totalAmount = subtotal + taxAmount - discountAmount;
 
-        // Update display (nếu có các element này)
-        if ($('#editSubTotal').length) $('#editSubTotal').text(subtotal.toLocaleString());
-        if ($('#editTaxAmount').length) $('#editTaxAmount').text(taxAmount.toLocaleString());
-        if ($('#editTotalAmount').length) $('#editTotalAmount').text(totalAmount.toLocaleString());
+        // ✅ CẬP NHẬT: Update display cho cả create và edit modal
+        if ($('#createSubTotal').length) $('#createSubTotal').text(subtotal.toLocaleString() + ' VNĐ');
+        if ($('#createTaxAmount').length) $('#createTaxAmount').text(taxAmount.toLocaleString() + ' VNĐ');
+        if ($('#createTotalAmount').length) $('#createTotalAmount').text(totalAmount.toLocaleString() + ' VNĐ');
+        
+        if ($('#editSubTotal').length) $('#editSubTotal').text(subtotal.toLocaleString() + ' VNĐ');
+        if ($('#editTaxAmount').length) $('#editTaxAmount').text(taxAmount.toLocaleString() + ' VNĐ');
+        if ($('#editTotalAmount').length) $('#editTotalAmount').text(totalAmount.toLocaleString() + ' VNĐ');
     },
 
     // ✅ THÊM: Function để format hiển thị số tiền trong input
@@ -1362,7 +1612,8 @@ window.QuotationManagement = {
         $('#viewStatus').text(quotation.status || quotation.Status || '');
         
         // ✅ SỬA: Thêm các trường bị thiếu
-        $('#viewQuotationType').text(quotation.quotationType || quotation.QuotationType || 'Personal');
+        var quotationType = quotation.quotationType || quotation.QuotationType || 'Personal';
+        $('#viewQuotationType').text(quotationType);
         $('#viewQuotationDate').text(quotation.quotationDate || quotation.QuotationDate ? new Date(quotation.quotationDate || quotation.QuotationDate).toLocaleDateString('vi-VN') : new Date().toLocaleDateString('vi-VN'));
         
         $('#viewValidUntil').text(quotation.validUntil || quotation.ValidUntil ? new Date(quotation.validUntil || quotation.ValidUntil).toLocaleDateString('vi-VN') : '');
@@ -1370,13 +1621,16 @@ window.QuotationManagement = {
         $('#viewTerms').text(quotation.terms || quotation.Terms || '');
         
         // Calculate and populate financial fields
+        var items = quotation.items || quotation.Items || [];
         var subtotal = 0;
         var taxAmount = 0;
         var vatRate = 10; // VAT rate 10%
         
-        if (quotation.items && quotation.items.length > 0) {
-            quotation.items.forEach(function(item) {
-                var itemSubtotal = (item.unitPrice || 0) * (item.quantity || 1);
+        if (items.length > 0) {
+            items.forEach(function(item) {
+                var unitPrice = item.unitPrice ?? item.UnitPrice ?? 0;
+                var quantity = item.quantity ?? item.Quantity ?? 1;
+                var itemSubtotal = unitPrice * quantity;
                 subtotal += itemSubtotal;
                 
                 // ✅ SỬA: Tính thuế VAT cho items có hóa đơn
@@ -1401,7 +1655,7 @@ window.QuotationManagement = {
         // Populate service items
         $('#viewServiceItems').empty();
         
-        if (quotation.items && quotation.items.length > 0) {
+        if (items.length > 0) {
             // Add table header
             var headerHtml = `
                 <table class="table table-sm table-bordered">
@@ -1422,17 +1676,20 @@ window.QuotationManagement = {
             $('#viewServiceItems').append(headerHtml);
             
             // Add service items
-            quotation.items.forEach(function(item, index) {
+            items.forEach(function(item, index) {
+                var unitPrice = item.unitPrice ?? item.UnitPrice ?? 0;
+                var quantity = item.quantity ?? item.Quantity ?? 1;
+                var totalPrice = item.totalPrice ?? item.TotalPrice ?? (unitPrice * quantity);
                 var serviceItemHtml = `
                     <tr>
-                        <td><strong>${item.service ? item.service.name : item.itemName || 'Dịch vụ'}</strong></td>
-                        <td class="text-center"><span class="badge badge-info">${item.quantity || 1}</span></td>
-                        <td class="text-right"><span class="text-muted">${item.unitPrice ? item.unitPrice.toLocaleString() + ' VNĐ' : '0 VNĐ'}</span></td>
-                        <td class="text-right"><strong class="text-primary">${item.totalPrice ? item.totalPrice.toLocaleString() + ' VNĐ' : '0 VNĐ'}</strong></td>
+                        <td><strong>${item.service ? item.service.name : (item.itemName || item.ItemName || 'Dịch vụ')}</strong></td>
+                        <td class="text-center"><span class="badge badge-info">${quantity}</span></td>
+                        <td class="text-right"><span class="text-muted">${unitPrice ? unitPrice.toLocaleString() + ' VNĐ' : '0 VNĐ'}</span></td>
+                        <td class="text-right"><strong class="text-primary">${totalPrice ? totalPrice.toLocaleString() + ' VNĐ' : '0 VNĐ'}</strong></td>
                         <td class="text-center">
                             ${(item.isVATApplicable || item.IsVATApplicable) ? '<span class="badge badge-success">Có</span>' : '<span class="badge badge-secondary">Không</span>'}
                         </td>
-                        <td><small class="text-muted">${item.notes || ''}</small></td>
+                        <td><small class="text-muted">${item.notes || item.Notes || ''}</small></td>
                     </tr>
                 `;
                 $('#viewServiceItemsBody').append(serviceItemHtml);
@@ -1442,11 +1699,26 @@ window.QuotationManagement = {
         }
         
         // Set data-id for print button
-        $('.print-quotation').attr('data-id', quotation.id);
+        $('.print-quotation').attr('data-id', quotation.id || quotation.Id);
     },
 
     populateEditModal: function(quotation) {
         var self = this;
+        
+        // ✅ DEBUG: Log data nhận được từ API
+        console.log('🔍 DEBUG populateEditModal - Quotation data:', quotation);
+        if (quotation.items && quotation.items.length > 0) {
+            console.log('🔍 DEBUG populateEditModal - Items:', quotation.items);
+            quotation.items.forEach(function(item, index) {
+                console.log(`🔍 DEBUG populateEditModal - Item ${index}:`, {
+                    itemName: item.itemName,
+                    vatRate: item.vatRate,
+                    VATRate: item.VATRate,
+                    hasInvoice: item.hasInvoice,
+                    HasInvoice: item.HasInvoice
+                });
+            });
+        }
         
         // Clear existing service items from all tabs
         $('#editPartsItems').empty();
@@ -1622,9 +1894,649 @@ window.QuotationManagement = {
     // Download attachment
     downloadAttachment: function(attachmentId) {
         window.open('/api/quotationattachments/' + attachmentId + '/download', '_blank');
+    },
+
+    // ✅ THÊM: Approve personal quotation
+    approvePersonalQuotation: function(quotationId) {
+        var self = this;
+        
+        Swal.fire({
+            title: 'Xác nhận duyệt báo giá',
+            text: 'Bạn có chắc chắn muốn duyệt báo giá này không?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#28a745',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Có, duyệt báo giá',
+            cancelButtonText: 'Hủy'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: '/QuotationManagement/UpdateQuotationStatus/' + quotationId,
+                    type: 'POST',
+                    data: { status: 'Approved' },
+                    success: function(response) {
+                        if (response.success) {
+                            Swal.fire('Thành công', 'Duyệt báo giá thành công', 'success');
+                            self.quotationTable.ajax.reload();
+                        } else {
+                            Swal.fire('Lỗi', response.error || 'Có lỗi xảy ra khi duyệt báo giá', 'error');
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        Swal.fire('Lỗi', 'Có lỗi xảy ra khi duyệt báo giá', 'error');
+                    }
+                });
+            }
+        });
+    },
+
+    // ✅ THÊM: Show corporate pricing modal
+    showCorporatePricingModal: function(quotationId) {
+        var self = this;
+        
+        // Kiểm tra xem đã có bảng giá công ty chưa
+        $.ajax({
+            url: '/QuotationManagement/GetCorporateApprovedPricing/' + quotationId,
+            type: 'GET',
+            success: function(response) {
+                if (response.success && response.data && response.data.companyName) {
+                    // Đã có bảng giá công ty, hiển thị thông báo
+                    Swal.fire({
+                        title: 'Bảng giá đã được cập nhật',
+                        text: 'Bảng giá duyệt của công ty cho xe này đã được cập nhật. Bạn có muốn xem/chỉnh sửa không?',
+                        icon: 'info',
+                        showCancelButton: true,
+                        confirmButtonColor: '#3085d6',
+                        cancelButtonColor: '#6c757d',
+                        confirmButtonText: 'Có, xem/chỉnh sửa',
+                        cancelButtonText: 'Hủy'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            // Pass existing pricing to avoid duplicate API calls
+                            self.openCorporatePricingModal(quotationId, response.data);
+                        }
+                    });
+                } else {
+                    // Chưa có bảng giá công ty, mở modal bình thường
+                    self.openCorporatePricingModal(quotationId, null);
+                }
+            },
+            error: function() {
+                // Có lỗi, mở modal bình thường
+                self.openCorporatePricingModal(quotationId, null);
+            }
+        });
+    },
+
+    // ✅ THÊM: Mở modal corporate pricing
+    openCorporatePricingModal: function(quotationId, existingPricing) {
+        var self = this;
+        
+        // Load quotation data first
+        $.ajax({
+            url: '/QuotationManagement/GetQuotation/' + quotationId,
+            type: 'GET',
+            success: function(response) {
+                if (response.success) {
+                    var quotation = response.data;
+                    
+                    // Populate modal with quotation data
+                    $('#corporatePricingQuotationId').val(quotationId);
+                    $('#corporatePricingQuotationNumber').text(quotation.quotationNumber);
+                    $('#corporatePricingCustomerName').text(quotation.customerName);
+                    $('#corporatePricingVehicleInfo').text(quotation.vehicleInfo);
+                    $('#corporatePricingTotalAmount').text(quotation.totalAmount.toLocaleString() + ' VNĐ');
+                    
+                    // Load existing corporate pricing if available, otherwise load from quotation
+                    self.loadCorporatePricing(quotationId, quotation, existingPricing);
+                    
+                    // Show modal
+                    $('#corporatePricingModal').modal('show');
+                } else {
+                    Swal.fire('Lỗi', response.error || 'Không thể tải thông tin báo giá', 'error');
+                }
+            },
+            error: function() {
+                Swal.fire('Lỗi', 'Không thể tải thông tin báo giá', 'error');
+            }
+        });
+    },
+
+    // ✅ THÊM: Load corporate pricing data
+    loadCorporatePricing: function(quotationId, quotationData, existingPricing) {
+        var self = this;
+        
+        // If existingPricing is provided, populate directly without extra API call
+        if (existingPricing) {
+            var pricing = existingPricing;
+            // Populate form fields
+            $('#corporateCompanyName').val(pricing.companyName);
+            $('#corporateTaxCode').val(pricing.taxCode);
+            $('#corporateContractNumber').val(pricing.contractNumber);
+            $('#corporateApprovalDate').val(pricing.approvalDate ? new Date(pricing.approvalDate).toISOString().split('T')[0] : '');
+            $('#corporateApprovedAmount').val(pricing.approvedAmount);
+            $('#corporateCustomerCoPayment').val(pricing.customerCoPayment);
+            $('#corporateApprovalNotes').val(pricing.approvalNotes);
+            if (pricing.approvedItems && pricing.approvedItems.length > 0) {
+                self.populateCorporateItemsTable(pricing.approvedItems);
+            } else if (quotationData && quotationData.items && quotationData.items.length > 0) {
+                self.populateCorporateItemsFromQuotation(quotationData.items);
+            }
+            return; // done
+        }
+
+        $.ajax({
+            url: '/QuotationManagement/GetCorporateApprovedPricing/' + quotationId,
+            type: 'GET',
+            success: function(response) {
+                if (response.success && response.data) {
+                    var pricing = response.data;
+                    
+                    // Populate form fields
+                    $('#corporateCompanyName').val(pricing.companyName);
+                    $('#corporateTaxCode').val(pricing.taxCode);
+                    $('#corporateContractNumber').val(pricing.contractNumber);
+                    $('#corporateApprovalDate').val(pricing.approvalDate ? new Date(pricing.approvalDate).toISOString().split('T')[0] : '');
+                    $('#corporateApprovedAmount').val(pricing.approvedAmount);
+                    $('#corporateCustomerCoPayment').val(pricing.customerCoPayment);
+                    $('#corporateApprovalNotes').val(pricing.approvalNotes);
+                    
+                    // Kiểm tra nếu approvedItems empty thì load từ quotation
+                    if (pricing.approvedItems && pricing.approvedItems.length > 0) {
+                        self.populateCorporateItemsTable(pricing.approvedItems);
+                    } else {
+                        // Load items từ quotation nếu approvedItems empty
+                        if (quotationData && quotationData.items && quotationData.items.length > 0) {
+                            self.populateCorporateItemsFromQuotation(quotationData.items);
+                        }
+                    }
+                } else {
+                    // Clear form if no data
+                    $('#corporatePricingForm')[0].reset();
+                    $('#corporateItemsTable tbody').empty();
+                    
+                    // Tự động load items từ báo giá nếu chưa có dữ liệu corporate pricing
+                    if (quotationData && quotationData.items && quotationData.items.length > 0) {
+                        self.populateCorporateItemsFromQuotation(quotationData.items);
+                    }
+                }
+            },
+            error: function(xhr, status, error) {
+                // Clear form on error
+                $('#corporatePricingForm')[0].reset();
+                $('#corporateItemsTable tbody').empty();
+                
+                // Load items từ quotation nếu có lỗi API
+                if (quotationData && quotationData.items && quotationData.items.length > 0) {
+                    self.populateCorporateItemsFromQuotation(quotationData.items);
+                }
+            }
+        });
+    },
+
+    // ✅ THÊM: Populate corporate items table
+    populateCorporateItemsTable: function(items) {
+        var tbody = $('#corporateItemsTable tbody');
+        tbody.empty();
+        
+        if (items && items.length > 0) {
+            items.forEach(function(item) {
+                var row = `
+                    <tr data-quotation-item-id="${item.quotationItemId || 0}">
+                        <td>${item.itemName || 'N/A'}</td>
+                        <td class="text-center">${item.quantity || 1}</td>
+                        <td class="text-right">${(item.originalPrice || 0).toLocaleString()} VNĐ</td>
+                        <td>
+                            <input type="number" class="form-control form-control-sm approved-price" 
+                                   value="${item.approvedPrice || 0}" min="0" step="0.01">
+                        </td>
+                        <td>
+                            <input type="number" class="form-control form-control-sm co-payment" 
+                                   value="${item.customerCoPayment || 0}" min="0" step="0.01">
+                        </td>
+                        <td class="text-center">
+                            <div class="custom-control custom-checkbox">
+                                <input type="checkbox" class="custom-control-input is-approved" ${item.isApproved ? 'checked' : ''}>
+                                <label class="custom-control-label"></label>
+                            </div>
+                        </td>
+                        <td>
+                            <input type="text" class="form-control form-control-sm approval-notes" 
+                                   value="${item.approvalNotes || ''}" placeholder="Ghi chú duyệt...">
+                        </td>
+                    </tr>
+                `;
+                tbody.append(row);
+            });
+        }
+    },
+
+    // ✅ THÊM: Populate corporate items from quotation data
+    populateCorporateItemsFromQuotation: function(quotationItems) {
+        var tbody = $('#corporateItemsTable tbody');
+        tbody.empty();
+        
+        if (quotationItems && quotationItems.length > 0) {
+            quotationItems.forEach(function(item) {
+                var row = `
+                    <tr data-quotation-item-id="${item.id || 0}">
+                        <td>${item.itemName || item.serviceName || 'N/A'}</td>
+                        <td class="text-center">${item.quantity || 1}</td>
+                        <td class="text-right">${(item.unitPrice || 0).toLocaleString()} VNĐ</td>
+                        <td>
+                            <input type="number" class="form-control form-control-sm approved-price" 
+                                   value="${item.unitPrice || 0}" min="0" step="0.01">
+                        </td>
+                        <td>
+                            <input type="number" class="form-control form-control-sm co-payment" 
+                                   value="0" min="0" step="0.01">
+                        </td>
+                        <td class="text-center">
+                            <div class="custom-control custom-checkbox">
+                                <input type="checkbox" class="custom-control-input is-approved" checked>
+                                <label class="custom-control-label"></label>
+                            </div>
+                        </td>
+                        <td>
+                            <input type="text" class="form-control form-control-sm approval-notes" 
+                                   placeholder="Ghi chú duyệt...">
+                        </td>
+                    </tr>
+                `;
+                tbody.append(row);
+            });
+        }
+    },
+
+    // ✅ THÊM: Save corporate pricing
+    saveCorporatePricing: function() {
+        var self = this;
+        var quotationId = $('#corporatePricingQuotationId').val();
+        
+        // Sử dụng FormData để upload file
+        var formData = new FormData();
+        
+        // Add basic form data
+        formData.append('quotationId', quotationId);
+        formData.append('companyName', $('#corporateCompanyName').val());
+        formData.append('taxCode', $('#corporateTaxCode').val());
+        formData.append('contractNumber', $('#corporateContractNumber').val());
+        formData.append('approvalDate', $('#corporateApprovalDate').val());
+        formData.append('approvedAmount', $('#corporateApprovedAmount').val());
+        formData.append('customerCoPayment', $('#corporateCustomerCoPayment').val());
+        formData.append('approvalNotes', $('#corporateApprovalNotes').val());
+        
+        // Add file if selected
+        var fileInput = $('#corporateContractFile')[0];
+        if (fileInput.files.length > 0) {
+            formData.append('contractFile', fileInput.files[0]);
+        }
+        
+        // Collect items data
+        var approvedItems = [];
+        $('#corporateItemsTable tbody tr').each(function(index) {
+            var row = $(this);
+            var item = {
+                quotationItemId: row.data('quotation-item-id') || index + 1,
+                itemName: row.find('td:first').text(),
+                quantity: parseInt(row.find('td:nth-child(2)').text()),
+                originalPrice: parseFloat(row.find('td:nth-child(3)').text().replace(/[^\d]/g, '')),
+                approvedPrice: parseFloat(row.find('.approved-price').val()) || 0,
+                customerCoPayment: parseFloat(row.find('.co-payment').val()) || 0,
+                isApproved: row.find('.is-approved').is(':checked'),
+                approvalNotes: row.find('.approval-notes').val()
+            };
+            approvedItems.push(item);
+        });
+        
+        formData.append('approvedItems', JSON.stringify(approvedItems));
+        
+        // Send data to server
+        $.ajax({
+            url: '/QuotationManagement/UpdateCorporateApprovedPricing/' + quotationId,
+            type: 'POST',
+            processData: false,
+            contentType: false,
+            data: formData,
+            success: function(response) {
+                if (response.success) {
+                    Swal.fire('Thành công', 'Cập nhật bảng giá duyệt của công ty thành công', 'success');
+                    $('#corporatePricingModal').modal('hide');
+                    // Refresh quotation table
+                    self.quotationTable.ajax.reload();
+                } else {
+                    Swal.fire('Lỗi', response.error || 'Có lỗi xảy ra khi cập nhật bảng giá duyệt của công ty', 'error');
+                }
+            },
+            error: function(xhr, status, error) {
+                Swal.fire('Lỗi', 'Có lỗi xảy ra khi cập nhật bảng giá duyệt của công ty', 'error');
+            }
+        });
+    },
+
+    // Show insurance pricing modal
+    showInsurancePricingModal: function(quotationId) {
+        var self = this;
+        
+        // ✅ THÊM: Kiểm tra xem đã có bảng giá bảo hiểm chưa
+        $.ajax({
+            url: '/QuotationManagement/GetInsuranceApprovedPricing/' + quotationId,
+            type: 'GET',
+            success: function(response) {
+                if (response.success && response.data && response.data.insuranceCompany) {
+                    // Đã có bảng giá bảo hiểm, hiển thị thông báo
+                    Swal.fire({
+                        title: 'Bảng giá đã được cập nhật',
+                        text: 'Bảng giá duyệt của bảo hiểm cho xe này đã được cập nhật. Bạn có muốn xem/chỉnh sửa không?',
+                        icon: 'info',
+                        showCancelButton: true,
+                        confirmButtonColor: '#3085d6',
+                        cancelButtonColor: '#6c757d',
+                        confirmButtonText: 'Có, xem/chỉnh sửa',
+                        cancelButtonText: 'Hủy'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            // Pass existing pricing to avoid duplicate API calls
+                            self.openInsurancePricingModal(quotationId, response.data);
+                        }
+                    });
+                } else {
+                    // Chưa có bảng giá bảo hiểm, mở modal bình thường
+                    self.openInsurancePricingModal(quotationId, null);
+                }
+            },
+            error: function() {
+                // Có lỗi, mở modal bình thường
+                self.openInsurancePricingModal(quotationId, null);
+            }
+        });
+    },
+
+    // ✅ THÊM: Mở modal insurance pricing
+    openInsurancePricingModal: function(quotationId, existingPricing) {
+        var self = this;
+        
+        // Load quotation data first
+        $.ajax({
+            url: '/QuotationManagement/GetQuotation/' + quotationId,
+            type: 'GET',
+            success: function(response) {
+                if (response.success) {
+                    var quotation = response.data;
+                    
+                    // Populate modal with quotation data
+                    $('#insurancePricingQuotationId').val(quotationId);
+                    $('#insurancePricingQuotationNumber').text(quotation.quotationNumber);
+                    $('#insurancePricingCustomerName').text(quotation.customerName);
+                    $('#insurancePricingVehicleInfo').text(quotation.vehicleInfo);
+                    $('#insurancePricingTotalAmount').text(quotation.totalAmount.toLocaleString() + ' VNĐ');
+                    
+                    // Load existing insurance pricing if available, otherwise load from quotation
+                    self.loadInsurancePricing(quotationId, quotation, existingPricing);
+                    
+                    // Show modal
+                    $('#insurancePricingModal').modal('show');
+                } else {
+                    Swal.fire('Lỗi', response.error || 'Không thể tải thông tin báo giá', 'error');
+                }
+            },
+            error: function() {
+                Swal.fire('Lỗi', 'Không thể tải thông tin báo giá', 'error');
+            }
+        });
+    },
+
+    // Load insurance pricing data
+    loadInsurancePricing: function(quotationId, quotationData, existingPricing) {
+        var self = this;
+        
+        // If existingPricing is provided, populate directly without extra API call
+        if (existingPricing) {
+            var pricing = existingPricing;
+            $('#insuranceCompany').val(pricing.insuranceCompany);
+            $('#taxCode').val(pricing.taxCode);
+            $('#policyNumber').val(pricing.policyNumber);
+            $('#approvalDate').val(pricing.approvalDate ? new Date(pricing.approvalDate).toISOString().split('T')[0] : '');
+            $('#approvedAmount').val(pricing.approvedAmount);
+            $('#customerCoPayment').val(pricing.customerCoPayment);
+            $('#approvalNotes').val(pricing.approvalNotes);
+            if (pricing.approvedItems && pricing.approvedItems.length > 0) {
+                self.populateInsuranceItemsTable(pricing.approvedItems);
+            } else if (quotationData && quotationData.items && quotationData.items.length > 0) {
+                self.populateInsuranceItemsFromQuotation(quotationData.items);
+            }
+            return; // done
+        }
+
+        $.ajax({
+            url: '/QuotationManagement/GetInsuranceApprovedPricing/' + quotationId,
+            type: 'GET',
+            success: function(response) {
+                if (response.success && response.data) {
+                    var pricing = response.data;
+                    
+                    // Populate form fields
+                    $('#insuranceCompany').val(pricing.insuranceCompany);
+                    $('#taxCode').val(pricing.taxCode);
+                    $('#policyNumber').val(pricing.policyNumber);
+                    $('#approvalDate').val(pricing.approvalDate ? new Date(pricing.approvalDate).toISOString().split('T')[0] : '');
+                    $('#approvedAmount').val(pricing.approvedAmount);
+                    $('#customerCoPayment').val(pricing.customerCoPayment);
+                    $('#approvalNotes').val(pricing.approvalNotes);
+                    
+                    // Kiểm tra nếu approvedItems empty thì load từ quotation
+                    if (pricing.approvedItems && pricing.approvedItems.length > 0) {
+                        self.populateInsuranceItemsTable(pricing.approvedItems);
+                    } else {
+                        // Load items từ quotation nếu approvedItems empty
+                        if (quotationData && quotationData.items && quotationData.items.length > 0) {
+                            self.populateInsuranceItemsFromQuotation(quotationData.items);
+                        }
+                    }
+                } else {
+                    // Clear form if no data
+                    $('#insurancePricingForm')[0].reset();
+                    $('#insuranceItemsTable tbody').empty();
+                    
+                    // Tự động load items từ báo giá nếu chưa có dữ liệu insurance pricing
+                    if (quotationData && quotationData.items && quotationData.items.length > 0) {
+                        self.populateInsuranceItemsFromQuotation(quotationData.items);
+                    }
+                }
+            },
+            error: function(xhr, status, error) {
+                // Clear form on error
+                $('#insurancePricingForm')[0].reset();
+                $('#insuranceItemsTable tbody').empty();
+                
+                // Load items từ quotation nếu có lỗi API
+                if (quotationData && quotationData.items && quotationData.items.length > 0) {
+                    self.populateInsuranceItemsFromQuotation(quotationData.items);
+                }
+            }
+        });
+    },
+
+    // Populate insurance items table
+    populateInsuranceItemsTable: function(items) {
+        var tbody = $('#insuranceItemsTable tbody');
+        tbody.empty();
+        
+        if (items && items.length > 0) {
+            items.forEach(function(item) {
+                var row = `
+                    <tr>
+                        <td>${item.itemName}</td>
+                        <td class="text-center">${item.quantity}</td>
+                        <td class="text-right">${item.originalPrice.toLocaleString()} VNĐ</td>
+                        <td>
+                            <input type="number" class="form-control form-control-sm approved-price" 
+                                   value="${item.approvedPrice}" min="0" step="0.01">
+                        </td>
+                        <td>
+                            <input type="number" class="form-control form-control-sm co-payment" 
+                                   value="${item.customerCoPayment}" min="0" step="0.01">
+                        </td>
+                        <td class="text-center">
+                            <div class="custom-control custom-checkbox">
+                                <input type="checkbox" class="custom-control-input is-approved" 
+                                       ${item.isApproved ? 'checked' : ''}>
+                                <label class="custom-control-label"></label>
+                            </div>
+                        </td>
+                        <td>
+                            <input type="text" class="form-control form-control-sm approval-notes" 
+                                   value="${item.approvalNotes || ''}">
+                        </td>
+                    </tr>
+                `;
+                tbody.append(row);
+            });
+        }
+    },
+
+    // ✅ THÊM: Populate insurance items from quotation data
+    populateInsuranceItemsFromQuotation: function(quotationItems) {
+        var tbody = $('#insuranceItemsTable tbody');
+        tbody.empty();
+        
+        if (quotationItems && quotationItems.length > 0) {
+            quotationItems.forEach(function(item) {
+                var row = `
+                    <tr data-quotation-item-id="${item.id || 0}">
+                        <td>${item.itemName || item.serviceName || 'N/A'}</td>
+                        <td class="text-center">${item.quantity || 1}</td>
+                        <td class="text-right">${(item.unitPrice || 0).toLocaleString()} VNĐ</td>
+                        <td>
+                            <input type="number" class="form-control form-control-sm approved-price" 
+                                   value="${item.unitPrice || 0}" min="0" step="0.01">
+                        </td>
+                        <td>
+                            <input type="number" class="form-control form-control-sm co-payment" 
+                                   value="0" min="0" step="0.01">
+                        </td>
+                        <td class="text-center">
+                            <div class="custom-control custom-checkbox">
+                                <input type="checkbox" class="custom-control-input is-approved" checked>
+                                <label class="custom-control-label"></label>
+                            </div>
+                        </td>
+                        <td>
+                            <input type="text" class="form-control form-control-sm approval-notes" 
+                                   placeholder="Ghi chú duyệt...">
+                        </td>
+                    </tr>
+                `;
+                tbody.append(row);
+            });
+        }
+    },
+
+    // Save insurance pricing
+    saveInsurancePricing: function() {
+        var self = this;
+        var quotationId = $('#insurancePricingQuotationId').val();
+        
+        // Sử dụng FormData để upload file
+        var formData = new FormData();
+        
+        // Add basic form data
+        formData.append('quotationId', quotationId);
+        formData.append('insuranceCompany', $('#insuranceCompany').val());
+        formData.append('taxCode', $('#taxCode').val());
+        formData.append('policyNumber', $('#policyNumber').val());
+        formData.append('approvalDate', $('#approvalDate').val());
+        formData.append('approvedAmount', $('#approvedAmount').val());
+        formData.append('customerCoPayment', $('#customerCoPayment').val());
+        formData.append('approvalNotes', $('#approvalNotes').val());
+        
+        // Add file if selected
+        var fileInput = $('#insuranceFile')[0];
+        if (fileInput.files.length > 0) {
+            formData.append('insuranceFile', fileInput.files[0]);
+        }
+        
+        // Collect items data
+        var approvedItems = [];
+        $('#insuranceItemsTable tbody tr').each(function(index) {
+            var row = $(this);
+            var item = {
+                quotationItemId: row.data('quotation-item-id') || index + 1,
+                itemName: row.find('td:first').text(),
+                quantity: parseInt(row.find('td:nth-child(2)').text()),
+                originalPrice: parseFloat(row.find('td:nth-child(3)').text().replace(/[^\d]/g, '')),
+                approvedPrice: parseFloat(row.find('.approved-price').val()) || 0,
+                customerCoPayment: parseFloat(row.find('.co-payment').val()) || 0,
+                isApproved: row.find('.is-approved').is(':checked'),
+                approvalNotes: row.find('.approval-notes').val()
+            };
+            approvedItems.push(item);
+        });
+        
+        formData.append('approvedItems', JSON.stringify(approvedItems));
+        
+        // Send data to server
+        $.ajax({
+            url: '/QuotationManagement/UpdateInsuranceApprovedPricing/' + quotationId,
+            type: 'POST',
+            processData: false,
+            contentType: false,
+            data: formData,
+            success: function(response) {
+                if (response.success) {
+                    Swal.fire('Thành công', 'Cập nhật bảng giá duyệt của bảo hiểm thành công', 'success');
+                    $('#insurancePricingModal').modal('hide');
+                    // Refresh quotation table
+                    self.quotationTable.ajax.reload();
+                } else {
+                    Swal.fire('Lỗi', response.error || 'Cập nhật thất bại', 'error');
+                }
+            },
+            error: function() {
+                Swal.fire('Lỗi', 'Cập nhật thất bại', 'error');
+            }
+        });
     }
 };
 
+// ✅ SỬA: Wrap khởi tạo trong document ready
 $(document).ready(function() {
+    // ✅ THÊM: Khởi tạo module và các event handlers
     QuotationManagement.init();
-});
+    
+    // ✅ THÊM: Khởi tạo CardWidget cho collapse/expand
+    $('[data-card-widget="collapse"]').CardWidget();
+    
+    // ✅ THÊM: Insurance pricing form submit
+    $(document).on('submit', '#insurancePricingForm', function(e) {
+        e.preventDefault();
+        QuotationManagement.saveInsurancePricing();
+    });
+
+    // ✅ THÊM: File upload events
+    $(document).on('change', '#insuranceFile', function() {
+        var file = this.files[0];
+        if (file) {
+            $('#fileName').text(file.name);
+            $('#filePreviewRow').show();
+            
+            // Update custom file label
+            $(this).next('.custom-file-label').text(file.name);
+        }
+    });
+
+    $(document).on('click', '#clearFileBtn', function() {
+        $('#insuranceFile').val('');
+        $('#filePreviewRow').hide();
+        $('#insuranceFile').next('.custom-file-label').text('Chọn file...');
+    });
+
+    $(document).on('click', '#viewFileBtn', function() {
+        var file = $('#insuranceFile')[0].files[0];
+        if (file) {
+            var url = URL.createObjectURL(file);
+            window.open(url, '_blank');
+        }
+    });
+}); // ✅ Đóng $(document).ready()

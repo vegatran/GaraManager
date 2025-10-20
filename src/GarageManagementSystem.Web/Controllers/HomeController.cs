@@ -137,7 +137,7 @@ namespace GarageManagementSystem.Web.Controllers
         [Route("GetConfig")]
         public IActionResult GetConfig()
         {
-            var identityServerAuthority = _configuration["IdentityServer:Authority"] ?? "https://localhost:44333";
+            var identityServerAuthority = _configuration["IdentityServer:Authority"] ?? "https://ids.ladtechs.com";
             var apiBaseUrl = _configuration["ApiConfiguration:BaseUrl"] ?? "https://localhost:44303/api/";
             
             var config = new

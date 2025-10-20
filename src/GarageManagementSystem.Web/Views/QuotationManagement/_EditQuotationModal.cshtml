@@ -11,82 +11,134 @@
             <form id="editQuotationForm">
                 <input type="hidden" id="editId" name="Id">
                 <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="form-group">
-                                <label for="editCustomerId">Khách Hàng <span class="text-danger">*</span></label>
-                                <select class="form-control form-control-sm select2" id="editCustomerId" name="CustomerId" required style="width: 100%;" disabled>
-                                    <option value="">Chọn khách hàng</option>
-                                </select>
-                                <small class="form-text text-muted">Không thể thay đổi khách hàng sau khi đã tạo báo giá</small>
+                    <!-- Thông Tin Cơ Bản -->
+                    <div class="card card-outline card-warning mb-3">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-info-circle"></i> Thông Tin Cơ Bản
+                            </h3>
+                            <div class="card-tools">
+                                <button type="button" class="btn btn-tool" data-card-widget="collapse" data-toggle="tooltip" title="Collapse">
+                                    <i class="fas fa-minus"></i>
+                                </button>
                             </div>
                         </div>
-                        <div class="col-md-4">
-                            <div class="form-group">
-                                <label for="editVehicleId">Xe <span class="text-danger">*</span></label>
-                                <select class="form-control form-control-sm select2" id="editVehicleId" name="VehicleId" required style="width: 100%;" disabled>
-                                    <option value="">Chọn xe</option>
-                                </select>
-                                <small class="form-text text-muted">Không thể thay đổi xe sau khi đã tạo báo giá</small>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="form-group">
-                                <label for="editValidUntil">Hiệu Lực Đến</label>
-                                <input type="date" class="form-control form-control-sm" id="editValidUntil" name="ValidUntil">
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="form-group">
-                                <label for="editQuotationType">Loại Báo Giá</label>
-                                <select class="form-control form-control-sm" id="editQuotationType" name="QuotationType">
-                                    <option value="Personal">Cá nhân</option>
-                                    <option value="Insurance">Bảo hiểm</option>
-                                    <option value="Company">Công ty</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="form-group">
-                                <label for="editDiscountAmount">Giảm Giá (VNĐ)</label>
-                                <input type="number" class="form-control form-control-sm" id="editDiscountAmount" name="DiscountAmount" min="0" step="1000">
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="form-group">
-                                <label for="editStatus">Trạng Thái</label>
-                                <select class="form-control form-control-sm" id="editStatus" name="Status">
-                                    <option value="Draft">Nháp</option>
-                                    <option value="Sent">Đã Gửi</option>
-                                    <option value="Approved">Đã Duyệt</option>
-                                    <option value="Rejected">Từ Chối</option>
-                                    <option value="Expired">Hết Hạn</option>
-                                </select>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="editCustomerId"><i class="fas fa-user text-success"></i> Khách Hàng <span class="text-danger">*</span></label>
+                                        <select class="form-control form-control-sm select2" id="editCustomerId" name="CustomerId" required style="width: 100%;" disabled>
+                                            <option value="">Chọn khách hàng</option>
+                                        </select>
+                                        <small class="form-text text-muted">Không thể thay đổi khách hàng sau khi đã tạo báo giá</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="editVehicleId"><i class="fas fa-car text-warning"></i> Xe <span class="text-danger">*</span></label>
+                                        <select class="form-control form-control-sm select2" id="editVehicleId" name="VehicleId" required style="width: 100%;" disabled>
+                                            <option value="">Chọn xe</option>
+                                        </select>
+                                        <small class="form-text text-muted">Không thể thay đổi xe sau khi đã tạo báo giá</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="editValidUntil"><i class="fas fa-calendar text-info"></i> Hiệu Lực Đến</label>
+                                        <input type="date" class="form-control form-control-sm" id="editValidUntil" name="ValidUntil">
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <div class="row">
-                        <div class="col-md-12">
-                            <div class="form-group">
-                                <label for="editDescription">Mô Tả</label>
-                                <textarea class="form-control form-control-sm" id="editDescription" name="Description" rows="2"></textarea>
+                    <!-- Cấu Hình Báo Giá -->
+                    <div class="card card-outline card-warning mb-3">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-cogs"></i> Cấu Hình Báo Giá
+                            </h3>
+                            <div class="card-tools">
+                                <button type="button" class="btn btn-tool" data-card-widget="collapse" data-toggle="tooltip" title="Collapse">
+                                    <i class="fas fa-minus"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="editQuotationType"><i class="fas fa-tags text-warning"></i> Loại Báo Giá</label>
+                                        <select class="form-control form-control-sm" id="editQuotationType" name="QuotationType">
+                                            <option value="Personal">Cá nhân</option>
+                                            <option value="Insurance">Bảo hiểm</option>
+                                            <option value="Company">Công ty</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="editDiscountAmount"><i class="fas fa-percent text-danger"></i> Giảm Giá (VNĐ)</label>
+                                        <input type="number" class="form-control form-control-sm" id="editDiscountAmount" name="DiscountAmount" min="0" step="1000">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="editStatus"><i class="fas fa-flag text-primary"></i> Trạng Thái</label>
+                                        <select class="form-control form-control-sm" id="editStatus" name="Status">
+                                            <option value="Draft">Nháp</option>
+                                            <option value="Sent">Đã Gửi</option>
+                                            <option value="Approved">Đã Duyệt</option>
+                                            <option value="Rejected">Từ Chối</option>
+                                            <option value="Expired">Hết Hạn</option>
+                                        </select>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <div class="row">
-                        <div class="col-md-12">
-                            <div class="form-group">
-                                <label for="editTerms">Điều Khoản</label>
-                                <textarea class="form-control form-control-sm" id="editTerms" name="Terms" rows="2"></textarea>
+                    <!-- Mô Tả & Điều Khoản -->
+                    <div class="card card-outline card-warning mb-3">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-file-alt"></i> Mô Tả & Điều Khoản
+                            </h3>
+                            <div class="card-tools">
+                                <button type="button" class="btn btn-tool" data-card-widget="collapse" data-toggle="tooltip" title="Collapse">
+                                    <i class="fas fa-minus"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="editDescription"><i class="fas fa-align-left text-success"></i> Mô Tả</label>
+                                        <textarea class="form-control form-control-sm" id="editDescription" name="Description" rows="3" placeholder="Mô tả báo giá..."></textarea>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="editTerms"><i class="fas fa-clipboard-list text-info"></i> Điều Khoản</label>
+                                        <textarea class="form-control form-control-sm" id="editTerms" name="Terms" rows="3" placeholder="Các điều khoản thanh toán và bảo hành..."></textarea>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <div class="row">
-                        <div class="col-md-12">
-                            <label>Dịch Vụ <span class="text-danger">*</span></label>
-                            
+                    <!-- Dịch Vụ -->
+                    <div class="card card-outline card-warning mb-3">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-concierge-bell"></i> Dịch Vụ <span class="text-danger">*</span>
+                            </h3>
+                            <div class="card-tools">
+                                <button type="button" class="btn btn-tool" data-card-widget="collapse" data-toggle="tooltip" title="Collapse">
+                                    <i class="fas fa-minus"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
                             <!-- Service Type Tabs -->
                             <ul class="nav nav-tabs" id="editServiceTypeTabs" role="tablist">
                                 <li class="nav-item">
@@ -118,10 +170,11 @@
                                                         <th width="20%">Tên Phụ Tùng</th>
                                                         <th width="8%">Số Lượng</th>
                                                         <th width="12%">Đơn Giá (VNĐ)</th>
-                                                        <th width="8%">VAT (%)</th>
                                                         <th width="12%">Thành Tiền (VNĐ)</th>
+                                                        <th width="8%">VAT (%)</th>
+                                                        <th width="12%">Tiền VAT (VNĐ)</th>
                                                         <th width="8%">Có Hóa Đơn</th>
-                                                        <th width="10%">Thao Tác</th>
+                                                        <th width="8%">Thao Tác</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody id="editPartsItems">
@@ -151,10 +204,11 @@
                                                         <th width="20%">Tên Dịch Vụ</th>
                                                         <th width="8%">Số Lượng</th>
                                                         <th width="12%">Đơn Giá (VNĐ)</th>
-                                                        <th width="8%">VAT (%)</th>
                                                         <th width="12%">Thành Tiền (VNĐ)</th>
+                                                        <th width="8%">VAT (%)</th>
+                                                        <th width="12%">Tiền VAT (VNĐ)</th>
                                                         <th width="8%">Có Hóa Đơn</th>
-                                                        <th width="10%">Thao Tác</th>
+                                                        <th width="8%">Thao Tác</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody id="editRepairItems">
@@ -184,10 +238,11 @@
                                                         <th width="20%">Tên Dịch Vụ</th>
                                                         <th width="8%">Số Lượng</th>
                                                         <th width="12%">Đơn Giá (VNĐ)</th>
-                                                        <th width="8%">VAT (%)</th>
                                                         <th width="12%">Thành Tiền (VNĐ)</th>
+                                                        <th width="8%">VAT (%)</th>
+                                                        <th width="12%">Tiền VAT (VNĐ)</th>
                                                         <th width="8%">Có Hóa Đơn</th>
-                                                        <th width="10%">Thao Tác</th>
+                                                        <th width="8%">Thao Tác</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody id="editPaintItems">
@@ -241,6 +296,7 @@
 }
 </style>
 
+@section Scripts {
 <script>
 $(document).ready(function() {
     // ✅ THÊM: Format số tiền khi input mất focus
@@ -258,4 +314,5 @@ $(document).ready(function() {
     });
 });
 </script>
+}
 

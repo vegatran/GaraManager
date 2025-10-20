@@ -231,6 +231,7 @@ window.InspectionManagement = {
             $('#createInspectorId').val(assignedTechnicianId).trigger('change');
             
             // Hiển thị thông tin đã chọn
+            console.log('Selected reception data:', {
                 customerId: customerId,
                 vehicleId: vehicleId,
                 customerName: customerName,

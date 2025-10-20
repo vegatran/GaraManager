@@ -65,7 +65,8 @@ namespace GarageManagementSystem.API.Controllers
         /// Upload file đính kèm cho báo giá
         /// </summary>
         [HttpPost("upload")]
-        public async Task<ActionResult<QuotationAttachmentDto>> UploadAttachment([FromForm] CreateQuotationAttachmentDto createDto, [FromForm] IFormFile file)
+        [Consumes("multipart/form-data")]
+        public async Task<ActionResult<QuotationAttachmentDto>> UploadAttachment([FromForm] CreateQuotationAttachmentDto createDto, IFormFile file)
         {
             try
             {

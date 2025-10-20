@@ -31,7 +31,7 @@ namespace GarageManagementSystem.Core.Entities
 
         // Quotation Type
         [StringLength(20)]
-        public string QuotationType { get; set; } = "Personal"; // Personal, Insurance, Company
+        public string QuotationType { get; set; } = "Personal"; // Personal, Insurance, Corporate
 
         // Pricing
         public decimal SubTotal { get; set; }
@@ -48,6 +48,15 @@ namespace GarageManagementSystem.Core.Entities
         public DateTime? InsuranceApprovalDate { get; set; }
         public decimal? InsuranceApprovedAmount { get; set; }
         public string? InsuranceApprovalNotes { get; set; }
+
+        // Corporate specific fields (nullable)
+        public string? ContractNumber { get; set; }
+        public DateTime? ContractDate { get; set; }
+        public string? ContractFilePath { get; set; }
+        public decimal? DiscountRate { get; set; } // Corporate discount percentage
+        public DateTime? CorporateApprovalDate { get; set; }
+        public decimal? CorporateApprovedAmount { get; set; }
+        public string? CorporateApprovalNotes { get; set; }
         public string? InsuranceAdjusterContact { get; set; }
         
         // Insurance pricing - Giá bảo hiểm duyệt

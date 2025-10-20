@@ -65,6 +65,7 @@ namespace GarageManagementSystem.Web.Controllers
                         quotationNumber = q.QuotationNumber,
                         vehicleInfo = $"{q.Vehicle?.Brand} {q.Vehicle?.Model} - {q.Vehicle?.LicensePlate}",
                         customerName = q.Customer?.Name ?? "N/A",
+                        quotationType = q.QuotationType,
                         // ✅ SỬA: Tính lại totalAmount từ SubTotal + TaxAmount - DiscountAmount
                         totalAmount = (q.SubTotal + q.TaxAmount - q.DiscountAmount).ToString("N0"),
                         status = TranslateQuotationStatus(q.Status),
@@ -125,7 +126,11 @@ namespace GarageManagementSystem.Web.Controllers
                         customerName = quotation.Customer?.Name ?? "",
                         vehicleInfo = $"{quotation.Vehicle?.Brand} {quotation.Vehicle?.Model} - {quotation.Vehicle?.LicensePlate}",
                         inspectionNumber = quotation.VehicleInspection?.InspectionNumber ?? "",
-                        // ✅ THÊM: Trả về discountAmount và các field tài chính
+                        // ✅ THÊM: Trả về quotationType và các field tài chính
+                        quotationType = quotation.QuotationType,
+                        quotationDate = quotation.QuotationDate.ToString("yyyy-MM-dd"),
+                        description = quotation.Description ?? "",
+                        terms = quotation.Terms ?? "",
                         discountAmount = quotation.DiscountAmount,
                         subTotal = quotation.SubTotal,
                         taxAmount = quotation.TaxAmount,
@@ -447,7 +452,7 @@ namespace GarageManagementSystem.Web.Controllers
             try
             {
                 // Load quotation data
-                var quotationResponse = await _apiService.GetAsync<ServiceQuotationDto>(ApiEndpoints.ServiceQuotations.GetById.Replace("{0}", id.ToString()));
+                var quotationResponse = await _apiService.GetAsync<ApiResponse<ServiceQuotationDto>>(ApiEndpoints.ServiceQuotations.GetById.Replace("{0}", id.ToString()));
                 
                 if (!quotationResponse.Success || quotationResponse.Data == null)
                 {
@@ -467,7 +472,7 @@ namespace GarageManagementSystem.Web.Controllers
                 }
 
                 // ✅ SỬA: Hiển thị tất cả items (bao gồm cả labor) khi in báo giá
-                var quotation = quotationResponse.Data;
+                var quotation = quotationResponse.Data.Data;
 
                 // Create view model
                 var viewModel = new PrintQuotationViewModel
@@ -489,8 +494,10 @@ namespace GarageManagementSystem.Web.Controllers
             return status switch
             {
                 "Draft" => "Nháp",
+                "Pending" => "Chờ Duyệt",
                 "Sent" => "Đã Gửi",
                 "Accepted" => "Đã Chấp Nhận",
+                "Approved" => "Đã Duyệt",
                 "Rejected" => "Đã Từ Chối",
                 "Expired" => "Hết Hạn",
                 "Converted" => "Đã Chuyển Đổi",
@@ -604,6 +611,230 @@ namespace GarageManagementSystem.Web.Controllers
             catch (Exception ex)
             {
                 return Json(new { success = false, message = "Lỗi không xác định" });
+            }
+        }
+
+        /// <summary>
+        /// Cập nhật bảng giá duyệt của bảo hiểm
+        /// </summary>
+        [HttpPost("UpdateInsuranceApprovedPricing/{quotationId}")]
+        public async Task<IActionResult> UpdateInsuranceApprovedPricing(int quotationId, IFormFile insuranceFile, 
+            string insuranceCompany, string taxCode, string policyNumber, string approvalDate, 
+            string approvedAmount, string customerCoPayment, string approvalNotes, string approvedItems)
+        {
+            try
+            {
+                // Tạo pricingData từ form data
+                var pricingData = new InsuranceApprovedPricingDto
+                {
+                    QuotationId = quotationId,
+                    InsuranceCompany = insuranceCompany ?? "",
+                    TaxCode = taxCode ?? "",
+                    PolicyNumber = policyNumber ?? "",
+                    ApprovalDate = !string.IsNullOrEmpty(approvalDate) ? DateTime.Parse(approvalDate) : null,
+                    ApprovedAmount = decimal.TryParse(approvedAmount, out var amount) ? amount : 0,
+                    CustomerCoPayment = decimal.TryParse(customerCoPayment, out var coPayment) ? coPayment : 0,
+                    ApprovalNotes = approvalNotes ?? "",
+                    ApprovedItems = !string.IsNullOrEmpty(approvedItems) ? 
+                        System.Text.Json.JsonSerializer.Deserialize<List<InsuranceApprovedItemDto>>(approvedItems) ?? new List<InsuranceApprovedItemDto>() : 
+                        new List<InsuranceApprovedItemDto>()
+                };
+
+                // Xử lý file upload
+                if (insuranceFile != null && insuranceFile.Length > 0)
+                {
+                    // Tạo thư mục lưu file nếu chưa có
+                    var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "insurance-files");
+                    if (!Directory.Exists(uploadsFolder))
+                    {
+                        Directory.CreateDirectory(uploadsFolder);
+                    }
+
+                    // Tạo tên file unique
+                    var fileName = $"insurance_{quotationId}_{DateTime.Now:yyyyMMddHHmmss}_{Path.GetFileName(insuranceFile.FileName)}";
+                    var filePath = Path.Combine(uploadsFolder, fileName);
+
+                    // Lưu file
+                    using (var stream = new FileStream(filePath, FileMode.Create))
+                    {
+                        await insuranceFile.CopyToAsync(stream);
+                    }
+
+                    // Lưu thông tin file vào database
+                    pricingData.ApprovalNotes += $"\n\nFile đối chứng: {fileName}";
+                }
+
+                var response = await _apiService.PostAsync<ServiceQuotationDto>(
+                    ApiEndpoints.Builder.WithId(ApiEndpoints.ServiceQuotations.UpdateInsuranceApprovedPricing, quotationId),
+                    pricingData
+                );
+
+                if (response.Success)
+                {
+                    return Json(new { success = true, message = "Cập nhật bảng giá duyệt của bảo hiểm thành công" });
+                }
+                else
+                {
+                    return Json(new { success = false, error = response.ErrorMessage ?? "Lỗi khi cập nhật bảng giá duyệt của bảo hiểm" });
+                }
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, error = "Lỗi khi cập nhật bảng giá duyệt của bảo hiểm: " + ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Lấy bảng giá duyệt của bảo hiểm cho báo giá
+        /// </summary>
+        [HttpGet("GetInsuranceApprovedPricing/{quotationId}")]
+        public async Task<IActionResult> GetInsuranceApprovedPricing(int quotationId)
+        {
+            try
+            {
+                var response = await _apiService.GetAsync<InsuranceApprovedPricingDto>(
+                    ApiEndpoints.Builder.WithId(ApiEndpoints.ServiceQuotations.GetInsuranceApprovedPricing, quotationId)
+                );
+
+                if (response.Success)
+                {
+                    return Json(new { success = true, data = response.Data });
+                }
+                else
+                {
+                    return Json(new { success = false, error = response.ErrorMessage ?? "Lỗi khi lấy bảng giá duyệt của bảo hiểm" });
+                }
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, error = "Lỗi khi lấy bảng giá duyệt của bảo hiểm: " + ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Cập nhật bảng giá duyệt của công ty
+        /// </summary>
+        [HttpPost("UpdateCorporateApprovedPricing/{quotationId}")]
+        public async Task<IActionResult> UpdateCorporateApprovedPricing(int quotationId, IFormFile contractFile, 
+            string companyName, string taxCode, string contractNumber, string approvalDate, 
+            string approvedAmount, string customerCoPayment, string approvalNotes, string approvedItems)
+        {
+            try
+            {
+                // Tạo pricingData từ form data
+                var pricingData = new CorporateApprovedPricingDto
+                {
+                    QuotationId = quotationId,
+                    CompanyName = companyName ?? "",
+                    TaxCode = taxCode ?? "",
+                    ContractNumber = contractNumber ?? "",
+                    ApprovalDate = !string.IsNullOrEmpty(approvalDate) ? DateTime.Parse(approvalDate) : null,
+                    ApprovedAmount = decimal.TryParse(approvedAmount, out var amount) ? amount : 0,
+                    CustomerCoPayment = decimal.TryParse(customerCoPayment, out var coPayment) ? coPayment : 0,
+                    ApprovalNotes = approvalNotes ?? "",
+                    ApprovedItems = !string.IsNullOrEmpty(approvedItems) ? 
+                        System.Text.Json.JsonSerializer.Deserialize<List<CorporateApprovedItemDto>>(approvedItems) ?? new List<CorporateApprovedItemDto>() : 
+                        new List<CorporateApprovedItemDto>()
+                };
+
+                // Xử lý file upload
+                if (contractFile != null && contractFile.Length > 0)
+                {
+                    // Tạo thư mục lưu file nếu chưa có
+                    var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "corporate-files");
+                    if (!Directory.Exists(uploadsFolder))
+                    {
+                        Directory.CreateDirectory(uploadsFolder);
+                    }
+
+                    // Tạo tên file unique
+                    var fileName = $"corporate_{quotationId}_{DateTime.Now:yyyyMMddHHmmss}_{Path.GetFileName(contractFile.FileName)}";
+                    var filePath = Path.Combine(uploadsFolder, fileName);
+
+                    // Lưu file
+                    using (var stream = new FileStream(filePath, FileMode.Create))
+                    {
+                        await contractFile.CopyToAsync(stream);
+                    }
+
+                    // Lưu thông tin file vào database
+                    pricingData.ApprovalNotes += $"\n\nFile hợp đồng: {fileName}";
+                }
+
+                var response = await _apiService.PostAsync<ServiceQuotationDto>(
+                    ApiEndpoints.Builder.WithId(ApiEndpoints.ServiceQuotations.UpdateCorporateApprovedPricing, quotationId),
+                    pricingData
+                );
+
+                if (response.Success)
+                {
+                    return Json(new { success = true, message = "Cập nhật bảng giá duyệt của công ty thành công" });
+                }
+                else
+                {
+                    return Json(new { success = false, error = response.ErrorMessage ?? "Lỗi khi cập nhật bảng giá duyệt của công ty" });
+                }
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, error = "Lỗi khi cập nhật bảng giá duyệt của công ty: " + ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Lấy bảng giá duyệt của công ty cho báo giá
+        /// </summary>
+        [HttpGet("GetCorporateApprovedPricing/{quotationId}")]
+        public async Task<IActionResult> GetCorporateApprovedPricing(int quotationId)
+        {
+            try
+            {
+                var response = await _apiService.GetAsync<CorporateApprovedPricingDto>(
+                    ApiEndpoints.Builder.WithId(ApiEndpoints.ServiceQuotations.GetCorporateApprovedPricing, quotationId)
+                );
+
+                if (response.Success)
+                {
+                    return Json(new { success = true, data = response.Data });
+                }
+                else
+                {
+                    return Json(new { success = false, error = response.ErrorMessage ?? "Lỗi khi lấy bảng giá duyệt của công ty" });
+                }
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, error = "Lỗi khi lấy bảng giá duyệt của công ty: " + ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Cập nhật trạng thái báo giá (chỉ cho xe cá nhân)
+        /// </summary>
+        [HttpPost("UpdateQuotationStatus/{quotationId}")]
+        public async Task<IActionResult> UpdateQuotationStatus(int quotationId, string status)
+        {
+            try
+            {
+                var statusDto = new UpdateQuotationStatusDto { Status = status };
+                
+                var response = await _apiService.PutAsync<ServiceQuotationDto>(
+                    ApiEndpoints.Builder.WithId(ApiEndpoints.ServiceQuotations.UpdateStatus, quotationId),
+                    statusDto
+                );
+
+                if (response.Success)
+                {
+                    return Json(new { success = true, message = "Cập nhật trạng thái báo giá thành công" });
+                }
+                else
+                {
+                    return Json(new { success = false, error = response.ErrorMessage ?? "Lỗi khi cập nhật trạng thái báo giá" });
+                }
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, error = "Lỗi khi cập nhật trạng thái báo giá: " + ex.Message });
             }
         }
     }

@@ -225,5 +225,66 @@ namespace GarageManagementSystem.Shared.DTOs
         public string? Notes { get; set; }
         public bool IsInsuranceDocument { get; set; } = false;
     }
+
+    /// <summary>
+    /// DTO cho việc cập nhật bảng giá duyệt của bảo hiểm
+    /// </summary>
+    public class InsuranceApprovedPricingDto
+    {
+        public int QuotationId { get; set; }
+        public string InsuranceCompany { get; set; } = string.Empty;
+        public string TaxCode { get; set; } = string.Empty; // ✅ THÊM: Mã số thuế
+        public string PolicyNumber { get; set; } = string.Empty;
+        public DateTime? ApprovalDate { get; set; }
+        public decimal ApprovedAmount { get; set; }
+        public decimal CustomerCoPayment { get; set; }
+        public string? ApprovalNotes { get; set; }
+        public List<InsuranceApprovedItemDto> ApprovedItems { get; set; } = new List<InsuranceApprovedItemDto>();
+    }
+
+    /// <summary>
+    /// DTO cho từng item được duyệt bởi bảo hiểm
+    /// </summary>
+    public class InsuranceApprovedItemDto
+    {
+        public int QuotationItemId { get; set; }
+        public string ItemName { get; set; } = string.Empty;
+        public int Quantity { get; set; }
+        public decimal OriginalPrice { get; set; }
+        public decimal ApprovedPrice { get; set; }
+        public decimal CustomerCoPayment { get; set; }
+        public bool IsApproved { get; set; } = true;
+        public string? ApprovalNotes { get; set; }
+    }
+
+    public class CorporateApprovedPricingDto
+    {
+        public int QuotationId { get; set; }
+        public string CompanyName { get; set; } = string.Empty;
+        public string TaxCode { get; set; } = string.Empty;
+        public string ContractNumber { get; set; } = string.Empty;
+        public DateTime? ApprovalDate { get; set; }
+        public decimal ApprovedAmount { get; set; }
+        public decimal CustomerCoPayment { get; set; }
+        public string ApprovalNotes { get; set; } = string.Empty;
+        public List<CorporateApprovedItemDto> ApprovedItems { get; set; } = new List<CorporateApprovedItemDto>();
+    }
+
+    public class CorporateApprovedItemDto
+    {
+        public int QuotationItemId { get; set; }
+        public string ItemName { get; set; } = string.Empty;
+        public int Quantity { get; set; }
+        public decimal OriginalPrice { get; set; }
+        public decimal ApprovedPrice { get; set; }
+        public decimal CustomerCoPayment { get; set; }
+        public bool IsApproved { get; set; } = true;
+        public string? ApprovalNotes { get; set; }
+    }
+
+    public class UpdateQuotationStatusDto
+    {
+        public string Status { get; set; } = string.Empty;
+    }
 }
 

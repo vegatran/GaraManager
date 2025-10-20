@@ -1,0 +1,215 @@
+<!-- Insurance Pricing Modal -->
+<div class="modal fade" id="insurancePricingModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">
+                    <i class="fas fa-shield-alt text-success"></i> Cập Nhật Bảng Giá Duyệt Của Bảo Hiểm
+                </h4>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="insurancePricingForm">
+                    <input type="hidden" id="insurancePricingQuotationId">
+                    
+                    <!-- Quotation Info -->
+                    <div class="card card-outline card-info mb-3">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-info-circle"></i> Thông Tin Báo Giá
+                            </h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <label>Số Báo Giá:</label>
+                                    <p class="form-control-static" id="insurancePricingQuotationNumber"></p>
+                                </div>
+                                <div class="col-md-3">
+                                    <label>Khách Hàng:</label>
+                                    <p class="form-control-static" id="insurancePricingCustomerName"></p>
+                                </div>
+                                <div class="col-md-3">
+                                    <label>Thông Tin Xe:</label>
+                                    <p class="form-control-static" id="insurancePricingVehicleInfo"></p>
+                                </div>
+                                <div class="col-md-3">
+                                    <label>Tổng Tiền:</label>
+                                    <p class="form-control-static font-weight-bold text-primary" id="insurancePricingTotalAmount"></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Insurance Information -->
+                    <div class="card card-outline card-warning mb-3">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-shield-alt"></i> Thông Tin Bảo Hiểm
+                            </h3>
+                            <div class="card-tools">
+                                <button type="button" class="btn btn-tool" data-card-widget="collapse" data-toggle="tooltip" title="Collapse">
+                                    <i class="fas fa-minus"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        <label for="insuranceCompany">Công Ty Bảo Hiểm <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control form-control-sm" id="insuranceCompany" name="insuranceCompany" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        <label for="taxCode">Mã Số Thuế</label>
+                                        <input type="text" class="form-control form-control-sm" id="taxCode" name="taxCode" placeholder="Ví dụ: 0123456789">
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        <label for="policyNumber">Số Hợp Đồng Bảo Hiểm</label>
+                                        <input type="text" class="form-control form-control-sm" id="policyNumber" name="policyNumber">
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        <label for="approvalDate">Ngày Duyệt</label>
+                                        <input type="date" class="form-control form-control-sm" id="approvalDate" name="approvalDate">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="approvedAmount">Số Tiền Được Duyệt (VNĐ)</label>
+                                        <input type="number" class="form-control form-control-sm" id="approvedAmount" name="approvedAmount" min="0" step="0.01">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="customerCoPayment">Số Tiền Khách Hàng Tự Trả (VNĐ)</label>
+                                        <input type="number" class="form-control form-control-sm" id="customerCoPayment" name="customerCoPayment" min="0" step="0.01">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="form-group">
+                                        <label for="approvalNotes">Ghi Chú Duyệt</label>
+                                        <textarea class="form-control form-control-sm" id="approvalNotes" name="approvalNotes" rows="3"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- File Upload -->
+                    <div class="card card-outline card-success mb-3">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-file-upload"></i> File Đối Chứng Bảo Hiểm
+                            </h3>
+                            <div class="card-tools">
+                                <button type="button" class="btn btn-tool" data-card-widget="collapse" data-toggle="tooltip" title="Collapse">
+                                    <i class="fas fa-minus"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="form-group">
+                                        <label for="insuranceFile">Upload File Báo Giá Duyệt (PDF, DOC, DOCX, JPG, PNG)</label>
+                                        <div class="input-group">
+                                            <div class="custom-file">
+                                                <input type="file" class="custom-file-input" id="insuranceFile" name="insuranceFile" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
+                                                <label class="custom-file-label" for="insuranceFile">Chọn file...</label>
+                                            </div>
+                                            <div class="input-group-append">
+                                                <button type="button" class="btn btn-outline-secondary btn-sm" id="clearFileBtn">
+                                                    <i class="fas fa-times"></i> Xóa
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <small class="form-text text-muted">
+                                            <i class="fas fa-info-circle"></i> 
+                                            File này sẽ được lưu làm đối chứng cho việc duyệt báo giá của bảo hiểm
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row" id="filePreviewRow" style="display: none;">
+                                <div class="col-md-12">
+                                    <div class="alert alert-info">
+                                        <i class="fas fa-file-alt"></i>
+                                        <strong>File đã chọn:</strong> <span id="fileName"></span>
+                                        <span class="float-right">
+                                            <button type="button" class="btn btn-sm btn-outline-primary" id="viewFileBtn">
+                                                <i class="fas fa-eye"></i> Xem
+                                            </button>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Items Approval -->
+                    <div class="card card-outline card-primary mb-3">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-list"></i> Chi Tiết Duyệt Từng Dịch Vụ
+                            </h3>
+                            <div class="card-tools">
+                                <button type="button" class="btn btn-tool" data-card-widget="collapse" data-toggle="tooltip" title="Collapse">
+                                    <i class="fas fa-minus"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-striped" id="insuranceItemsTable">
+                                    <thead class="thead-light">
+                                        <tr>
+                                            <th width="25%">Tên Dịch Vụ</th>
+                                            <th width="8%">Số Lượng</th>
+                                            <th width="15%">Giá Gốc (VNĐ)</th>
+                                            <th width="15%">Giá Được Duyệt (VNĐ)</th>
+                                            <th width="15%">Khách Tự Trả (VNĐ)</th>
+                                            <th width="8%">Được Duyệt</th>
+                                            <th width="14%">Ghi Chú</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- Items will be populated by JavaScript -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">
+                    <i class="fas fa-times"></i> Đóng
+                </button>
+                <button type="submit" form="insurancePricingForm" class="btn btn-success btn-sm">
+                    <i class="fas fa-save"></i> Lưu Bảng Giá Duyệt
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+$(document).ready(function() {
+    // Initialize AdminLTE card widgets for collapse/expand functionality
+    $('[data-card-widget="collapse"]').CardWidget();
+});
+</script>
+}

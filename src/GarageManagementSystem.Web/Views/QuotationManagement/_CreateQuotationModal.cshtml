@@ -13,7 +13,14 @@
                     <!-- Thông Tin Cơ Bản -->
                     <div class="card card-outline card-primary mb-3">
                         <div class="card-header">
-                            <h3 class="card-title"><i class="fas fa-info-circle"></i> Thông Tin Cơ Bản</h3>
+                            <h3 class="card-title">
+                                <i class="fas fa-info-circle"></i> Thông Tin Cơ Bản
+                            </h3>
+                            <div class="card-tools">
+                                <button type="button" class="btn btn-tool" data-card-widget="collapse" data-toggle="tooltip" title="Collapse">
+                                    <i class="fas fa-minus"></i>
+                                </button>
+                            </div>
                         </div>
                         <div class="card-body">
                             <div class="row">
@@ -48,7 +55,14 @@
                     <!-- Cấu Hình Báo Giá -->
                     <div class="card card-outline card-info mb-3">
                         <div class="card-header">
-                            <h3 class="card-title"><i class="fas fa-cog"></i> Cấu Hình Báo Giá</h3>
+                            <h3 class="card-title">
+                                <i class="fas fa-cog"></i> Cấu Hình Báo Giá
+                            </h3>
+                            <div class="card-tools">
+                                <button type="button" class="btn btn-tool" data-card-widget="collapse" data-toggle="tooltip" title="Collapse">
+                                    <i class="fas fa-minus"></i>
+                                </button>
+                            </div>
                         </div>
                         <div class="card-body">
                             <div class="row">
@@ -80,7 +94,14 @@
                     <!-- Mô Tả & Điều Khoản -->
                     <div class="card card-outline card-success mb-3">
                         <div class="card-header">
-                            <h3 class="card-title"><i class="fas fa-file-alt"></i> Mô Tả & Điều Khoản</h3>
+                            <h3 class="card-title">
+                                <i class="fas fa-file-alt"></i> Mô Tả & Điều Khoản
+                            </h3>
+                            <div class="card-tools">
+                                <button type="button" class="btn btn-tool" data-card-widget="collapse" data-toggle="tooltip" title="Collapse">
+                                    <i class="fas fa-minus"></i>
+                                </button>
+                            </div>
                         </div>
                         <div class="card-body">
                             <div class="row">
@@ -104,7 +125,14 @@
                     <!-- Dịch Vụ -->
                     <div class="card card-outline card-warning mb-3">
                         <div class="card-header">
-                            <h3 class="card-title"><i class="fas fa-list-alt"></i> Dịch Vụ <span class="text-danger">*</span></h3>
+                            <h3 class="card-title">
+                                <i class="fas fa-list-alt"></i> Dịch Vụ <span class="text-danger">*</span>
+                            </h3>
+                            <div class="card-tools">
+                                <button type="button" class="btn btn-tool" data-card-widget="collapse" data-toggle="tooltip" title="Collapse">
+                                    <i class="fas fa-minus"></i>
+                                </button>
+                            </div>
                         </div>
                         <div class="card-body">
                             <!-- Service Type Tabs -->
@@ -135,12 +163,14 @@
                                             <table class="table table-bordered table-sm">
                                                 <thead class="thead-light">
                                                     <tr>
-                                                        <th width="25%">Tên Phụ Tùng</th>
-                                                        <th width="10%">Số Lượng</th>
-                                                        <th width="15%">Đơn Giá (VNĐ)</th>
-                                                        <th width="15%">Thành Tiền (VNĐ)</th>
-                                                        <th width="10%">Có Hóa Đơn</th>
-                                                        <th width="10%">Thao Tác</th>
+                                                        <th width="20%">Tên Phụ Tùng</th>
+                                                        <th width="8%">Số Lượng</th>
+                                                        <th width="12%">Đơn Giá (VNĐ)</th>
+                                                        <th width="12%">Thành Tiền (VNĐ)</th>
+                                                        <th width="8%">VAT (%)</th>
+                                                        <th width="12%">Tiền VAT (VNĐ)</th>
+                                                        <th width="8%">Có Hóa Đơn</th>
+                                                        <th width="8%">Thao Tác</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody id="createPartsItems">
@@ -167,12 +197,14 @@
                                             <table class="table table-bordered table-sm">
                                                 <thead class="thead-light">
                                                     <tr>
-                                                        <th width="25%">Tên Dịch Vụ</th>
-                                                        <th width="10%">Số Lượng</th>
-                                                        <th width="15%">Đơn Giá (VNĐ)</th>
-                                                        <th width="15%">Thành Tiền (VNĐ)</th>
-                                                        <th width="10%">Có Hóa Đơn</th>
-                                                        <th width="10%">Thao Tác</th>
+                                                        <th width="20%">Tên Dịch Vụ</th>
+                                                        <th width="8%">Số Lượng</th>
+                                                        <th width="12%">Đơn Giá (VNĐ)</th>
+                                                        <th width="12%">Thành Tiền (VNĐ)</th>
+                                                        <th width="8%">VAT (%)</th>
+                                                        <th width="12%">Tiền VAT (VNĐ)</th>
+                                                        <th width="8%">Có Hóa Đơn</th>
+                                                        <th width="8%">Thao Tác</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody id="createRepairItems">
@@ -199,12 +231,14 @@
                                             <table class="table table-bordered table-sm">
                                                 <thead class="thead-light">
                                                     <tr>
-                                                        <th width="25%">Tên Dịch Vụ</th>
-                                                        <th width="10%">Số Lượng</th>
-                                                        <th width="15%">Đơn Giá (VNĐ)</th>
-                                                        <th width="15%">Thành Tiền (VNĐ)</th>
-                                                        <th width="10%">Có Hóa Đơn</th>
-                                                        <th width="10%">Thao Tác</th>
+                                                        <th width="20%">Tên Dịch Vụ</th>
+                                                        <th width="8%">Số Lượng</th>
+                                                        <th width="12%">Đơn Giá (VNĐ)</th>
+                                                        <th width="12%">Thành Tiền (VNĐ)</th>
+                                                        <th width="8%">VAT (%)</th>
+                                                        <th width="12%">Tiền VAT (VNĐ)</th>
+                                                        <th width="8%">Có Hóa Đơn</th>
+                                                        <th width="8%">Thao Tác</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody id="createPaintItems">
@@ -236,4 +270,24 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+<script>
+$(document).ready(function() {
+    // Set default ngày hiệu lực (30 ngày từ hôm nay)
+    var today = new Date();
+    var validUntil = new Date(today);
+    validUntil.setDate(today.getDate() + 30);
+    
+    var validUntilString = validUntil.getFullYear() + '-' + 
+                          String(validUntil.getMonth() + 1).padStart(2, '0') + '-' + 
+                          String(validUntil.getDate()).padStart(2, '0');
+    
+    $('#createValidUntil').val(validUntilString);
+    
+    // Initialize AdminLTE card widgets
+    $('[data-card-widget="collapse"]').CardWidget();
+});
+</script>
+}
 

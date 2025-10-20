@@ -80,6 +80,13 @@ namespace GarageManagementSystem.Core.Entities
         public decimal? InsuranceApprovedVATAmount { get; set; }
         public decimal? InsuranceApprovedTotalAmount { get; set; }
         public string? InsuranceApprovalNotes { get; set; }
+
+        // Corporate approved pricing - Giá công ty duyệt
+        public decimal? CorporateApprovedUnitPrice { get; set; }
+        public decimal? CorporateApprovedSubTotal { get; set; }
+        public decimal? CorporateApprovedVATAmount { get; set; }
+        public decimal? CorporateApprovedTotalAmount { get; set; }
+        public string? CorporateApprovalNotes { get; set; }
         
         [StringLength(1500)]
         public string? PricingBreakdown { get; set; } // Chi tiết phân tích giá (JSON)

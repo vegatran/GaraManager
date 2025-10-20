@@ -17,15 +17,15 @@ builder.Services.AddControllers()
 builder.Services.AddAuthentication("Bearer")
     .AddJwtBearer("Bearer", options =>
     {
-        options.Authority = "https://localhost:44333";
-        options.RequireHttpsMetadata = false; // For development only
+        options.Authority = builder.Configuration["IdentityServer:Authority"];
+        options.RequireHttpsMetadata = builder.Configuration.GetValue<bool>("IdentityServer:RequireHttpsMetadata");
         options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
         {
-            ValidateAudience = true,
-            ValidAudience = "garage.api",
-            ValidateIssuer = true,
-            ValidIssuer = "https://localhost:44333",
-            ValidateLifetime = true
+            ValidateAudience = builder.Configuration.GetValue<bool>("IdentityServer:ValidateAudience"),
+            ValidAudience = builder.Configuration["IdentityServer:Audience"],
+            ValidateIssuer = builder.Configuration.GetValue<bool>("IdentityServer:ValidateIssuer"),
+            ValidIssuer = builder.Configuration["IdentityServer:Issuer"],
+            ValidateLifetime = builder.Configuration.GetValue<bool>("IdentityServer:ValidateLifetime")
         };
     });
 

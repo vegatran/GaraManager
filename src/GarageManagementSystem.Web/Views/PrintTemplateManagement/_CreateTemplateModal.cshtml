@@ -1,0 +1,138 @@
+<!-- Modal Create Template -->
+<div class="modal fade" id="createTemplateModal" tabindex="-1" role="dialog" aria-labelledby="createTemplateModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createTemplateModalLabel">Tạo Mẫu In Mới</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form id="createTemplateForm">
+                <div class="modal-body">
+                    <!-- Basic Information -->
+                    <div class="card card-outline card-primary">
+                        <div class="card-header">
+                            <h3 class="card-title">Thông Tin Cơ Bản</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="createTemplateName">Tên Mẫu <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control form-control-sm" id="createTemplateName" name="TemplateName" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="createTemplateType">Loại Mẫu <span class="text-danger">*</span></label>
+                                        <select class="form-control form-control-sm" id="createTemplateType" name="TemplateType" required>
+                                            <option value="Quotation">Báo Giá</option>
+                                            <option value="Invoice">Hóa Đơn</option>
+                                            <option value="Receipt">Phiếu Thu</option>
+                                            <option value="Order">Đơn Hàng</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="createDescription">Mô Tả</label>
+                                <textarea class="form-control form-control-sm" id="createDescription" name="Description" rows="3"></textarea>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <div class="custom-control custom-checkbox">
+                                            <input type="checkbox" class="custom-control-input" id="createIsActive" name="IsActive" checked>
+                                            <label class="custom-control-label" for="createIsActive">Kích Hoạt</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <div class="custom-control custom-checkbox">
+                                            <input type="checkbox" class="custom-control-input" id="createIsDefault" name="IsDefault">
+                                            <label class="custom-control-label" for="createIsDefault">Mặc Định</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Company Information -->
+                    <div class="card card-outline card-info">
+                        <div class="card-header">
+                            <h3 class="card-title">Thông Tin Công Ty</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="createCompanyName">Tên Công Ty</label>
+                                        <input type="text" class="form-control form-control-sm" id="createCompanyName" name="CompanyName">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="createTaxCode">Mã Số Thuế</label>
+                                        <input type="text" class="form-control form-control-sm" id="createTaxCode" name="TaxCode">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="createCompanyAddress">Địa Chỉ</label>
+                                <textarea class="form-control form-control-sm" id="createCompanyAddress" name="CompanyAddress" rows="2"></textarea>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="createCompanyPhone">Điện Thoại</label>
+                                        <input type="text" class="form-control form-control-sm" id="createCompanyPhone" name="CompanyPhone">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="createCompanyEmail">Email</label>
+                                        <input type="email" class="form-control form-control-sm" id="createCompanyEmail" name="CompanyEmail">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="createCompanyWebsite">Website</label>
+                                        <input type="text" class="form-control form-control-sm" id="createCompanyWebsite" name="CompanyWebsite">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Template Content -->
+                    <div class="card card-outline card-success">
+                        <div class="card-header">
+                            <h3 class="card-title">Nội Dung Mẫu</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label for="createHeaderHtml">HTML Header</label>
+                                <textarea class="form-control form-control-sm" id="createHeaderHtml" name="HeaderHtml" rows="6" placeholder="HTML cho phần đầu trang"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="createFooterHtml">HTML Footer</label>
+                                <textarea class="form-control form-control-sm" id="createFooterHtml" name="FooterHtml" rows="4" placeholder="HTML cho phần cuối trang"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="createCustomCss">CSS Tùy Chỉnh</label>
+                                <textarea class="form-control form-control-sm" id="createCustomCss" name="CustomCss" rows="6" placeholder="CSS tùy chỉnh cho mẫu in"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Đóng</button>
+                    <button type="submit" class="btn btn-primary btn-sm">Tạo Mẫu</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

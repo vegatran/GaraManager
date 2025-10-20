@@ -12,7 +12,8 @@ namespace GarageManagementSystem.API.Profiles
             CreateMap<ServiceQuotation, ServiceQuotationDto>()
                 .ForMember(dest => dest.Customer, opt => opt.MapFrom(src => src.Customer))
                 .ForMember(dest => dest.Vehicle, opt => opt.MapFrom(src => src.Vehicle))
-                .ForMember(dest => dest.Items, opt => opt.MapFrom(src => src.Items));
+                .ForMember(dest => dest.Items, opt => opt.MapFrom(src => src.Items))
+                .ForMember(dest => dest.QuotationType, opt => opt.MapFrom(src => src.QuotationType));
 
             // Create DTO to ServiceQuotation Entity
             CreateMap<CreateServiceQuotationDto, ServiceQuotation>()
@@ -39,7 +40,7 @@ namespace GarageManagementSystem.API.Profiles
                 .ForMember(dest => dest.IsDeleted, opt => opt.Ignore())
                 .ForMember(dest => dest.Customer, opt => opt.Ignore())
                 .ForMember(dest => dest.Vehicle, opt => opt.Ignore())
-                .ForMember(dest => dest.Items, opt => opt.Ignore())
+                .ForMember(dest => dest.Items, opt => opt.Ignore()) // ✅ SỬA: Ignore Items vì sẽ xử lý riêng trong controller
                 .ForMember(dest => dest.QuotationNumber, opt => opt.Ignore())
                 .ForMember(dest => dest.QuotationDate, opt => opt.Ignore())
                 .ForMember(dest => dest.Status, opt => opt.Condition(src => !string.IsNullOrEmpty(src.Status)));

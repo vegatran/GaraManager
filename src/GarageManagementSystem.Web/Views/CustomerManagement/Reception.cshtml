@@ -1,0 +1,212 @@
+@{
+    ViewData["Title"] = ViewBag.Title ?? "Tiếp Đón Khách Hàng";
+    var subtitle = ViewBag.Subtitle ?? "Khách hàng đang có xe tại gara";
+}
+
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1 class="m-0">@ViewData["Title"]</h1>
+                <small class="text-muted">@subtitle</small>
+            </div>
+            <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-right">
+                    <li class="breadcrumb-item"><a href="@Url.Action("Index", "Home")">Trang Chủ</a></li>
+                    <li class="breadcrumb-item active">@ViewData["Title"]</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+
+<section class="content">
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-handshake text-primary mr-2"></i>
+                            Danh Sách Khách Hàng Đang Có Xe Tại Gara
+                        </h3>
+                        <div class="card-tools">
+                            <button type="button" class="btn btn-primary btn-sm" id="refreshBtn">
+                                <i class="fas fa-sync-alt"></i> Làm Mới
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table id="receptionTable" class="table table-bordered table-striped table-hover">
+                                <thead class="bg-light">
+                                    <tr>
+                                        <th class="text-center" style="width: 80px;">ID</th>
+                                        <th style="width: 200px;">Tên Khách Hàng</th>
+                                        <th style="width: 150px;">Email</th>
+                                        <th style="width: 130px;">Số Điện Thoại</th>
+                                        <th style="width: 250px;">Địa Chỉ</th>
+                                        <th style="width: 150px;">Trạng Thái Dịch Vụ</th>
+                                        <th style="width: 120px;" class="text-center">Thao Tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Data will be loaded via AJAX -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <div class="row">
+                            <div class="col-sm-12 col-md-5">
+                                <div class="dataTables_info" id="receptionTable_info" role="status" aria-live="polite">
+                                    <!-- Info will be populated by DataTables -->
+                                </div>
+                            </div>
+                            <div class="col-sm-12 col-md-7">
+                                <div class="dataTables_paginate paging_simple_numbers" id="receptionTable_paginate">
+                                    <!-- Pagination will be populated by DataTables -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Initialize DataTable for reception
+            window.ReceptionTable = $('#receptionTable').DataTable({
+                "processing": true,
+                "serverSide": false,
+                "ajax": {
+                    "url": "/CustomerManagement/GetCustomersWithActiveVehicles",
+                    "type": "GET",
+                    "dataSrc": function(json) {
+                        return json || [];
+                    }
+                },
+                "columns": [
+                    {
+                        "data": "id",
+                        "className": "text-center",
+                        "render": function(data, type, row) {
+                            return `<span class="badge badge-info">${data}</span>`;
+                        }
+                    },
+                    {
+                        "data": "name",
+                        "render": function(data, type, row) {
+                            return `<strong>${data || 'N/A'}</strong>`;
+                        }
+                    },
+                    {
+                        "data": "email",
+                        "render": function(data, type, row) {
+                            return data ? `<a href="mailto:${data}">${data}</a>` : 'N/A';
+                        }
+                    },
+                    {
+                        "data": "phoneNumber",
+                        "render": function(data, type, row) {
+                            return data ? `<a href="tel:${data}">${data}</a>` : 'N/A';
+                        }
+                    },
+                    {
+                        "data": "address",
+                        "render": function(data, type, row) {
+                            return data || 'N/A';
+                        }
+                    },
+                    {
+                        "data": null,
+                        "className": "text-center",
+                        "render": function(data, type, row) {
+                            return '<span class="badge badge-success"><i class="fas fa-car"></i> Đang Sửa Chữa</span>';
+                        }
+                    },
+                    {
+                        "data": null,
+                        "className": "text-center",
+                        "orderable": false,
+                        "render": function(data, type, row) {
+                            return `
+                                <div class="btn-group" role="group">
+                                    <button type="button" class="btn btn-info btn-sm" onclick="viewCustomer(${row.id})" title="Xem Chi Tiết">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-warning btn-sm" onclick="editCustomer(${row.id})" title="Chỉnh Sửa">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-success btn-sm" onclick="startService(${row.id})" title="Bắt Đầu Dịch Vụ">
+                                        <i class="fas fa-play"></i>
+                                    </button>
+                                </div>
+                            `;
+                        }
+                    }
+                ],
+                "order": [[0, "desc"]],
+                "pageLength": 25,
+                "lengthMenu": [[10, 25, 50, 100], [10, 25, 50, 100]],
+                "language": {
+                    "url": "//cdn.datatables.net/plug-ins/1.10.24/i18n/Vietnamese.json"
+                },
+                "dom": '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>' +
+                       '<"row"<"col-sm-12"tr>>' +
+                       '<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+                "responsive": true,
+                "autoWidth": false,
+                "drawCallback": function(settings) {
+                    // Add any post-draw callbacks here
+                }
+            });
+
+            // Refresh button
+            $('#refreshBtn').on('click', function() {
+                window.ReceptionTable.ajax.reload();
+            });
+        });
+
+        // Action functions
+        function viewCustomer(id) {
+            // Implement view customer details
+            console.log('View customer:', id);
+            // You can implement a modal or redirect to details page
+        }
+
+        function editCustomer(id) {
+            // Implement edit customer
+            console.log('Edit customer:', id);
+            // You can implement edit functionality
+        }
+
+        function startService(id) {
+            // Implement start service for customer
+            console.log('Start service for customer:', id);
+            // You can redirect to inspection or service order creation
+            Swal.fire({
+                title: 'Bắt Đầu Dịch Vụ',
+                text: 'Bạn muốn chuyển đến bước tiếp theo nào?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Kiểm Tra Xe',
+                cancelButtonText: 'Tạo Phiếu Sửa Chữa',
+                showDenyButton: true,
+                denyButtonText: 'Hủy'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Redirect to inspection
+                    window.location.href = '/InspectionManagement';
+                } else if (result.isDismissed) {
+                    // Redirect to service order
+                    window.location.href = '/OrderManagement';
+                }
+            });
+        }
+    </script>
+}
