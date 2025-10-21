@@ -1,15 +1,41 @@
-<!-- Create Part Modal -->
+<!-- Create Part Modal with Classification -->
 <div class="modal fade" id="createPartModal" tabindex="-1" role="dialog">
-    <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-dialog modal-xl" role="document">
         <div class="modal-content">
-            <div class="modal-header">
-                <h4 class="modal-title">Thêm Phụ Tùng Mới</h4>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <div class="modal-header bg-primary text-white">
+                <h4 class="modal-title"><i class="fas fa-plus-circle"></i> Thêm Phụ Tùng Mới</h4>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
             <form id="createPartForm">
                 <div class="modal-body">
+                    <!-- Tab Navigation -->
+                    <ul class="nav nav-tabs" id="createPartTabs" role="tablist">
+                        <li class="nav-item">
+                            <a class="nav-link active" id="create-basic-tab" data-toggle="tab" href="#createBasicInfo" role="tab">
+                                <i class="fas fa-info-circle"></i> Thông Tin Cơ Bản
+                                <span class="badge badge-danger ml-1">*</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="create-classification-tab" data-toggle="tab" href="#createClassification" role="tab">
+                                <i class="fas fa-shield-alt"></i> Phân Loại & Hóa Đơn
+                                <span class="badge badge-warning ml-1">!</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="create-technical-tab" data-toggle="tab" href="#createTechnical" role="tab">
+                                <i class="fas fa-cogs"></i> Thông Tin Kỹ Thuật
+                                <span class="badge badge-secondary ml-1">?</span>
+                            </a>
+                        </li>
+                    </ul>
+
+                    <!-- Tab Content -->
+                    <div class="tab-content mt-3" id="createPartTabContent">
+                        <!-- Tab 1: Thông Tin Cơ Bản -->
+                        <div class="tab-pane fade show active" id="createBasicInfo" role="tabpanel">
                     <div class="row">
                         <div class="col-md-6">
                             <div class="form-group">
@@ -36,7 +62,7 @@
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label for="createCategory">Danh Mục</label>
-                                <input type="text" class="form-control form-control-sm" id="createCategory" name="Category" maxlength="100">
+                                        <input type="text" class="form-control form-control-sm" id="createCategory" name="Category" maxlength="100" placeholder="VD: Dầu, Lốp, Má phanh...">
                             </div>
                         </div>
                         <div class="col-md-6">
@@ -69,54 +95,277 @@
                         </div>
                         <div class="col-md-4">
                             <div class="form-group">
-                                <label for="createMinimumStock">Tồn Kho Tối Thiểu <span class="text-danger">*</span></label>
-                                <input type="number" class="form-control form-control-sm" id="createMinimumStock" name="MinimumStock" required min="0" value="0">
+                                        <label for="createMinimumStock">Tồn Kho Tối Thiểu</label>
+                                        <input type="number" class="form-control form-control-sm" id="createMinimumStock" name="MinimumStock" min="0" value="0">
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="form-group">
-                                <label for="createReorderLevel">Mức Đặt Lại</label>
-                                <input type="number" class="form-control form-control-sm" id="createReorderLevel" name="ReorderLevel" min="0">
+                                        <label for="createUnit">Đơn Vị Tính</label>
+                                        <input type="text" class="form-control form-control-sm" id="createUnit" name="Unit" maxlength="20" placeholder="VD: Cái, Bộ, Lít...">
                             </div>
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label for="createUnit">Đơn Vị Tính</label>
-                                <input type="text" class="form-control form-control-sm" id="createUnit" name="Unit" maxlength="20" placeholder="VD: Cái, Bộ, Lít...">
+                                        <label for="createLocation">Vị Trí Kho</label>
+                                        <input type="text" class="form-control form-control-sm" id="createLocation" name="Location" maxlength="100" placeholder="VD: Kệ A1-01">
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label for="createLocation">Vị Trí Kho</label>
-                                <input type="text" class="form-control form-control-sm" id="createLocation" name="Location" maxlength="100">
+                                        <label for="createCompatibleVehicles">Xe Tương Thích</label>
+                                        <input type="text" class="form-control form-control-sm" id="createCompatibleVehicles" name="CompatibleVehicles" maxlength="500" placeholder="VD: Toyota Camry, Honda Civic...">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="custom-control custom-checkbox">
+                                        <input type="checkbox" class="custom-control-input" id="createIsActive" name="IsActive" checked>
+                                        <label class="custom-control-label" for="createIsActive">Đang Hoạt Động</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tab 2: Phân Loại & Hóa Đơn -->
+                        <div class="tab-pane fade" id="createClassification" role="tabpanel">
+                            <!-- Quick Preset -->
+                            <div class="alert alert-info">
+                                <div class="row">
+                                    <div class="col-md-9">
+                                        <label><i class="fas fa-magic"></i> <strong>Chọn Nhanh Preset:</strong></label>
+                                        <select class="form-control form-control-sm" id="createPresetSelect">
+                                            <option value="">-- Tùy chỉnh thủ công --</option>
+                                            <option value="new_with_invoice">📄 Phụ tùng mới có hóa đơn (Công ty/Bảo hiểm)</option>
+                                            <option value="new_no_invoice">📦 Phụ tùng mới không hóa đơn (Cá nhân)</option>
+                                            <option value="used_salvage">♻️ Phụ tùng tháo xe (Cá nhân only)</option>
+                                            <option value="oem_parts">⭐ Phụ tùng chính hãng OEM</option>
+                                            <option value="refurbished">🔄 Phụ tùng tái chế/Tân trang</option>
+                                        </select>
+                                        <small class="form-text text-muted">Chọn preset để tự động điền các trường bên dưới</small>
+                                    </div>
+                                    <div class="col-md-3 text-right">
+                                        <br>
+                                        <button type="button" class="btn btn-sm btn-primary" id="createApplyPreset">
+                                            <i class="fas fa-check"></i> Áp dụng
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <hr>
+
+                            <!-- Nguồn Gốc & Tình Trạng -->
+                            <h6 class="text-primary"><i class="fas fa-box"></i> Nguồn Gốc & Tình Trạng</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="createSourceType">Nguồn Gốc</label>
+                                        <select class="form-control form-control-sm" id="createSourceType" name="SourceType">
+                                            <option value="Purchased" selected>Mua mới</option>
+                                            <option value="Used">Tháo từ xe cũ</option>
+                                            <option value="Refurbished">Tái chế</option>
+                                            <option value="Salvage">Phế liệu</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="createCondition">Tình Trạng</label>
+                                        <select class="form-control form-control-sm" id="createCondition" name="Condition">
+                                            <option value="New" selected>Mới 100%</option>
+                                            <option value="Used">Đã qua sử dụng</option>
+                                            <option value="Refurbished">Tái chế</option>
+                                            <option value="AsIs">Nguyên trạng</option>
+                                        </select>
                             </div>
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-md-12">
                             <div class="form-group">
-                                <label for="createCompatibleVehicles">Xe Tương Thích</label>
-                                <textarea class="form-control form-control-sm" id="createCompatibleVehicles" name="CompatibleVehicles" rows="2" maxlength="500" placeholder="VD: Toyota Camry 2015-2020, Honda Civic..."></textarea>
+                                        <label for="createSourceReference">Chi Tiết Nguồn Gốc</label>
+                                        <input type="text" class="form-control form-control-sm" id="createSourceReference" name="SourceReference" maxlength="100" placeholder="VD: Tháo từ xe 30A-12345, Mua từ nhà cung cấp ABC">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <hr>
+
+                            <!-- Quản Lý Hóa Đơn -->
+                            <h6 class="text-primary"><i class="fas fa-file-invoice"></i> Quản Lý Hóa Đơn</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="createInvoiceType">Loại Hóa Đơn</label>
+                                        <select class="form-control form-control-sm" id="createInvoiceType" name="InvoiceType">
+                                            <option value="WithInvoice" selected>Có hóa đơn VAT</option>
+                                            <option value="WithoutInvoice">Không hóa đơn</option>
+                                            <option value="Internal">Nội bộ</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <br>
+                                        <div class="custom-control custom-checkbox">
+                                            <input type="checkbox" class="custom-control-input" id="createHasInvoice" name="HasInvoice" checked>
+                                            <label class="custom-control-label" for="createHasInvoice">
+                                                <strong>Có hóa đơn VAT</strong>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <hr>
+
+                            <!-- Đối Tượng Sử Dụng -->
+                            <h6 class="text-primary"><i class="fas fa-users"></i> Đối Tượng Sử Dụng</h6>
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle"></i> <strong>Lưu ý:</strong> Công ty và Bảo hiểm chỉ chấp nhận phụ tùng có hóa đơn VAT hợp lệ
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="custom-control custom-checkbox">
+                                        <input type="checkbox" class="custom-control-input" id="createCanUseForIndividual" name="CanUseForIndividual" checked>
+                                        <label class="custom-control-label" for="createCanUseForIndividual">
+                                            <i class="fas fa-user"></i> <strong>Cá nhân</strong>
+                                            <br><small class="text-muted">Luôn được phép</small>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="custom-control custom-checkbox">
+                                        <input type="checkbox" class="custom-control-input" id="createCanUseForCompany" name="CanUseForCompany">
+                                        <label class="custom-control-label" for="createCanUseForCompany">
+                                            <i class="fas fa-building"></i> <strong>Công ty</strong>
+                                            <br><small class="text-danger">⚠️ Yêu cầu có hóa đơn</small>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="custom-control custom-checkbox">
+                                        <input type="checkbox" class="custom-control-input" id="createCanUseForInsurance" name="CanUseForInsurance">
+                                        <label class="custom-control-label" for="createCanUseForInsurance">
+                                            <i class="fas fa-shield-alt"></i> <strong>Bảo hiểm</strong>
+                                            <br><small class="text-danger">⚠️ Yêu cầu có hóa đơn</small>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <hr>
+
+                            <!-- Bảo Hành -->
+                            <h6 class="text-primary"><i class="fas fa-shield-check"></i> Bảo Hành</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="createWarrantyMonths">Thời Gian Bảo Hành (tháng)</label>
+                                        <input type="number" class="form-control form-control-sm" id="createWarrantyMonths" name="WarrantyMonths" min="0" max="120" value="12">
+                                        <small class="form-text text-muted">0 = Không bảo hành</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <br>
+                                        <div class="custom-control custom-checkbox">
+                                            <input type="checkbox" class="custom-control-input" id="createIsOEM" name="IsOEM">
+                                            <label class="custom-control-label" for="createIsOEM">
+                                                <i class="fas fa-star text-warning"></i> <strong>Phụ tùng chính hãng (OEM)</strong>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <hr>
+
+                            <!-- Classification Summary -->
+                            <div id="createClassificationSummary"></div>
+                        </div>
+
+                        <!-- Tab 3: Thông Tin Kỹ Thuật -->
+                        <div class="tab-pane fade" id="createTechnical" role="tabpanel">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle"></i> Các thông tin bên dưới là <strong>tùy chọn</strong> và có thể bổ sung sau
+                            </div>
+
+                            <h6 class="text-primary"><i class="fas fa-barcode"></i> Mã Phụ Tùng</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="createOEMNumber">Mã OEM (Chính hãng)</label>
+                                        <input type="text" class="form-control form-control-sm" id="createOEMNumber" name="OEMNumber" maxlength="50">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="createAftermarketNumber">Mã Aftermarket (Thay thế)</label>
+                                        <input type="text" class="form-control form-control-sm" id="createAftermarketNumber" name="AftermarketNumber" maxlength="50">
                             </div>
                         </div>
                     </div>
+
+                            <hr>
+
+                            <h6 class="text-primary"><i class="fas fa-industry"></i> Nhà Sản Xuất</h6>
                     <div class="row">
                         <div class="col-md-12">
-                            <div class="custom-control custom-checkbox">
-                                <input type="checkbox" class="custom-control-input" id="createIsActive" name="IsActive" checked>
-                                <label class="custom-control-label" for="createIsActive">Đang Hoạt Động</label>
+                                    <div class="form-group">
+                                        <label for="createManufacturer">Nhà Sản Xuất</label>
+                                        <input type="text" class="form-control form-control-sm" id="createManufacturer" name="Manufacturer" maxlength="100">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <hr>
+
+                            <h6 class="text-primary"><i class="fas fa-ruler-combined"></i> Thông Số Kỹ Thuật</h6>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="createDimensions">Kích Thước</label>
+                                        <input type="text" class="form-control form-control-sm" id="createDimensions" name="Dimensions" maxlength="100" placeholder="VD: 120x80x25mm">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="createWeight">Trọng Lượng (kg)</label>
+                                        <input type="number" class="form-control form-control-sm" id="createWeight" name="Weight" min="0" step="0.01">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="createMaterial">Chất Liệu</label>
+                                        <input type="text" class="form-control form-control-sm" id="createMaterial" name="Material" maxlength="50" placeholder="VD: Thép, Nhựa, Nhôm">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="createColor">Màu Sắc</label>
+                                        <input type="text" class="form-control form-control-sm" id="createColor" name="Color" maxlength="50">
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Hủy</button>
-                    <button type="submit" class="btn btn-primary btn-sm">Lưu Phụ Tùng</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                        <i class="fas fa-times"></i> Hủy
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Lưu Phụ Tùng
+                    </button>
                 </div>
             </form>
         </div>
     </div>
 </div>
-

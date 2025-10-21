@@ -1,159 +1,273 @@
-<!-- View Part Modal -->
+<!-- View Part Modal with Classification Details -->
 <div class="modal fade" id="viewPartModal" tabindex="-1" role="dialog">
-    <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-dialog modal-xl" role="document">
         <div class="modal-content">
-            <div class="modal-header">
-                <h4 class="modal-title">Chi Tiết Phụ Tùng</h4>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <div class="modal-header bg-info text-white">
+                <h4 class="modal-title"><i class="fas fa-eye"></i> Chi Tiết Phụ Tùng</h4>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
             <div class="modal-body">
-                <!-- Thông tin cơ bản -->
-                <div class="mb-4">
-                    <h6 class="text-primary font-weight-bold mb-3">
-                        <i class="fas fa-info-circle mr-2"></i>Thông Tin Cơ Bản
-                    </h6>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group mb-3">
-                                <label class="font-weight-bold text-muted small">Mã Phụ Tùng:</label>
-                                <p id="viewPartNumber" class="form-control-plaintext font-weight-bold text-dark mb-0"></p>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group mb-3">
-                                <label class="font-weight-bold text-muted small">Tên Phụ Tùng:</label>
-                                <p id="viewPartName" class="form-control-plaintext font-weight-bold text-dark mb-0"></p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-12">
-                            <div class="form-group mb-0">
-                                <label class="font-weight-bold text-muted small">Mô Tả:</label>
-                                <p id="viewDescription" class="form-control-plaintext mb-0"></p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <!-- Classification Summary Badges -->
+                <div class="mb-4 p-3 border rounded bg-light" id="viewClassificationBadges"></div>
 
-                <!-- Thông tin phân loại -->
-                <div class="mb-4">
-                    <h6 class="text-success font-weight-bold mb-3">
-                        <i class="fas fa-tags mr-2"></i>Phân Loại
-                    </h6>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group mb-3">
-                                <label class="font-weight-bold text-muted small">Danh Mục:</label>
-                                <p id="viewCategory" class="form-control-plaintext mb-0"></p>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group mb-3">
-                                <label class="font-weight-bold text-muted small">Thương Hiệu:</label>
-                                <p id="viewBrand" class="form-control-plaintext mb-0"></p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <!-- Tab Navigation -->
+                <ul class="nav nav-tabs" id="viewPartTabs" role="tablist">
+                    <li class="nav-item">
+                        <a class="nav-link active" id="view-basic-tab" data-toggle="tab" href="#viewBasicInfo" role="tab">
+                            <i class="fas fa-info-circle"></i> Thông Tin Cơ Bản
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="view-classification-tab" data-toggle="tab" href="#viewClassification" role="tab">
+                            <i class="fas fa-shield-alt"></i> Phân Loại & Hóa Đơn
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="view-technical-tab" data-toggle="tab" href="#viewTechnical" role="tab">
+                            <i class="fas fa-cogs"></i> Thông Tin Kỹ Thuật
+                        </a>
+                    </li>
+                </ul>
 
-                <!-- Thông tin giá -->
-                <div class="mb-4">
-                    <h6 class="text-warning font-weight-bold mb-3">
-                        <i class="fas fa-dollar-sign mr-2"></i>Thông Tin Giá
-                    </h6>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group mb-3">
-                                <label class="font-weight-bold text-muted small">Giá Vốn:</label>
-                                <p id="viewCostPrice" class="form-control-plaintext mb-0"></p>
+                <!-- Tab Content -->
+                <div class="tab-content mt-3" id="viewPartTabContent">
+                    <!-- Tab 1: Thông Tin Cơ Bản -->
+                    <div class="tab-pane fade show active" id="viewBasicInfo" role="tabpanel">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label class="font-weight-bold text-muted small">Mã Phụ Tùng:</label>
+                                    <p id="viewPartNumber" class="form-control-plaintext font-weight-bold text-primary mb-0"></p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label class="font-weight-bold text-muted small">Tên Phụ Tùng:</label>
+                                    <p id="viewPartName" class="form-control-plaintext font-weight-bold text-dark mb-0"></p>
+                                </div>
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <div class="form-group mb-3">
-                                <label class="font-weight-bold text-muted small">Giá Bán:</label>
-                                <p id="viewSellPrice" class="form-control-plaintext text-primary font-weight-bold mb-0"></p>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="form-group mb-3">
+                                    <label class="font-weight-bold text-muted small">Mô Tả:</label>
+                                    <p id="viewDescription" class="form-control-plaintext mb-0"></p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label class="font-weight-bold text-muted small">Danh Mục:</label>
+                                    <p id="viewCategory" class="form-control-plaintext mb-0"></p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label class="font-weight-bold text-muted small">Thương Hiệu:</label>
+                                    <p id="viewBrand" class="form-control-plaintext mb-0"></p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label class="font-weight-bold text-muted small">Giá Vốn:</label>
+                                    <p id="viewCostPrice" class="form-control-plaintext text-danger font-weight-bold mb-0"></p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label class="font-weight-bold text-muted small">Giá Bán:</label>
+                                    <p id="viewSellPrice" class="form-control-plaintext text-success font-weight-bold mb-0"></p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-group mb-3">
+                                    <label class="font-weight-bold text-muted small">Số Lượng Tồn:</label>
+                                    <p id="viewQuantityInStock" class="form-control-plaintext font-weight-bold mb-0"></p>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group mb-3">
+                                    <label class="font-weight-bold text-muted small">Tồn Kho Tối Thiểu:</label>
+                                    <p id="viewMinimumStock" class="form-control-plaintext mb-0"></p>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group mb-3">
+                                    <label class="font-weight-bold text-muted small">Đơn Vị:</label>
+                                    <p id="viewUnit" class="form-control-plaintext mb-0"></p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label class="font-weight-bold text-muted small">Vị Trí Kho:</label>
+                                    <p id="viewLocation" class="form-control-plaintext mb-0"></p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-0">
+                                    <label class="font-weight-bold text-muted small">Trạng Thái:</label>
+                                    <p id="viewIsActive" class="form-control-plaintext mb-0"></p>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- Thông tin tồn kho -->
-                <div class="mb-4">
-                    <h6 class="text-info font-weight-bold mb-3">
-                        <i class="fas fa-boxes mr-2"></i>Thông Tin Tồn Kho
-                    </h6>
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="form-group mb-3">
-                                <label class="font-weight-bold text-muted small">Số Lượng Tồn:</label>
-                                <p id="viewQuantityInStock" class="form-control-plaintext mb-0"></p>
+                    <!-- Tab 2: Phân Loại & Hóa Đơn -->
+                    <div class="tab-pane fade" id="viewClassification" role="tabpanel">
+                        <!-- Nguồn Gốc & Tình Trạng -->
+                        <h6 class="text-primary"><i class="fas fa-box"></i> Nguồn Gốc & Tình Trạng</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label class="font-weight-bold text-muted small">Nguồn Gốc:</label>
+                                    <p id="viewSourceType" class="form-control-plaintext mb-0"></p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label class="font-weight-bold text-muted small">Tình Trạng:</label>
+                                    <p id="viewCondition" class="form-control-plaintext mb-0"></p>
+                                </div>
                             </div>
                         </div>
-                        <div class="col-md-4">
-                            <div class="form-group mb-3">
-                                <label class="font-weight-bold text-muted small">Tồn Kho Tối Thiểu:</label>
-                                <p id="viewMinimumStock" class="form-control-plaintext mb-0"></p>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="form-group mb-3">
+                                    <label class="font-weight-bold text-muted small">Chi Tiết Nguồn Gốc:</label>
+                                    <p id="viewSourceReference" class="form-control-plaintext mb-0"></p>
+                                </div>
                             </div>
                         </div>
-                        <div class="col-md-4">
-                            <div class="form-group mb-3">
-                                <label class="font-weight-bold text-muted small">Mức Đặt Lại:</label>
-                                <p id="viewReorderLevel" class="form-control-plaintext mb-0"></p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group mb-0">
-                                <label class="font-weight-bold text-muted small">Đơn Vị Tính:</label>
-                                <p id="viewUnit" class="form-control-plaintext mb-0"></p>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group mb-0">
-                                <label class="font-weight-bold text-muted small">Vị Trí Kho:</label>
-                                <p id="viewLocation" class="form-control-plaintext mb-0"></p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
-                <!-- Thông tin bổ sung -->
-                <div class="mb-0">
-                    <h6 class="text-secondary font-weight-bold mb-3">
-                        <i class="fas fa-car mr-2"></i>Thông Tin Bổ Sung
-                    </h6>
-                    <div class="row">
-                        <div class="col-md-12">
-                            <div class="form-group mb-3">
-                                <label class="font-weight-bold text-muted small">Xe Tương Thích:</label>
-                                <p id="viewCompatibleVehicles" class="form-control-plaintext mb-0"></p>
+                        <hr>
+
+                        <!-- Hóa Đơn -->
+                        <h6 class="text-primary"><i class="fas fa-file-invoice"></i> Thông Tin Hóa Đơn</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label class="font-weight-bold text-muted small">Loại Hóa Đơn:</label>
+                                    <p id="viewInvoiceType" class="form-control-plaintext mb-0"></p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label class="font-weight-bold text-muted small">Trạng Thái Hóa Đơn:</label>
+                                    <p id="viewHasInvoice" class="form-control-plaintext mb-0"></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <!-- Đối Tượng Sử Dụng -->
+                        <h6 class="text-primary"><i class="fas fa-users"></i> Đối Tượng Sử Dụng</h6>
+                        <div id="viewUsageTypes" class="mb-3"></div>
+
+                        <hr>
+
+                        <!-- Bảo Hành -->
+                        <h6 class="text-primary"><i class="fas fa-shield-check"></i> Bảo Hành</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label class="font-weight-bold text-muted small">Thời Gian Bảo Hành:</label>
+                                    <p id="viewWarrantyMonths" class="form-control-plaintext mb-0"></p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label class="font-weight-bold text-muted small">Loại Phụ Tùng:</label>
+                                    <p id="viewIsOEM" class="form-control-plaintext mb-0"></p>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group mb-0">
-                                <label class="font-weight-bold text-muted small">Trạng Thái:</label>
-                                <p id="viewIsActive" class="form-control-plaintext mb-0"></p>
+
+                    <!-- Tab 3: Thông Tin Kỹ Thuật -->
+                    <div class="tab-pane fade" id="viewTechnical" role="tabpanel">
+                        <h6 class="text-primary"><i class="fas fa-barcode"></i> Mã Phụ Tùng</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label class="font-weight-bold text-muted small">Mã OEM (Chính hãng):</label>
+                                    <p id="viewOEMNumber" class="form-control-plaintext mb-0"></p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label class="font-weight-bold text-muted small">Mã Aftermarket:</label>
+                                    <p id="viewAftermarketNumber" class="form-control-plaintext mb-0"></p>
+                                </div>
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <div class="form-group mb-0">
-                                <label class="font-weight-bold text-muted small">Ngày Tạo:</label>
-                                <p id="viewCreatedAt" class="form-control-plaintext mb-0"></p>
+
+                        <hr>
+
+                        <h6 class="text-primary"><i class="fas fa-industry"></i> Nhà Sản Xuất</h6>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="form-group mb-3">
+                                    <label class="font-weight-bold text-muted small">Nhà Sản Xuất:</label>
+                                    <p id="viewManufacturer" class="form-control-plaintext mb-0"></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <h6 class="text-primary"><i class="fas fa-ruler-combined"></i> Thông Số Kỹ Thuật</h6>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-group mb-3">
+                                    <label class="font-weight-bold text-muted small">Kích Thước:</label>
+                                    <p id="viewDimensions" class="form-control-plaintext mb-0"></p>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group mb-3">
+                                    <label class="font-weight-bold text-muted small">Trọng Lượng:</label>
+                                    <p id="viewWeight" class="form-control-plaintext mb-0"></p>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group mb-3">
+                                    <label class="font-weight-bold text-muted small">Chất Liệu:</label>
+                                    <p id="viewMaterial" class="form-control-plaintext mb-0"></p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label class="font-weight-bold text-muted small">Màu Sắc:</label>
+                                    <p id="viewColor" class="form-control-plaintext mb-0"></p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label class="font-weight-bold text-muted small">Xe Tương Thích:</label>
+                                    <p id="viewCompatibleVehicles" class="form-control-plaintext mb-0"></p>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Đóng</button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                    <i class="fas fa-times"></i> Đóng
+                </button>
             </div>
         </div>
     </div>
 </div>
-

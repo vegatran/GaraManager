@@ -1,123 +1,366 @@
-<!-- Edit Part Modal -->
+<!-- Edit Part Modal with Classification -->
 <div class="modal fade" id="editPartModal" tabindex="-1" role="dialog">
-    <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-dialog modal-xl" role="document">
         <div class="modal-content">
-            <div class="modal-header">
-                <h4 class="modal-title">Cập Nhật Phụ Tùng</h4>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <div class="modal-header bg-info text-white">
+                <h4 class="modal-title"><i class="fas fa-edit"></i> Cập Nhật Phụ Tùng</h4>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
             <form id="editPartForm">
                 <input type="hidden" id="editId" name="Id">
                 <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="editPartNumber">Mã Phụ Tùng <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control form-control-sm" id="editPartNumber" name="PartNumber" required maxlength="50">
+                    <!-- Tab Navigation -->
+                    <ul class="nav nav-tabs" id="editPartTabs" role="tablist">
+                        <li class="nav-item">
+                            <a class="nav-link active" id="edit-basic-tab" data-toggle="tab" href="#editBasicInfo" role="tab">
+                                <i class="fas fa-info-circle"></i> Thông Tin Cơ Bản
+                                <span class="badge badge-danger ml-1">*</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="edit-classification-tab" data-toggle="tab" href="#editClassification" role="tab">
+                                <i class="fas fa-shield-alt"></i> Phân Loại & Hóa Đơn
+                                <span class="badge badge-warning ml-1">!</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="edit-technical-tab" data-toggle="tab" href="#editTechnical" role="tab">
+                                <i class="fas fa-cogs"></i> Thông Tin Kỹ Thuật
+                                <span class="badge badge-secondary ml-1">?</span>
+                            </a>
+                        </li>
+                    </ul>
+
+                    <!-- Tab Content -->
+                    <div class="tab-content mt-3" id="editPartTabContent">
+                        <!-- Tab 1: Thông Tin Cơ Bản -->
+                        <div class="tab-pane fade show active" id="editBasicInfo" role="tabpanel">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="editPartNumber">Mã Phụ Tùng <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control form-control-sm" id="editPartNumber" name="PartNumber" required maxlength="50">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="editPartName">Tên Phụ Tùng <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control form-control-sm" id="editPartName" name="PartName" required maxlength="200">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="form-group">
+                                        <label for="editDescription">Mô Tả</label>
+                                        <textarea class="form-control form-control-sm" id="editDescription" name="Description" rows="2" maxlength="1000"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="editCategory">Danh Mục</label>
+                                        <input type="text" class="form-control form-control-sm" id="editCategory" name="Category" maxlength="100">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="editBrand">Thương Hiệu</label>
+                                        <input type="text" class="form-control form-control-sm" id="editBrand" name="Brand" maxlength="100">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="editCostPrice">Giá Vốn <span class="text-danger">*</span></label>
+                                        <input type="number" class="form-control form-control-sm" id="editCostPrice" name="CostPrice" required min="0" step="1000">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="editSellPrice">Giá Bán <span class="text-danger">*</span></label>
+                                        <input type="number" class="form-control form-control-sm" id="editSellPrice" name="SellPrice" required min="0" step="1000">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="editQuantityInStock">Số Lượng Tồn <span class="text-danger">*</span></label>
+                                        <input type="number" class="form-control form-control-sm" id="editQuantityInStock" name="QuantityInStock" required min="0">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="editMinimumStock">Tồn Kho Tối Thiểu</label>
+                                        <input type="number" class="form-control form-control-sm" id="editMinimumStock" name="MinimumStock" min="0">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="editUnit">Đơn Vị Tính</label>
+                                        <input type="text" class="form-control form-control-sm" id="editUnit" name="Unit" maxlength="20">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="editLocation">Vị Trí Kho</label>
+                                        <input type="text" class="form-control form-control-sm" id="editLocation" name="Location" maxlength="100">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="editCompatibleVehicles">Xe Tương Thích</label>
+                                        <input type="text" class="form-control form-control-sm" id="editCompatibleVehicles" name="CompatibleVehicles" maxlength="500">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="custom-control custom-checkbox">
+                                        <input type="checkbox" class="custom-control-input" id="editIsActive" name="IsActive">
+                                        <label class="custom-control-label" for="editIsActive">Đang Hoạt Động</label>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="editPartName">Tên Phụ Tùng <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control form-control-sm" id="editPartName" name="PartName" required maxlength="200">
+
+                        <!-- Tab 2: Phân Loại & Hóa Đơn -->
+                        <div class="tab-pane fade" id="editClassification" role="tabpanel">
+                            <!-- Quick Preset -->
+                            <div class="alert alert-info">
+                                <div class="row">
+                                    <div class="col-md-9">
+                                        <label><i class="fas fa-magic"></i> <strong>Chọn Nhanh Preset:</strong></label>
+                                        <select class="form-control form-control-sm" id="editPresetSelect">
+                                            <option value="">-- Giữ nguyên cài đặt hiện tại --</option>
+                                            <option value="new_with_invoice">📄 Phụ tùng mới có hóa đơn (Công ty/Bảo hiểm)</option>
+                                            <option value="new_no_invoice">📦 Phụ tùng mới không hóa đơn (Cá nhân)</option>
+                                            <option value="used_salvage">♻️ Phụ tùng tháo xe (Cá nhân only)</option>
+                                            <option value="oem_parts">⭐ Phụ tùng chính hãng OEM</option>
+                                            <option value="refurbished">🔄 Phụ tùng tái chế/Tân trang</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3 text-right">
+                                        <br>
+                                        <button type="button" class="btn btn-sm btn-primary" id="editApplyPreset">
+                                            <i class="fas fa-check"></i> Áp dụng
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-12">
-                            <div class="form-group">
-                                <label for="editDescription">Mô Tả</label>
-                                <textarea class="form-control form-control-sm" id="editDescription" name="Description" rows="2" maxlength="1000"></textarea>
+
+                            <hr>
+
+                            <!-- Nguồn Gốc & Tình Trạng -->
+                            <h6 class="text-primary"><i class="fas fa-box"></i> Nguồn Gốc & Tình Trạng</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="editSourceType">Nguồn Gốc</label>
+                                        <select class="form-control form-control-sm" id="editSourceType" name="SourceType">
+                                            <option value="Purchased">Mua mới</option>
+                                            <option value="Used">Tháo từ xe cũ</option>
+                                            <option value="Refurbished">Tái chế</option>
+                                            <option value="Salvage">Phế liệu</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="editCondition">Tình Trạng</label>
+                                        <select class="form-control form-control-sm" id="editCondition" name="Condition">
+                                            <option value="New">Mới 100%</option>
+                                            <option value="Used">Đã qua sử dụng</option>
+                                            <option value="Refurbished">Tái chế</option>
+                                            <option value="AsIs">Nguyên trạng</option>
+                                        </select>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="editCategory">Danh Mục</label>
-                                <input type="text" class="form-control form-control-sm" id="editCategory" name="Category" maxlength="100">
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="form-group">
+                                        <label for="editSourceReference">Chi Tiết Nguồn Gốc</label>
+                                        <input type="text" class="form-control form-control-sm" id="editSourceReference" name="SourceReference" maxlength="100" placeholder="VD: Tháo từ xe 30A-12345">
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="editBrand">Thương Hiệu</label>
-                                <input type="text" class="form-control form-control-sm" id="editBrand" name="Brand" maxlength="100">
+
+                            <hr>
+
+                            <!-- Quản Lý Hóa Đơn -->
+                            <h6 class="text-primary"><i class="fas fa-file-invoice"></i> Quản Lý Hóa Đơn</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="editInvoiceType">Loại Hóa Đơn</label>
+                                        <select class="form-control form-control-sm" id="editInvoiceType" name="InvoiceType">
+                                            <option value="WithInvoice">Có hóa đơn VAT</option>
+                                            <option value="WithoutInvoice">Không hóa đơn</option>
+                                            <option value="Internal">Nội bộ</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <br>
+                                        <div class="custom-control custom-checkbox">
+                                            <input type="checkbox" class="custom-control-input" id="editHasInvoice" name="HasInvoice">
+                                            <label class="custom-control-label" for="editHasInvoice">
+                                                <strong>Có hóa đơn VAT</strong>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="editCostPrice">Giá Vốn <span class="text-danger">*</span></label>
-                                <input type="number" class="form-control form-control-sm" id="editCostPrice" name="CostPrice" required min="0" step="1000">
+
+                            <hr>
+
+                            <!-- Đối Tượng Sử Dụng -->
+                            <h6 class="text-primary"><i class="fas fa-users"></i> Đối Tượng Sử Dụng</h6>
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle"></i> <strong>Lưu ý:</strong> Công ty và Bảo hiểm chỉ chấp nhận phụ tùng có hóa đơn VAT hợp lệ
                             </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="editSellPrice">Giá Bán <span class="text-danger">*</span></label>
-                                <input type="number" class="form-control form-control-sm" id="editSellPrice" name="SellPrice" required min="0" step="1000">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="custom-control custom-checkbox">
+                                        <input type="checkbox" class="custom-control-input" id="editCanUseForIndividual" name="CanUseForIndividual">
+                                        <label class="custom-control-label" for="editCanUseForIndividual">
+                                            <i class="fas fa-user"></i> <strong>Cá nhân</strong>
+                                            <br><small class="text-muted">Luôn được phép</small>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="custom-control custom-checkbox">
+                                        <input type="checkbox" class="custom-control-input" id="editCanUseForCompany" name="CanUseForCompany">
+                                        <label class="custom-control-label" for="editCanUseForCompany">
+                                            <i class="fas fa-building"></i> <strong>Công ty</strong>
+                                            <br><small class="text-danger">⚠️ Yêu cầu có hóa đơn</small>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="custom-control custom-checkbox">
+                                        <input type="checkbox" class="custom-control-input" id="editCanUseForInsurance" name="CanUseForInsurance">
+                                        <label class="custom-control-label" for="editCanUseForInsurance">
+                                            <i class="fas fa-shield-alt"></i> <strong>Bảo hiểm</strong>
+                                            <br><small class="text-danger">⚠️ Yêu cầu có hóa đơn</small>
+                                        </label>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="form-group">
-                                <label for="editQuantityInStock">Số Lượng Tồn <span class="text-danger">*</span></label>
-                                <input type="number" class="form-control form-control-sm" id="editQuantityInStock" name="QuantityInStock" required min="0">
+
+                            <hr>
+
+                            <!-- Bảo Hành -->
+                            <h6 class="text-primary"><i class="fas fa-shield-check"></i> Bảo Hành</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="editWarrantyMonths">Thời Gian Bảo Hành (tháng)</label>
+                                        <input type="number" class="form-control form-control-sm" id="editWarrantyMonths" name="WarrantyMonths" min="0" max="120">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <br>
+                                        <div class="custom-control custom-checkbox">
+                                            <input type="checkbox" class="custom-control-input" id="editIsOEM" name="IsOEM">
+                                            <label class="custom-control-label" for="editIsOEM">
+                                                <i class="fas fa-star text-warning"></i> <strong>Phụ tùng chính hãng (OEM)</strong>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
+
+                            <hr>
+
+                            <!-- Classification Summary -->
+                            <div id="editClassificationSummary"></div>
                         </div>
-                        <div class="col-md-4">
-                            <div class="form-group">
-                                <label for="editMinimumStock">Tồn Kho Tối Thiểu <span class="text-danger">*</span></label>
-                                <input type="number" class="form-control form-control-sm" id="editMinimumStock" name="MinimumStock" required min="0">
+
+                        <!-- Tab 3: Thông Tin Kỹ Thuật -->
+                        <div class="tab-pane fade" id="editTechnical" role="tabpanel">
+                            <h6 class="text-primary"><i class="fas fa-barcode"></i> Mã Phụ Tùng</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="editOEMNumber">Mã OEM (Chính hãng)</label>
+                                        <input type="text" class="form-control form-control-sm" id="editOEMNumber" name="OEMNumber" maxlength="50">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="editAftermarketNumber">Mã Aftermarket (Thay thế)</label>
+                                        <input type="text" class="form-control form-control-sm" id="editAftermarketNumber" name="AftermarketNumber" maxlength="50">
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="form-group">
-                                <label for="editReorderLevel">Mức Đặt Lại</label>
-                                <input type="number" class="form-control form-control-sm" id="editReorderLevel" name="ReorderLevel" min="0">
+
+                            <hr>
+
+                            <h6 class="text-primary"><i class="fas fa-industry"></i> Nhà Sản Xuất</h6>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="form-group">
+                                        <label for="editManufacturer">Nhà Sản Xuất</label>
+                                        <input type="text" class="form-control form-control-sm" id="editManufacturer" name="Manufacturer" maxlength="100">
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="editUnit">Đơn Vị Tính</label>
-                                <input type="text" class="form-control form-control-sm" id="editUnit" name="Unit" maxlength="20">
+
+                            <hr>
+
+                            <h6 class="text-primary"><i class="fas fa-ruler-combined"></i> Thông Số Kỹ Thuật</h6>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="editDimensions">Kích Thước</label>
+                                        <input type="text" class="form-control form-control-sm" id="editDimensions" name="Dimensions" maxlength="100" placeholder="VD: 120x80x25mm">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="editWeight">Trọng Lượng (kg)</label>
+                                        <input type="number" class="form-control form-control-sm" id="editWeight" name="Weight" min="0" step="0.01">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="editMaterial">Chất Liệu</label>
+                                        <input type="text" class="form-control form-control-sm" id="editMaterial" name="Material" maxlength="50">
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="editLocation">Vị Trí Kho</label>
-                                <input type="text" class="form-control form-control-sm" id="editLocation" name="Location" maxlength="100">
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-12">
-                            <div class="form-group">
-                                <label for="editCompatibleVehicles">Xe Tương Thích</label>
-                                <textarea class="form-control form-control-sm" id="editCompatibleVehicles" name="CompatibleVehicles" rows="2" maxlength="500"></textarea>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-12">
-                            <div class="custom-control custom-checkbox">
-                                <input type="checkbox" class="custom-control-input" id="editIsActive" name="IsActive">
-                                <label class="custom-control-label" for="editIsActive">Đang Hoạt Động</label>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="editColor">Màu Sắc</label>
+                                        <input type="text" class="form-control form-control-sm" id="editColor" name="Color" maxlength="50">
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Hủy</button>
-                    <button type="submit" class="btn btn-primary btn-sm">Cập Nhật</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                        <i class="fas fa-times"></i> Hủy
+                    </button>
+                    <button type="submit" class="btn btn-info">
+                        <i class="fas fa-save"></i> Cập Nhật
+                    </button>
                 </div>
             </form>
         </div>
     </div>
 </div>
-
