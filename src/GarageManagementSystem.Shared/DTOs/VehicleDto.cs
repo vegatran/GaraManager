@@ -11,6 +11,7 @@ namespace GarageManagementSystem.Shared.DTOs
         public string? Color { get; set; }
         public string? VIN { get; set; }
         public string? EngineNumber { get; set; }
+        public int? Mileage { get; set; }
         public int CustomerId { get; set; }
         public string? CustomerName { get; set; } // Customer name for display
 

@@ -73,24 +73,29 @@ namespace GarageManagementSystem.Core.Enums
         Sent = 1,
         
         /// <summary>
+        /// Chờ duyệt
+        /// </summary>
+        Pending = 2,
+        
+        /// <summary>
         /// Đã duyệt
         /// </summary>
-        Approved = 2,
+        Approved = 3,
         
         /// <summary>
         /// Đã từ chối
         /// </summary>
-        Rejected = 3,
+        Rejected = 4,
         
         /// <summary>
         /// Đã hết hạn
         /// </summary>
-        Expired = 4,
+        Expired = 5,
         
         /// <summary>
         /// Đã hủy
         /// </summary>
-        Cancelled = 5
+        Cancelled = 6
     }
 
     /// <summary>

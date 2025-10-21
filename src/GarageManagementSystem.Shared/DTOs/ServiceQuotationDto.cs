@@ -116,6 +116,9 @@ namespace GarageManagementSystem.Shared.DTOs
         public decimal DiscountAmount { get; set; }
 
         [StringLength(20)]
+        public string? QuotationType { get; set; }
+
+        [StringLength(20)]
         public string? Status { get; set; }
 
         [StringLength(5000)]

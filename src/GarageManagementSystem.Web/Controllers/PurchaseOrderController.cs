@@ -1,4 +1,5 @@
 using GarageManagementSystem.Shared.DTOs;
+using GarageManagementSystem.Shared.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using GarageManagementSystem.Web.Services;
@@ -30,99 +31,145 @@ namespace GarageManagementSystem.Web.Controllers
         }
 
         /// <summary>
-        /// Lấy danh sách phiếu nhập hàng cho DataTable thông qua API
+        /// Tạo phiếu nhập hàng mới thông qua API
         /// </summary>
-        [HttpGet("GetPurchaseOrders")]
-        public async Task<IActionResult> GetPurchaseOrders()
+        [HttpPost("Create")]
+        public async Task<IActionResult> Create([FromBody] CreatePurchaseOrderDto createDto)
         {
-            var response = await _apiService.GetAsync<List<PurchaseOrderDto>>(ApiEndpoints.PurchaseOrders.GetAll);
-            
-            if (response.Success)
+            try
             {
-                var purchaseOrderList = new List<object>();
+                Console.WriteLine($"[PurchaseOrderController.Create] Received request to create purchase order");
+                Console.WriteLine($"[PurchaseOrderController.Create] SupplierId: {createDto.SupplierId}, Items count: {createDto.Items?.Count ?? 0}");
+
+                var response = await _apiService.PostAsync<object>(ApiEndpoints.PurchaseOrders.Create, createDto);
                 
-                if (response.Data != null)
+                if (response.Success)
                 {
-                    // Map API response to frontend format
-                    var purchaseOrders = response.Data.Select(po => new
-                    {
-                        referenceNumber = po.OrderNumber,
-                        transactionDate = po.OrderDate,
-                        supplierId = po.SupplierId,
-                        supplierName = po.SupplierName ?? "Chưa có nhà cung cấp",
-                        itemCount = po.ItemCount,
-                        totalAmount = po.TotalAmount,
-                        status = GetStatusDisplayName(po.Status)
-                    })
-                    .OrderByDescending(po => po.transactionDate)
-                    .ToList();
-
-                    purchaseOrderList = purchaseOrders.Cast<object>().ToList();
+                    Console.WriteLine($"[PurchaseOrderController.Create] Successfully created purchase order");
+                    return Json(new { success = true, message = "Tạo phiếu nhập hàng thành công" });
                 }
-
-                return Json(new { 
-                    success = true,
-                    data = purchaseOrderList,
-                    message = "Lấy danh sách phiếu nhập hàng thành công"
-                });
+                else
+                {
+                    Console.WriteLine($"[PurchaseOrderController.Create] Failed to create: {response.ErrorMessage}");
+                    return Json(new { success = false, error = response.ErrorMessage ?? "Lỗi khi tạo phiếu nhập hàng" });
+                }
             }
-            else
+            catch (Exception ex)
             {
-                return Json(new { error = response.ErrorMessage });
+                Console.WriteLine($"[PurchaseOrderController.Create] Exception: {ex.Message}");
+                return Json(new { success = false, error = "Có lỗi xảy ra khi tạo phiếu nhập hàng: " + ex.Message });
             }
         }
 
         /// <summary>
-        /// Lấy thông tin chi tiết phiếu nhập hàng theo ReferenceNumber thông qua API
+        /// Lấy danh sách phiếu nhập hàng cho DataTable thông qua API với pagination
         /// </summary>
-        [HttpGet("GetPurchaseOrderDetails/{referenceNumber}")]
-        public async Task<IActionResult> GetPurchaseOrderDetails(string referenceNumber)
+        [HttpGet("GetPurchaseOrders")]
+        public async Task<IActionResult> GetPurchaseOrders(
+            int pageNumber = 1,
+            int pageSize = 10,
+            string? searchTerm = null,
+            string? status = null,
+            int? supplierId = null)
         {
-            // First get all purchase orders to find the one with matching OrderNumber
-            var response = await _apiService.GetAsync<List<PurchaseOrderDto>>(ApiEndpoints.PurchaseOrders.GetAll);
-            
-            if (response.Success && response.Data != null)
+            try
             {
-                var purchaseOrder = response.Data.FirstOrDefault(po => po.OrderNumber == referenceNumber);
-
-                if (purchaseOrder != null)
+                // Build query parameters
+                var queryParams = new List<string>
                 {
-                    // Get detailed information including items by ID
-                    var detailResponse = await _apiService.GetAsync<PurchaseOrderDto>(
-                        ApiEndpoints.Builder.WithId(ApiEndpoints.PurchaseOrders.GetById, purchaseOrder.Id)
-                    );
+                    $"pageNumber={pageNumber}",
+                    $"pageSize={pageSize}"
+                };
 
-                    if (detailResponse.Success && detailResponse.Data != null)
+                if (!string.IsNullOrEmpty(searchTerm))
+                    queryParams.Add($"searchTerm={Uri.EscapeDataString(searchTerm)}");
+                if (!string.IsNullOrEmpty(status))
+                    queryParams.Add($"status={Uri.EscapeDataString(status)}");
+                if (supplierId.HasValue)
+                    queryParams.Add($"supplierId={supplierId.Value}");
+
+                var endpoint = ApiEndpoints.PurchaseOrders.GetAll + "?" + string.Join("&", queryParams);
+                var response = await _apiService.GetAsync<PagedResponse<PurchaseOrderDto>>(endpoint);
+                
+                if (response.Success && response.Data != null)
+                {
+                    return Json(response.Data);
+                }
+                else
+                {
+                    return Json(new PagedResponse<PurchaseOrderDto>
                     {
-                        var detailedOrder = detailResponse.Data;
-                        
-                        var purchaseOrderDetails = new
-                        {
-                            referenceNumber = detailedOrder.OrderNumber,
-                            transactionDate = detailedOrder.OrderDate,
-                            supplierId = detailedOrder.SupplierId,
-                            supplierName = detailedOrder.SupplierName ?? "Chưa có nhà cung cấp",
-                            totalAmount = detailedOrder.TotalAmount,
-                            itemCount = detailedOrder.ItemCount,
-                            items = detailedOrder.Items?.Select(item => (object)new
-                            {
-                                id = item.Id,
-                                partName = item.PartName ?? "N/A",
-                                partNumber = item.SupplierPartNumber ?? "N/A",
-                                quantity = item.QuantityOrdered,
-                                unitPrice = item.UnitPrice,
-                                totalAmount = item.TotalPrice,
-                                hasInvoice = true,
-                                notes = item.Notes
-                            }).ToList() ?? new List<object>()
-                        };
-
-                        return Json(new { success = true, data = purchaseOrderDetails });
-                    }
+                        Data = new List<PurchaseOrderDto>(),
+                        TotalCount = 0,
+                        PageNumber = pageNumber,
+                        PageSize = pageSize,
+                        Success = false,
+                        Message = response.ErrorMessage ?? "Lỗi khi lấy danh sách phiếu nhập hàng"
+                    });
                 }
             }
+            catch (Exception ex)
+            {
+                return Json(new PagedResponse<PurchaseOrderDto>
+                {
+                    Data = new List<PurchaseOrderDto>(),
+                    TotalCount = 0,
+                    PageNumber = pageNumber,
+                    PageSize = pageSize,
+                    Success = false,
+                    Message = $"Lỗi: {ex.Message}"
+                });
+            }
+        }
 
-            return Json(new { success = false, error = "Không tìm thấy phiếu nhập hàng" });
+        /// <summary>
+        /// Lấy thông tin chi tiết phiếu nhập hàng theo ID thông qua API
+        /// </summary>
+        [HttpGet("GetPurchaseOrder/{id}")]
+        public async Task<IActionResult> GetPurchaseOrder(int id)
+        {
+            try
+            {
+                var response = await _apiService.GetAsync<ApiResponse<PurchaseOrderDto>>(
+                    ApiEndpoints.Builder.WithId(ApiEndpoints.PurchaseOrders.GetById, id)
+                );
+                
+                if (response.Success && response.Data != null)
+                {
+                    var purchaseOrder = response.Data.Data;
+                    var purchaseOrderData = new
+                    {
+                        id = purchaseOrder.Id,
+                        orderNumber = purchaseOrder.OrderNumber,
+                        orderDate = purchaseOrder.OrderDate,
+                        supplierId = purchaseOrder.SupplierId,
+                        supplierName = purchaseOrder.SupplierName,
+                        totalAmount = purchaseOrder.TotalAmount,
+                        itemCount = purchaseOrder.ItemCount,
+                        status = purchaseOrder.Status,
+                        notes = purchaseOrder.Notes,
+                        items = purchaseOrder.Items?.Select(item => new
+                        {
+                            id = item.Id,
+                            partId = item.PartId,
+                            partName = item.PartName,
+                            quantity = item.QuantityOrdered,
+                            unitPrice = item.UnitPrice,
+                            totalPrice = item.TotalPrice
+                        }).ToList()
+                    };
+                    
+                    return Json(new ApiResponse { Data = purchaseOrderData, Success = true, StatusCode = System.Net.HttpStatusCode.OK });
+                }
+                else
+                {
+                    return Json(new { success = false, error = "Phiếu nhập hàng không tồn tại" });
+                }
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, error = $"Lỗi: {ex.Message}" });
+            }
         }
 
         /// <summary>

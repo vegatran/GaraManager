@@ -8,6 +8,7 @@
 window.SupplierManagement = {
     // DataTable instance
     supplierTable: null,
+    currentEditData: null, // ✅ THÊM: Store data for edit modal
 
     // Initialize module
     init: function() {
@@ -23,7 +24,7 @@ window.SupplierManagement = {
         var columns = [
             { data: 'id', title: 'ID', width: '60px' },
             { data: 'supplierCode', title: 'Mã NCC' },
-            { data: 'name', title: 'Tên Nhà Cung Cấp' },
+            { data: 'supplierName', title: 'Tên Nhà Cung Cấp' },
             { data: 'contactPerson', title: 'Người Liên Hệ' },
             { data: 'phone', title: 'Số Điện Thoại' },
             { data: 'email', title: 'Email' },
@@ -31,7 +32,9 @@ window.SupplierManagement = {
             { 
                 data: 'isActive', 
                 title: 'Trạng Thái',
-                render: DataTablesUtility.renderStatus
+                render: function(data, type, row) {
+                    return data ? '<span class="badge badge-success">Hoạt động</span>' : '<span class="badge badge-danger">Tạm dừng</span>';
+                }
             },
             { 
                 data: 'createdAt', 
@@ -59,7 +62,7 @@ window.SupplierManagement = {
             }
         ];
 
-        this.supplierTable = DataTablesUtility.initServerSideTable('#suppliersTable', '/api/suppliers', columns, {
+        this.supplierTable = DataTablesUtility.initServerSideTable('#suppliersTable', '/SupplierManagement/GetSuppliers', columns, {
             order: [[0, 'desc']],
             pageLength: 10
         });
@@ -92,6 +95,22 @@ window.SupplierManagement = {
         $(document).on('click', '.edit-supplier', function() {
             var id = $(this).data('id');
             self.editSupplier(id);
+        });
+
+        // ✅ THÊM: Populate edit modal when shown
+        $('#editSupplierModal').on('shown.bs.modal', function() {
+            if (self.currentEditData) {
+                self.populateEditModal(self.currentEditData);
+                self.currentEditData = null; // Clear after use
+            }
+        });
+
+        // ✅ THÊM: Populate view modal when shown
+        $('#viewSupplierModal').on('shown.bs.modal', function() {
+            if (self.currentEditData) {
+                self.populateViewModal(self.currentEditData);
+                self.currentEditData = null; // Clear after use
+            }
         });
 
         // Delete supplier
@@ -148,40 +167,75 @@ window.SupplierManagement = {
                 }
             },
             error: function(xhr, status, error) {
-                Swal.fire({
-                    title: 'Lỗi!',
-                    text: 'Có lỗi xảy ra khi tạo nhà cung cấp: ' + error,
-                    icon: 'error',
-                    confirmButtonText: 'OK'
-                });
+                if (xhr.status === 400) {
+                    // Handle validation errors
+                    try {
+                        var errorResponse = JSON.parse(xhr.responseText);
+                        if (errorResponse.errors) {
+                            self.displayValidationErrors(errorResponse.errors);
+                        } else {
+                            Swal.fire({
+                                title: 'Lỗi!',
+                                text: errorResponse.message || 'Dữ liệu không hợp lệ',
+                                icon: 'error',
+                                confirmButtonText: 'OK'
+                            });
+                        }
+                    } catch (e) {
+                        Swal.fire({
+                            title: 'Lỗi!',
+                            text: 'Dữ liệu không hợp lệ',
+                            icon: 'error',
+                            confirmButtonText: 'OK'
+                        });
+                    }
+                } else {
+                    Swal.fire({
+                        title: 'Lỗi!',
+                        text: 'Có lỗi xảy ra khi tạo nhà cung cấp: ' + error,
+                        icon: 'error',
+                        confirmButtonText: 'OK'
+                    });
+                }
             }
+        });
+    },
+
+    // ✅ THÊM: Function hiển thị validation errors
+    displayValidationErrors: function(errors) {
+        // Clear previous errors
+        $('.is-invalid').removeClass('is-invalid');
+        $('.invalid-feedback').remove();
+        
+        // Display field-specific errors
+        for (var field in errors) {
+            var fieldElement = $(`#${field.toLowerCase()}`);
+            if (fieldElement.length > 0) {
+                fieldElement.addClass('is-invalid');
+                fieldElement.after(`<div class="invalid-feedback">${errors[field].join(', ')}</div>`);
+            }
+        }
+        
+        // Show general error message
+        Swal.fire({
+            title: 'Lỗi!',
+            text: 'Vui lòng kiểm tra lại thông tin đã nhập',
+            icon: 'error',
+            confirmButtonText: 'OK'
         });
     },
 
     // View supplier details
     viewSupplier: function(id) {
+        var self = this;
         $.ajax({
             url: '/SupplierManagement/GetSupplier/' + id,
             type: 'GET',
             success: function(response) {
                 if (response.success && response.data) {
-                    var supplier = response.data;
-                    Swal.fire({
-                        title: 'Thông Tin Nhà Cung Cấp',
-                        html: `
-                            <div class="text-left">
-                                <p><strong>Mã NCC:</strong> ${supplier.supplierCode || 'N/A'}</p>
-                                <p><strong>Tên:</strong> ${supplier.name || 'N/A'}</p>
-                                <p><strong>Người liên hệ:</strong> ${supplier.contactPerson || 'N/A'}</p>
-                                <p><strong>Số điện thoại:</strong> ${supplier.phone || 'N/A'}</p>
-                                <p><strong>Email:</strong> ${supplier.email || 'N/A'}</p>
-                                <p><strong>Địa chỉ:</strong> ${supplier.address || 'N/A'}</p>
-                                <p><strong>Trạng thái:</strong> ${supplier.isActive ? 'Hoạt động' : 'Không hoạt động'}</p>
-                            </div>
-                        `,
-                        icon: 'info',
-                        confirmButtonText: 'Đóng'
-                    });
+                    // Store data and show modal
+                    self.currentEditData = response.data;
+                    $('#viewSupplierModal').modal('show');
                 } else {
                     Swal.fire({
                         title: 'Lỗi!',
@@ -204,22 +258,14 @@ window.SupplierManagement = {
 
     // Edit supplier
     editSupplier: function(id) {
+        var self = this;
         $.ajax({
             url: '/SupplierManagement/GetSupplier/' + id,
             type: 'GET',
             success: function(response) {
                 if (response.success && response.data) {
-                    var supplier = response.data;
-                    
-                    $('#editSupplierId').val(supplier.id);
-                    $('#editSupplierCode').val(supplier.supplierCode);
-                    $('#editSupplierName').val(supplier.name);
-                    $('#editContactPerson').val(supplier.contactPerson);
-                    $('#editPhone').val(supplier.phone);
-                    $('#editEmail').val(supplier.email);
-                    $('#editAddress').val(supplier.address);
-                    $('#editIsActive').val(supplier.isActive.toString());
-                    
+                    // Store data and show modal
+                    self.currentEditData = response.data;
                     $('#editSupplierModal').modal('show');
                 } else {
                     Swal.fire({
@@ -239,6 +285,29 @@ window.SupplierManagement = {
                 });
             }
         });
+    },
+
+    // ✅ THÊM: Function populate edit modal
+    populateEditModal: function(supplier) {
+        $('#editSupplierId').val(supplier.id);
+        $('#editSupplierCode').val(supplier.supplierCode);
+        $('#editSupplierName').val(supplier.supplierName);
+        $('#editContactPerson').val(supplier.contactPerson);
+        $('#editPhone').val(supplier.phone);
+        $('#editEmail').val(supplier.email);
+        $('#editAddress').val(supplier.address);
+        $('#editIsActive').val(supplier.isActive.toString());
+    },
+
+    // ✅ THÊM: Function populate view modal
+    populateViewModal: function(supplier) {
+        $('#viewSupplierCode').text(supplier.supplierCode || 'N/A');
+        $('#viewSupplierName').text(supplier.supplierName || 'N/A');
+        $('#viewContactPerson').text(supplier.contactPerson || 'N/A');
+        $('#viewPhone').text(supplier.phone || 'N/A');
+        $('#viewEmail').text(supplier.email || 'N/A');
+        $('#viewAddress').text(supplier.address || 'N/A');
+        $('#viewIsActive').text(supplier.isActive ? 'Hoạt động' : 'Không hoạt động');
     },
 
     // Update supplier

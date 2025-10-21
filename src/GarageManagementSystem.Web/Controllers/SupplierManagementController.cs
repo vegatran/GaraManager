@@ -1,4 +1,5 @@
 using GarageManagementSystem.Shared.DTOs;
+using GarageManagementSystem.Shared.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using GarageManagementSystem.Web.Services;
@@ -30,42 +31,60 @@ namespace GarageManagementSystem.Web.Controllers
         }
 
         /// <summary>
-        /// Lấy danh sách tất cả nhà cung cấp cho DataTable thông qua API
+        /// Lấy danh sách nhà cung cấp cho DataTable thông qua API với pagination
         /// </summary>
         [HttpGet("GetSuppliers")]
-        public async Task<IActionResult> GetSuppliers()
+        public async Task<IActionResult> GetSuppliers(
+            int pageNumber = 1,
+            int pageSize = 10,
+            string? searchTerm = null,
+            string? status = null)
         {
-            var response = await _apiService.GetAsync<List<SupplierDto>>(ApiEndpoints.Suppliers.GetAll);
-            
-            if (response.Success)
+            try
             {
-                var supplierList = new List<object>();
-                
-                if (response.Data != null)
+                // Build query parameters
+                var queryParams = new List<string>
                 {
-                    supplierList = response.Data.Select(s => new
-                    {
-                        id = s.Id,
-                        supplierCode = s.SupplierCode,
-                        name = s.SupplierName,
-                        contactPerson = s.ContactPerson,
-                        phone = s.Phone,
-                        email = s.Email,
-                        address = s.Address,
-                        isActive = s.IsActive,
-                        createdAt = s.CreatedAt
-                    }).Cast<object>().ToList();
-                }
+                    $"pageNumber={pageNumber}",
+                    $"pageSize={pageSize}"
+                };
 
-                return Json(new { 
-                    success = true,
-                    data = supplierList,
-                    message = "Lấy danh sách nhà cung cấp thành công"
-                });
+                if (!string.IsNullOrEmpty(searchTerm))
+                    queryParams.Add($"searchTerm={Uri.EscapeDataString(searchTerm)}");
+                if (!string.IsNullOrEmpty(status))
+                    queryParams.Add($"status={Uri.EscapeDataString(status)}");
+
+                var endpoint = ApiEndpoints.Suppliers.GetAll + "?" + string.Join("&", queryParams);
+                var response = await _apiService.GetAsync<PagedResponse<SupplierDto>>(endpoint);
+                
+                if (response.Success && response.Data != null)
+                {
+                    return Json(response.Data);
+                }
+                else
+                {
+                    return Json(new PagedResponse<SupplierDto>
+                    {
+                        Data = new List<SupplierDto>(),
+                        TotalCount = 0,
+                        PageNumber = pageNumber,
+                        PageSize = pageSize,
+                        Success = false,
+                        Message = response.ErrorMessage ?? "Lỗi khi lấy danh sách nhà cung cấp"
+                    });
+                }
             }
-            else
+            catch (Exception ex)
             {
-                return Json(new { error = response.ErrorMessage });
+                return Json(new PagedResponse<SupplierDto>
+                {
+                    Data = new List<SupplierDto>(),
+                    TotalCount = 0,
+                    PageNumber = pageNumber,
+                    PageSize = pageSize,
+                    Success = false,
+                    Message = $"Lỗi: {ex.Message}"
+                });
             }
         }
 
@@ -75,11 +94,29 @@ namespace GarageManagementSystem.Web.Controllers
         [HttpGet("GetSupplier/{id}")]
         public async Task<IActionResult> GetSupplier(int id)
         {
-            var response = await _apiService.GetAsync<SupplierDto>(
+            var response = await _apiService.GetAsync<ApiResponse<SupplierDto>>(
                 ApiEndpoints.Builder.WithId(ApiEndpoints.Suppliers.GetById, id)
             );
             
-            return Json(response);
+            if (response.Success && response.Data != null)
+            {
+                var supplier = response.Data.Data;
+                var supplierData = new
+                {
+                    id = supplier.Id,
+                    supplierCode = supplier.SupplierCode,
+                    supplierName = supplier.SupplierName,
+                    contactPerson = supplier.ContactPerson,
+                    phone = supplier.Phone,
+                    email = supplier.Email,
+                    address = supplier.Address,
+                    isActive = supplier.IsActive
+                };
+                
+                return Json(new ApiResponse { Data = supplierData, Success = true, StatusCode = System.Net.HttpStatusCode.OK });
+            }
+            
+            return Json(new { success = false, error = "Nhà cung cấp không tồn tại" });
         }
 
         /// <summary>
@@ -88,14 +125,42 @@ namespace GarageManagementSystem.Web.Controllers
         [HttpPost("CreateSupplier")]
         public async Task<IActionResult> CreateSupplier([FromBody] CreateSupplierDto model)
         {
-            if (!ModelState.IsValid)
+            try
             {
-                return Json(new { success = false, message = "Dữ liệu không hợp lệ" });
-            }
+                // Log input data for debugging
+                Console.WriteLine($"DEBUG: CreateSupplier input: {System.Text.Json.JsonSerializer.Serialize(model)}");
 
-            var response = await _apiService.PostAsync<SupplierDto>(ApiEndpoints.Suppliers.Create, model);
-            
-            return Json(response);
+                if (!ModelState.IsValid)
+                {
+                    var errors = new Dictionary<string, string[]>();
+                    foreach (var key in ModelState.Keys)
+                    {
+                        var modelErrors = ModelState[key].Errors.Select(e => e.ErrorMessage).ToArray();
+                        if (modelErrors.Length > 0)
+                        {
+                            errors[key] = modelErrors;
+                        }
+                    }
+                    Console.WriteLine($"DEBUG: ModelState errors: {System.Text.Json.JsonSerializer.Serialize(errors)}");
+                    return BadRequest(new { success = false, message = "Dữ liệu không hợp lệ", errors = errors });
+                }
+
+                var response = await _apiService.PostAsync<SupplierDto>(ApiEndpoints.Suppliers.Create, model);
+                
+                if (response.Success)
+                {
+                    return Json(new { success = true, message = "Tạo nhà cung cấp thành công" });
+                }
+                else
+                {
+                    return Json(new { success = false, message = response.ErrorMessage ?? "Lỗi khi tạo nhà cung cấp" });
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"DEBUG: CreateSupplier exception: {ex.Message}");
+                return Json(new { success = false, message = $"Lỗi: {ex.Message}" });
+            }
         }
 
         /// <summary>

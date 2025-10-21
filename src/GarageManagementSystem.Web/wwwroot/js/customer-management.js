@@ -57,7 +57,7 @@ window.CustomerManagement = {
             }
         ];
         
-        this.customerTable = DataTablesUtility.initServerSideTable('#customerTable', '/api/customers', columns, {
+        this.customerTable = DataTablesUtility.initServerSideTable('#customerTable', '/CustomerManagement/GetCustomers', columns, {
             order: [[0, 'desc']],
             pageLength: 10
         });
@@ -107,7 +107,15 @@ window.CustomerManagement = {
     // Show create modal
     showCreateModal: function() {
         $('#createCustomerModal').modal('show');
-        $('#createCustomerForm')[0].reset();
+        
+        // Reset form when modal is fully shown
+        $('#createCustomerModal').on('shown.bs.modal', function() {
+            // Reset form fields
+            $('#createCustomerForm')[0].reset();
+            
+            // Remove the event listener to prevent multiple bindings
+            $('#createCustomerModal').off('shown.bs.modal');
+        });
     },
 
     // View customer
@@ -147,8 +155,19 @@ window.CustomerManagement = {
             success: function(response) {
                 if (AuthHandler.validateApiResponse(response)) {
                     if (response.success) {
-                        self.populateEditModal(response.data);
+                        
+                        // Store customer data and show modal
+                        var customerData = response.data;
                         $('#editCustomerModal').modal('show');
+                        
+                        // Populate form when modal is fully shown
+                        $('#editCustomerModal').on('shown.bs.modal', function() {
+                            // Reset form first
+                            $('#editCustomerForm')[0].reset();
+                            self.populateEditModal(customerData);
+                            // Remove the event listener to prevent multiple bindings
+                            $('#editCustomerModal').off('shown.bs.modal');
+                        });
                     } else {
                         GarageApp.showError(GarageApp.parseErrorMessage(response) || 'Error loading customer');
                     }
@@ -235,7 +254,22 @@ window.CustomerManagement = {
                 if (AuthHandler.isUnauthorized(xhr)) {
                     AuthHandler.handleUnauthorized(xhr, true);
                 } else {
-                    GarageApp.showError('Error creating customer');
+                    // Handle validation errors
+                    if (xhr.status === 400) {
+                        try {
+                            var errorResponse = JSON.parse(xhr.responseText);
+                            if (errorResponse.errors) {
+                                // Display validation errors
+                                self.displayValidationErrors(errorResponse.errors);
+                            } else {
+                                GarageApp.showError(errorResponse.message || 'Validation error occurred');
+                            }
+                        } catch (e) {
+                            GarageApp.showError('Error creating customer');
+                        }
+                    } else {
+                        GarageApp.showError('Error creating customer');
+                    }
                 }
             }
         });
@@ -275,7 +309,22 @@ window.CustomerManagement = {
                 if (AuthHandler.isUnauthorized(xhr)) {
                     AuthHandler.handleUnauthorized(xhr, true);
                 } else {
-                    GarageApp.showError('Error updating customer');
+                    // Handle validation errors
+                    if (xhr.status === 400) {
+                        try {
+                            var errorResponse = JSON.parse(xhr.responseText);
+                            if (errorResponse.errors) {
+                                // Display validation errors
+                                self.displayValidationErrors(errorResponse.errors);
+                            } else {
+                                GarageApp.showError(errorResponse.message || 'Validation error occurred');
+                            }
+                        } catch (e) {
+                            GarageApp.showError('Error updating customer');
+                        }
+                    } else {
+                        GarageApp.showError('Error updating customer');
+                    }
                 }
             }
         });
@@ -300,6 +349,47 @@ window.CustomerManagement = {
         $('#editAddress').val(customer.address);
         $('#editAlternativePhone').val(customer.alternativePhone);
         $('#editContactPersonName').val(customer.contactPersonName);
+    },
+
+    // Display validation errors
+    displayValidationErrors: function(errors) {
+        // Clear previous errors
+        $('.field-error').remove();
+        $('.form-control').removeClass('is-invalid');
+        
+        // Display new errors
+        for (var field in errors) {
+            var fieldElement = $('#' + field.toLowerCase());
+            if (fieldElement.length === 0) {
+                // Try alternative field names
+                if (field.toLowerCase() === 'name') {
+                    fieldElement = $('#createName, #editName');
+                } else if (field.toLowerCase() === 'phone') {
+                    fieldElement = $('#createPhone, #editPhone');
+                } else if (field.toLowerCase() === 'email') {
+                    fieldElement = $('#createEmail, #editEmail');
+                } else if (field.toLowerCase() === 'address') {
+                    fieldElement = $('#createAddress, #editAddress');
+                } else if (field.toLowerCase() === 'alternativephone') {
+                    fieldElement = $('#createAlternativePhone, #editAlternativePhone');
+                } else if (field.toLowerCase() === 'contactpersonname') {
+                    fieldElement = $('#createContactPersonName, #editContactPersonName');
+                }
+            }
+            
+            if (fieldElement.length > 0) {
+                fieldElement.addClass('is-invalid');
+                var errorHtml = '<div class="field-error invalid-feedback">' + errors[field].join(', ') + '</div>';
+                fieldElement.after(errorHtml);
+            }
+        }
+        
+        // Show general error message
+        var errorMessages = [];
+        for (var field in errors) {
+            errorMessages.push(field + ': ' + errors[field].join(', '));
+        }
+        GarageApp.showError('Validation errors:\n' + errorMessages.join('\n'));
     }
 };
 

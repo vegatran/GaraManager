@@ -43,6 +43,8 @@ namespace GarageManagementSystem.API.Profiles
                 .ForMember(dest => dest.Items, opt => opt.Ignore()) // ✅ SỬA: Ignore Items vì sẽ xử lý riêng trong controller
                 .ForMember(dest => dest.QuotationNumber, opt => opt.Ignore())
                 .ForMember(dest => dest.QuotationDate, opt => opt.Ignore())
+                .ForMember(dest => dest.QuotationType, opt => opt.Condition(src => !string.IsNullOrEmpty(src.QuotationType)))
+                .ForMember(dest => dest.DiscountAmount, opt => opt.MapFrom(src => src.DiscountAmount))
                 .ForMember(dest => dest.Status, opt => opt.Condition(src => !string.IsNullOrEmpty(src.Status)));
 
             // QuotationItem mappings

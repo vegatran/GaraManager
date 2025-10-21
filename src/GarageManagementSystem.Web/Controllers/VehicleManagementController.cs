@@ -31,20 +31,42 @@ namespace GarageManagementSystem.Web.Controllers
         }
 
         /// <summary>
-        /// Lấy danh sách tất cả xe cho DataTable thông qua API
+        /// Lấy danh sách tất cả xe cho DataTable thông qua API với pagination
         /// </summary>
         [HttpGet("GetVehicles")]
-        public async Task<IActionResult> GetVehicles()
+        public async Task<IActionResult> GetVehicles(
+            [FromQuery] int pageNumber = 1, 
+            [FromQuery] int pageSize = 10,
+            [FromQuery] string? searchTerm = null,
+            [FromQuery] string? brand = null,
+            [FromQuery] int? customerId = null)
         {
-            var response = await _apiService.GetAsync<ApiResponse<List<VehicleDto>>>(ApiEndpoints.Vehicles.GetAll);
-            
-            if (response.Success)
+            try
             {
-                var vehicleList = new List<object>();
-                
-                if (response.Data != null)
+                // Build query parameters
+                var queryParams = new List<string>
                 {
-                    vehicleList = response.Data.Data.Select(v => new
+                    $"pageNumber={pageNumber}",
+                    $"pageSize={pageSize}"
+                };
+                
+                if (!string.IsNullOrEmpty(searchTerm))
+                    queryParams.Add($"searchTerm={Uri.EscapeDataString(searchTerm)}");
+                
+                if (!string.IsNullOrEmpty(brand))
+                    queryParams.Add($"brand={Uri.EscapeDataString(brand)}");
+                
+                if (customerId.HasValue)
+                    queryParams.Add($"customerId={customerId.Value}");
+
+                var queryString = string.Join("&", queryParams);
+                var endpoint = $"{ApiEndpoints.Vehicles.GetAll}?{queryString}";
+
+                var response = await _apiService.GetAsync<PagedResponse<VehicleDto>>(endpoint);
+                
+                if (response.Success && response.Data != null)
+                {
+                    var vehicleList = response.Data.Data.Select(v => new
                     {
                         id = v.Id,
                         licensePlate = v.LicensePlate,
@@ -57,18 +79,29 @@ namespace GarageManagementSystem.Web.Controllers
                         customerName = v.CustomerName ?? "N/A",
                         customerId = v.CustomerId,
                         createdDate = v.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss")
-                    }).Cast<object>().ToList();
-                }
+                    }).ToList();
 
-                return Json(new { 
-                    success = true,
-                    data = vehicleList,
-                    message = "Lấy danh sách xe thành công"
-                });
+                    return Json(new { 
+                        success = true,
+                        data = vehicleList,
+                        totalCount = response.Data.TotalCount,
+                        message = "Lấy danh sách xe thành công"
+                    });
+                }
+                else
+                {
+                    return Json(new { 
+                        success = false,
+                        error = response.ErrorMessage ?? "Lỗi khi lấy danh sách xe"
+                    });
+                }
             }
-            else
+            catch (Exception ex)
             {
-                return Json(new { error = response.ErrorMessage });
+                return Json(new { 
+                    success = false,
+                    error = "Lỗi khi lấy danh sách xe: " + ex.Message
+                });
             }
         }
 
@@ -78,16 +111,32 @@ namespace GarageManagementSystem.Web.Controllers
         [HttpGet("GetVehicle/{id}")]
         public async Task<IActionResult> Details(int id)
         {
-            var response = await _apiService.GetAsync<VehicleDto>(ApiEndpoints.Builder.WithId(ApiEndpoints.Vehicles.GetById, id));
+            var response = await _apiService.GetAsync<ApiResponse<VehicleDto>>(
+                ApiEndpoints.Builder.WithId(ApiEndpoints.Vehicles.GetById, id)
+            );
             
-            if (response.Success)
+            if (response.Success && response.Data != null)
             {
-                return Json(new { success = true, data = response.Data });
+                var vehicle = response.Data.Data;
+                var vehicleData = new
+                {
+                    id = vehicle.Id,
+                    licensePlate = vehicle.LicensePlate,
+                    brand = vehicle.Brand,
+                    model = vehicle.Model,
+                    year = vehicle.Year ?? "N/A",
+                    color = vehicle.Color ?? "N/A",
+                    vin = vehicle.VIN ?? "N/A",
+                    engineNumber = vehicle.EngineNumber ?? "N/A",
+                    mileage = vehicle.Mileage,
+                    customerId = vehicle.CustomerId,
+                    customerName = vehicle.CustomerName ?? "N/A"
+                };
+                
+                return Json(new ApiResponse { Data = vehicleData, Success = true, StatusCode = System.Net.HttpStatusCode.OK });
             }
-            else
-            {
-                return Json(new { success = false, error = response.ErrorMessage });
-            }
+            
+            return Json(new { success = false, error = "Vehicle not found" });
         }
 
         /// <summary>
@@ -135,17 +184,36 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Tạo xe mới thông qua API
         /// </summary>
-        [HttpPost("CreateVehicle")]
+        [HttpPost]
+        [Route("CreateVehicle")]
         public async Task<IActionResult> Create([FromBody] CreateVehicleDto model)
         {
-            if (!ModelState.IsValid)
+            try
             {
-                return Json(new { success = false, message = "Invalid model data" });
-            }
+                // Log input data for debugging
+                Console.WriteLine($"DEBUG: CreateVehicle input: {System.Text.Json.JsonSerializer.Serialize(model)}");
 
-            var response = await _apiService.PostAsync<VehicleDto>(ApiEndpoints.Vehicles.Create, model);
-            
-            return Json(response);
+                if (!ModelState.IsValid)
+                {
+                    var errors = ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage)).ToList();
+                    Console.WriteLine($"DEBUG: ModelState errors: {string.Join(", ", errors)}");
+                    return BadRequest(new { success = false, errorMessage = "Dữ liệu không hợp lệ", errors = errors });
+                }
+
+                var response = await _apiService.PostAsync<VehicleDto>(ApiEndpoints.Vehicles.Create, model);
+
+                if (!response.Success)
+                {
+                    Console.WriteLine($"DEBUG: API Response Error: {response.ErrorMessage}");
+                }
+
+                return Json(response);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"DEBUG: Exception in CreateVehicle: {ex.Message}");
+                return BadRequest(new { success = false, errorMessage = ex.Message });
+            }
         }
 
         /// <summary>

@@ -8,12 +8,24 @@
 window.PurchaseOrderManagement = {
     // DataTable instance
     purchaseOrderTable: null,
+    currentEditData: null, // ✅ THÊM: Store data for edit modal
     currentReferenceNumber: null,
+    itemCounter: 0, // Counter for dynamic item rows
+    allParts: [], // Cache all parts for dropdown
 
     // Initialize module
     init: function() {
+        // Guard clause to prevent duplicate initialization
+        if (this.initialized) {
+            return;
+        }
+        
         this.initDataTable();
         this.bindEvents();
+        this.loadSuppliers();
+        this.loadParts();
+        
+        this.initialized = true;
     },
 
     // Initialize DataTable
@@ -22,9 +34,9 @@ window.PurchaseOrderManagement = {
         
         // Sử dụng DataTablesUtility với style chung
         var columns = [
-            { data: 'referenceNumber', title: 'Số Phiếu', width: '15%' },
+            { data: 'orderNumber', title: 'Số Phiếu', width: '15%' },
             { 
-                data: 'transactionDate', 
+                data: 'orderDate', 
                 title: 'Ngày Tạo', 
                 width: '12%',
                 render: DataTablesUtility.renderDate
@@ -42,15 +54,7 @@ window.PurchaseOrderManagement = {
                 data: 'status', 
                 title: 'Trạng Thái', 
                 width: '12%',
-                render: function(data, type, row) {
-                    var badgeClass = 'badge-secondary';
-                    switch(data) {
-                        case 'Chờ nhập': badgeClass = 'badge-warning'; break;
-                        case 'Đã nhập': badgeClass = 'badge-success'; break;
-                        case 'Hủy': badgeClass = 'badge-danger'; break;
-                    }
-                    return `<span class="badge ${badgeClass}">${data}</span>`;
-                }
+                render: DataTablesUtility.renderStatus
             },
             {
                 data: null,
@@ -61,13 +65,13 @@ window.PurchaseOrderManagement = {
                 className: 'text-center',
                 render: function(data, type, row) {
                     return `
-                        <button class="btn btn-info btn-sm view-purchase-order" data-ref="${row.referenceNumber}">
+                        <button class="btn btn-info btn-sm view-purchase-order" data-ref="${row.orderNumber}">
                             <i class="fas fa-eye"></i>
                         </button>
-                        <button class="btn btn-primary btn-sm print-purchase-order" data-ref="${row.referenceNumber}">
+                        <button class="btn btn-primary btn-sm print-purchase-order" data-ref="${row.orderNumber}">
                             <i class="fas fa-print"></i>
                         </button>
-                        <button class="btn btn-success btn-sm confirm-receipt" data-ref="${row.referenceNumber}">
+                        <button class="btn btn-success btn-sm confirm-receipt" data-ref="${row.orderNumber}">
                             <i class="fas fa-check"></i>
                         </button>
                     `;
@@ -75,7 +79,7 @@ window.PurchaseOrderManagement = {
             }
         ];
 
-        this.purchaseOrderTable = DataTablesUtility.initServerSideTable('#purchaseOrdersTable', '/api/purchaseorders', columns, {
+        this.purchaseOrderTable = DataTablesUtility.initServerSideTable('#purchaseOrdersTable', '/PurchaseOrder/GetPurchaseOrders', columns, {
             order: [[1, 'desc']], // Sort by date desc
             pageLength: 10
         });
@@ -84,10 +88,51 @@ window.PurchaseOrderManagement = {
     // Bind events
     bindEvents: function() {
         var self = this;
+        
+        // Guard clause to prevent duplicate event binding
+        if (this.eventsBound) {
+            return;
+        }
 
-        // Search functionality
-        $('#searchInput').on('keyup', function() {
-            self.purchaseOrderTable.search(this.value).draw();
+        // Add purchase order button - FOLLOW EMPLOYEE PATTERN
+        $(document).on('click', '#addPurchaseOrderBtn', function() {
+            self.showCreateModal();
+        });
+        
+        // Add purchase order item button
+        $(document).on('click', '#addPurchaseOrderItemBtn', function() {
+            self.addPurchaseOrderItem();
+        });
+        
+        // Remove item button
+        $(document).on('click', '.remove-item-btn', function() {
+            $(this).closest('tr').remove();
+            
+            // Show empty message if no items
+            if ($('#purchaseOrderItemsBody tr').length === 0) {
+                $('#purchaseOrderItemsBody').html(`
+                    <tr>
+                        <td colspan="7" class="text-center text-muted">
+                            <i class="fas fa-info-circle"></i> Chưa có phụ tùng nào. Nhấn "Thêm Phụ Tùng" để bắt đầu.
+                        </td>
+                    </tr>
+                `);
+            }
+            
+            self.updateTotalAmount();
+        });
+        
+        // Auto-fill price when part selected - REMOVED: No longer needed with typeahead
+        
+        // Update total when quantity or price changes
+        $(document).on('input', '.item-quantity, .item-unit-price', function() {
+            self.updateTotalAmount();
+        });
+        
+        // Submit create purchase order form
+        $('#createPurchaseOrderForm').on('submit', function(e) {
+            e.preventDefault();
+            self.createPurchaseOrder();
         });
 
         // View purchase order details
@@ -127,6 +172,9 @@ window.PurchaseOrderManagement = {
                 self.showConfirmReceiptModal(self.currentReferenceNumber);
             }
         });
+        
+        // Mark events as bound
+        this.eventsBound = true;
     },
 
     // View purchase order details
@@ -135,7 +183,7 @@ window.PurchaseOrderManagement = {
         self.currentReferenceNumber = referenceNumber;
 
         $.ajax({
-            url: '/PurchaseOrder/GetPurchaseOrderDetails/' + encodeURIComponent(referenceNumber),
+            url: '/PurchaseOrder/GetPurchaseOrder/' + encodeURIComponent(referenceNumber),
             type: 'GET',
             success: function(response) {
                 if (response.success && response.data) {
@@ -230,7 +278,7 @@ window.PurchaseOrderManagement = {
 
         // Load purchase order details
         $.ajax({
-            url: '/PurchaseOrder/GetPurchaseOrderDetails/' + encodeURIComponent(referenceNumber),
+            url: '/PurchaseOrder/GetPurchaseOrder/' + encodeURIComponent(referenceNumber),
             type: 'GET',
             success: function(response) {
                 if (response.success && response.data) {
@@ -335,9 +383,311 @@ window.PurchaseOrderManagement = {
                 });
             }
         });
+    },
+
+    // Load suppliers for dropdown
+    loadSuppliers: function() {
+        var self = this;
+        $.ajax({
+            url: '/SupplierManagement/GetSuppliers?pageNumber=1&pageSize=1000',
+            type: 'GET',
+            success: function(response) {
+                if (response.success && response.data) {
+                    var $select = $('#createSupplierId');
+                    $select.empty().append('<option value="">-- Chọn Nhà Cung Cấp --</option>');
+                    
+                    response.data.forEach(function(supplier) {
+                        $select.append(`<option value="${supplier.id}">${supplier.supplierName}</option>`);
+                    });
+                }
+            }
+        });
+    },
+
+    // Load parts for dropdown
+    loadParts: function() {
+        var self = this;
+        $.ajax({
+            url: '/PartsManagement/GetParts?pageNumber=1&pageSize=10000',
+            type: 'GET',
+            success: function(response) {
+                if (response.success && response.data) {
+                    self.allParts = response.data;
+                }
+            }
+        });
+    },
+
+    // Show create purchase order modal - FOLLOW EMPLOYEE PATTERN
+    showCreateModal: function() {
+        var self = this;
+        $('#createPurchaseOrderModal').modal('show');
+        
+        // Reset form when modal is fully shown
+        $('#createPurchaseOrderModal').on('shown.bs.modal', function() {
+            // Reset form fields
+            $('#createPurchaseOrderForm')[0].reset();
+            $('.text-danger').text('');
+            
+            // Set default date to today
+            var today = new Date().toISOString().split('T')[0];
+            $('#createOrderDate').val(today);
+            
+            // Clear items table
+            self.itemCounter = 0;
+            $('#purchaseOrderItemsBody').html(`
+                <tr>
+                    <td colspan="7" class="text-center text-muted">
+                        <i class="fas fa-info-circle"></i> Chưa có phụ tùng nào. Nhấn "Thêm Phụ Tùng" để bắt đầu.
+                    </td>
+                </tr>
+            `);
+            self.updateTotalAmount();
+            
+            // Remove the event listener to prevent multiple bindings
+            $('#createPurchaseOrderModal').off('shown.bs.modal');
+        });
+    },
+
+    // Add purchase order item row
+    addPurchaseOrderItem: function() {
+        var self = this;
+        self.itemCounter++;
+        
+        var row = `
+            <tr data-item-id="${self.itemCounter}">
+                <td class="text-center">${self.itemCounter}</td>
+                <td>
+                    <input type="text" class="form-control form-control-sm part-typeahead" placeholder="Tìm kiếm phụ tùng..." required>
+                    <input type="hidden" class="part-id-input" value="">
+                </td>
+                <td>
+                    <input type="number" class="form-control form-control-sm item-quantity" min="1" value="1" required>
+                </td>
+                <td>
+                    <input type="number" class="form-control form-control-sm item-unit-price" min="0" step="0.01" required>
+                </td>
+                <td class="text-right item-subtotal">0 VNĐ</td>
+                <td>
+                    <input type="text" class="form-control form-control-sm item-notes" placeholder="Ghi chú...">
+                </td>
+                <td class="text-center">
+                    <button type="button" class="btn btn-danger btn-sm remove-item-btn">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+        
+        // Remove empty message if exists
+        if ($('#purchaseOrderItemsBody tr td').length === 1) {
+            $('#purchaseOrderItemsBody').empty();
+        }
+        
+        $('#purchaseOrderItemsBody').append(row);
+        
+        // Initialize typeahead for the new part input
+        self.initializePartTypeahead($('#purchaseOrderItemsBody .part-typeahead').last());
+    },
+
+    // Initialize part typeahead
+    initializePartTypeahead: function(input) {
+        var self = this;
+        
+        input.typeahead({
+            source: function(query, process) {
+                $.ajax({
+                    url: '/StockManagement/SearchParts',
+                    type: 'GET',
+                    data: { q: query },
+                    success: function(response) {
+                        if (response.success && response.data && Array.isArray(response.data)) {
+                            var parts = response.data.map(function(part) {
+                                return {
+                                    id: part.id,
+                                    name: part.text,
+                                    costPrice: part.costPrice || 0,
+                                    sellPrice: part.sellPrice || 0
+                                };
+                            });
+                            process(parts);
+                        } else {
+                            process([]);
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        process([]);
+                    }
+                });
+            },
+            displayText: function(item) {
+                return item.name;
+            },
+            afterSelect: function(item) {
+                var row = input.closest('tr');
+                
+                // Set hidden input with part ID
+                row.find('.part-id-input').val(item.id);
+                
+                // Auto-fill cost price
+                row.find('.item-unit-price').val(item.costPrice || 0);
+                
+                // Update subtotal
+                self.updateTotalAmount();
+                
+                // Set input value
+                input.val(item.name);
+            },
+            delay: 300,
+        });
+    },
+
+    // Calculate and update total amount
+    updateTotalAmount: function() {
+        var total = 0;
+        
+        $('#purchaseOrderItemsBody tr').each(function() {
+            var quantity = parseFloat($(this).find('.item-quantity').val()) || 0;
+            var unitPrice = parseFloat($(this).find('.item-unit-price').val()) || 0;
+            var subtotal = quantity * unitPrice;
+            
+            $(this).find('.item-subtotal').text(subtotal.toLocaleString('vi-VN') + ' VNĐ');
+            total += subtotal;
+        });
+        
+        $('#totalAmount').text(total.toLocaleString('vi-VN') + ' VNĐ');
+    },
+
+    // Create purchase order
+    createPurchaseOrder: function() {
+        var self = this;
+        
+        // Validate items
+        if ($('#purchaseOrderItemsBody tr').length === 0 || $('#purchaseOrderItemsBody tr td').length === 1) {
+            Swal.fire({
+                title: 'Cảnh báo!',
+                text: 'Vui lòng thêm ít nhất một phụ tùng',
+                icon: 'warning',
+                confirmButtonText: 'OK'
+            });
+            return;
+        }
+        
+        // Collect items
+        var items = [];
+        var isValid = true;
+        
+        $('#purchaseOrderItemsBody tr').each(function() {
+            var partId = $(this).find('.part-id-input').val();
+            var quantity = parseFloat($(this).find('.item-quantity').val());
+            var unitPrice = parseFloat($(this).find('.item-unit-price').val());
+            var notes = $(this).find('.item-notes').val();
+            
+            if (!partId || !quantity || !unitPrice) {
+                isValid = false;
+                return false;
+            }
+            
+            items.push({
+                PartId: parseInt(partId),
+                Quantity: quantity,
+                UnitPrice: unitPrice,
+                Notes: notes
+            });
+        });
+        
+        if (!isValid) {
+            Swal.fire({
+                title: 'Cảnh báo!',
+                text: 'Vui lòng điền đầy đủ thông tin cho tất cả phụ tùng',
+                icon: 'warning',
+                confirmButtonText: 'OK'
+            });
+            return;
+        }
+        
+        var formData = {
+            SupplierId: parseInt($('#createSupplierId').val()),
+            OrderDate: $('#createOrderDate').val(),
+            ExpectedDeliveryDate: $('#createExpectedDeliveryDate').val() || null,
+            PaymentTerms: $('#createPaymentTerms').val(),
+            DeliveryAddress: $('#createDeliveryAddress').val(),
+            Notes: $('#createNotes').val(),
+            Items: items
+        };
+        
+        console.log('Creating Purchase Order:', formData);
+        
+        $.ajax({
+            url: '/PurchaseOrder/Create',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(formData),
+            success: function(response) {
+                if (response.success) {
+                    Swal.fire({
+                        title: 'Thành công!',
+                        text: response.message || 'Đã tạo phiếu nhập hàng thành công',
+                        icon: 'success',
+                        confirmButtonText: 'OK'
+                    }).then(() => {
+                        $('#createPurchaseOrderModal').modal('hide');
+                        self.purchaseOrderTable.ajax.reload();
+                    });
+                } else {
+                    // Handle validation errors
+                    if (response.errors) {
+                        self.displayValidationErrors(response.errors);
+                    } else {
+                        Swal.fire({
+                            title: 'Lỗi!',
+                            text: response.error || 'Có lỗi xảy ra khi tạo phiếu nhập hàng',
+                            icon: 'error',
+                            confirmButtonText: 'OK'
+                        });
+                    }
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Create PO Error:', xhr.responseText);
+                Swal.fire({
+                    title: 'Lỗi!',
+                    text: 'Có lỗi xảy ra khi tạo phiếu nhập hàng: ' + error,
+                    icon: 'error',
+                    confirmButtonText: 'OK'
+                });
+            }
+        });
+    },
+
+    // Display validation errors
+    displayValidationErrors: function(errors) {
+        // Clear previous errors
+        $('.text-danger').text('');
+        
+        // Display new errors
+        for (var field in errors) {
+            var errorMessages = errors[field];
+            var errorText = Array.isArray(errorMessages) ? errorMessages.join(', ') : errorMessages;
+            $('#create' + field + '-error').text(errorText);
+        }
+        
+        Swal.fire({
+            title: 'Lỗi!',
+            text: 'Vui lòng kiểm tra lại thông tin đã nhập',
+            icon: 'error',
+            confirmButtonText: 'OK'
+        });
     }
 };
 
+// Initialize when document is ready
 $(document).ready(function() {
+    // Guard clause to prevent duplicate initialization
+    if (window.PurchaseOrderManagement && window.PurchaseOrderManagement.initialized) {
+        return;
+    }
+    
     PurchaseOrderManagement.init();
+    window.PurchaseOrderManagement.initialized = true;
 });

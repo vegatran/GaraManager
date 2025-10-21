@@ -116,6 +116,105 @@
             <!-- ./col -->
         </div>
         <!-- /.row -->
+        
+        <!-- Inventory Alerts Section -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card card-warning collapsed-card">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-exclamation-triangle mr-2"></i>
+                            Cảnh Báo Tồn Kho
+                        </h3>
+                        <div class="card-tools">
+                            <span class="badge badge-warning" id="lowStockCount">0</span>
+                            <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body p-0" style="display: none;">
+                        <div class="row p-3">
+                            <!-- Low Stock -->
+                            <div class="col-md-4">
+                                <div class="info-box bg-warning">
+                                    <span class="info-box-icon"><i class="fas fa-box-open"></i></span>
+                                    <div class="info-box-content">
+                                        <span class="info-box-text">Tồn Kho Thấp</span>
+                                        <span class="info-box-number" id="lowStockNumber">0</span>
+                                        <div class="progress">
+                                            <div class="progress-bar" style="width: 100%"></div>
+                                        </div>
+                                        <span class="progress-description">
+                                            <a href="/InventoryAlert/Index?filter=low" class="text-white">
+                                                <i class="fas fa-eye"></i> Xem chi tiết
+                                            </a>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Out of Stock -->
+                            <div class="col-md-4">
+                                <div class="info-box bg-danger">
+                                    <span class="info-box-icon"><i class="fas fa-times-circle"></i></span>
+                                    <div class="info-box-content">
+                                        <span class="info-box-text">Hết Hàng</span>
+                                        <span class="info-box-number" id="outOfStockNumber">0</span>
+                                        <div class="progress">
+                                            <div class="progress-bar" style="width: 100%"></div>
+                                        </div>
+                                        <span class="progress-description">
+                                            <a href="/InventoryAlert/Index?filter=out" class="text-white">
+                                                <i class="fas fa-eye"></i> Xem chi tiết
+                                            </a>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Reorder Suggestions -->
+                            <div class="col-md-4">
+                                <div class="info-box bg-info">
+                                    <span class="info-box-icon"><i class="fas fa-shopping-cart"></i></span>
+                                    <div class="info-box-content">
+                                        <span class="info-box-text">Cần Đặt Hàng</span>
+                                        <span class="info-box-number" id="reorderNumber">0</span>
+                                        <div class="progress">
+                                            <div class="progress-bar" style="width: 100%"></div>
+                                        </div>
+                                        <span class="progress-description">
+                                            <a href="/InventoryAlert/Index?filter=reorder" class="text-white">
+                                                <i class="fas fa-eye"></i> Xem gợi ý
+                                            </a>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Recent Low Stock Items -->
+                        <div class="table-responsive" id="lowStockTable" style="display: none;">
+                            <table class="table table-sm table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Mã PT</th>
+                                        <th>Tên Phụ Tùng</th>
+                                        <th>Tồn Hiện Tại</th>
+                                        <th>Mức Tối Thiểu</th>
+                                        <th>Thao Tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="lowStockTableBody">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- /.Inventory Alerts -->
+        
         <!-- Main row -->
         <div class="row">
             <!-- Left col -->

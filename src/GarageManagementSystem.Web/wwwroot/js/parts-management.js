@@ -1,6 +1,7 @@
 // Parts Management Module
 window.PartsManagement = {
     partTable: null,
+    currentEditData: null, // ✅ THÊM: Store data for edit modal
 
     init: function() {
         this.initDataTable();
@@ -14,23 +15,25 @@ window.PartsManagement = {
         var columns = [
             { data: 'id', title: 'ID', width: '5%' },
             { data: 'partNumber', title: 'Mã Phụ Tùng', width: '10%' },
-            { data: 'name', title: 'Tên Phụ Tùng', width: '15%' },
+            { data: 'partName', title: 'Tên Phụ Tùng', width: '15%' },
             { data: 'category', title: 'Danh Mục', width: '10%' },
             { data: 'brand', title: 'Thương Hiệu', width: '10%' },
             { 
-                data: 'price', 
+                data: 'sellPrice', 
                 title: 'Giá Bán', 
                 width: '10%',
                 render: DataTablesUtility.renderCurrency
             },
-            { data: 'stockQuantity', title: 'Tồn Kho', width: '8%' },
-            { data: 'minStockLevel', title: 'Tồn TT', width: '8%' },
+            { data: 'quantityInStock', title: 'Tồn Kho', width: '8%' },
+            { data: 'minimumStock', title: 'Tồn TT', width: '8%' },
             { data: 'unit', title: 'Đơn Vị', width: '7%' },
             { 
-                data: 'status', 
+                data: 'isActive', 
                 title: 'Trạng Thái', 
                 width: '8%',
-                render: DataTablesUtility.renderStatus
+                render: function(data, type, row) {
+                    return data ? '<span class="badge badge-success">Hoạt động</span>' : '<span class="badge badge-danger">Tạm dừng</span>';
+                }
             },
             {
                 data: null,
@@ -53,7 +56,7 @@ window.PartsManagement = {
             }
         ];
         
-        this.partTable = DataTablesUtility.initServerSideTable('#partTable', '/api/parts', columns, {
+        this.partTable = DataTablesUtility.initServerSideTable('#partTable', '/PartsManagement/GetParts', columns, {
             order: [[0, 'desc']],
             pageLength: 10
         });
@@ -85,6 +88,14 @@ window.PartsManagement = {
         $(document).on('click', '.edit-part', function() {
             var partId = $(this).data('id');
             self.loadPartForEdit(partId);
+        });
+
+        // ✅ THÊM: Populate edit modal when shown
+        $('#editPartModal').on('shown.bs.modal', function() {
+            if (self.currentEditData) {
+                self.populateEditModal(self.currentEditData);
+                self.currentEditData = null; // Clear after use
+            }
         });
 
         // Delete part
@@ -137,6 +148,18 @@ window.PartsManagement = {
             error: function(xhr) {
                 if (AuthHandler.isUnauthorized(xhr)) {
                     AuthHandler.handleUnauthorized(xhr, true);
+                } else if (xhr.status === 400) {
+                    // Handle validation errors
+                    try {
+                        var errorResponse = JSON.parse(xhr.responseText);
+                        if (errorResponse.errors) {
+                            self.displayValidationErrors(errorResponse.errors);
+                        } else {
+                            GarageApp.showError(errorResponse.message || 'Dữ liệu không hợp lệ');
+                        }
+                    } catch (e) {
+                        GarageApp.showError('Dữ liệu không hợp lệ');
+                    }
                 } else {
                     GarageApp.showError('Lỗi khi thêm phụ tùng');
                 }
@@ -144,13 +167,34 @@ window.PartsManagement = {
         });
     },
 
+    // ✅ THÊM: Function hiển thị validation errors
+    displayValidationErrors: function(errors) {
+        // Clear previous errors
+        $('.is-invalid').removeClass('is-invalid');
+        $('.invalid-feedback').remove();
+        
+        // Display field-specific errors
+        for (var field in errors) {
+            var fieldElement = $(`#create${field}`);
+            if (fieldElement.length > 0) {
+                fieldElement.addClass('is-invalid');
+                fieldElement.after(`<div class="invalid-feedback">${errors[field].join(', ')}</div>`);
+            }
+        }
+        
+        // Show general error message
+        GarageApp.showError('Vui lòng kiểm tra lại thông tin đã nhập');
+    },
+
     loadPartForEdit: function(partId) {
+        var self = this;
         $.ajax({
             url: '/PartsManagement/GetPart/' + partId,
             type: 'GET',
             success: function(response) {
                 if (response.success && response.data) {
-                    window.PartsManagement.populateEditModal(response.data);
+                    // Store data and show modal
+                    self.currentEditData = response.data;
                     $('#editPartModal').modal('show');
                 } else {
                     GarageApp.showError('Không thể tải thông tin phụ tùng');

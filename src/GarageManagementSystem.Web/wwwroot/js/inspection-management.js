@@ -116,6 +116,15 @@ window.InspectionManagement = {
         this.inspectionTable = DataTablesUtility.initServerSideTable('#inspectionTable', '/VehicleManagement/GetInspections', columns, {
             order: [[0, 'desc']],
             pageLength: 10,
+            ajax: {
+                url: '/VehicleManagement/GetInspections',
+                data: function(d) {
+                    // Thêm parameters cho search và filter
+                    d.searchTerm = $('#inspectionSearchInput').val();
+                    d.status = $('#statusFilter').val();
+                    d.customerId = $('#customerFilter').val();
+                }
+            }
         });
     },
 
@@ -167,6 +176,33 @@ window.InspectionManagement = {
         // Bind CustomerReception change event
         $(document).on('change', '#createCustomerReceptionId', function() {
             self.onReceptionChange();
+        });
+
+        // Search functionality
+        var searchTimeout;
+        $(document).on('keyup', '#inspectionSearchInput', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(function() {
+                self.inspectionTable.ajax.reload();
+            }, 500);
+        });
+
+        // Status filter
+        $(document).on('change', '#statusFilter', function() {
+            self.inspectionTable.ajax.reload();
+        });
+
+        // Customer filter
+        $(document).on('change', '#customerFilter', function() {
+            self.inspectionTable.ajax.reload();
+        });
+
+        // Clear filters
+        $(document).on('click', '#clearFilters', function() {
+            $('#inspectionSearchInput').val('');
+            $('#statusFilter').val('').trigger('change');
+            $('#customerFilter').val('').trigger('change');
+            self.inspectionTable.ajax.reload();
         });
     },
 
@@ -304,11 +340,18 @@ window.InspectionManagement = {
             success: function(response) {
                 if (response && Array.isArray(response)) {
                     var customers = response;
-                    var options = '<option value="">Chọn khách hàng</option>';
+                    var options = '<option value="">Tất cả khách hàng</option>';
                     customers.forEach(function(customer) {
                         options += `<option value="${customer.value}">${customer.text}</option>`;
                     });
-                    $('#createCustomerId, #editCustomerId').html(options);
+                    $('#customerFilter').html(options);
+                    
+                    // Cũng load cho create/edit modals
+                    var modalOptions = '<option value="">Chọn khách hàng</option>';
+                    customers.forEach(function(customer) {
+                        modalOptions += `<option value="${customer.value}">${customer.text}</option>`;
+                    });
+                    $('#createCustomerId, #editCustomerId').html(modalOptions);
                 } else {
                 }
             },

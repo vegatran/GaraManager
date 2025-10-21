@@ -1,4 +1,5 @@
 using GarageManagementSystem.Shared.DTOs;
+using GarageManagementSystem.Shared.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using GarageManagementSystem.Web.Services;
@@ -58,12 +59,12 @@ namespace GarageManagementSystem.Web.Controllers
         [HttpGet("GetActiveCustomers")]
         public async Task<IActionResult> GetActiveCustomers()
         {
-            var response = await _apiService.GetAsync<List<CustomerDto>>(ApiEndpoints.Customers.GetAll);
+            var response = await _apiService.GetAsync<ApiResponse<List<CustomerDto>>>(ApiEndpoints.Customers.GetAll);
             
             if (response.Success && response.Data != null)
             {
                 // Return all customers (no IsActive filter for now)
-                return Json(response.Data);
+                return Json(response.Data.Data);
             }
             
             return Json(new List<CustomerDto>());
@@ -132,20 +133,34 @@ namespace GarageManagementSystem.Web.Controllers
         }
 
         /// <summary>
-        /// Lấy danh sách tất cả khách hàng cho DataTable thông qua API
+        /// Lấy danh sách tất cả khách hàng cho DataTable thông qua API với pagination
         /// </summary>
         [HttpGet("GetCustomers")]
-        public async Task<IActionResult> GetCustomers()
+        public async Task<IActionResult> GetCustomers(
+            [FromQuery] int pageNumber = 1, 
+            [FromQuery] int pageSize = 10,
+            [FromQuery] string? searchTerm = null)
         {
-            var response = await _apiService.GetAsync<List<CustomerDto>>(ApiEndpoints.Customers.GetAll);
-            
-            if (response.Success)
+            try
             {
-                var customerList = new List<object>();
-                
-                if (response.Data != null)
+                // Build query parameters
+                var queryParams = new List<string>
                 {
-                    customerList = response.Data.Select(c => new
+                    $"pageNumber={pageNumber}",
+                    $"pageSize={pageSize}"
+                };
+                
+                if (!string.IsNullOrEmpty(searchTerm))
+                    queryParams.Add($"searchTerm={Uri.EscapeDataString(searchTerm)}");
+
+                var queryString = string.Join("&", queryParams);
+                var endpoint = $"{ApiEndpoints.Customers.GetAll}?{queryString}";
+
+                var response = await _apiService.GetAsync<PagedResponse<CustomerDto>>(endpoint);
+                
+                if (response.Success && response.Data != null)
+                {
+                    var customerList = response.Data.Data.Select(c => new
                     {
                         id = c.Id,
                         name = c.Name,
@@ -154,18 +169,29 @@ namespace GarageManagementSystem.Web.Controllers
                         address = c.Address ?? "N/A",
                         createdDate = c.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss"),
                         isActive = true // Assuming active from API
-                    }).Cast<object>().ToList();
-                }
+                    }).ToList();
 
-                return Json(new { 
-                    success = true,
-                    data = customerList,
-                    message = "Lấy danh sách khách hàng thành công"
-                });
+                    return Json(new { 
+                        success = true,
+                        data = customerList,
+                        totalCount = response.Data.TotalCount,
+                        message = "Lấy danh sách khách hàng thành công"
+                    });
+                }
+                else
+                {
+                    return Json(new { 
+                        success = false,
+                        error = response.ErrorMessage ?? "Lỗi khi lấy danh sách khách hàng"
+                    });
+                }
             }
-            else
+            catch (Exception ex)
             {
-                return Json(new { error = response.ErrorMessage });
+                return Json(new { 
+                    success = false,
+                    error = "Lỗi khi lấy danh sách khách hàng: " + ex.Message
+                });
             }
         }
 
@@ -175,30 +201,74 @@ namespace GarageManagementSystem.Web.Controllers
         [HttpGet("GetCustomer/{id}")]
         public async Task<IActionResult> GetCustomer(int id)
         {
-            var response = await _apiService.GetAsync<CustomerDto>(
+            var response = await _apiService.GetAsync<ApiResponse<CustomerDto>>(
                 ApiEndpoints.Builder.WithId(ApiEndpoints.Customers.GetById, id)
             );
             
-            return Json(response);
+            if (response.Success && response.Data != null)
+            {
+                var customer = response.Data.Data;
+                var customerData = new
+                {
+                    id = customer.Id,
+                    name = customer.Name,
+                    email = customer.Email ?? "N/A",
+                    phone = customer.Phone ?? "N/A",
+                    address = customer.Address ?? "N/A",
+                    alternativePhone = customer.AlternativePhone ?? "N/A",
+                    contactPersonName = customer.ContactPersonName ?? "N/A"
+                };
+                
+                return Json(new ApiResponse { Data = customerData, Success = true, StatusCode = System.Net.HttpStatusCode.OK });
+            }
+            
+            return Json(new { success = false, error = "Customer not found" });
         }
 
         /// <summary>
         /// Tạo khách hàng mới thông qua API
         /// </summary>
-        [HttpPost("CreateCustomer")]
+        [HttpPost]
+        [Route("CreateCustomer")]
         public async Task<IActionResult> CreateCustomer([FromBody] CreateCustomerDto customerDto)
         {
-            if (!ModelState.IsValid)
+            try
             {
-                return BadRequest(new { success = false, errorMessage = "Dữ liệu không hợp lệ" });
+                // Log input data for debugging
+                Console.WriteLine($"DEBUG: CreateCustomer input: {System.Text.Json.JsonSerializer.Serialize(customerDto)}");
+
+                if (!ModelState.IsValid)
+                {
+                    var errors = new Dictionary<string, string[]>();
+                    foreach (var key in ModelState.Keys)
+                    {
+                        var modelErrors = ModelState[key].Errors.Select(e => e.ErrorMessage).ToArray();
+                        if (modelErrors.Length > 0)
+                        {
+                            errors[key] = modelErrors;
+                        }
+                    }
+                    Console.WriteLine($"DEBUG: ModelState errors: {System.Text.Json.JsonSerializer.Serialize(errors)}");
+                    return BadRequest(new { success = false, message = "Dữ liệu không hợp lệ", errors = errors });
+                }
+
+                var response = await _apiService.PostAsync<CustomerDto>(
+                    ApiEndpoints.Customers.Create,
+                    customerDto
+                );
+
+                if (!response.Success)
+                {
+                    Console.WriteLine($"DEBUG: API Response Error: {response.ErrorMessage}");
+                }
+
+                return Json(response);
             }
-
-            var response = await _apiService.PostAsync<CustomerDto>(
-                ApiEndpoints.Customers.Create,
-                customerDto
-            );
-
-            return Json(response);
+            catch (Exception ex)
+            {
+                Console.WriteLine($"DEBUG: Exception in CreateCustomer: {ex.Message}");
+                return BadRequest(new { success = false, errorMessage = ex.Message });
+            }
         }
 
         /// <summary>
@@ -209,7 +279,17 @@ namespace GarageManagementSystem.Web.Controllers
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(new { success = false, errorMessage = "Dữ liệu không hợp lệ" });
+                var errors = new Dictionary<string, string[]>();
+                foreach (var key in ModelState.Keys)
+                {
+                    var modelErrors = ModelState[key].Errors.Select(e => e.ErrorMessage).ToArray();
+                    if (modelErrors.Length > 0)
+                    {
+                        errors[key] = modelErrors;
+                    }
+                }
+                Console.WriteLine($"DEBUG: UpdateCustomer ModelState errors: {System.Text.Json.JsonSerializer.Serialize(errors)}");
+                return BadRequest(new { success = false, message = "Dữ liệu không hợp lệ", errors = errors });
             }
 
             if (id != customerDto.Id)

@@ -78,7 +78,7 @@ namespace GarageManagementSystem.Core.Entities
         // Status
         [Required]
         [StringLength(20)]
-        public string Status { get; set; } = "Draft"; // Draft, Sent, Approved, Rejected, Expired, Cancelled
+        public string Status { get; set; } = "Draft"; // Draft, Sent, Pending, Approved, Rejected, Expired, Cancelled
 
         public DateTime? SentDate { get; set; }
         public DateTime? ApprovedDate { get; set; }

@@ -1,4 +1,5 @@
 using GarageManagementSystem.Shared.DTOs;
+using GarageManagementSystem.Shared.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using GarageManagementSystem.Web.Services;
@@ -30,49 +31,63 @@ namespace GarageManagementSystem.Web.Controllers
         }
 
         /// <summary>
-        /// Lấy danh sách tất cả giao dịch kho cho DataTable thông qua API
+        /// Lấy danh sách giao dịch kho cho DataTable thông qua API với pagination
         /// </summary>
         [HttpGet("GetStockTransactions")]
-        public async Task<IActionResult> GetStockTransactions()
+        public async Task<IActionResult> GetStockTransactions(
+            int pageNumber = 1,
+            int pageSize = 10,
+            string? searchTerm = null,
+            string? transactionType = null,
+            int? partId = null)
         {
             try
             {
-                var response = await _apiService.GetAsync<List<StockTransactionDto>>(ApiEndpoints.StockTransactions.GetAll);
-                
-                if (response.Success)
+                // Build query parameters
+                var queryParams = new List<string>
                 {
-                    var transactionList = new List<object>();
-                    
-                    if (response.Data != null)
-                    {
-                        transactionList = response.Data.Select(t => new
-                        {
-                            id = t.Id,
-                            transactionNumber = t.TransactionNumber,
-                            partName = t.Part?.PartName ?? "N/A",
-                            transactionType = t.TransactionTypeDisplay, // Sử dụng display name tiếng Việt
-                            quantity = t.Quantity,
-                            quantityBefore = t.QuantityBefore,
-                            quantityAfter = t.QuantityAfter,
-                            unitPrice = t.UnitPrice, // Raw value for DataTablesUtility.renderCurrency
-                            totalAmount = t.TotalAmount, // Raw value for DataTablesUtility.renderCurrency
-                            transactionDate = t.TransactionDate, // Raw DateTime for DataTablesUtility.renderDate
-                            referenceNumber = t.ReferenceNumber ?? "N/A",
-                            notes = t.Notes ?? "N/A",
-                            createdDate = t.CreatedAt
-                        }).Cast<object>().ToList();
-                    }
+                    $"pageNumber={pageNumber}",
+                    $"pageSize={pageSize}"
+                };
 
-                    return Json(new { data = transactionList });
+                if (!string.IsNullOrEmpty(searchTerm))
+                    queryParams.Add($"searchTerm={Uri.EscapeDataString(searchTerm)}");
+                if (!string.IsNullOrEmpty(transactionType))
+                    queryParams.Add($"transactionType={Uri.EscapeDataString(transactionType)}");
+                if (partId.HasValue)
+                    queryParams.Add($"partId={partId.Value}");
+
+                var endpoint = ApiEndpoints.StockTransactions.GetAll + "?" + string.Join("&", queryParams);
+                var response = await _apiService.GetAsync<PagedResponse<StockTransactionDto>>(endpoint);
+                
+                if (response.Success && response.Data != null)
+                {
+                    return Json(response.Data);
                 }
                 else
                 {
-                    return Json(new { error = response.ErrorMessage ?? "Không thể tải dữ liệu giao dịch kho" });
+                    return Json(new PagedResponse<StockTransactionDto>
+                    {
+                        Data = new List<StockTransactionDto>(),
+                        TotalCount = 0,
+                        PageNumber = pageNumber,
+                        PageSize = pageSize,
+                        Success = false,
+                        Message = response.ErrorMessage ?? "Lỗi khi lấy danh sách giao dịch kho"
+                    });
                 }
             }
             catch (Exception ex)
             {
-                return Json(new { error = $"Lỗi khi tải dữ liệu: {ex.Message}" });
+                return Json(new PagedResponse<StockTransactionDto>
+                {
+                    Data = new List<StockTransactionDto>(),
+                    TotalCount = 0,
+                    PageNumber = pageNumber,
+                    PageSize = pageSize,
+                    Success = false,
+                    Message = $"Lỗi: {ex.Message}"
+                });
             }
         }
 
@@ -84,20 +99,40 @@ namespace GarageManagementSystem.Web.Controllers
         {
             try
             {
-                var response = await _apiService.GetAsync<StockTransactionDto>(string.Format(ApiEndpoints.StockTransactions.GetById, id));
+                var response = await _apiService.GetAsync<ApiResponse<StockTransactionDto>>(
+                    ApiEndpoints.Builder.WithId(ApiEndpoints.StockTransactions.GetById, id)
+                );
                 
                 if (response.Success && response.Data != null)
                 {
-                    return Json(new { success = true, data = response.Data });
+                    var transaction = response.Data.Data;
+                    var transactionData = new
+                    {
+                        id = transaction.Id,
+                        transactionNumber = transaction.TransactionNumber,
+                        partId = transaction.PartId,
+                        partName = transaction.Part?.PartName ?? "N/A",
+                        transactionType = transaction.TransactionType,
+                        quantity = transaction.Quantity,
+                        quantityBefore = transaction.QuantityBefore,
+                        quantityAfter = transaction.QuantityAfter,
+                        unitPrice = transaction.UnitPrice,
+                        totalAmount = transaction.TotalAmount,
+                        transactionDate = transaction.TransactionDate,
+                        referenceNumber = transaction.ReferenceNumber,
+                        notes = transaction.Notes
+                    };
+                    
+                    return Json(new ApiResponse { Data = transactionData, Success = true, StatusCode = System.Net.HttpStatusCode.OK });
                 }
                 else
                 {
-                    return Json(new { success = false, message = response.ErrorMessage ?? "Không tìm thấy giao dịch kho" });
+                    return Json(new { success = false, error = "Giao dịch kho không tồn tại" });
                 }
             }
             catch (Exception ex)
             {
-                return Json(new { success = false, message = $"Lỗi khi tải dữ liệu: {ex.Message}" });
+                return Json(new { success = false, error = $"Lỗi: {ex.Message}" });
             }
         }
 
@@ -141,10 +176,22 @@ namespace GarageManagementSystem.Web.Controllers
         {
             try
             {
+                // Log input data for debugging
+                Console.WriteLine($"DEBUG: CreateStockTransaction input: {System.Text.Json.JsonSerializer.Serialize(dto)}");
+
                 if (!ModelState.IsValid)
                 {
-                    var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
-                    return Json(new { success = false, message = string.Join(", ", errors) });
+                    var errors = new Dictionary<string, string[]>();
+                    foreach (var key in ModelState.Keys)
+                    {
+                        var modelErrors = ModelState[key].Errors.Select(e => e.ErrorMessage).ToArray();
+                        if (modelErrors.Length > 0)
+                        {
+                            errors[key] = modelErrors;
+                        }
+                    }
+                    Console.WriteLine($"DEBUG: ModelState errors: {System.Text.Json.JsonSerializer.Serialize(errors)}");
+                    return BadRequest(new { success = false, message = "Dữ liệu không hợp lệ", errors = errors });
                 }
 
                 var response = await _apiService.PostAsync<StockTransactionDto>(
@@ -152,7 +199,7 @@ namespace GarageManagementSystem.Web.Controllers
 
                 if (response.Success)
                 {
-                    return Json(new { success = true, message = "Tạo giao dịch kho thành công!", data = response.Data });
+                    return Json(new { success = true, message = "Tạo giao dịch kho thành công!" });
                 }
                 else
                 {
@@ -161,7 +208,8 @@ namespace GarageManagementSystem.Web.Controllers
             }
             catch (Exception ex)
             {
-                return Json(new { success = false, message = $"Lỗi khi tạo giao dịch kho: {ex.Message}" });
+                Console.WriteLine($"DEBUG: CreateStockTransaction exception: {ex.Message}");
+                return Json(new { success = false, message = $"Lỗi: {ex.Message}" });
             }
         }
 
@@ -174,14 +222,16 @@ namespace GarageManagementSystem.Web.Controllers
             try
             {
                 // ✅ SỬA: Sử dụng searchTerm thay vì q
-                var response = await _apiService.GetAsync<List<PartDto>>(ApiEndpoints.Parts.Search + "?searchTerm=" + Uri.EscapeDataString(q ?? ""));
+                var response = await _apiService.GetAsync<ApiResponse<List<PartDto>>>(ApiEndpoints.Parts.Search + "?searchTerm=" + Uri.EscapeDataString(q ?? ""));
                 
                 if (response.Success && response.Data != null)
                 {
-                    var parts = response.Data.Select(p => new
+                    var parts = response.Data.Data.Select(p => new
                     {
                         id = p.Id,
-                        text = $"{p.PartName} ({p.PartNumber})"
+                        text = $"{p.PartName} ({p.PartNumber})",
+                        costPrice = p.CostPrice,
+                        sellPrice = p.SellPrice
                     }).Cast<object>().ToList();
                     
                     return Json(new { success = true, data = parts });

@@ -49,7 +49,7 @@ window.VehicleManagement = {
             }
         ];
         
-        this.vehicleTable = DataTablesUtility.initServerSideTable('#vehicleTable', '/api/vehicles', columns, {
+        this.vehicleTable = DataTablesUtility.initServerSideTable('#vehicleTable', '/VehicleManagement/GetVehicles', columns, {
             order: [[0, 'desc']],
             pageLength: 10
         });
@@ -121,7 +121,18 @@ window.VehicleManagement = {
     // Show create modal
     showCreateModal: function() {
         $('#createVehicleModal').modal('show');
-        $('#createVehicleForm')[0].reset();
+        
+        // Reset form when modal is fully shown
+        $('#createVehicleModal').on('shown.bs.modal', function() {
+            // Reset form fields
+            $('#createVehicleForm')[0].reset();
+            
+            // Reset dropdowns to default
+            $('#createCustomerId').val('').trigger('change');
+            
+            // Remove the event listener to prevent multiple bindings
+            $('#createVehicleModal').off('shown.bs.modal');
+        });
     },
 
     // View vehicle
@@ -161,8 +172,19 @@ window.VehicleManagement = {
             success: function(response) {
                 if (AuthHandler.validateApiResponse(response)) {
                     if (response.success) {
-                        self.populateEditModal(response.data);
+                        
+                        // Store vehicle data and show modal
+                        var vehicleData = response.data;
                         $('#editVehicleModal').modal('show');
+                        
+                        // Populate form when modal is fully shown
+                        $('#editVehicleModal').on('shown.bs.modal', function() {
+                            // Reset form first
+                            $('#editVehicleForm')[0].reset();
+                            self.populateEditModal(vehicleData);
+                            // Remove the event listener to prevent multiple bindings
+                            $('#editVehicleModal').off('shown.bs.modal');
+                        });
                     } else {
                         GarageApp.showError(GarageApp.parseErrorMessage(response) || 'Lỗi khi tải thông tin xe');
                     }

@@ -8,6 +8,7 @@
 window.StockManagement = {
     // DataTable instance
     stockTable: null,
+    currentEditData: null, // ✅ THÊM: Store data for edit modal
 
     // Initialize module
     init: function() {
@@ -23,7 +24,7 @@ window.StockManagement = {
         // Sử dụng DataTablesUtility với style chung
         var columns = [
             { data: 'transactionNumber', title: 'Mã Giao Dịch', width: '120px' },
-            { data: 'partName', title: 'Phụ Tùng' },
+            { data: 'part.partName', title: 'Phụ Tùng' },
             { 
                 data: 'transactionType', 
                 title: 'Loại Giao Dịch',
@@ -97,7 +98,7 @@ window.StockManagement = {
             }
         ];
         
-        this.stockTable = DataTablesUtility.initServerSideTable('#stockTransactionsTable', '/api/stocktransactions', columns, {
+        this.stockTable = DataTablesUtility.initServerSideTable('#stockTransactionsTable', '/StockManagement/GetStockTransactions', columns, {
             order: [[0, 'desc']],
             pageLength: 10
         });
@@ -342,6 +343,28 @@ window.StockManagement = {
             error: function(xhr, status, error) {
                 if (AuthHandler && AuthHandler.isUnauthorized && AuthHandler.isUnauthorized(xhr)) {
                     AuthHandler.handleUnauthorized(xhr, true);
+                } else if (xhr.status === 400) {
+                    // Handle validation errors
+                    try {
+                        var errorResponse = JSON.parse(xhr.responseText);
+                        if (errorResponse.errors) {
+                            self.displayValidationErrors(errorResponse.errors);
+                        } else {
+                            Swal.fire({
+                                title: 'Lỗi!',
+                                text: errorResponse.message || 'Dữ liệu không hợp lệ',
+                                icon: 'error',
+                                confirmButtonText: 'OK'
+                            });
+                        }
+                    } catch (e) {
+                        Swal.fire({
+                            title: 'Lỗi!',
+                            text: 'Dữ liệu không hợp lệ',
+                            icon: 'error',
+                            confirmButtonText: 'OK'
+                        });
+                    }
                 } else {
                     Swal.fire({
                         title: 'Lỗi!',
@@ -351,6 +374,30 @@ window.StockManagement = {
                     });
                 }
             }
+        });
+    },
+
+    // ✅ THÊM: Function hiển thị validation errors
+    displayValidationErrors: function(errors) {
+        // Clear previous errors
+        $('.is-invalid').removeClass('is-invalid');
+        $('.invalid-feedback').remove();
+        
+        // Display field-specific errors
+        for (var field in errors) {
+            var fieldElement = $(`#${field.toLowerCase()}`);
+            if (fieldElement.length > 0) {
+                fieldElement.addClass('is-invalid');
+                fieldElement.after(`<div class="invalid-feedback">${errors[field].join(', ')}</div>`);
+            }
+        }
+        
+        // Show general error message
+        Swal.fire({
+            title: 'Lỗi!',
+            text: 'Vui lòng kiểm tra lại thông tin đã nhập',
+            icon: 'error',
+            confirmButtonText: 'OK'
         });
     },
 

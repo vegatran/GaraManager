@@ -10,7 +10,7 @@ namespace GarageManagementSystem.Web.Configuration
         /// </summary>
         public static class Dashboard
         {
-            public const string Statistics = "dashboard/statistics";
+            public const string Statistics = "Analytics/dashboard";
         }
 
         /// <summary>

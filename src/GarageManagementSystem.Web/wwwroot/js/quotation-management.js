@@ -530,15 +530,48 @@ window.QuotationManagement = {
         $('#createTaxAmount').text('0 VNĐ');
         $('#createTotalAmount').text('0 VNĐ');
         
-        // ✅ THÊM: Thêm một hàng mẫu để người dùng thấy cấu trúc VAT
-        this.addSampleRow();
+        // ✅ XÓA: Không thêm hàng mẫu nữa để modal trống hoàn toàn
+        // this.addSampleRow();
         
         // ✅ THÊM: Set default date (30 days from now)
         var defaultDate = new Date();
         defaultDate.setDate(defaultDate.getDate() + 30);
         $('#createValidUntil').val(defaultDate.toISOString().split('T')[0]);
         
+        // ✅ THÊM: Force clear any remaining data
+        this.clearAllCreateData();
+        
         $('#createQuotationModal').modal('show');
+    },
+
+    // ✅ THÊM: Function clear hoàn toàn dữ liệu tạo mới
+    clearAllCreateData: function() {
+        // Clear all service items tables
+        $('#createPartsItems').empty();
+        $('#createRepairItems').empty();
+        $('#createPaintItems').empty();
+        
+        // Clear all form inputs
+        $('#createQuotationForm input[type="text"]').val('');
+        $('#createQuotationForm input[type="number"]').val('');
+        $('#createQuotationForm textarea').val('');
+        $('#createQuotationForm select').val('').trigger('change');
+        
+        // Reset specific fields to defaults
+        $('#createQuotationType').val('Personal');
+        $('#createTaxRate').val('10');
+        $('#createDiscountAmount').val('0');
+        $('#createStatus').val('Draft');
+        
+        // Reset totals
+        $('#createSubTotal').text('0 VNĐ');
+        $('#createTaxAmount').text('0 VNĐ');
+        $('#createTotalAmount').text('0 VNĐ');
+        
+        // Set default date
+        var defaultDate = new Date();
+        defaultDate.setDate(defaultDate.getDate() + 30);
+        $('#createValidUntil').val(defaultDate.toISOString().split('T')[0]);
     },
 
     // ✅ THÊM: Function thêm hàng mẫu để demo VAT
@@ -1436,6 +1469,8 @@ window.QuotationManagement = {
             ValidUntil: $('#editValidUntil').val() || null,
             TaxRate: parseFloat($('#editTaxRate').val()) || 0,
             DiscountAmount: parseFloat($('#editDiscountAmount').val()) || 0,
+            QuotationType: $('#editQuotationType').val() || 'Personal',
+            Status: $('#editStatus').val() || 'Draft',
             Items: items,
         };
         

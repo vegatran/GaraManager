@@ -40,10 +40,10 @@ namespace GarageManagementSystem.Web.Controllers
                     var stats = response.Data;
                     
                     // Thiết lập giá trị viewbag từ phản hồi API
-                    ViewBag.CustomerCount = stats?.GetProperty("customerCount").GetInt32() ?? 0;
-                    ViewBag.VehicleCount = stats?.GetProperty("vehicleCount").GetInt32() ?? 0;
-                    ViewBag.ServiceCount = stats?.GetProperty("serviceCount").GetInt32() ?? 0;
-                    ViewBag.OrderCount = stats?.GetProperty("orderCount").GetInt32() ?? 0;
+                    ViewBag.CustomerCount = stats?.GetProperty("Total")?.GetProperty("Customers").GetInt32() ?? 0;
+                    ViewBag.VehicleCount = stats?.GetProperty("Total")?.GetProperty("Vehicles").GetInt32() ?? 0;
+                    ViewBag.ServiceCount = stats?.GetProperty("ThisMonth")?.GetProperty("NewOrders").GetInt32() ?? 0;
+                    ViewBag.OrderCount = stats?.GetProperty("Total")?.GetProperty("ActiveOrders").GetInt32() ?? 0;
                 }
                 else
                 {
@@ -196,6 +196,87 @@ namespace GarageManagementSystem.Web.Controllers
             return SignOut(CookieAuthenticationDefaults.AuthenticationScheme, "oidc");
         }
 
+
+        /// <summary>
+        /// Get dashboard statistics for JavaScript
+        /// </summary>
+        [Route("GetDashboardStatistics")]
+        public async Task<IActionResult> GetDashboardStatistics()
+        {
+            try
+            {
+                var response = await _apiService.GetAsync<dynamic>(ApiEndpoints.Dashboard.Statistics);
+                
+                if (response.Success)
+                {
+                    var stats = response.Data;
+                    var dashboardData = new
+                    {
+                        totalCustomers = stats?.GetProperty("Total")?.GetProperty("Customers").GetInt32() ?? 0,
+                        totalVehicles = stats?.GetProperty("Total")?.GetProperty("Vehicles").GetInt32() ?? 0,
+                        pendingOrders = stats?.GetProperty("Total")?.GetProperty("ActiveOrders").GetInt32() ?? 0,
+                        todayAppointments = stats?.GetProperty("Today")?.GetProperty("Appointments").GetInt32() ?? 0,
+                        monthlyRevenue = stats?.GetProperty("ThisMonth")?.GetProperty("Revenue").GetDecimal() ?? 0
+                    };
+                    
+                    return Json(new { success = true, data = dashboardData });
+                }
+                
+                return Json(new { success = false, message = "Không thể tải thống kê" });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Lỗi: " + ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Get recent orders for dashboard
+        /// </summary>
+        [Route("GetRecentOrders")]
+        public async Task<IActionResult> GetRecentOrders()
+        {
+            try
+            {
+                // Tạm thời trả về dữ liệu mẫu
+                var recentOrders = new[]
+                {
+                    new { orderNumber = "ORD001", customerName = "Nguyễn Văn A", orderDate = "2024-01-15", totalAmount = 1500000, status = "Hoàn thành", statusClass = "success" },
+                    new { orderNumber = "ORD002", customerName = "Trần Thị B", orderDate = "2024-01-14", totalAmount = 2300000, status = "Đang xử lý", statusClass = "warning" },
+                    new { orderNumber = "ORD003", customerName = "Lê Văn C", orderDate = "2024-01-13", totalAmount = 1800000, status = "Chờ duyệt", statusClass = "info" }
+                };
+                
+                return Json(new { success = true, data = recentOrders });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Lỗi: " + ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Get upcoming appointments for dashboard
+        /// </summary>
+        [Route("GetUpcomingAppointments")]
+        public async Task<IActionResult> GetUpcomingAppointments()
+        {
+            try
+            {
+                // Tạm thời trả về dữ liệu mẫu
+                var upcomingAppointments = new[]
+                {
+                    new { customerName = "Nguyễn Văn A", vehicleLicensePlate = "30A-12345", appointmentDate = "2024-01-16", appointmentTime = "09:00", serviceType = "Bảo dưỡng định kỳ" },
+                    new { customerName = "Trần Thị B", vehicleLicensePlate = "51B-67890", appointmentDate = "2024-01-16", appointmentTime = "14:00", serviceType = "Sửa chữa động cơ" },
+                    new { customerName = "Lê Văn C", vehicleLicensePlate = "43C-11111", appointmentDate = "2024-01-17", appointmentTime = "10:30", serviceType = "Thay phụ tùng" }
+                };
+                
+                return Json(new { success = true, data = upcomingAppointments });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Lỗi: " + ex.Message });
+            }
+        }
 
         [AllowAnonymous]
         [Route("Privacy")]

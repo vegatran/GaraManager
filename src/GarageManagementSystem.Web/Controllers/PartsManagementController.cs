@@ -1,4 +1,5 @@
 using GarageManagementSystem.Shared.DTOs;
+using GarageManagementSystem.Shared.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using GarageManagementSystem.Web.Services;
@@ -30,47 +31,63 @@ namespace GarageManagementSystem.Web.Controllers
         }
 
         /// <summary>
-        /// Lấy danh sách tất cả phụ tùng cho DataTable thông qua API
+        /// Lấy danh sách phụ tùng cho DataTable thông qua API với pagination
         /// </summary>
         [HttpGet("GetParts")]
-        public async Task<IActionResult> GetParts()
+        public async Task<IActionResult> GetParts(
+            int pageNumber = 1,
+            int pageSize = 10,
+            string? searchTerm = null,
+            string? category = null,
+            string? brand = null)
         {
-            var response = await _apiService.GetAsync<List<PartDto>>(ApiEndpoints.Parts.GetAll);
-            
-            if (response.Success)
+            try
             {
-                var partList = new List<object>();
-                
-                if (response.Data != null)
+                // Build query parameters
+                var queryParams = new List<string>
                 {
-                    partList = response.Data.Select(p => new
-                    {
-                        id = p.Id,
-                        partNumber = p.PartNumber,
-                        name = p.PartName,
-                        description = p.Description ?? "N/A",
-                        category = p.Category ?? "N/A",
-                        brand = p.Brand ?? "N/A",
-                        price = p.SellPrice.ToString("N0"),
-                        stockQuantity = p.QuantityInStock.ToString(),
-                        minStockLevel = p.MinimumStock.ToString(),
-                        maxStockLevel = p.ReorderLevel?.ToString() ?? "0",
-                        unit = p.Unit ?? "N/A",
-                        location = p.Location ?? "N/A",
-                        status = p.IsActive ? "Active" : "Inactive",
-                        createdDate = p.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss")
-                    }).Cast<object>().ToList();
-                }
+                    $"pageNumber={pageNumber}",
+                    $"pageSize={pageSize}"
+                };
 
-                return Json(new { 
-                    success = true,
-                    data = partList,
-                    message = "Lấy danh sách phụ tùng thành công"
-                });
+                if (!string.IsNullOrEmpty(searchTerm))
+                    queryParams.Add($"searchTerm={Uri.EscapeDataString(searchTerm)}");
+                if (!string.IsNullOrEmpty(category))
+                    queryParams.Add($"category={Uri.EscapeDataString(category)}");
+                if (!string.IsNullOrEmpty(brand))
+                    queryParams.Add($"brand={Uri.EscapeDataString(brand)}");
+
+                var endpoint = ApiEndpoints.Parts.GetAll + "?" + string.Join("&", queryParams);
+                var response = await _apiService.GetAsync<PagedResponse<PartDto>>(endpoint);
+                
+                if (response.Success && response.Data != null)
+                {
+                    return Json(response.Data);
+                }
+                else
+                {
+                    return Json(new PagedResponse<PartDto>
+                    {
+                        Data = new List<PartDto>(),
+                        TotalCount = 0,
+                        PageNumber = pageNumber,
+                        PageSize = pageSize,
+                        Success = false,
+                        Message = response.ErrorMessage ?? "Lỗi khi lấy danh sách phụ tùng"
+                    });
+                }
             }
-            else
+            catch (Exception ex)
             {
-                return Json(new { error = response.ErrorMessage });
+                return Json(new PagedResponse<PartDto>
+                {
+                    Data = new List<PartDto>(),
+                    TotalCount = 0,
+                    PageNumber = pageNumber,
+                    PageSize = pageSize,
+                    Success = false,
+                    Message = $"Lỗi: {ex.Message}"
+                });
             }
         }
 
@@ -80,11 +97,34 @@ namespace GarageManagementSystem.Web.Controllers
         [HttpGet("GetPart/{id}")]
         public async Task<IActionResult> GetPart(int id)
         {
-            var response = await _apiService.GetAsync<PartDto>(
+            var response = await _apiService.GetAsync<ApiResponse<PartDto>>(
                 ApiEndpoints.Builder.WithId(ApiEndpoints.Parts.GetById, id)
             );
             
-            return Json(response);
+            if (response.Success && response.Data != null)
+            {
+                var part = response.Data.Data;
+                var partData = new
+                {
+                    id = part.Id,
+                    partNumber = part.PartNumber,
+                    partName = part.PartName,
+                    description = part.Description ?? "N/A",
+                    category = part.Category ?? "N/A",
+                    brand = part.Brand ?? "N/A",
+                    sellPrice = part.SellPrice,
+                    quantityInStock = part.QuantityInStock,
+                    minimumStock = part.MinimumStock,
+                    reorderLevel = part.ReorderLevel ?? 0,
+                    unit = part.Unit ?? "N/A",
+                    location = part.Location ?? "N/A",
+                    isActive = part.IsActive
+                };
+                
+                return Json(new ApiResponse { Data = partData, Success = true, StatusCode = System.Net.HttpStatusCode.OK });
+            }
+            
+            return Json(new { success = false, error = "Phụ tùng không tồn tại" });
         }
 
         /// <summary>
@@ -93,17 +133,45 @@ namespace GarageManagementSystem.Web.Controllers
         [HttpPost("CreatePart")]
         public async Task<IActionResult> CreatePart([FromBody] CreatePartDto partDto)
         {
-            if (!ModelState.IsValid)
+            try
             {
-                return BadRequest(new { success = false, errorMessage = "Dữ liệu không hợp lệ" });
+                // Log input data for debugging
+                Console.WriteLine($"DEBUG: CreatePart input: {System.Text.Json.JsonSerializer.Serialize(partDto)}");
+
+                if (!ModelState.IsValid)
+                {
+                    var errors = new Dictionary<string, string[]>();
+                    foreach (var key in ModelState.Keys)
+                    {
+                        var modelErrors = ModelState[key].Errors.Select(e => e.ErrorMessage).ToArray();
+                        if (modelErrors.Length > 0)
+                        {
+                            errors[key] = modelErrors;
+                        }
+                    }
+                    Console.WriteLine($"DEBUG: ModelState errors: {System.Text.Json.JsonSerializer.Serialize(errors)}");
+                    return BadRequest(new { success = false, message = "Dữ liệu không hợp lệ", errors = errors });
+                }
+
+                var response = await _apiService.PostAsync<PartDto>(
+                    ApiEndpoints.Parts.Create,
+                    partDto
+                );
+
+                if (response.Success)
+                {
+                    return Json(new { success = true, message = "Tạo phụ tùng thành công" });
+                }
+                else
+                {
+                    return Json(new { success = false, message = response.ErrorMessage ?? "Lỗi khi tạo phụ tùng" });
+                }
             }
-
-            var response = await _apiService.PostAsync<PartDto>(
-                ApiEndpoints.Parts.Create,
-                partDto
-            );
-
-            return Json(response);
+            catch (Exception ex)
+            {
+                Console.WriteLine($"DEBUG: CreatePart exception: {ex.Message}");
+                return Json(new { success = false, message = $"Lỗi: {ex.Message}" });
+            }
         }
 
         /// <summary>
