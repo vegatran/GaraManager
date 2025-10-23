@@ -2,22 +2,9 @@
 
 ## 📁 CÁC FILE QUAN TRỌNG
 
-### 1. **`DROP_ALL_TABLES.sql`** ⚠️
-Xóa TẤT CẢ tables trong database (để reset hoàn toàn).
+### ✅ **FILES CẦN THIẾT (Chỉ còn lại 4 files)**
 
-### 2. **`CREATE_DATABASE_FROM_DBCONTEXT.sql`** ⭐
-Tạo TẤT CẢ tables từ GarageDbContext.
-
-**Đặc điểm:**
-- ✅ **Idempotent**: Có thể chạy nhiều lần an toàn
-- ✅ **Đầy đủ**: 45 tables từ DbContext
-- ✅ **Chính xác 100%**: Match với entities trong code
-- ✅ **Tự động check**: Chỉ tạo table chưa có
-- ✅ **Foreign Keys**: Tất cả relationships đã đúng
-- ✅ **Indexes**: Đầy đủ indexes cho performance
-- ✅ **155 KB**: Full schema
-
-### 3. **`CONSOLIDATED_DATABASE_SCHEMA.sql`** ⭐ NEW
+#### 1. **`CONSOLIDATED_DATABASE_SCHEMA.sql`** ⭐ MAIN
 Tổng hợp TẤT CẢ migrations thành 1 file duy nhất.
 
 **Đặc điểm:**
@@ -27,8 +14,35 @@ Tổng hợp TẤT CẢ migrations thành 1 file duy nhất.
 - ✅ **317 KB**: Full consolidated schema
 - ✅ **Single file**: Thay thế tất cả migration files riêng lẻ
 
-### 4. **`DEMO_DATA_COMPLETE.sql`** 🎯
+#### 2. **`CREATE_DATABASE_FROM_DBCONTEXT.sql`** ⭐ BACKUP
+Tạo TẤT CẢ tables từ GarageDbContext (backup option).
+
+**Đặc điểm:**
+- ✅ **Idempotent**: Có thể chạy nhiều lần an toàn
+- ✅ **Đầy đủ**: 46 tables từ DbContext
+- ✅ **Chính xác 100%**: Match với entities trong code
+- ✅ **Tự động check**: Chỉ tạo table chưa có
+- ✅ **Foreign Keys**: Tất cả relationships đã đúng
+- ✅ **Indexes**: Đầy đủ indexes cho performance
+- ✅ **155 KB**: Full schema
+
+#### 3. **`DROP_ALL_TABLES.sql`** ⚠️ RESET
+Xóa TẤT CẢ tables trong database (để reset hoàn toàn).
+
+#### 4. **`DEMO_DATA_COMPLETE.sql`** 🎯 DEMO
 Load demo data đầy đủ cho testing (2 workflows hoàn chỉnh).
+
+### ❌ **FILES ĐÃ XÓA (Dư thừa)**
+- ~~`ClearStockData.sql`~~ - Script clear dữ liệu cũ
+- ~~`FixPurchaseOrderData.sql`~~ - Script fix dữ liệu cũ  
+- ~~`ImportStockData.sql`~~ - Script import cũ
+- ~~`ImportStockDataCorrected.sql`~~ - Script import cũ đã sửa
+- ~~`ImportStockDataFinal.sql`~~ - Script import cũ
+- ~~`ImportStockDataFixed.sql`~~ - Script import cũ
+- ~~`ImportStockDataMinimal.sql`~~ - Script import cũ
+- ~~`ImportStockDataPerfect.sql`~~ - Script import cũ
+- ~~`InsertDefaultQuotationTemplate.sql`~~ - Script insert template cũ
+- ~~`InsertTemplate.sql`~~ - Script insert template cũ
 
 ---
 
@@ -461,6 +475,8 @@ dotnet ef migrations script MigrationName
 | 1.3 | 2024-01-30 | **Thêm tính năng tính thuế VAT** - Hỗ trợ tỷ lệ 0%, 8%, 10% |
 | 2.0 | 2024-10-22 | **Tổng hợp tài liệu** - Kết hợp Database Setup, Reset, EF Core Migrations |
 | 2.1 | 2024-10-23 | **Tổng hợp migrations** - Tạo CONSOLIDATED_DATABASE_SCHEMA.sql (317KB, 15 migrations) |
+| 2.2 | 2024-10-23 | **Hướng dẫn xóa migrations** - Script PowerShell và quy trình an toàn |
+| 2.3 | 2024-10-23 | **Dọn dẹp file SQL** - Xóa 10 file SQL dư thừa, chỉ giữ lại 4 file cần thiết |
 
 ---
 
