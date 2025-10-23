@@ -129,6 +129,11 @@ window.PurchaseOrderManagement = {
             self.updateTotalAmount();
         });
         
+        // Update total when VAT rate changes
+        $(document).on('change', '#createVATRate', function() {
+            self.updateTotalAmount();
+        });
+        
         // Submit create purchase order form
         $('#createPurchaseOrderForm').on('submit', function(e) {
             e.preventDefault();
@@ -542,20 +547,30 @@ window.PurchaseOrderManagement = {
         });
     },
 
-    // Calculate and update total amount
+    // Calculate and update total amount with VAT
     updateTotalAmount: function() {
-        var total = 0;
+        var subtotal = 0;
+        var vatRate = parseFloat($('#createVATRate').val()) || 0;
         
+        // Calculate subtotal
         $('#purchaseOrderItemsBody tr').each(function() {
             var quantity = parseFloat($(this).find('.item-quantity').val()) || 0;
             var unitPrice = parseFloat($(this).find('.item-unit-price').val()) || 0;
-            var subtotal = quantity * unitPrice;
+            var itemSubtotal = quantity * unitPrice;
             
-            $(this).find('.item-subtotal').text(subtotal.toLocaleString('vi-VN') + ' VNĐ');
-            total += subtotal;
+            $(this).find('.item-subtotal').text(itemSubtotal.toLocaleString('vi-VN') + ' VNĐ');
+            subtotal += itemSubtotal;
         });
         
-        $('#totalAmount').text(total.toLocaleString('vi-VN') + ' VNĐ');
+        // Calculate VAT amount
+        var vatAmount = subtotal * (vatRate / 100);
+        var totalAmount = subtotal + vatAmount;
+        
+        // Update display
+        $('#subTotalAmount').text(subtotal.toLocaleString('vi-VN') + ' VNĐ');
+        $('#vatAmount').text(vatAmount.toLocaleString('vi-VN') + ' VNĐ');
+        $('#totalAmount').text(totalAmount.toLocaleString('vi-VN') + ' VNĐ');
+        $('#vatRateDisplay').text(vatRate);
     },
 
     // Create purchase order
@@ -612,6 +627,7 @@ window.PurchaseOrderManagement = {
             ExpectedDeliveryDate: $('#createExpectedDeliveryDate').val() || null,
             PaymentTerms: $('#createPaymentTerms').val(),
             DeliveryAddress: $('#createDeliveryAddress').val(),
+            VATRate: parseFloat($('#createVATRate').val()) || 0,
             Notes: $('#createNotes').val(),
             Items: items
         };

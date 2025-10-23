@@ -145,15 +145,58 @@ namespace GarageManagementSystem.Web.Controllers
                     return BadRequest(new { success = false, message = "Dữ liệu không hợp lệ", errors = errors });
                 }
 
-                var response = await _apiService.PostAsync<SupplierDto>(ApiEndpoints.Suppliers.Create, model);
+                var response = await _apiService.PostAsync<ApiResponse<SupplierDto>>(ApiEndpoints.Suppliers.Create, model);
                 
+                Console.WriteLine($"DEBUG: API Response: {System.Text.Json.JsonSerializer.Serialize(response)}");
+
                 if (response.Success)
                 {
-                    return Json(new { success = true, message = "Tạo nhà cung cấp thành công" });
+                    return Ok(new { success = true, message = "Tạo nhà cung cấp thành công", data = response.Data });
                 }
                 else
                 {
-                    return Json(new { success = false, message = response.ErrorMessage ?? "Lỗi khi tạo nhà cung cấp" });
+                    // Handle API validation errors
+                    if (response.Errors != null && response.Errors.Count > 0)
+                    {
+                        var errors = new Dictionary<string, string[]>();
+                        foreach (var error in response.Errors)
+                        {
+                            // Parse error format "field: message"
+                            var parts = error.Split(':', 2);
+                            if (parts.Length == 2)
+                            {
+                                var field = parts[0].Trim();
+                                var message = parts[1].Trim();
+                                if (!errors.ContainsKey(field))
+                                {
+                                    errors[field] = new string[] { message };
+                                }
+                                else
+                                {
+                                    var existingErrors = errors[field].ToList();
+                                    existingErrors.Add(message);
+                                    errors[field] = existingErrors.ToArray();
+                                }
+                            }
+                            else
+                            {
+                                // General error
+                                if (!errors.ContainsKey("General"))
+                                {
+                                    errors["General"] = new string[] { error };
+                                }
+                                else
+                                {
+                                    var existingErrors = errors["General"].ToList();
+                                    existingErrors.Add(error);
+                                    errors["General"] = existingErrors.ToArray();
+                                }
+                            }
+                        }
+                        return BadRequest(new { success = false, message = "Dữ liệu không hợp lệ", errors = errors });
+                    }
+                    
+                    return BadRequest(new { success = false, message = response.Message ?? "Có lỗi xảy ra khi tạo nhà cung cấp" });
                 }
             }
             catch (Exception ex)
@@ -169,22 +212,61 @@ namespace GarageManagementSystem.Web.Controllers
         [HttpPut("UpdateSupplier/{id}")]
         public async Task<IActionResult> UpdateSupplier(int id, [FromBody] UpdateSupplierDto model)
         {
-            if (!ModelState.IsValid)
+            try
             {
-                return BadRequest(new { success = false, errorMessage = "Dữ liệu không hợp lệ" });
-            }
+                if (!ModelState.IsValid)
+                {
+                    var errors = new Dictionary<string, string[]>();
+                    foreach (var key in ModelState.Keys)
+                    {
+                        var modelErrors = ModelState[key].Errors.Select(e => e.ErrorMessage).ToArray();
+                        if (modelErrors.Length > 0)
+                        {
+                            errors[key] = modelErrors;
+                        }
+                    }
+                    return BadRequest(new { success = false, message = "Dữ liệu không hợp lệ", errors = errors });
+                }
 
-            if (id != model.Id)
+                if (id != model.Id)
+                {
+                    return BadRequest(new { success = false, message = "ID không khớp" });
+                }
+
+                var response = await _apiService.PutAsync<SupplierDto>(
+                    ApiEndpoints.Builder.WithId(ApiEndpoints.Suppliers.Update, id), 
+                    model
+                );
+                
+                if (response.Success)
+                {
+                    return Json(new { success = true, message = "Cập nhật nhà cung cấp thành công" });
+                }
+                else
+                {
+                    // Handle API validation errors
+                    if (response.ErrorMessage != null && response.ErrorMessage.Contains("validation"))
+                    {
+                        try
+                        {
+                            var errorResponse = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(response.ErrorMessage);
+                            if (errorResponse.ContainsKey("errors"))
+                            {
+                                return BadRequest(new { success = false, message = "Dữ liệu không hợp lệ", errors = errorResponse["errors"] });
+                            }
+                        }
+                        catch
+                        {
+                            // If parsing fails, return general error
+                        }
+                    }
+                    return Json(new { success = false, message = response.ErrorMessage ?? "Lỗi khi cập nhật nhà cung cấp" });
+                }
+            }
+            catch (Exception ex)
             {
-                return BadRequest(new { success = false, errorMessage = "ID không khớp" });
+                return Json(new { success = false, message = $"Lỗi: {ex.Message}" });
             }
-
-            var response = await _apiService.PutAsync<SupplierDto>(
-                ApiEndpoints.Builder.WithId(ApiEndpoints.Suppliers.Update, id), 
-                model
-            );
-            
-            return Json(response);
         }
 
         /// <summary>

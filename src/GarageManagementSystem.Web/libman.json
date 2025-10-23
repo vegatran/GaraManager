@@ -91,6 +91,13 @@
       "files": [
         "bootstrap3-typeahead.min.js"
       ]
+    },
+    {
+      "library": "jquery.inputmask@5.0.8",
+      "destination": "wwwroot/lib/inputmask/",
+      "files": [
+        "jquery.inputmask.min.js"
+      ]
     }
   ]
 }

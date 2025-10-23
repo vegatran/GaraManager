@@ -49,6 +49,8 @@ namespace GarageManagementSystem.Core.Entities
         
         public decimal SubTotal { get; set; } = 0; // Tổng tiền hàng
         
+        public decimal VATRate { get; set; } = 0; // Tỷ lệ thuế VAT
+        
         public decimal TaxAmount { get; set; } = 0; // Tiền thuế
         
         public decimal ShippingCost { get; set; } = 0; // Phí vận chuyển

@@ -167,7 +167,7 @@
                                                         <th width="8%">Số Lượng</th>
                                                         <th width="12%">Đơn Giá (VNĐ)</th>
                                                         <th width="12%">Thành Tiền (VNĐ)</th>
-                                                        <th width="8%">VAT (%)</th>
+                                                        <th width="8%">VAT (%) <small class="text-muted">*</small></th>
                                                         <th width="12%">Tiền VAT (VNĐ)</th>
                                                         <th width="8%">Có Hóa Đơn</th>
                                                         <th width="8%">Thao Tác</th>
@@ -201,7 +201,7 @@
                                                         <th width="8%">Số Lượng</th>
                                                         <th width="12%">Đơn Giá (VNĐ)</th>
                                                         <th width="12%">Thành Tiền (VNĐ)</th>
-                                                        <th width="8%">VAT (%)</th>
+                                                        <th width="8%">VAT (%) <small class="text-muted">*</small></th>
                                                         <th width="12%">Tiền VAT (VNĐ)</th>
                                                         <th width="8%">Có Hóa Đơn</th>
                                                         <th width="8%">Thao Tác</th>
@@ -235,7 +235,7 @@
                                                         <th width="8%">Số Lượng</th>
                                                         <th width="12%">Đơn Giá (VNĐ)</th>
                                                         <th width="12%">Thành Tiền (VNĐ)</th>
-                                                        <th width="8%">VAT (%)</th>
+                                                        <th width="8%">VAT (%) <small class="text-muted">*</small></th>
                                                         <th width="12%">Tiền VAT (VNĐ)</th>
                                                         <th width="8%">Có Hóa Đơn</th>
                                                         <th width="8%">Thao Tác</th>
@@ -270,6 +270,46 @@
         </div>
     </div>
 </div>
+
+<style>
+/* ✅ THÊM: CSS cho VAT READ-ONLY */
+.vat-rate-input[readonly] {
+    background-color: #f8f9fa !important;
+    color: #6c757d !important;
+    cursor: not-allowed;
+    border-color: #dee2e6;
+}
+
+.vat-rate-input[readonly]:hover {
+    background-color: #e9ecef !important;
+}
+
+/* Tooltip cho VAT READ-ONLY */
+.vat-rate-input[title] {
+    position: relative;
+}
+
+.vat-rate-input[title]:hover::after {
+    content: attr(title);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #333;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 1000;
+    pointer-events: none;
+}
+
+/* Style cho header VAT với asterisk */
+th small.text-muted {
+    font-size: 0.7em;
+}
+</style>
 
 @section Scripts {
 <script>

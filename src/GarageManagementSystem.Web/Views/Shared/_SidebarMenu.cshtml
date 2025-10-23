@@ -80,8 +80,8 @@
         </li>
 
         <!-- QUẢN LÝ KHO (Multilevel) -->
-        <li class="nav-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "PartsManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "SupplierManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "StockManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "PurchaseOrder" ? "menu-open" : "")">
-            <a href="#" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "PartsManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "SupplierManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "StockManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "PurchaseOrder" ? "active" : "")">
+        <li class="nav-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "PartsManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "SupplierManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "StockManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "PurchaseOrder" || ViewContext.RouteData.Values["Controller"]?.ToString() == "InventoryAlerts" ? "menu-open" : "")">
+            <a href="#" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "PartsManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "SupplierManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "StockManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "PurchaseOrder" || ViewContext.RouteData.Values["Controller"]?.ToString() == "InventoryAlerts" ? "active" : "")">
                 <i class="nav-icon fas fa-warehouse text-warning"></i>
                 <p>
                     Quản Lý Kho
@@ -111,6 +111,12 @@
                     <a href="@Url.Action("Index", "PurchaseOrder")" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "PurchaseOrder" ? "active" : "")">
                         <i class="far fa-circle nav-icon text-success"></i>
                         <p>Phiếu Nhập Hàng</p>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="@Url.Action("Index", "InventoryAlerts")" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "InventoryAlerts" ? "active" : "")">
+                        <i class="far fa-circle nav-icon text-danger"></i>
+                        <p>Cảnh Báo Tồn Kho</p>
                     </a>
                 </li>
             </ul>

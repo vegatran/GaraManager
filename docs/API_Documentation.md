@@ -1315,5 +1315,6 @@ EXTERNAL_SERVICE_ERROR  - External service call failed
 ---
 
 *API Documentation Version: 2.0.0*
-*Last Updated: 2024-01-15*
+*Tài liệu API - Version 3.0.0*  
+*Last Updated: 2024-10-22*
 

@@ -161,6 +161,11 @@ namespace GarageManagementSystem.Web.Controllers
                             serviceType = item.ServiceType,
                             itemCategory = item.ItemCategory,
                             vatRate = item.VATRate,
+                            // ✅ THÊM: Các field VAT mới
+                            overrideVATRate = item.OverrideVATRate,
+                            overrideIsVATApplicable = item.OverrideIsVATApplicable,
+                            partVATRate = item.PartVATRate,
+                            partIsVATApplicable = item.PartIsVATApplicable,
                             service = item.Service != null ? new
                             {
                                 id = item.Service.Id,

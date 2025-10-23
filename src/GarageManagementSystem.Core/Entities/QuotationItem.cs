@@ -74,6 +74,50 @@ namespace GarageManagementSystem.Core.Entities
         
         public bool IsVATApplicable { get; set; } = true; // Có chịu VAT không
         
+        // ✅ THÊM: VAT Override từ Part (CHỈ ĐỌC, KHÔNG ĐƯỢC CHỈNH SỬA)
+        public decimal? OverrideVATRate { get; set; } // Ghi đè VAT từ Part (READ-ONLY)
+        public bool? OverrideIsVATApplicable { get; set; } // Ghi đè áp dụng VAT từ Part (READ-ONLY)
+        
+        // ✅ THÊM: Methods để tính VAT hiệu quả (TUÂN THỦ NGUYÊN TẮC THUẾ)
+        public decimal GetEffectiveVATRate()
+        {
+            // Ưu tiên VAT từ Part (không được chỉnh sửa)
+            if (Part != null && Part.VATRate > 0)
+            {
+                return Part.VATRate;
+            }
+            
+            // Fallback về VAT mặc định của QuotationItem
+            return OverrideVATRate ?? VATRate;
+        }
+        
+        public bool GetEffectiveIsVATApplicable()
+        {
+            // Ưu tiên thông tin từ Part (không được chỉnh sửa)
+            if (Part != null)
+            {
+                return Part.IsVATApplicable;
+            }
+            
+            // Fallback về thông tin mặc định của QuotationItem
+            return OverrideIsVATApplicable ?? IsVATApplicable;
+        }
+        
+        public decimal CalculateVATAmount()
+        {
+            var effectiveVATRate = GetEffectiveVATRate();
+            var effectiveIsVATApplicable = GetEffectiveIsVATApplicable();
+            
+            if (!effectiveIsVATApplicable) return 0;
+            
+            return SubTotal * effectiveVATRate;
+        }
+        
+        public decimal CalculateTotalAmount()
+        {
+            return SubTotal + CalculateVATAmount() - DiscountAmount;
+        }
+        
         // Insurance approved pricing - Giá bảo hiểm duyệt
         public decimal? InsuranceApprovedUnitPrice { get; set; }
         public decimal? InsuranceApprovedSubTotal { get; set; }

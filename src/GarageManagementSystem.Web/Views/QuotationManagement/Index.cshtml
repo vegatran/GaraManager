@@ -84,8 +84,8 @@
 }
 
 <!-- Include Modals -->
-@Html.Partial("_CreateQuotationModal")
-@Html.Partial("_EditQuotationModal")
-@Html.Partial("_ViewQuotationModal")
-@Html.Partial("_InsurancePricingModal")
-@Html.Partial("_CorporatePricingModal")
+@await Html.PartialAsync("_CreateQuotationModal")
+@await Html.PartialAsync("_EditQuotationModal")
+@await Html.PartialAsync("_ViewQuotationModal")
+@await Html.PartialAsync("_InsurancePricingModal")
+@await Html.PartialAsync("_CorporatePricingModal")

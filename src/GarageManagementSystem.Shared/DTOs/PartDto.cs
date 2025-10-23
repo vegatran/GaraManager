@@ -18,6 +18,31 @@ namespace GarageManagementSystem.Shared.DTOs
         public string? CompatibleVehicles { get; set; }
         public string? Location { get; set; }
         public bool IsActive { get; set; }
+        
+        // ✅ THÊM: Classification fields
+        public string SourceType { get; set; } = "Purchased";
+        public string InvoiceType { get; set; } = "WithInvoice";
+        public bool HasInvoice { get; set; } = true;
+        public bool CanUseForCompany { get; set; } = false;
+        public bool CanUseForInsurance { get; set; } = false;
+        public bool CanUseForIndividual { get; set; } = true;
+        public string Condition { get; set; } = "New";
+        public string? SourceReference { get; set; }
+        
+        // ✅ THÊM: Thông tin thuế VAT
+        public decimal VATRate { get; set; } = 10;
+        public bool IsVATApplicable { get; set; } = true;
+        
+        // ✅ THÊM: Technical fields
+        public string? OEMNumber { get; set; }
+        public string? AftermarketNumber { get; set; }
+        public string? Manufacturer { get; set; }
+        public string? Dimensions { get; set; }
+        public decimal? Weight { get; set; }
+        public string? Material { get; set; }
+        public string? Color { get; set; }
+        public int WarrantyMonths { get; set; } = 12;
+        public bool IsOEM { get; set; } = false;
     }
 
     public class CreatePartDto
@@ -36,6 +61,31 @@ namespace GarageManagementSystem.Shared.DTOs
         [StringLength(500)] public string? CompatibleVehicles { get; set; }
         [StringLength(100)] public string? Location { get; set; }
         public bool IsActive { get; set; } = true;
+        
+        // ✅ THÊM: Classification fields
+        [StringLength(30)] public string SourceType { get; set; } = "Purchased";
+        [StringLength(50)] public string InvoiceType { get; set; } = "WithInvoice";
+        public bool HasInvoice { get; set; } = true;
+        public bool CanUseForCompany { get; set; } = false;
+        public bool CanUseForInsurance { get; set; } = false;
+        public bool CanUseForIndividual { get; set; } = true;
+        [StringLength(20)] public string Condition { get; set; } = "New";
+        [StringLength(100)] public string? SourceReference { get; set; }
+        
+        // ✅ THÊM: Thông tin thuế VAT
+        [Range(0, 20)] public decimal VATRate { get; set; } = 10;
+        public bool IsVATApplicable { get; set; } = true;
+        
+        // ✅ THÊM: Technical fields
+        [StringLength(50)] public string? OEMNumber { get; set; }
+        [StringLength(50)] public string? AftermarketNumber { get; set; }
+        [StringLength(100)] public string? Manufacturer { get; set; }
+        [StringLength(100)] public string? Dimensions { get; set; }
+        public decimal? Weight { get; set; }
+        [StringLength(50)] public string? Material { get; set; }
+        [StringLength(50)] public string? Color { get; set; }
+        [Range(0, 120)] public int WarrantyMonths { get; set; } = 12;
+        public bool IsOEM { get; set; } = false;
     }
 
     public class UpdatePartDto : CreatePartDto

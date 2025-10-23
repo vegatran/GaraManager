@@ -69,6 +69,11 @@ namespace GarageManagementSystem.Core.Entities
         
         [StringLength(100)]
         public string? SourceReference { get; set; } // Nguồn gốc: Tháo từ xe (biển số), Mua từ đâu
+        
+        // ✅ THÊM: Thông tin thuế VAT
+        public decimal VATRate { get; set; } = 10; // Tỷ lệ thuế VAT mặc định (%)
+        
+        public bool IsVATApplicable { get; set; } = true; // Có áp dụng thuế VAT không
 
         // Thông tin kỹ thuật mở rộng
         public int? PartGroupId { get; set; } // Thuộc nhóm phụ tùng nào

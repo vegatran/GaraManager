@@ -356,16 +356,36 @@ window.QuotationManagement = {
             var vatAmountInput = row.find('.vat-amount-input');
             
             // ✅ SỬA: Disable/enable VAT input và set value về 0 khi uncheck
-            if (isChecked) {
-                // Enable VAT input và set default value
-                vatRateInput.prop('disabled', false).val('10');
-                vatAmountInput.prop('disabled', false);
-                row.addClass('table-success');
+            // ✅ THÊM: Kiểm tra xem có phải phụ tùng từ kho không (READ-ONLY VAT)
+            var isPartsTab = row.closest('#createPartsItems, #editPartsItems').length > 0;
+            var hasPartId = row.find('.service-id-input').val() && row.find('.service-id-input').val() !== '';
+            
+            if (isPartsTab && hasPartId) {
+                // ✅ THÊM: Đối với phụ tùng từ kho, VAT không được chỉnh sửa
+                if (isChecked) {
+                    // Enable VAT input nhưng vẫn readonly
+                    vatRateInput.prop('disabled', false).prop('readonly', true);
+                    vatAmountInput.prop('disabled', false);
+                    row.addClass('table-success');
+                } else {
+                    // Disable VAT input và set về 0
+                    vatRateInput.prop('disabled', true).val('0');
+                    vatAmountInput.prop('disabled', true).val('0 VNĐ');
+                    row.removeClass('table-success');
+                }
             } else {
-                // Disable VAT input và set về 0
-                vatRateInput.prop('disabled', true).val('0');
-                vatAmountInput.prop('disabled', true).val('0 VNĐ');
-                row.removeClass('table-success');
+                // ✅ GIỮ NGUYÊN: Logic cũ cho Services (có thể chỉnh sửa VAT)
+                if (isChecked) {
+                    // Enable VAT input và set default value
+                    vatRateInput.prop('disabled', false).prop('readonly', false);
+                    vatAmountInput.prop('disabled', false);
+                    row.addClass('table-success');
+                } else {
+                    // Disable VAT input và set về 0
+                    vatRateInput.prop('disabled', true).val('0');
+                    vatAmountInput.prop('disabled', true).val('0 VNĐ');
+                    row.removeClass('table-success');
+                }
             }
             
             // ✅ THÊM: Recalculate totals
@@ -744,6 +764,11 @@ window.QuotationManagement = {
                     lastRow.find('.vat-rate-input').prop('disabled', true).val('0');
                     lastRow.find('.vat-amount-input').prop('disabled', true).val('0 VNĐ');
                     
+                    // ✅ THÊM: Nếu là tab Parts, thêm tooltip READ-ONLY
+                    if (serviceType === 'parts') {
+                        lastRow.find('.vat-rate-input').attr('title', 'VAT sẽ được lấy từ thông tin phụ tùng (Không được chỉnh sửa)');
+                    }
+                    
                     // Initialize typeahead for new service input
                     self.initializeServiceTypeahead($('#' + containerId + ' .service-typeahead').last(), prefix);
                     
@@ -975,9 +1000,17 @@ window.QuotationManagement = {
         
         // ✅ THÊM: Disable VAT input nếu checkbox không được check
         var isInvoiceChecked = lastRow.find('.invoice-checkbox').is(':checked');
+        var isPartsTab = lastRow.closest('#editPartsItems').length > 0;
+        var hasPartId = lastRow.find('.service-id-input').val() && lastRow.find('.service-id-input').val() !== '';
+        
         if (!isInvoiceChecked) {
             lastRow.find('.vat-rate-input').prop('disabled', true).val('0');
             lastRow.find('.vat-amount-input').prop('disabled', true).val('0 VNĐ');
+        } else if (isPartsTab && hasPartId) {
+            // ✅ THÊM: Đối với phụ tùng từ kho, VAT không được chỉnh sửa
+            lastRow.find('.vat-rate-input').prop('disabled', false).prop('readonly', true);
+            lastRow.find('.vat-rate-input').addClass('bg-light text-muted');
+            lastRow.find('.vat-rate-input').attr('title', 'VAT từ phụ tùng (Không được chỉnh sửa)');
         }
         
         // Initialize typeahead for new service input
@@ -1085,53 +1118,137 @@ window.QuotationManagement = {
         }
     },
 
+    // ✅ THÊM: Function để search parts với VAT information
+    searchPartsWithVAT: function(query, callback) {
+        var self = this;
+        $.ajax({
+            url: '/PartsManagement/SearchParts',
+            type: 'GET',
+            data: { searchTerm: query },
+            success: function(response) {
+                if (response && response.success && response.data) {
+                    var parts = response.data.map(function(part) {
+                        return {
+                            value: part.id,
+                            text: `${part.partName} (${part.partNumber}) - ${part.sellPrice.toLocaleString()} VNĐ`,
+                            partId: part.id,
+                            partName: part.partName,
+                            partNumber: part.partNumber,
+                            sellPrice: part.sellPrice,
+                            costPrice: part.costPrice,
+                            vatRate: part.vatRate || 10, // ✅ THÊM: VAT rate từ Part
+                            isVATApplicable: part.isVATApplicable !== false, // ✅ THÊM: VAT applicability từ Part
+                            hasInvoice: part.hasInvoice !== false // ✅ THÊM: Has invoice từ Part
+                        };
+                    });
+                    callback(parts);
+                } else {
+                    callback([]);
+                }
+            },
+            error: function() {
+                callback([]);
+            }
+        });
+    },
+
     initializeServiceTypeahead: function(input, prefix) {
         var self = this;
         
-        input.typeahead({
-            source: function(query, process) {
-                $.ajax({
-                    url: '/QuotationManagement/SearchServices',
-                    type: 'GET',
-                    data: { q: query },
-                    success: function(response) {
-                        if (response && Array.isArray(response)) {
-                            var services = response.map(function(service) {
-                                return {
-                                    id: service.value,
-                                    name: service.text,
-                                    price: service.price || 0,
-                                };
-                            });
-                            process(services);
-                        } else {
+        // ✅ THÊM: Kiểm tra xem có phải tab Parts không
+        var isPartsTab = input.closest('#createPartsItems, #editPartsItems').length > 0;
+        
+        if (isPartsTab) {
+            // ✅ THÊM: Sử dụng search parts với VAT cho tab Parts
+            input.typeahead({
+                source: function(query, process) {
+                    self.searchPartsWithVAT(query, process);
+                },
+                displayText: function(item) {
+                    return item.text;
+                },
+                afterSelect: function(item) {
+                    var row = input.closest('.service-item-row');
+                    var price = item.sellPrice;
+                    var quantity = parseFloat(row.find('.quantity-input').val()) || 1;
+                    var total = price * quantity;
+                    
+                    // Set values
+                    row.find('.service-id-input').val(item.partId);
+                    row.find('.unit-price-input').val(price.toLocaleString() + ' VNĐ');
+                    row.find('.total-input').val(total.toLocaleString() + ' VNĐ');
+                    
+                    // ✅ THÊM: Set VAT từ Part (READ-ONLY)
+                    var vatRateInput = row.find('.vat-rate-input');
+                    var vatAmountInput = row.find('.vat-amount-input');
+                    var invoiceCheckbox = row.find('.invoice-checkbox');
+                    
+                    // Set VAT rate từ Part và disable input (READ-ONLY)
+                    vatRateInput.val(item.vatRate).prop('disabled', true).prop('readonly', true);
+                    vatAmountInput.prop('disabled', true);
+                    
+                    // Set checkbox dựa trên Part information
+                    invoiceCheckbox.prop('checked', item.hasInvoice);
+                    
+                    // ✅ THÊM: Add tooltip để hiển thị READ-ONLY
+                    vatRateInput.attr('title', `VAT từ phụ tùng: ${item.vatRate}% (Không được chỉnh sửa)`);
+                    vatRateInput.addClass('bg-light text-muted');
+                    
+                    // Set input value
+                    input.val(item.partName);
+                    
+                    // Recalculate totals
+                    self.calculateItemTotal(row);
+                },
+                delay: 300,
+            });
+        } else {
+            // ✅ GIỮ NGUYÊN: Logic cũ cho Services
+            input.typeahead({
+                source: function(query, process) {
+                    $.ajax({
+                        url: '/QuotationManagement/SearchServices',
+                        type: 'GET',
+                        data: { q: query },
+                        success: function(response) {
+                            if (response && Array.isArray(response)) {
+                                var services = response.map(function(service) {
+                                    return {
+                                        id: service.value,
+                                        name: service.text,
+                                        price: service.price || 0,
+                                    };
+                                });
+                                process(services);
+                            } else {
+                                process([]);
+                            }
+                        },
+                        error: function(xhr, status, error) {
                             process([]);
                         }
-                    },
-                    error: function(xhr, status, error) {
-                        process([]);
-                    }
-                });
-            },
-            displayText: function(item) {
-                return item.name + ' - ' + item.price.toLocaleString() + ' VNĐ';
-            },
-            afterSelect: function(item) {
-                var row = input.closest('.service-item-row');
-                var price = item.price;
-                var quantity = parseFloat(row.find('.quantity-input').val()) || 1;
-                var total = price * quantity;
-                
-                // Set values
-                row.find('.service-id-input').val(item.id);
-                row.find('.unit-price-input').val(price.toLocaleString() + ' VNĐ');
-                row.find('.total-input').val(total.toLocaleString() + ' VNĐ');
-                
-                // Set input value
-                input.val(item.name);
-            },
-            delay: 300,
-        });
+                    });
+                },
+                displayText: function(item) {
+                    return item.name + ' - ' + item.price.toLocaleString() + ' VNĐ';
+                },
+                afterSelect: function(item) {
+                    var row = input.closest('.service-item-row');
+                    var price = item.price;
+                    var quantity = parseFloat(row.find('.quantity-input').val()) || 1;
+                    var total = price * quantity;
+                    
+                    // Set values
+                    row.find('.service-id-input').val(item.id);
+                    row.find('.unit-price-input').val(price.toLocaleString() + ' VNĐ');
+                    row.find('.total-input').val(total.toLocaleString() + ' VNĐ');
+                    
+                    // Set input value
+                    input.val(item.name);
+                },
+                delay: 300,
+            });
+        }
     },
 
     // ✅ THÊM: Function tính toán thủ công cho labor item

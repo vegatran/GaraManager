@@ -77,13 +77,13 @@
                                 <div class="col-md-6">
                                     <div class="form-group">
                                         <label for="editCostPrice">Giá Vốn <span class="text-danger">*</span></label>
-                                        <input type="number" class="form-control form-control-sm" id="editCostPrice" name="CostPrice" required min="0" step="1000">
+                                        <input type="text" class="form-control form-control-sm" id="editCostPrice" name="CostPrice" required>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="form-group">
                                         <label for="editSellPrice">Giá Bán <span class="text-danger">*</span></label>
-                                        <input type="number" class="form-control form-control-sm" id="editSellPrice" name="SellPrice" required min="0" step="1000">
+                                        <input type="text" class="form-control form-control-sm" id="editSellPrice" name="SellPrice" required>
                                     </div>
                                 </div>
                             </div>
@@ -198,7 +198,7 @@
                             <!-- Quản Lý Hóa Đơn -->
                             <h6 class="text-primary"><i class="fas fa-file-invoice"></i> Quản Lý Hóa Đơn</h6>
                             <div class="row">
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <div class="form-group">
                                         <label for="editInvoiceType">Loại Hóa Đơn</label>
                                         <select class="form-control form-control-sm" id="editInvoiceType" name="InvoiceType">
@@ -208,13 +208,23 @@
                                         </select>
                                     </div>
                                 </div>
-                                <div class="col-md-6">
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="editVATRate">Thuế VAT (%)</label>
+                                        <select class="form-control form-control-sm" id="editVATRate" name="VATRate">
+                                            <option value="0">Không VAT (0%)</option>
+                                            <option value="8">VAT 8%</option>
+                                            <option value="10">VAT 10%</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
                                     <div class="form-group">
                                         <br>
                                         <div class="custom-control custom-checkbox">
-                                            <input type="checkbox" class="custom-control-input" id="editHasInvoice" name="HasInvoice">
-                                            <label class="custom-control-label" for="editHasInvoice">
-                                                <strong>Có hóa đơn VAT</strong>
+                                            <input type="checkbox" class="custom-control-input" id="editIsVATApplicable" name="IsVATApplicable">
+                                            <label class="custom-control-label" for="editIsVATApplicable">
+                                                <strong>Áp dụng thuế VAT</strong>
                                             </label>
                                         </div>
                                     </div>

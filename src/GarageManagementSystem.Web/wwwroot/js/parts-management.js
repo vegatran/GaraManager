@@ -93,6 +93,8 @@ window.PartsManagement = {
         // ✅ THÊM: Populate edit modal when shown
         $('#editPartModal').on('shown.bs.modal', function() {
             if (self.currentEditData) {
+                // Đảm bảo InputMask được khởi tạo trước khi populate
+                self.initPriceInputMask();
                 self.populateEditModal(self.currentEditData);
                 self.currentEditData = null; // Clear after use
             }
@@ -145,6 +147,36 @@ window.PartsManagement = {
             }
         });
 
+        // ✅ THÊM: Format tiền tệ khi nhập vào các trường giá bằng InputMask
+        // Áp dụng inputmask cho các trường giá
+        this.initPriceInputMask();
+
+    },
+
+    // ✅ THÊM: Initialize InputMask cho các trường giá
+    initPriceInputMask: function() {
+        // Cấu hình inputmask cho tiền tệ Việt Nam
+        var maskOptions = {
+            alias: 'numeric',
+            groupSeparator: ',',
+            digits: 0,
+            digitsOptional: false,
+            placeholder: '0',
+            autoGroup: true,
+            rightAlign: false,
+            autoUnmask: true, // Tự động remove mask khi lấy giá trị
+            removeMaskOnSubmit: true
+        };
+
+        // Áp dụng cho create modal (chỉ nếu chưa có)
+        if (!$('#createCostPrice').data('inputmask')) {
+            $('#createCostPrice, #createSellPrice').inputmask(maskOptions);
+        }
+        
+        // Áp dụng cho edit modal (chỉ nếu chưa có)
+        if (!$('#editCostPrice').data('inputmask')) {
+            $('#editCostPrice, #editSellPrice').inputmask(maskOptions);
+        }
     },
 
     createPart: function() {
@@ -205,6 +237,10 @@ window.PartsManagement = {
             CanUseForIndividual: $('#createCanUseForIndividual').is(':checked'),
             WarrantyMonths: parseInt($('#createWarrantyMonths').val()) || 12,
             IsOEM: $('#createIsOEM').is(':checked'),
+            
+            // ✅ THÊM: Thông tin thuế VAT
+            VATRate: parseFloat($('#createVATRate').val()) || 10,
+            IsVATApplicable: $('#createIsVATApplicable').is(':checked'),
             
             // ✅ THÊM: Technical fields
             OEMNumber: $('#createOEMNumber').val(),
@@ -310,8 +346,14 @@ window.PartsManagement = {
         $('#editDescription').val(part.description);
         $('#editCategory').val(part.category);
         $('#editBrand').val(part.brand);
-        $('#editCostPrice').val(part.costPrice);
-        $('#editSellPrice').val(part.sellPrice);
+        
+        // Set giá trị cho các trường giá (dùng unmasked value)
+        if (part.costPrice) {
+            $('#editCostPrice').val(part.costPrice);
+        }
+        if (part.sellPrice) {
+            $('#editSellPrice').val(part.sellPrice);
+        }
         $('#editQuantityInStock').val(part.quantityInStock);
         $('#editMinimumStock').val(part.minimumStock);
         $('#editReorderLevel').val(part.reorderLevel);
@@ -379,6 +421,10 @@ window.PartsManagement = {
     },
 
     submitUpdatePart: function(partId) {
+        // ✅ DEBUG: Log input values
+        console.log('DEBUG: editCostPrice value:', $('#editCostPrice').val());
+        console.log('DEBUG: editSellPrice value:', $('#editSellPrice').val());
+        
         var formData = {
             Id: parseInt(partId),
             PartNumber: $('#editPartNumber').val(),
@@ -408,6 +454,10 @@ window.PartsManagement = {
             WarrantyMonths: parseInt($('#editWarrantyMonths').val()) || 12,
             IsOEM: $('#editIsOEM').is(':checked'),
             
+            // ✅ THÊM: Thông tin thuế VAT
+            VATRate: parseFloat($('#editVATRate').val()) || 10,
+            IsVATApplicable: $('#editIsVATApplicable').is(':checked'),
+            
             // ✅ THÊM: Technical fields
             OEMNumber: $('#editOEMNumber').val(),
             AftermarketNumber: $('#editAftermarketNumber').val(),
@@ -417,6 +467,10 @@ window.PartsManagement = {
             Material: $('#editMaterial').val(),
             Color: $('#editColor').val()
         };
+
+        // ✅ DEBUG: Log formData
+        console.log('DEBUG: formData being sent:', formData);
+        console.log('DEBUG: CostPrice in formData:', formData.CostPrice);
 
         $.ajax({
             url: '/PartsManagement/UpdatePart/' + partId,
@@ -471,8 +525,8 @@ window.PartsManagement = {
         $('#viewDescription').text(part.description || 'N/A');
         $('#viewCategory').text(part.category || 'N/A');
         $('#viewBrand').text(part.brand || 'N/A');
-        $('#viewCostPrice').text(part.costPrice.toLocaleString() + ' VNĐ');
-        $('#viewSellPrice').text(part.sellPrice.toLocaleString() + ' VNĐ');
+        $('#viewCostPrice').text(part.costPrice ? part.costPrice.toLocaleString() + ' VNĐ' : 'N/A');
+        $('#viewSellPrice').text(part.sellPrice ? part.sellPrice.toLocaleString() + ' VNĐ' : 'N/A');
         $('#viewQuantityInStock').text(part.quantityInStock);
         $('#viewMinimumStock').text(part.minimumStock);
         $('#viewUnit').text(part.unit || 'N/A');

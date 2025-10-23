@@ -131,6 +131,7 @@ window.SupplierManagement = {
 
     // Create new supplier
     createSupplier: function() {
+        var self = this;
         var formData = {
             SupplierCode: $('#supplierCode').val(),
             SupplierName: $('#supplierName').val(),
@@ -141,12 +142,16 @@ window.SupplierManagement = {
             IsActive: $('#isActive').val() === 'true'
         };
 
+        // Debug logging
+        console.log('DEBUG: CreateSupplier formData:', formData);
+
         $.ajax({
             url: '/SupplierManagement/CreateSupplier',
             type: 'POST',
             contentType: 'application/json',
             data: JSON.stringify(formData),
             success: function(response) {
+                console.log('DEBUG: CreateSupplier success response:', response);
                 if (response.success) {
                     Swal.fire({
                         title: 'Thành công!',
@@ -167,11 +172,17 @@ window.SupplierManagement = {
                 }
             },
             error: function(xhr, status, error) {
+                console.log('DEBUG: CreateSupplier error response:', xhr.responseText);
+                console.log('DEBUG: CreateSupplier status:', xhr.status);
+                
                 if (xhr.status === 400) {
                     // Handle validation errors
                     try {
                         var errorResponse = JSON.parse(xhr.responseText);
+                        console.log('DEBUG: Parsed error response:', errorResponse);
+                        
                         if (errorResponse.errors) {
+                            console.log('DEBUG: Displaying validation errors:', errorResponse.errors);
                             self.displayValidationErrors(errorResponse.errors);
                         } else {
                             Swal.fire({
@@ -182,6 +193,7 @@ window.SupplierManagement = {
                             });
                         }
                     } catch (e) {
+                        console.log('DEBUG: Error parsing response:', e);
                         Swal.fire({
                             title: 'Lỗi!',
                             text: 'Dữ liệu không hợp lệ',
@@ -203,23 +215,75 @@ window.SupplierManagement = {
 
     // ✅ THÊM: Function hiển thị validation errors
     displayValidationErrors: function(errors) {
+        console.log('DEBUG: displayValidationErrors called with:', errors);
+        
         // Clear previous errors
         $('.is-invalid').removeClass('is-invalid');
         $('.invalid-feedback').remove();
         
         // Display field-specific errors
         for (var field in errors) {
+            console.log('DEBUG: Processing field:', field, 'with errors:', errors[field]);
+            
             var fieldElement = $(`#${field.toLowerCase()}`);
+            console.log('DEBUG: Found field element:', fieldElement.length, fieldElement);
+            
+            if (fieldElement.length === 0) {
+                // Try alternative field names for create modal
+                if (field.toLowerCase() === 'suppliercode') {
+                    fieldElement = $('#supplierCode');
+                } else if (field.toLowerCase() === 'suppliername') {
+                    fieldElement = $('#supplierName');
+                } else if (field.toLowerCase() === 'contactperson') {
+                    fieldElement = $('#contactPerson');
+                } else if (field.toLowerCase() === 'phone') {
+                    fieldElement = $('#phone');
+                } else if (field.toLowerCase() === 'email') {
+                    fieldElement = $('#email');
+                } else if (field.toLowerCase() === 'address') {
+                    fieldElement = $('#address');
+                }
+                // Try alternative field names for edit modal
+                if (fieldElement.length === 0) {
+                    if (field.toLowerCase() === 'suppliercode') {
+                        fieldElement = $('#editSupplierCode');
+                    } else if (field.toLowerCase() === 'suppliername') {
+                        fieldElement = $('#editSupplierName');
+                    } else if (field.toLowerCase() === 'contactperson') {
+                        fieldElement = $('#editContactPerson');
+                    } else if (field.toLowerCase() === 'phone') {
+                        fieldElement = $('#editPhone');
+                    } else if (field.toLowerCase() === 'email') {
+                        fieldElement = $('#editEmail');
+                    } else if (field.toLowerCase() === 'address') {
+                        fieldElement = $('#editAddress');
+                    }
+                }
+            }
+            
+            console.log('DEBUG: Final field element:', fieldElement.length, fieldElement);
+            
             if (fieldElement.length > 0) {
                 fieldElement.addClass('is-invalid');
                 fieldElement.after(`<div class="invalid-feedback">${errors[field].join(', ')}</div>`);
+                console.log('DEBUG: Added validation error to field:', field);
+            } else {
+                console.log('DEBUG: Could not find field element for:', field);
             }
         }
         
-        // Show general error message
+        // Show general error message with specific field errors
+        var errorMessages = [];
+        for (var field in errors) {
+            errorMessages.push(field + ': ' + errors[field].join(', '));
+        }
+        
+        console.log('DEBUG: Showing SweetAlert with errors:', errorMessages);
+        
         Swal.fire({
-            title: 'Lỗi!',
-            text: 'Vui lòng kiểm tra lại thông tin đã nhập',
+            title: 'Lỗi Validation!',
+            html: '<div style="text-align: left;"><strong>Vui lòng kiểm tra lại các trường sau:</strong><br><br>' + 
+                  errorMessages.map(msg => '• ' + msg).join('<br>') + '</div>',
             icon: 'error',
             confirmButtonText: 'OK'
         });
@@ -312,6 +376,7 @@ window.SupplierManagement = {
 
     // Update supplier
     updateSupplier: function() {
+        var self = this;
         var formData = {
             Id: parseInt($('#editSupplierId').val()),
             SupplierCode: $('#editSupplierCode').val(),
@@ -349,12 +414,36 @@ window.SupplierManagement = {
                 }
             },
             error: function(xhr, status, error) {
-                Swal.fire({
-                    title: 'Lỗi!',
-                    text: 'Có lỗi xảy ra khi cập nhật nhà cung cấp: ' + error,
-                    icon: 'error',
-                    confirmButtonText: 'OK'
-                });
+                if (xhr.status === 400) {
+                    // Handle validation errors
+                    try {
+                        var errorResponse = JSON.parse(xhr.responseText);
+                        if (errorResponse.errors) {
+                            self.displayValidationErrors(errorResponse.errors);
+                        } else {
+                            Swal.fire({
+                                title: 'Lỗi!',
+                                text: errorResponse.message || 'Dữ liệu không hợp lệ',
+                                icon: 'error',
+                                confirmButtonText: 'OK'
+                            });
+                        }
+                    } catch (e) {
+                        Swal.fire({
+                            title: 'Lỗi!',
+                            text: 'Dữ liệu không hợp lệ',
+                            icon: 'error',
+                            confirmButtonText: 'OK'
+                        });
+                    }
+                } else {
+                    Swal.fire({
+                        title: 'Lỗi!',
+                        text: 'Có lỗi xảy ra khi cập nhật nhà cung cấp: ' + error,
+                        icon: 'error',
+                        confirmButtonText: 'OK'
+                    });
+                }
             }
         });
     },

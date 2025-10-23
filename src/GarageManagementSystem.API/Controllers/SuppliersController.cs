@@ -132,8 +132,13 @@ namespace GarageManagementSystem.API.Controllers
             {
                 if (!ModelState.IsValid)
                 {
-                    var errors = ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage)).ToList();
-                    return BadRequest(ApiResponse<SupplierDto>.ErrorResult("Invalid data", errors));
+                    var errors = new List<string>();
+                    foreach (var key in ModelState.Keys)
+                    {
+                        var modelErrors = ModelState[key].Errors.Select(e => $"{key}: {e.ErrorMessage}");
+                        errors.AddRange(modelErrors);
+                    }
+                    return BadRequest(ApiResponse<SupplierDto>.ErrorResult("Validation failed", errors));
                 }
 
                 var supplier = new Core.Entities.Supplier
@@ -187,6 +192,17 @@ namespace GarageManagementSystem.API.Controllers
         {
             try
             {
+                if (!ModelState.IsValid)
+                {
+                    var errors = new List<string>();
+                    foreach (var key in ModelState.Keys)
+                    {
+                        var modelErrors = ModelState[key].Errors.Select(e => $"{key}: {e.ErrorMessage}");
+                        errors.AddRange(modelErrors);
+                    }
+                    return BadRequest(ApiResponse<SupplierDto>.ErrorResult("Validation failed", errors));
+                }
+
                 if (id != dto.Id) return BadRequest(ApiResponse<SupplierDto>.ErrorResult("ID mismatch"));
                 var supplier = await _unitOfWork.Suppliers.GetByIdAsync(id);
                 if (supplier == null) return NotFound(ApiResponse<SupplierDto>.ErrorResult("Not found"));

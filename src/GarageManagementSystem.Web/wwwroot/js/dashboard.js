@@ -33,6 +33,13 @@ window.Dashboard = {
 
     // Update statistics display
     updateStatistics: function(data) {
+        // Update the small boxes (stat cards)
+        $('.small-box.bg-info h3').text(data.totalCustomers || 0);
+        $('.small-box.bg-success h3').text(data.totalVehicles || 0);
+        $('.small-box.bg-warning h3').text(data.pendingOrders || 0);
+        $('.small-box.bg-danger h3').text(data.pendingOrders || 0);
+        
+        // Update other elements if they exist
         $('#totalCustomers').text(data.totalCustomers || 0);
         $('#totalVehicles').text(data.totalVehicles || 0);
         $('#pendingOrders').text(data.pendingOrders || 0);
@@ -116,73 +123,195 @@ window.Dashboard = {
 
     // Load service statistics
     loadServiceStatistics: function() {
-        // Tạm thời hiển thị dữ liệu mẫu
-        var serviceStatsHtml = `
-            <div class="row">
-                <div class="col-md-6">
-                    <h5>Dịch vụ phổ biến</h5>
-                    <ul class="list-group">
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            Bảo dưỡng định kỳ
-                            <span class="badge badge-primary badge-pill">15</span>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            Sửa chữa động cơ
-                            <span class="badge badge-primary badge-pill">8</span>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            Thay phụ tùng
-                            <span class="badge badge-primary badge-pill">12</span>
-                        </li>
-                    </ul>
-                </div>
-                <div class="col-md-6">
-                    <h5>Doanh thu tháng</h5>
-                    <div class="progress mb-2">
-                        <div class="progress-bar bg-success" role="progressbar" style="width: 75%">75%</div>
-                    </div>
-                    <small class="text-muted">₫45,000,000 / ₫60,000,000</small>
-                </div>
-            </div>
-        `;
-        $('#serviceStatisticsContent').html(serviceStatsHtml);
+        // Load real data and create charts
+        $.ajax({
+            url: '/Home/GetDashboardStatistics',
+            type: 'GET',
+            success: function(response) {
+                if (response.success && response.data) {
+                    var data = response.data;
+                    
+                    // Create revenue chart
+                    var revenueCtx = document.getElementById('revenue-chart-canvas').getContext('2d');
+                    new Chart(revenueCtx, {
+                        type: 'line',
+                        data: {
+                            labels: ['Tháng trước', 'Tháng này'],
+                            datasets: [{
+                                label: 'Doanh thu (VNĐ)',
+                                data: [data.lastMonthRevenue || 0, data.monthlyRevenue || 0],
+                                borderColor: '#28a745',
+                                backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                                tension: 0.4
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: {
+                                        callback: function(value) {
+                                            return value.toLocaleString() + ' VNĐ';
+                                        }
+                                    }
+                                }
+                            },
+                            plugins: {
+                                legend: {
+                                    display: false
+                                }
+                            }
+                        }
+                    });
+                    
+                    // Create sales chart
+                    var salesCtx = document.getElementById('sales-chart-canvas').getContext('2d');
+                    new Chart(salesCtx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['Hoàn thành', 'Đang xử lý', 'Chờ duyệt'],
+                            datasets: [{
+                                data: [
+                                    data.completedOrders || 0,
+                                    data.inProgressOrders || 0,
+                                    data.pendingOrders || 0
+                                ],
+                                backgroundColor: ['#28a745', '#ffc107', '#17a2b8'],
+                                borderWidth: 2
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'bottom'
+                                }
+                            }
+                        }
+                    });
+                }
+            },
+            error: function() {
+                console.log('Error loading service statistics');
+            }
+        });
     },
 
     // Load system information
     loadSystemInformation: function() {
-        // Tạm thời hiển thị dữ liệu mẫu
-        var systemInfoHtml = `
-            <div class="row">
-                <div class="col-md-4 text-center">
-                    <div class="info-box">
-                        <span class="info-box-icon bg-info"><i class="fas fa-users"></i></span>
-                        <div class="info-box-content">
-                            <span class="info-box-text">Khách hàng</span>
-                            <span class="info-box-number">4</span>
+        // Load real data from dashboard statistics
+        $.ajax({
+            url: '/Home/GetDashboardStatistics',
+            type: 'GET',
+            success: function(response) {
+                if (response.success && response.data) {
+                    var data = response.data;
+                    
+                    // Update sparklines with real data (using Chart.js instead)
+                    $('#sparkline-1').html(`<canvas width="40" height="40"></canvas>`);
+                    $('#sparkline-2').html(`<canvas width="40" height="40"></canvas>`);
+                    $('#sparkline-3').html(`<canvas width="40" height="40"></canvas>`);
+                    
+                    // Create mini charts for sparklines
+                    new Chart($('#sparkline-1 canvas')[0], {
+                        type: 'bar',
+                        data: {
+                            labels: [''],
+                            datasets: [{
+                                data: [data.totalCustomers],
+                                backgroundColor: '#17a2b8',
+                                borderWidth: 0
+                            }]
+                        },
+                        options: {
+                            responsive: false,
+                            maintainAspectRatio: false,
+                            plugins: { legend: { display: false } },
+                            scales: { x: { display: false }, y: { display: false } }
+                        }
+                    });
+                    
+                    new Chart($('#sparkline-2 canvas')[0], {
+                        type: 'bar',
+                        data: {
+                            labels: [''],
+                            datasets: [{
+                                data: [data.totalVehicles],
+                                backgroundColor: '#28a745',
+                                borderWidth: 0
+                            }]
+                        },
+                        options: {
+                            responsive: false,
+                            maintainAspectRatio: false,
+                            plugins: { legend: { display: false } },
+                            scales: { x: { display: false }, y: { display: false } }
+                        }
+                    });
+                    
+                    new Chart($('#sparkline-3 canvas')[0], {
+                        type: 'bar',
+                        data: {
+                            labels: [''],
+                            datasets: [{
+                                data: [data.pendingOrders],
+                                backgroundColor: '#ffc107',
+                                borderWidth: 0
+                            }]
+                        },
+                        options: {
+                            responsive: false,
+                            maintainAspectRatio: false,
+                            plugins: { legend: { display: false } },
+                            scales: { x: { display: false }, y: { display: false } }
+                        }
+                    });
+                    
+                    // Update world map area with summary info
+                    var mapContent = `
+                        <div class="text-center text-white p-4">
+                            <h4><i class="fas fa-chart-line"></i> Tổng Quan Hệ Thống</h4>
+                            <div class="row mt-3">
+                                <div class="col-4">
+                                    <div class="info-box bg-info-transparent">
+                                        <span class="info-box-icon"><i class="fas fa-users"></i></span>
+                                        <div class="info-box-content">
+                                            <span class="info-box-text">Khách hàng</span>
+                                            <span class="info-box-number">${data.totalCustomers}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="info-box bg-success-transparent">
+                                        <span class="info-box-icon"><i class="fas fa-car"></i></span>
+                                        <div class="info-box-content">
+                                            <span class="info-box-text">Xe</span>
+                                            <span class="info-box-number">${data.totalVehicles}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="info-box bg-warning-transparent">
+                                        <span class="info-box-icon"><i class="fas fa-wrench"></i></span>
+                                        <div class="info-box-content">
+                                            <span class="info-box-text">Đơn hàng</span>
+                                            <span class="info-box-number">${data.pendingOrders}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                </div>
-                <div class="col-md-4 text-center">
-                    <div class="info-box">
-                        <span class="info-box-icon bg-success"><i class="fas fa-car"></i></span>
-                        <div class="info-box-content">
-                            <span class="info-box-text">Xe</span>
-                            <span class="info-box-number">4</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4 text-center">
-                    <div class="info-box">
-                        <span class="info-box-icon bg-warning"><i class="fas fa-wrench"></i></span>
-                        <div class="info-box-content">
-                            <span class="info-box-text">Dịch vụ</span>
-                            <span class="info-box-number">8</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-        $('#systemInformationContent').html(systemInfoHtml);
+                    `;
+                    $('#world-map').html(mapContent);
+                }
+            },
+            error: function() {
+                console.log('Error loading system information');
+            }
+        });
     },
 
     // Load inventory alerts
@@ -191,11 +320,8 @@ window.Dashboard = {
         
         // Load low stock
         $.ajax({
-            url: '/api/inventory-alerts/low-stock',
+            url: '/Home/GetLowStockAlerts',
             type: 'GET',
-            headers: {
-                'Authorization': 'Bearer ' + localStorage.getItem('access_token')
-            },
             success: function(response) {
                 if (response.success && response.data) {
                     var count = response.data.length;
@@ -223,11 +349,8 @@ window.Dashboard = {
         
         // Load out of stock
         $.ajax({
-            url: '/api/inventory-alerts/out-of-stock',
+            url: '/Home/GetOutOfStockAlerts',
             type: 'GET',
-            headers: {
-                'Authorization': 'Bearer ' + localStorage.getItem('access_token')
-            },
             success: function(response) {
                 if (response.success && response.data) {
                     $('#outOfStockNumber').text(response.data.length);
@@ -240,11 +363,8 @@ window.Dashboard = {
         
         // Load reorder suggestions
         $.ajax({
-            url: '/api/inventory-alerts/reorder-suggestions',
+            url: '/Home/GetReorderSuggestions',
             type: 'GET',
-            headers: {
-                'Authorization': 'Bearer ' + localStorage.getItem('access_token')
-            },
             success: function(response) {
                 if (response.success && response.data) {
                     $('#reorderNumber').text(response.data.length);

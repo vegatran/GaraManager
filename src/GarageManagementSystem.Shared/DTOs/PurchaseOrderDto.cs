@@ -51,6 +51,8 @@ namespace GarageManagementSystem.Shared.DTOs
         
         public decimal SubTotal { get; set; } = 0;
         
+        public decimal VATRate { get; set; } = 0;
+        
         public decimal TaxAmount { get; set; } = 0;
         
         public decimal ShippingCost { get; set; } = 0;
@@ -172,6 +174,8 @@ namespace GarageManagementSystem.Shared.DTOs
         public string? Currency { get; set; } = "VND";
         
         public decimal SubTotal { get; set; } = 0;
+        
+        public decimal VATRate { get; set; } = 0;
         
         public decimal TaxAmount { get; set; } = 0;
         

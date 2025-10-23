@@ -150,6 +150,14 @@ namespace GarageManagementSystem.Shared.DTOs
         public bool IsVATApplicable { get; set; }
         public decimal? VATRate { get; set; } // ✅ THÊM VATRate
         
+        // ✅ THÊM: VAT Override từ Part (READ-ONLY - KHÔNG ĐƯỢC CHỈNH SỬA)
+        public decimal? OverrideVATRate { get; set; } // Ghi đè VAT từ Part (CHỈ ĐỌC)
+        public bool? OverrideIsVATApplicable { get; set; } // Ghi đè áp dụng VAT từ Part (CHỈ ĐỌC)
+        
+        // ✅ THÊM: Thông tin VAT từ Part (READ-ONLY)
+        public decimal? PartVATRate { get; set; } // VAT rate từ Part entity
+        public bool? PartIsVATApplicable { get; set; } // Có áp dụng VAT từ Part entity
+        
         // Insurance approved pricing - Giá bảo hiểm duyệt
         public decimal? InsuranceApprovedUnitPrice { get; set; }
         public decimal? InsuranceApprovedSubTotal { get; set; }
@@ -201,6 +209,9 @@ namespace GarageManagementSystem.Shared.DTOs
         
         [Range(0, 100)]
         public decimal VATRate { get; set; } = 10; // ✅ THÊM: VAT rate
+        
+        // ❌ XÓA: Không cho phép Override VAT trong CreateQuotationItemDto
+        // VAT sẽ được lấy tự động từ Part entity (READ-ONLY)
     }
 
     public class QuotationAttachmentDto
