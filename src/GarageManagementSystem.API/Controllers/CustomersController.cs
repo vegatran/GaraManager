@@ -215,12 +215,8 @@ namespace GarageManagementSystem.API.Controllers
                 // Cập nhật thông tin mới nếu có
                 if (updateDto != null)
                 {
-                    customer.Name = updateDto.Name;
-                    customer.Email = updateDto.Email;
-                    customer.Phone = updateDto.Phone;
-                    customer.AlternativePhone = updateDto.AlternativePhone;
-                    customer.Address = updateDto.Address;
-                    customer.ContactPersonName = updateDto.ContactPersonName;
+                    // ✅ SỬA: Dùng AutoMapper thay vì map tay
+                    _mapper.Map(updateDto, customer);
                 }
 
                 // Bắt đầu transaction để đảm bảo tính toàn vẹn dữ liệu
@@ -272,12 +268,8 @@ namespace GarageManagementSystem.API.Controllers
                     return NotFound(ApiResponse<CustomerDto>.ErrorResult("Customer not found"));
                 }
 
-                customer.Name = updateDto.Name;
-                customer.Email = updateDto.Email;
-                customer.Phone = updateDto.Phone;
-                customer.AlternativePhone = updateDto.AlternativePhone;
-                customer.Address = updateDto.Address;
-                customer.ContactPersonName = updateDto.ContactPersonName;
+                // ✅ SỬA: Dùng AutoMapper thay vì map tay
+                _mapper.Map(updateDto, customer);
 
                 // Bắt đầu transaction để đảm bảo tính toàn vẹn dữ liệu
                 await _unitOfWork.BeginTransactionAsync();

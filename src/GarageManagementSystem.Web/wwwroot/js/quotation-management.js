@@ -375,16 +375,16 @@ window.QuotationManagement = {
                 }
             } else {
                 // ✅ GIỮ NGUYÊN: Logic cũ cho Services (có thể chỉnh sửa VAT)
-                if (isChecked) {
+            if (isChecked) {
                     // Enable VAT input và set default value
                     vatRateInput.prop('disabled', false).prop('readonly', false);
                     vatAmountInput.prop('disabled', false);
-                    row.addClass('table-success');
-                } else {
+                row.addClass('table-success');
+            } else {
                     // Disable VAT input và set về 0
                     vatRateInput.prop('disabled', true).val('0');
                     vatAmountInput.prop('disabled', true).val('0 VNĐ');
-                    row.removeClass('table-success');
+                row.removeClass('table-success');
                 }
             }
             
@@ -1204,50 +1204,50 @@ window.QuotationManagement = {
             });
         } else {
             // ✅ GIỮ NGUYÊN: Logic cũ cho Services
-            input.typeahead({
-                source: function(query, process) {
-                    $.ajax({
-                        url: '/QuotationManagement/SearchServices',
-                        type: 'GET',
-                        data: { q: query },
-                        success: function(response) {
-                            if (response && Array.isArray(response)) {
-                                var services = response.map(function(service) {
-                                    return {
-                                        id: service.value,
-                                        name: service.text,
-                                        price: service.price || 0,
-                                    };
-                                });
-                                process(services);
-                            } else {
-                                process([]);
-                            }
-                        },
-                        error: function(xhr, status, error) {
+        input.typeahead({
+            source: function(query, process) {
+                $.ajax({
+                    url: '/QuotationManagement/SearchServices',
+                    type: 'GET',
+                    data: { q: query },
+                    success: function(response) {
+                        if (response && Array.isArray(response)) {
+                            var services = response.map(function(service) {
+                                return {
+                                    id: service.value,
+                                    name: service.text,
+                                    price: service.price || 0,
+                                };
+                            });
+                            process(services);
+                        } else {
                             process([]);
                         }
-                    });
-                },
-                displayText: function(item) {
-                    return item.name + ' - ' + item.price.toLocaleString() + ' VNĐ';
-                },
-                afterSelect: function(item) {
-                    var row = input.closest('.service-item-row');
-                    var price = item.price;
-                    var quantity = parseFloat(row.find('.quantity-input').val()) || 1;
-                    var total = price * quantity;
-                    
-                    // Set values
-                    row.find('.service-id-input').val(item.id);
-                    row.find('.unit-price-input').val(price.toLocaleString() + ' VNĐ');
-                    row.find('.total-input').val(total.toLocaleString() + ' VNĐ');
-                    
-                    // Set input value
-                    input.val(item.name);
-                },
-                delay: 300,
-            });
+                    },
+                    error: function(xhr, status, error) {
+                        process([]);
+                    }
+                });
+            },
+            displayText: function(item) {
+                return item.name + ' - ' + item.price.toLocaleString() + ' VNĐ';
+            },
+            afterSelect: function(item) {
+                var row = input.closest('.service-item-row');
+                var price = item.price;
+                var quantity = parseFloat(row.find('.quantity-input').val()) || 1;
+                var total = price * quantity;
+                
+                // Set values
+                row.find('.service-id-input').val(item.id);
+                row.find('.unit-price-input').val(price.toLocaleString() + ' VNĐ');
+                row.find('.total-input').val(total.toLocaleString() + ' VNĐ');
+                
+                // Set input value
+                input.val(item.name);
+            },
+            delay: 300,
+        });
         }
     },
 

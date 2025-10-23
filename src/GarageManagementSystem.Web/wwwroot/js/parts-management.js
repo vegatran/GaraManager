@@ -235,7 +235,7 @@ window.PartsManagement = {
             CanUseForCompany: $('#createCanUseForCompany').is(':checked'),
             CanUseForInsurance: $('#createCanUseForInsurance').is(':checked'),
             CanUseForIndividual: $('#createCanUseForIndividual').is(':checked'),
-            WarrantyMonths: parseInt($('#createWarrantyMonths').val()) || 12,
+            WarrantyMonths: $('#createWarrantyMonths').val() ? parseInt($('#createWarrantyMonths').val()) : 0,
             IsOEM: $('#createIsOEM').is(':checked'),
             
             // ✅ THÊM: Thông tin thuế VAT
@@ -371,7 +371,7 @@ window.PartsManagement = {
         $('#editCanUseForCompany').prop('checked', part.canUseForCompany || false);
         $('#editCanUseForInsurance').prop('checked', part.canUseForInsurance || false);
         $('#editCanUseForIndividual').prop('checked', part.canUseForIndividual !== false);
-        $('#editWarrantyMonths').val(part.warrantyMonths || 12);
+        $('#editWarrantyMonths').val(part.warrantyMonths !== undefined ? part.warrantyMonths : 0);
         $('#editIsOEM').prop('checked', part.isOEM || false);
         
         // ✅ THÊM: Technical fields
@@ -451,7 +451,7 @@ window.PartsManagement = {
             CanUseForCompany: $('#editCanUseForCompany').is(':checked'),
             CanUseForInsurance: $('#editCanUseForInsurance').is(':checked'),
             CanUseForIndividual: $('#editCanUseForIndividual').is(':checked'),
-            WarrantyMonths: parseInt($('#editWarrantyMonths').val()) || 12,
+            WarrantyMonths: $('#editWarrantyMonths').val() ? parseInt($('#editWarrantyMonths').val()) : 0,
             IsOEM: $('#editIsOEM').is(':checked'),
             
             // ✅ THÊM: Thông tin thuế VAT

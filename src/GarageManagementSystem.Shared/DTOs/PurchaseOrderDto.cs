@@ -23,7 +23,7 @@ namespace GarageManagementSystem.Shared.DTOs
         public DateTime? ActualDeliveryDate { get; set; }
         
         [StringLength(20)]
-        public string Status { get; set; } = "Pending";
+        public string Status { get; set; } = "Draft";
         
         [StringLength(50)]
         public string? SupplierOrderNumber { get; set; }
@@ -65,6 +65,18 @@ namespace GarageManagementSystem.Shared.DTOs
         public string? ApprovedBy { get; set; }
         
         public DateTime? ApprovedDate { get; set; }
+        
+        public DateTime? SentDate { get; set; }
+        
+        public DateTime? ReceivedDate { get; set; }
+        
+        public DateTime? CancelledDate { get; set; }
+        
+        [StringLength(500)]
+        public string? CancelReason { get; set; }
+        
+        [StringLength(100)]
+        public string? CancelledBy { get; set; }
         
         [StringLength(500)]
         public string? Notes { get; set; }

@@ -1,0 +1,221 @@
+@{
+    ViewData["Title"] = "Quản Lý Cảnh Báo Tồn Kho";
+}
+
+<div class="content-wrapper">
+    <!-- Content Header -->
+    <div class="content-header">
+        <div class="container-fluid">
+            <div class="row mb-2">
+                <div class="col-sm-6">
+                    <h1 class="m-0">Quản Lý Cảnh Báo Tồn Kho</h1>
+                </div>
+                <div class="col-sm-6">
+                    <ol class="breadcrumb float-sm-right">
+                        <li class="breadcrumb-item"><a href="@Url.Action("Index", "Home")">Trang Chủ</a></li>
+                        <li class="breadcrumb-item"><a href="#">Quản Lý Kho</a></li>
+                        <li class="breadcrumb-item active">Cảnh Báo Tồn Kho</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main content -->
+    <section class="content">
+        <div class="container-fluid">
+            
+            <!-- Alert Summary Cards -->
+            <div class="row">
+                <div class="col-lg-3 col-6">
+                    <div class="small-box bg-danger">
+                        <div class="inner">
+                            <h3 id="criticalAlerts">0</h3>
+                            <p>Cảnh Báo Nghiêm Trọng</p>
+                        </div>
+                        <div class="icon">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-6">
+                    <div class="small-box bg-warning">
+                        <div class="inner">
+                            <h3 id="highAlerts">0</h3>
+                            <p>Cảnh Báo Cao</p>
+                        </div>
+                        <div class="icon">
+                            <i class="fas fa-exclamation-circle"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-6">
+                    <div class="small-box bg-info">
+                        <div class="inner">
+                            <h3 id="mediumAlerts">0</h3>
+                            <p>Cảnh Báo Trung Bình</p>
+                        </div>
+                        <div class="icon">
+                            <i class="fas fa-info-circle"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-6">
+                    <div class="small-box bg-success">
+                        <div class="inner">
+                            <h3 id="resolvedAlerts">0</h3>
+                            <p>Đã Xử Lý</p>
+                        </div>
+                        <div class="icon">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Bộ Lọc</h3>
+                            <div class="card-tools">
+                                <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                                    <i class="fas fa-minus"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        <label>Loại Cảnh Báo</label>
+                                        <select id="alertTypeFilter" class="form-control form-control-sm">
+                                            <option value="">Tất Cả</option>
+                                            <option value="LowStock">Tồn Kho Thấp</option>
+                                            <option value="OutOfStock">Hết Hàng</option>
+                                            <option value="Expired">Hết Hạn</option>
+                                            <option value="NearExpiry">Sắp Hết Hạn</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        <label>Mức Độ</label>
+                                        <select id="severityFilter" class="form-control form-control-sm">
+                                            <option value="">Tất Cả</option>
+                                            <option value="Critical">Nghiêm Trọng</option>
+                                            <option value="High">Cao</option>
+                                            <option value="Medium">Trung Bình</option>
+                                            <option value="Low">Thấp</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        <label>Trạng Thái</label>
+                                        <select id="statusFilter" class="form-control form-control-sm">
+                                            <option value="">Tất Cả</option>
+                                            <option value="false">Chưa Xử Lý</option>
+                                            <option value="true">Đã Xử Lý</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        <label>&nbsp;</label>
+                                        <div>
+                                            <button type="button" id="clearFilters" class="btn btn-secondary btn-sm">
+                                                <i class="fas fa-times"></i> Xóa Bộ Lọc
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Thao Tác</h3>
+                        </div>
+                        <div class="card-body">
+                            <button type="button" id="markAllResolved" class="btn btn-success btn-sm">
+                                <i class="fas fa-check-double"></i> Đánh Dấu Tất Cả Đã Xử Lý
+                            </button>
+                            <button type="button" id="refreshAlerts" class="btn btn-primary btn-sm">
+                                <i class="fas fa-sync-alt"></i> Làm Mới
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Alerts Table -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Danh Sách Cảnh Báo</h3>
+                        </div>
+                        <div class="card-body">
+                            <table id="alertsTable" class="table table-bordered table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Phụ Tùng</th>
+                                        <th>Loại Cảnh Báo</th>
+                                        <th>Mức Độ</th>
+                                        <th>Thông Báo</th>
+                                        <th>Số Lượng</th>
+                                        <th>Ngày Cảnh Báo</th>
+                                        <th>Trạng Thái</th>
+                                        <th>Thao Tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+
+<!-- Resolve Alert Modal -->
+<div class="modal fade" id="resolveAlertModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">Xử Lý Cảnh Báo</h4>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="resolveAlertForm">
+                    <input type="hidden" id="resolveAlertId" />
+                    <div class="form-group">
+                        <label>Ghi Chú Xử Lý</label>
+                        <textarea id="resolutionNotes" class="form-control form-control-sm" rows="3" placeholder="Nhập ghi chú về cách xử lý cảnh báo..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Hủy</button>
+                <button type="button" id="confirmResolve" class="btn btn-success btn-sm">Xác Nhận Xử Lý</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/inventory-alerts-management.js" asp-append-version="true"></script>
+}

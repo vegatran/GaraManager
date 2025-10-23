@@ -311,25 +311,10 @@ namespace GarageManagementSystem.API.Controllers
                     return NotFound(ApiResponse<VehicleInspectionDto>.ErrorResult("Không tìm thấy kiểm tra xe"));
                 }
 
-                // Update inspection properties
-                inspection.InspectorId = updateDto.InspectorId; // Missing line!
-                inspection.InspectionDate = updateDto.InspectionDate; // Update inspection date
-                inspection.InspectionType = updateDto.InspectionType;
-                inspection.CurrentMileage = updateDto.CurrentMileage;
-                inspection.FuelLevel = updateDto.FuelLevel;
-                inspection.GeneralCondition = updateDto.GeneralCondition;
-                inspection.ExteriorCondition = updateDto.ExteriorCondition;
-                inspection.InteriorCondition = updateDto.InteriorCondition;
-                inspection.EngineCondition = updateDto.EngineCondition;
-                inspection.BrakeCondition = updateDto.BrakeCondition;
-                inspection.SuspensionCondition = updateDto.SuspensionCondition;
-                inspection.TireCondition = updateDto.TireCondition;
-                inspection.ElectricalCondition = updateDto.ElectricalCondition;
-                inspection.LightsCondition = updateDto.LightsCondition;
-                inspection.CustomerComplaints = updateDto.CustomerComplaints;
-                inspection.Recommendations = updateDto.Recommendations;
-                inspection.TechnicianNotes = updateDto.TechnicianNotes;
+                // ✅ SỬA: Dùng AutoMapper thay vì map tay
+                _mapper.Map(updateDto, inspection);
                 
+                // ✅ GIỮ: Logic đặc biệt cho Status và CompletedDate
                 if (!string.IsNullOrEmpty(updateDto.Status))
                 {
                     inspection.Status = updateDto.Status;

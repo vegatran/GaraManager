@@ -126,12 +126,8 @@ namespace GarageManagementSystem.API.Controllers
                     return NotFound(ApiResponse<ServiceDto>.ErrorResult("Không tìm thấy dịch vụ"));
                 }
 
-                service.Name = updateDto.Name;
-                service.Description = updateDto.Description;
-                service.Price = updateDto.Price;
-                service.Duration = updateDto.Duration;
-                service.Category = updateDto.Category;
-                service.IsActive = updateDto.IsActive;
+                // ✅ SỬA: Dùng AutoMapper thay vì map tay
+                _mapper.Map(updateDto, service);
 
                 // Bắt đầu transaction để đảm bảo tính toàn vẹn dữ liệu
                 await _unitOfWork.BeginTransactionAsync();

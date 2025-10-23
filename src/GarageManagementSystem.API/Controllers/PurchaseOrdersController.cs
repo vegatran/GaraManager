@@ -7,6 +7,7 @@ using GarageManagementSystem.Core.Extensions;
 using GarageManagementSystem.Shared.DTOs;
 using GarageManagementSystem.Shared.Models;
 using GarageManagementSystem.API.Services;
+using System.ComponentModel.DataAnnotations;
 
 namespace GarageManagementSystem.API.Controllers
 {
@@ -99,12 +100,14 @@ namespace GarageManagementSystem.API.Controllers
             }
         }
 
-        [HttpGet("{id}")]
-        public async Task<ActionResult<ApiResponse<PurchaseOrderDto>>> GetById(int id)
+        [HttpGet("{orderNumber}")]
+        public async Task<ActionResult<ApiResponse<PurchaseOrderDto>>> GetByOrderNumber(string orderNumber)
         {
             try
             {
-                var order = await _unitOfWork.Repository<PurchaseOrder>().GetByIdAsync(id);
+                var orders = await _unitOfWork.Repository<PurchaseOrder>().GetAllAsync();
+                var order = orders.FirstOrDefault(o => o.OrderNumber == orderNumber);
+                
                 if (order == null)
                     return NotFound(ApiResponse<PurchaseOrderDto>.ErrorResult("Không tìm thấy đơn mua hàng"));
 
@@ -115,7 +118,7 @@ namespace GarageManagementSystem.API.Controllers
                 var items = await _unitOfWork.Repository<PurchaseOrderItem>().GetAllAsync();
                 var orderItems = items.Where(i => i.PurchaseOrderId == order.Id).ToList();
                 
-                _logger.LogInformation($"Purchase Order {id} has {orderItems.Count} items");
+                _logger.LogInformation($"Purchase Order {orderNumber} has {orderItems.Count} items");
                 
                 var orderDto = _mapper.Map<PurchaseOrderDto>(order);
                 orderDto.SupplierName = supplier?.SupplierName ?? "N/A";
@@ -128,7 +131,7 @@ namespace GarageManagementSystem.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting purchase order by id: {Id}", id);
+                _logger.LogError(ex, "Error getting purchase order by order number: {OrderNumber}", orderNumber);
                 return StatusCode(500, ApiResponse<PurchaseOrderDto>.ErrorResult("Lỗi khi lấy thông tin đơn mua hàng", ex.Message));
             }
         }
@@ -149,7 +152,7 @@ namespace GarageManagementSystem.API.Controllers
                 await _unitOfWork.SaveChangesAsync();
 
                 var orderDto = _mapper.Map<PurchaseOrderDto>(order);
-                return CreatedAtAction(nameof(GetById), new { id = order.Id }, 
+                return CreatedAtAction(nameof(GetByOrderNumber), new { orderNumber = order.OrderNumber }, 
                     ApiResponse<PurchaseOrderDto>.SuccessResult(orderDto, "Tạo đơn mua hàng thành công"));
             }
             catch (Exception ex)
@@ -186,6 +189,94 @@ namespace GarageManagementSystem.API.Controllers
             }
         }
 
+        [HttpPut("{id}/send")]
+        public async Task<IActionResult> SendOrder(int id)
+        {
+            try
+            {
+                var order = await _unitOfWork.Repository<PurchaseOrder>().GetByIdAsync(id);
+                if (order == null)
+                    return NotFound(new { success = false, message = "Không tìm thấy đơn mua hàng" });
+
+                if (order.Status != "Draft")
+                    return BadRequest(new { success = false, message = "Chỉ có thể gửi PO ở trạng thái Draft" });
+
+                order.Status = "Sent";
+                order.SentDate = DateTime.Now;
+                order.UpdatedAt = DateTime.Now;
+
+                await _unitOfWork.Repository<PurchaseOrder>().UpdateAsync(order);
+                await _unitOfWork.SaveChangesAsync();
+
+                return Ok(new { success = true, data = order, message = "Đã gửi PO cho supplier" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error sending purchase order");
+                return StatusCode(500, new { success = false, message = "Lỗi khi gửi PO" });
+            }
+        }
+
+        [HttpPut("{id}/cancel")]
+        public async Task<IActionResult> CancelOrder(int id, [FromBody] CancelOrderDto dto)
+        {
+            try
+            {
+                var order = await _unitOfWork.Repository<PurchaseOrder>().GetByIdAsync(id);
+                if (order == null)
+                    return NotFound(new { success = false, message = "Không tìm thấy đơn mua hàng" });
+
+                if (order.Status == "Received")
+                    return BadRequest(new { success = false, message = "Không thể hủy PO đã nhận hàng" });
+
+                order.Status = "Cancelled";
+                order.CancelledDate = DateTime.Now;
+                order.CancelReason = dto.Reason;
+                order.CancelledBy = User.Identity?.Name ?? "System";
+                order.UpdatedAt = DateTime.Now;
+
+                await _unitOfWork.Repository<PurchaseOrder>().UpdateAsync(order);
+                await _unitOfWork.SaveChangesAsync();
+
+                return Ok(new { success = true, data = order, message = "Đã hủy PO thành công" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error cancelling purchase order");
+                return StatusCode(500, new { success = false, message = "Lỗi khi hủy PO" });
+            }
+        }
+
+        [HttpPost("update-status-legacy")]
+        public async Task<IActionResult> UpdateLegacyStatus()
+        {
+            try
+            {
+                var orders = await _unitOfWork.Repository<PurchaseOrder>().GetAllAsync();
+                var updatedCount = 0;
+                
+                foreach (var order in orders)
+                {
+                    if (order.Status == "Pending" || order.Status == "Không hoạt động" || string.IsNullOrEmpty(order.Status))
+                    {
+                        order.Status = "Draft";
+                        order.UpdatedAt = DateTime.Now;
+                        await _unitOfWork.Repository<PurchaseOrder>().UpdateAsync(order);
+                        updatedCount++;
+                    }
+                }
+                
+                await _unitOfWork.SaveChangesAsync();
+                
+                return Ok(new { success = true, message = $"Đã cập nhật {updatedCount} Purchase Orders", updatedCount });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating legacy status");
+                return StatusCode(500, new { success = false, message = "Lỗi khi cập nhật status" });
+            }
+        }
+
         [HttpPost("{id}/receive")]
         public async Task<IActionResult> ReceiveOrder(int id)
         {
@@ -195,7 +286,11 @@ namespace GarageManagementSystem.API.Controllers
                 if (order == null)
                     return NotFound(new { success = false, message = "Không tìm thấy đơn mua hàng" });
 
+                if (order.Status != "Sent")
+                    return BadRequest(new { success = false, message = "Chỉ có thể nhận hàng PO đã được gửi" });
+
                 order.Status = "Received";
+                order.ReceivedDate = DateTime.Now;
                 order.ActualDeliveryDate = DateTime.Now;
                 order.UpdatedAt = DateTime.Now;
 
@@ -229,6 +324,16 @@ namespace GarageManagementSystem.API.Controllers
                 return StatusCode(500, new { success = false, message = "Lỗi khi nhận hàng" });
             }
         }
+    }
+
+    /// <summary>
+    /// DTO để hủy Purchase Order
+    /// </summary>
+    public class CancelOrderDto
+    {
+        [Required(ErrorMessage = "Lý do hủy là bắt buộc")]
+        [StringLength(500, ErrorMessage = "Lý do hủy không được vượt quá 500 ký tự")]
+        public string Reason { get; set; } = string.Empty;
     }
 }
 

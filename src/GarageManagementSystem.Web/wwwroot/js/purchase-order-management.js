@@ -59,22 +59,48 @@ window.PurchaseOrderManagement = {
             {
                 data: null,
                 title: 'Thao Tác',
-                width: '16%',
+                width: '20%',
                 orderable: false,
                 searchable: false,
                 className: 'text-center',
                 render: function(data, type, row) {
-                    return `
-                        <button class="btn btn-info btn-sm view-purchase-order" data-ref="${row.orderNumber}">
+                    var buttons = '';
+                    
+                    // Always show view button
+                    buttons += `<button class="btn btn-info btn-sm view-purchase-order" data-ref="${row.orderNumber}" title="Xem chi tiết">
                             <i class="fas fa-eye"></i>
-                        </button>
-                        <button class="btn btn-primary btn-sm print-purchase-order" data-ref="${row.orderNumber}">
+                    </button> `;
+                    
+                    // Always show print button
+                    buttons += `<button class="btn btn-secondary btn-sm print-purchase-order" data-ref="${row.orderNumber}" title="In phiếu">
                             <i class="fas fa-print"></i>
-                        </button>
-                        <button class="btn btn-success btn-sm confirm-receipt" data-ref="${row.orderNumber}">
+                    </button> `;
+                    
+                    // Dynamic buttons based on status
+                    if (row.status === 'Draft') {
+                        buttons += `<button class="btn btn-primary btn-sm edit-po-btn" data-id="${row.id}" title="Chỉnh sửa">
+                            <i class="fas fa-edit"></i>
+                        </button> `;
+                        buttons += `<button class="btn btn-success btn-sm send-po-btn" data-id="${row.id}" title="Gửi PO">
+                            <i class="fas fa-paper-plane"></i>
+                        </button> `;
+                        buttons += `<button class="btn btn-danger btn-sm cancel-po-btn" data-id="${row.id}" title="Hủy PO">
+                            <i class="fas fa-ban"></i>
+                        </button>`;
+                    } else if (row.status === 'Sent') {
+                        buttons += `<button class="btn btn-warning btn-sm cancel-po-btn" data-id="${row.id}" title="Hủy PO">
+                            <i class="fas fa-ban"></i>
+                        </button> `;
+                        buttons += `<button class="btn btn-success btn-sm confirm-receipt" data-ref="${row.orderNumber}" title="Xác nhận nhập kho">
                             <i class="fas fa-check"></i>
-                        </button>
-                    `;
+                        </button>`;
+                    } else if (row.status === 'Received') {
+                        buttons += `<span class="badge badge-success">Đã nhận</span>`;
+                    } else if (row.status === 'Cancelled') {
+                        buttons += `<span class="badge badge-danger">Đã hủy</span>`;
+                    }
+                    
+                    return buttons;
                 }
             }
         ];
@@ -88,7 +114,7 @@ window.PurchaseOrderManagement = {
     // Bind events
     bindEvents: function() {
         var self = this;
-        
+
         // Guard clause to prevent duplicate event binding
         if (this.eventsBound) {
             return;
@@ -176,6 +202,24 @@ window.PurchaseOrderManagement = {
             if (self.currentReferenceNumber) {
                 self.showConfirmReceiptModal(self.currentReferenceNumber);
             }
+        });
+
+        // Send PO button
+        $(document).on('click', '.send-po-btn', function() {
+            var poId = $(this).data('id');
+            self.sendPurchaseOrder(poId);
+        });
+
+        // Cancel PO button
+        $(document).on('click', '.cancel-po-btn', function() {
+            var poId = $(this).data('id');
+            self.showCancelModal(poId);
+        });
+
+        // Edit PO button
+        $(document).on('click', '.edit-po-btn', function() {
+            var poId = $(this).data('id');
+            self.editPurchaseOrder(poId);
         });
         
         // Mark events as bound
@@ -605,7 +649,7 @@ window.PurchaseOrderManagement = {
             
             items.push({
                 PartId: parseInt(partId),
-                Quantity: quantity,
+                QuantityOrdered: quantity,
                 UnitPrice: unitPrice,
                 Notes: notes
             });
@@ -692,6 +736,129 @@ window.PurchaseOrderManagement = {
             title: 'Lỗi!',
             text: 'Vui lòng kiểm tra lại thông tin đã nhập',
             icon: 'error',
+            confirmButtonText: 'OK'
+        });
+    },
+
+    // Send Purchase Order
+    sendPurchaseOrder: function(poId) {
+        var self = this;
+        
+        Swal.fire({
+            title: 'Xác nhận gửi PO',
+            text: 'Bạn có chắc chắn muốn gửi PO này cho supplier?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Có, gửi',
+            cancelButtonText: 'Hủy'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: '/api/PurchaseOrders/' + poId + '/send',
+                    type: 'PUT',
+                    contentType: 'application/json',
+                    success: function(response) {
+                        if (response.success) {
+                            Swal.fire({
+                                title: 'Thành công!',
+                                text: response.message || 'Đã gửi PO thành công',
+                                icon: 'success',
+                                confirmButtonText: 'OK'
+                            }).then(() => {
+                                self.purchaseOrderTable.ajax.reload();
+                            });
+                        } else {
+                            Swal.fire({
+                                title: 'Lỗi!',
+                                text: response.message || 'Có lỗi xảy ra',
+                                icon: 'error',
+                                confirmButtonText: 'OK'
+                            });
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        Swal.fire({
+                            title: 'Lỗi!',
+                            text: 'Có lỗi xảy ra khi gửi PO: ' + error,
+                            icon: 'error',
+                            confirmButtonText: 'OK'
+                        });
+                    }
+                });
+            }
+        });
+    },
+
+    // Show Cancel Modal
+    showCancelModal: function(poId) {
+        var self = this;
+        
+        Swal.fire({
+            title: 'Hủy Purchase Order',
+            input: 'textarea',
+            inputLabel: 'Lý do hủy',
+            inputPlaceholder: 'Nhập lý do hủy PO...',
+            inputValidator: (value) => {
+                if (!value) {
+                    return 'Vui lòng nhập lý do hủy!';
+                }
+            },
+            showCancelButton: true,
+            confirmButtonText: 'Hủy PO',
+            cancelButtonText: 'Đóng',
+            confirmButtonColor: '#dc3545'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                self.cancelPurchaseOrder(poId, result.value);
+            }
+        });
+    },
+
+    // Cancel Purchase Order
+    cancelPurchaseOrder: function(poId, reason) {
+        var self = this;
+        
+        $.ajax({
+            url: '/api/PurchaseOrders/' + poId + '/cancel',
+            type: 'PUT',
+            contentType: 'application/json',
+            data: JSON.stringify({ Reason: reason }),
+            success: function(response) {
+                if (response.success) {
+                    Swal.fire({
+                        title: 'Thành công!',
+                        text: response.message || 'Đã hủy PO thành công',
+                        icon: 'success',
+                        confirmButtonText: 'OK'
+                    }).then(() => {
+                        self.purchaseOrderTable.ajax.reload();
+                    });
+                } else {
+                    Swal.fire({
+                        title: 'Lỗi!',
+                        text: response.message || 'Có lỗi xảy ra',
+                        icon: 'error',
+                        confirmButtonText: 'OK'
+                    });
+                }
+            },
+            error: function(xhr, status, error) {
+                Swal.fire({
+                    title: 'Lỗi!',
+                    text: 'Có lỗi xảy ra khi hủy PO: ' + error,
+                    icon: 'error',
+                    confirmButtonText: 'OK'
+                });
+            }
+        });
+    },
+
+    // Edit Purchase Order (placeholder - cần implement modal edit)
+    editPurchaseOrder: function(poId) {
+        Swal.fire({
+            title: 'Chức năng đang phát triển',
+            text: 'Chức năng chỉnh sửa PO sẽ được implement trong phiên bản tiếp theo',
+            icon: 'info',
             confirmButtonText: 'OK'
         });
     }

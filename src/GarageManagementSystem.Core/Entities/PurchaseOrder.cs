@@ -21,7 +21,7 @@ namespace GarageManagementSystem.Core.Entities
         public DateTime? ActualDeliveryDate { get; set; } // Ngày giao hàng thực tế
         
         [StringLength(20)]
-        public string Status { get; set; } = "Pending"; // "Pending", "Ordered", "PartiallyReceived", "Received", "Cancelled"
+        public string Status { get; set; } = "Draft"; // "Draft", "Sent", "Received", "Cancelled"
         
         [StringLength(50)]
         public string? SupplierOrderNumber { get; set; } // Số đơn hàng của nhà cung cấp
@@ -63,6 +63,18 @@ namespace GarageManagementSystem.Core.Entities
         public string? ApprovedBy { get; set; } // Người phê duyệt
         
         public DateTime? ApprovedDate { get; set; } // Ngày phê duyệt
+        
+        public DateTime? SentDate { get; set; } // Ngày gửi PO cho supplier
+        
+        public DateTime? ReceivedDate { get; set; } // Ngày nhận hàng
+        
+        public DateTime? CancelledDate { get; set; } // Ngày hủy PO
+        
+        [StringLength(500)]
+        public string? CancelReason { get; set; } // Lý do hủy PO
+        
+        [StringLength(100)]
+        public string? CancelledBy { get; set; } // Người hủy PO
         
         [StringLength(500)]
         public string? Notes { get; set; } // Ghi chú

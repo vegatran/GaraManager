@@ -98,7 +98,7 @@ namespace GarageManagementSystem.Core.Entities
         [StringLength(50)]
         public string? Color { get; set; } // "Đen", "Trắng", "Xám"
         
-        public int WarrantyMonths { get; set; } = 12; // Bảo hành (tháng)
+        public int WarrantyMonths { get; set; } = 0; // Bảo hành (tháng)
         
         [StringLength(100)]
         public string? WarrantyConditions { get; set; } // "Không bảo hành khi va chạm"

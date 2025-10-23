@@ -169,20 +169,8 @@ namespace GarageManagementSystem.API.Controllers
                 var part = await _unitOfWork.Parts.GetByIdAsync(id);
                 if (part == null) return NotFound(ApiResponse<PartDto>.ErrorResult("Part not found"));
 
-                part.PartNumber = dto.PartNumber;
-                part.PartName = dto.PartName;
-                part.Description = dto.Description;
-                part.Category = dto.Category;
-                part.Brand = dto.Brand;
-                part.CostPrice = dto.CostPrice;
-                part.SellPrice = dto.SellPrice;
-                part.QuantityInStock = dto.QuantityInStock;
-                part.MinimumStock = dto.MinimumStock;
-                part.ReorderLevel = dto.ReorderLevel;
-                part.Unit = dto.Unit;
-                part.CompatibleVehicles = dto.CompatibleVehicles;
-                part.Location = dto.Location;
-                part.IsActive = dto.IsActive;
+                // ✅ SỬA: Dùng AutoMapper thay vì map tay
+                _mapper.Map(dto, part);
 
                 // Bắt đầu transaction để đảm bảo tính toàn vẹn dữ liệu
                 await _unitOfWork.BeginTransactionAsync();

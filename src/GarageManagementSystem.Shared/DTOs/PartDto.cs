@@ -41,7 +41,7 @@ namespace GarageManagementSystem.Shared.DTOs
         public decimal? Weight { get; set; }
         public string? Material { get; set; }
         public string? Color { get; set; }
-        public int WarrantyMonths { get; set; } = 12;
+        public int WarrantyMonths { get; set; } = 0;
         public bool IsOEM { get; set; } = false;
     }
 
@@ -84,7 +84,7 @@ namespace GarageManagementSystem.Shared.DTOs
         public decimal? Weight { get; set; }
         [StringLength(50)] public string? Material { get; set; }
         [StringLength(50)] public string? Color { get; set; }
-        [Range(0, 120)] public int WarrantyMonths { get; set; } = 12;
+        [Range(0, 120)] public int WarrantyMonths { get; set; } = 0;
         public bool IsOEM { get; set; } = false;
     }
 

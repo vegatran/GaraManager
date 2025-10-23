@@ -1,3 +1,4 @@
+using AutoMapper;
 using GarageManagementSystem.Core.Interfaces;
 using GarageManagementSystem.Core.Extensions;
 using GarageManagementSystem.Shared.DTOs;
@@ -15,11 +16,13 @@ namespace GarageManagementSystem.API.Controllers
     public class SuppliersController : ControllerBase
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IMapper _mapper;
         private readonly ICacheService _cacheService;
 
-        public SuppliersController(IUnitOfWork unitOfWork, ICacheService cacheService)
+        public SuppliersController(IUnitOfWork unitOfWork, IMapper mapper, ICacheService cacheService)
         {
             _unitOfWork = unitOfWork;
+            _mapper = mapper;
             _cacheService = cacheService;
         }
 
@@ -207,18 +210,10 @@ namespace GarageManagementSystem.API.Controllers
                 var supplier = await _unitOfWork.Suppliers.GetByIdAsync(id);
                 if (supplier == null) return NotFound(ApiResponse<SupplierDto>.ErrorResult("Not found"));
 
-                supplier.SupplierCode = dto.SupplierCode;
-                supplier.SupplierName = dto.SupplierName;
-                supplier.Phone = dto.Phone;
-                supplier.Email = dto.Email;
-                supplier.Address = dto.Address;
-                supplier.ContactPerson = dto.ContactPerson;
-                supplier.ContactPhone = dto.ContactPhone;
-                supplier.TaxCode = dto.TaxCode;
-                supplier.BankAccount = dto.BankAccount;
-                supplier.BankName = dto.BankName;
-                supplier.Notes = dto.Notes;
-                supplier.IsActive = dto.IsActive;
+                // ✅ SỬA: Dùng AutoMapper thay vì map tay
+                _mapper.Map(dto, supplier);
+                
+                // ✅ GIỮ: Logic đặc biệt cho Rating
                 supplier.Rating = dto.Rating.HasValue ? (decimal)dto.Rating.Value : 5.0m;
 
                 // Bắt đầu transaction để đảm bảo tính toàn vẹn dữ liệu
