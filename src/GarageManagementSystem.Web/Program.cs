@@ -4,6 +4,7 @@ using GarageManagementSystem.Web.Middleware;
 using System.Security.Claims;
 using System.IdentityModel.Tokens.Jwt;
 using Microsoft.AspNetCore.Authentication;
+using AutoMapper;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,7 +16,12 @@ builder.WebHost.ConfigureKestrel(options =>
 });
 
 // Add services to the container.
-builder.Services.AddControllersWithViews();
+builder.Services.AddControllersWithViews()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+        options.JsonSerializerOptions.WriteIndented = true;
+    });
 
 // Add global authorization policy - require authentication for all endpoints by default
 builder.Services.AddAuthorization(options =>
@@ -151,6 +157,9 @@ builder.Services.AddHttpClient(ApiConfiguration.HttpClientName, client =>
 // Register ApiService
 builder.Services.AddScoped<GarageManagementSystem.Web.Services.ApiService>();
 builder.Services.AddHttpContextAccessor();
+
+// Add AutoMapper
+builder.Services.AddAutoMapper(typeof(Program).Assembly);
 
 // Remove direct database connections - Web App will call API instead
 

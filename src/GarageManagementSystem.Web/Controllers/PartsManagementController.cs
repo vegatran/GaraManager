@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using GarageManagementSystem.Web.Services;
 using GarageManagementSystem.Web.Configuration;
+using AutoMapper;
+using GarageManagementSystem.Web.Models;
 
 namespace GarageManagementSystem.Web.Controllers
 {
@@ -15,10 +17,12 @@ namespace GarageManagementSystem.Web.Controllers
     public class PartsManagementController : Controller
     {
         private readonly ApiService _apiService;
+        private readonly IMapper _mapper;
 
-        public PartsManagementController(ApiService apiService)
+        public PartsManagementController(ApiService apiService, IMapper mapper)
         {
             _apiService = apiService;
+            _mapper = mapper;
         }
 
         /// <summary>
@@ -103,45 +107,7 @@ namespace GarageManagementSystem.Web.Controllers
             
             if (response.Success && response.Data != null)
             {
-                var part = response.Data.Data;
-                var partData = new
-                {
-                    id = part.Id,
-                    partNumber = part.PartNumber,
-                    partName = part.PartName,
-                    description = part.Description ?? "N/A",
-                    category = part.Category ?? "N/A",
-                    brand = part.Brand ?? "N/A",
-                    costPrice = part.CostPrice, // ✅ THÊM costPrice
-                    sellPrice = part.SellPrice,
-                    quantityInStock = part.QuantityInStock,
-                    minimumStock = part.MinimumStock,
-                    reorderLevel = part.ReorderLevel ?? 0,
-                    unit = part.Unit ?? "N/A",
-                    location = part.Location ?? "N/A",
-                    isActive = part.IsActive,
-                    
-                    // ✅ THÊM: Classification fields
-                    sourceType = part.SourceType ?? "Purchased",
-                    invoiceType = part.InvoiceType ?? "WithInvoice",
-                    hasInvoice = part.HasInvoice,
-                    condition = part.Condition ?? "New",
-                    sourceReference = part.SourceReference ?? "",
-                    canUseForCompany = part.CanUseForCompany,
-                    canUseForInsurance = part.CanUseForInsurance,
-                    canUseForIndividual = part.CanUseForIndividual,
-                    warrantyMonths = part.WarrantyMonths,
-                    isOEM = part.IsOEM,
-                    
-                    // ✅ THÊM: Technical fields
-                    oemNumber = part.OEMNumber ?? "",
-                    aftermarketNumber = part.AftermarketNumber ?? "",
-                    manufacturer = part.Manufacturer ?? "",
-                    dimensions = part.Dimensions ?? "",
-                    weight = part.Weight?.ToString("F2") ?? "",
-                    material = part.Material ?? "",
-                    color = part.Color ?? ""
-                };
+                var partData = _mapper.Map<PartDetailsViewModel>(response.Data.Data);
                 
                 return Json(new ApiResponse { Data = partData, Success = true, StatusCode = System.Net.HttpStatusCode.OK });
             }

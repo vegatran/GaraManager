@@ -239,56 +239,39 @@ namespace GarageManagementSystem.Shared.DTOs
     /// </summary>
     public class UpdatePurchaseOrderDto
     {
-        [Required]
         public int Id { get; set; }
+        
+        [Required(ErrorMessage = "Nhà cung cấp là bắt buộc")]
+        public int SupplierId { get; set; }
+        
+        [Required(ErrorMessage = "Ngày đặt hàng là bắt buộc")]
+        public DateTime OrderDate { get; set; }
         
         public DateTime? ExpectedDeliveryDate { get; set; }
         
-        public DateTime? ActualDeliveryDate { get; set; }
-        
-        [StringLength(20)]
-        public string? Status { get; set; }
-        
-        [StringLength(50)]
-        public string? SupplierOrderNumber { get; set; }
-        
-        [StringLength(100)]
-        public string? ContactPerson { get; set; }
-        
-        [StringLength(20)]
-        public string? ContactPhone { get; set; }
-        
-        [StringLength(100)]
-        public string? ContactEmail { get; set; }
+        [StringLength(200)]
+        public string? PaymentTerms { get; set; }
         
         [StringLength(500)]
         public string? DeliveryAddress { get; set; }
         
-        [StringLength(50)]
-        public string? PaymentTerms { get; set; }
-        
-        [StringLength(100)]
-        public string? DeliveryTerms { get; set; }
-        
-        [StringLength(50)]
-        public string? Currency { get; set; }
-        
-        public decimal? SubTotal { get; set; }
-        
-        public decimal? TaxAmount { get; set; }
-        
-        public decimal? ShippingCost { get; set; }
-        
-        public decimal? TotalAmount { get; set; }
-        
-        [StringLength(100)]
-        public string? ApprovedBy { get; set; }
-        
-        public DateTime? ApprovedDate { get; set; }
+        [Range(0, 100, ErrorMessage = "Thuế VAT phải từ 0 đến 100%")]
+        public decimal VATRate { get; set; } = 0;
         
         [StringLength(500)]
         public string? Notes { get; set; }
         
-        public bool? IsApproved { get; set; }
+        [Required(ErrorMessage = "Danh sách phụ tùng là bắt buộc")]
+        public List<CreatePurchaseOrderItemDto> Items { get; set; } = new List<CreatePurchaseOrderItemDto>();
+    }
+
+    /// <summary>
+    /// DTO để hủy Purchase Order
+    /// </summary>
+    public class CancelOrderDto
+    {
+        [Required(ErrorMessage = "Lý do hủy là bắt buộc")]
+        [StringLength(500, ErrorMessage = "Lý do hủy không được vượt quá 500 ký tự")]
+        public string Reason { get; set; } = string.Empty;
     }
 }

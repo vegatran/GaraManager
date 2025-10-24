@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using GarageManagementSystem.Web.Services;
 using GarageManagementSystem.Web.Configuration;
+using AutoMapper;
+using GarageManagementSystem.Web.Models;
 
 namespace GarageManagementSystem.Web.Controllers
 {
@@ -15,10 +17,12 @@ namespace GarageManagementSystem.Web.Controllers
     public class PurchaseOrderController : Controller
     {
         private readonly ApiService _apiService;
+        private readonly IMapper _mapper;
 
-        public PurchaseOrderController(ApiService apiService)
+        public PurchaseOrderController(ApiService apiService, IMapper mapper)
         {
             _apiService = apiService;
+            _mapper = mapper;
         }
 
         /// <summary>
@@ -58,6 +62,85 @@ namespace GarageManagementSystem.Web.Controllers
             {
                 Console.WriteLine($"[PurchaseOrderController.Create] Exception: {ex.Message}");
                 return Json(new { success = false, error = "Có lỗi xảy ra khi tạo phiếu nhập hàng: " + ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Lấy thông tin chi tiết phiếu nhập hàng theo ID thông qua API
+        /// </summary>
+        [HttpGet("GetPurchaseOrderById/{id}")]
+        public async Task<IActionResult> GetPurchaseOrderById(int id)
+        {
+            try
+            {
+                var response = await _apiService.GetAsync<ApiResponse<PurchaseOrderDto>>(
+                    ApiEndpoints.PurchaseOrders.GetById.Replace("{0}", id.ToString())
+                );
+                
+                if (response.Success && response.Data != null)
+                {
+                    var purchaseOrderData = _mapper.Map<PurchaseOrderDetailsViewModel>(response.Data.Data);
+                    
+                    // Debug logging
+                    Console.WriteLine($"PurchaseOrder ID: {purchaseOrderData.Id}");
+                    Console.WriteLine($"OrderNumber: {purchaseOrderData.OrderNumber}");
+                    Console.WriteLine($"Items Count: {purchaseOrderData.Items?.Count ?? 0}");
+                    
+                    return Json(new { success = true, data = purchaseOrderData });
+                }
+                else
+                {
+                    Console.WriteLine($"API Response failed: Success={response.Success}, Data={response.Data}");
+                    return Json(new { success = false, error = "Phiếu nhập hàng không tồn tại" });
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Exception in GetPurchaseOrderById: {ex.Message}");
+                return Json(new { success = false, error = $"Lỗi: {ex.Message}" });
+            }
+        }
+
+        /// <summary>
+        /// Cập nhật phiếu nhập hàng thông qua API
+        /// </summary>
+        [HttpPut("Update")]
+        public async Task<IActionResult> Update([FromBody] UpdatePurchaseOrderDto dto)
+        {
+            try
+            {
+                var response = await _apiService.PutAsync<ApiResponse<PurchaseOrderDto>>(
+                    ApiEndpoints.PurchaseOrders.Update.Replace("{0}", dto.Id.ToString()),
+                    dto
+                );
+                
+                if (response.Success && response.Data != null)
+                {
+                    return Json(new ApiResponse { Data = response.Data.Data, Success = true, StatusCode = System.Net.HttpStatusCode.OK });
+                }
+                else
+                {
+                    // Build detailed error message
+                    var errorMessage = response.Message ?? "Có lỗi xảy ra khi cập nhật phiếu nhập hàng";
+                    
+                    // Add detailed errors if available
+                    if (response.Errors != null && response.Errors.Any())
+                    {
+                        errorMessage += "\n" + string.Join("\n", response.Errors);
+                    }
+                    
+                    // Add error message if available
+                    if (!string.IsNullOrEmpty(response.ErrorMessage))
+                    {
+                        errorMessage += "\n" + response.ErrorMessage;
+                    }
+                    
+                    return Json(new { success = false, error = errorMessage });
+                }
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, error = $"Lỗi: {ex.Message}" });
             }
         }
 
@@ -123,43 +206,22 @@ namespace GarageManagementSystem.Web.Controllers
         }
 
         /// <summary>
-        /// Lấy thông tin chi tiết phiếu nhập hàng theo ID thông qua API
+        /// Lấy thông tin chi tiết phiếu nhập hàng theo OrderNumber thông qua API
         /// </summary>
-        [HttpGet("GetPurchaseOrder/{id}")]
-        public async Task<IActionResult> GetPurchaseOrder(int id)
+        [HttpGet("GetPurchaseOrder/{orderNumber}")]
+        public async Task<IActionResult> GetPurchaseOrder(string orderNumber)
         {
             try
             {
                 var response = await _apiService.GetAsync<ApiResponse<PurchaseOrderDto>>(
-                    ApiEndpoints.Builder.WithId(ApiEndpoints.PurchaseOrders.GetById, id)
+                    ApiEndpoints.PurchaseOrders.GetByOrderNumber.Replace("{orderNumber}", orderNumber)
                 );
                 
                 if (response.Success && response.Data != null)
                 {
-                    var purchaseOrder = response.Data.Data;
-                    var purchaseOrderData = new
-                    {
-                        id = purchaseOrder.Id,
-                        orderNumber = purchaseOrder.OrderNumber,
-                        orderDate = purchaseOrder.OrderDate,
-                        supplierId = purchaseOrder.SupplierId,
-                        supplierName = purchaseOrder.SupplierName,
-                        totalAmount = purchaseOrder.TotalAmount,
-                        itemCount = purchaseOrder.ItemCount,
-                        status = purchaseOrder.Status,
-                        notes = purchaseOrder.Notes,
-                        items = purchaseOrder.Items?.Select(item => new
-                        {
-                            id = item.Id,
-                            partId = item.PartId,
-                            partName = item.PartName,
-                            quantity = item.QuantityOrdered,
-                            unitPrice = item.UnitPrice,
-                            totalPrice = item.TotalPrice
-                        }).ToList()
-                    };
+                    var purchaseOrderData = _mapper.Map<PurchaseOrderDetailsViewModel>(response.Data.Data);
                     
-                    return Json(new ApiResponse { Data = purchaseOrderData, Success = true, StatusCode = System.Net.HttpStatusCode.OK });
+                    return Json(new { success = true, data = purchaseOrderData });
                 }
                 else
                 {

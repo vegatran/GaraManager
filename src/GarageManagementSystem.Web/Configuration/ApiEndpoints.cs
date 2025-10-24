@@ -233,7 +233,8 @@ namespace GarageManagementSystem.Web.Configuration
         public static class PurchaseOrders
         {
             public const string GetAll = "purchaseorders";
-            public const string GetById = "purchaseorders/{0}";
+            public const string GetById = "purchaseorders/by-id/{0}";
+            public const string GetByOrderNumber = "purchaseorders/{orderNumber}";
             public const string Create = "purchaseorders";
             public const string Update = "purchaseorders/{0}";
             public const string Delete = "purchaseorders/{0}";

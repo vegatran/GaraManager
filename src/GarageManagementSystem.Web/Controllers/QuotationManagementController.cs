@@ -5,6 +5,7 @@ using GarageManagementSystem.Web.Services;
 using GarageManagementSystem.Web.Configuration;
 using GarageManagementSystem.Web.Models;
 using GarageManagementSystem.Shared.Models;
+using AutoMapper;
 
 namespace GarageManagementSystem.Web.Controllers
 {
@@ -16,10 +17,12 @@ namespace GarageManagementSystem.Web.Controllers
     public class QuotationManagementController : Controller
     {
         private readonly ApiService _apiService;
+        private readonly IMapper _mapper;
 
-        public QuotationManagementController(ApiService apiService)
+        public QuotationManagementController(ApiService apiService, IMapper mapper)
         {
             _apiService = apiService;
+            _mapper = mapper;
         }
 
         /// <summary>
@@ -844,7 +847,7 @@ namespace GarageManagementSystem.Web.Controllers
         {
             try
             {
-                var statusDto = new UpdateQuotationStatusDto { Status = status };
+                var statusDto = _mapper.Map<UpdateQuotationStatusDto>(new { Status = status });
                 
                 var response = await _apiService.PutAsync<ServiceQuotationDto>(
                     ApiEndpoints.Builder.WithId(ApiEndpoints.ServiceQuotations.UpdateStatus, quotationId),

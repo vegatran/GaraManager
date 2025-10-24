@@ -25,6 +25,10 @@ namespace GarageManagementSystem.Core.Entities
         [Required]
         public decimal TotalPrice { get; set; } // Tổng tiền = QuantityOrdered × UnitPrice
         
+        // ✅ VAT Information per item
+        public decimal VATRate { get; set; } = 10; // Thuế suất VAT (%) cho item này
+        public decimal VATAmount { get; set; } = 0; // Tiền thuế VAT cho item này
+        
         [StringLength(50)]
         public string? SupplierPartNumber { get; set; } // Mã phụ tùng của nhà cung cấp
         

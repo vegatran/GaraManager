@@ -255,7 +255,18 @@ window.DataTablesUtility = {
 
     // Render functions chung
     renderStatus: function(data, type, row) {
-        if (data === true || data === 'true' || 
+        // Purchase Order statuses
+        if (data === 'Draft') {
+            return '<span class="badge badge-secondary">Nháp</span>';
+        } else if (data === 'Sent') {
+            return '<span class="badge badge-info">Đã gửi</span>';
+        } else if (data === 'Received') {
+            return '<span class="badge badge-success">Đã nhận</span>';
+        } else if (data === 'Cancelled') {
+            return '<span class="badge badge-danger">Đã hủy</span>';
+        }
+        // Legacy statuses
+        else if (data === true || data === 'true' || 
             data === 'Active' || data === 'active' || 
             data === 'Đang Làm Việc' || data === 'Hoạt động') {
             return '<span class="badge badge-success">Hoạt động</span>';

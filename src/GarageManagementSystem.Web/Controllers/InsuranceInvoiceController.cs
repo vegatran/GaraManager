@@ -3,6 +3,7 @@ using GarageManagementSystem.Web.Services;
 using GarageManagementSystem.Web.Configuration;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using AutoMapper;
 
 namespace GarageManagementSystem.Web.Controllers
 {
@@ -14,10 +15,12 @@ namespace GarageManagementSystem.Web.Controllers
     public class InsuranceInvoiceController : Controller
     {
         private readonly ApiService _apiService;
+        private readonly IMapper _mapper;
 
-        public InsuranceInvoiceController(ApiService apiService)
+        public InsuranceInvoiceController(ApiService apiService, IMapper mapper)
         {
             _apiService = apiService;
+            _mapper = mapper;
         }
 
         /// <summary>
@@ -105,12 +108,11 @@ namespace GarageManagementSystem.Web.Controllers
                     ViewBag.ServiceOrderData = serviceOrderResponse.Data;
                 }
 
-                return View(new InsuranceInvoiceDto
-                {
-                    ServiceOrderId = serviceOrderId,
-                    AccidentDate = DateTime.Now,
-                    Items = new List<InsuranceInvoiceItemDto>()
-                });
+                return View(_mapper.Map<InsuranceInvoiceDto>(new { 
+                    ServiceOrderId = serviceOrderId, 
+                    AccidentDate = DateTime.Now, 
+                    Items = new List<InsuranceInvoiceItemDto>() 
+                }));
             }
             catch (Exception ex)
             {

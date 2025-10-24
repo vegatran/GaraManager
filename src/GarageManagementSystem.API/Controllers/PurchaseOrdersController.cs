@@ -120,10 +120,24 @@ namespace GarageManagementSystem.API.Controllers
                 
                 _logger.LogInformation($"Purchase Order {orderNumber} has {orderItems.Count} items");
                 
+                // Get all parts for the items
+                var partIds = orderItems.Select(i => i.PartId).Distinct().ToList();
+                var parts = await _unitOfWork.Repository<Part>().GetAllAsync();
+                var partsDict = parts.Where(p => partIds.Contains(p.Id)).ToDictionary(p => p.Id, p => p);
+                
                 var orderDto = _mapper.Map<PurchaseOrderDto>(order);
                 orderDto.SupplierName = supplier?.SupplierName ?? "N/A";
                 orderDto.ItemCount = orderItems.Count;
-                orderDto.Items = _mapper.Map<List<PurchaseOrderItemDto>>(orderItems);
+                orderDto.Items = orderItems.Select(item => new PurchaseOrderItemDto
+                {
+                    Id = item.Id,
+                    PartId = item.PartId,
+                    PartName = partsDict.ContainsKey(item.PartId) ? partsDict[item.PartId].PartName : null,
+                    QuantityOrdered = item.QuantityOrdered,
+                    UnitPrice = item.UnitPrice,
+                    TotalPrice = item.QuantityOrdered * item.UnitPrice,
+                    Notes = item.Notes
+                }).ToList();
                 
                 _logger.LogInformation($"Mapped {orderDto.Items.Count} items to DTO");
 
@@ -133,6 +147,67 @@ namespace GarageManagementSystem.API.Controllers
             {
                 _logger.LogError(ex, "Error getting purchase order by order number: {OrderNumber}", orderNumber);
                 return StatusCode(500, ApiResponse<PurchaseOrderDto>.ErrorResult("Lỗi khi lấy thông tin đơn mua hàng", ex.Message));
+            }
+        }
+
+        [HttpGet("by-id/{id}")]
+        public async Task<ActionResult<ApiResponse<PurchaseOrderDto>>> GetById(int id)
+        {
+            try
+            {
+                var order = await _unitOfWork.Repository<PurchaseOrder>().GetByIdAsync(id);
+                
+                if (order == null)
+                    return NotFound(ApiResponse<PurchaseOrderDto>.ErrorResult("Không tìm thấy đơn mua hàng"));
+
+                // Get supplier information
+                var supplier = await _unitOfWork.Repository<Supplier>().GetByIdAsync(order.SupplierId);
+                
+                // Get purchase order items
+                var items = await _unitOfWork.Repository<PurchaseOrderItem>().GetAllAsync();
+                var orderItems = items.Where(i => i.PurchaseOrderId == order.Id).ToList();
+
+                // Get all parts for the items
+                var partIds = orderItems.Select(i => i.PartId).Distinct().ToList();
+                var parts = await _unitOfWork.Repository<Part>().GetAllAsync();
+                var partsDict = parts.Where(p => partIds.Contains(p.Id)).ToDictionary(p => p.Id, p => p);
+
+                // Map to DTO
+                var orderDto = new PurchaseOrderDto
+                {
+                    Id = order.Id,
+                    OrderNumber = order.OrderNumber,
+                    OrderDate = order.OrderDate,
+                    SupplierId = order.SupplierId,
+                    SupplierName = supplier?.SupplierName ?? "N/A",
+                    TotalAmount = order.TotalAmount,
+                    ItemCount = orderItems.Count,
+                    Status = order.Status,
+                    Notes = order.Notes,
+                    ExpectedDeliveryDate = order.ExpectedDeliveryDate,
+                    PaymentTerms = order.PaymentTerms,
+                    DeliveryAddress = order.DeliveryAddress,
+                    VATRate = order.VATRate,
+                    Items = orderItems.Select(item => new PurchaseOrderItemDto
+                    {
+                        Id = item.Id,
+                        PartId = item.PartId,
+                        PartName = partsDict.ContainsKey(item.PartId) ? partsDict[item.PartId].PartName : null,
+                        QuantityOrdered = item.QuantityOrdered,
+                        UnitPrice = item.UnitPrice,
+                        TotalPrice = item.QuantityOrdered * item.UnitPrice,
+                        Notes = item.Notes
+                    }).ToList()
+                };
+                
+                _logger.LogInformation($"Purchase Order {order.OrderNumber} - Items: {orderDto.Items.Count}, First item QuantityOrdered: {orderDto.Items.FirstOrDefault()?.QuantityOrdered}");
+
+                return Ok(ApiResponse<PurchaseOrderDto>.SuccessResult(orderDto));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting purchase order by ID");
+                return StatusCode(500, ApiResponse<PurchaseOrderDto>.ErrorResult("Lỗi khi lấy thông tin đơn mua hàng"));
             }
         }
 
@@ -162,33 +237,6 @@ namespace GarageManagementSystem.API.Controllers
             }
         }
 
-        [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, [FromBody] PurchaseOrder order)
-        {
-            try
-            {
-                var existing = await _unitOfWork.Repository<PurchaseOrder>().GetByIdAsync(id);
-                if (existing == null)
-                    return NotFound(new { success = false, message = "Không tìm thấy đơn mua hàng" });
-
-                existing.ExpectedDeliveryDate = order.ExpectedDeliveryDate;
-                existing.ActualDeliveryDate = order.ActualDeliveryDate;
-                existing.Status = order.Status;
-                existing.Notes = order.Notes;
-                existing.UpdatedAt = DateTime.Now;
-
-                await _unitOfWork.Repository<PurchaseOrder>().UpdateAsync(existing);
-                await _unitOfWork.SaveChangesAsync();
-
-                return Ok(new { success = true, data = existing, message = "Cập nhật thành công" });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error updating purchase order");
-                return StatusCode(500, new { success = false, message = "Lỗi khi cập nhật" });
-            }
-        }
-
         [HttpPut("{id}/send")]
         public async Task<IActionResult> SendOrder(int id)
         {
@@ -214,6 +262,130 @@ namespace GarageManagementSystem.API.Controllers
             {
                 _logger.LogError(ex, "Error sending purchase order");
                 return StatusCode(500, new { success = false, message = "Lỗi khi gửi PO" });
+            }
+        }
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdatePurchaseOrder(int id, [FromBody] UpdatePurchaseOrderDto dto)
+        {
+            try
+            {
+                _logger.LogInformation($"UpdatePurchaseOrder called with ID: {id}");
+                
+                if (dto == null)
+                {
+                    _logger.LogWarning("UpdatePurchaseOrderDto is null");
+                    return BadRequest(new { success = false, message = "Dữ liệu không hợp lệ" });
+                }
+                
+                _logger.LogInformation($"UpdatePurchaseOrderDto - SupplierId: {dto.SupplierId}, Items Count: {dto.Items?.Count ?? 0}");
+                
+                var order = await _unitOfWork.Repository<PurchaseOrder>().GetByIdAsync(id);
+                if (order == null)
+                {
+                    _logger.LogWarning($"Purchase order with ID {id} not found");
+                    return NotFound(new { success = false, message = "Không tìm thấy đơn mua hàng" });
+                }
+
+                if (order.Status != "Draft")
+                {
+                    _logger.LogWarning($"Purchase order {id} is not in Draft status. Current status: {order.Status}");
+                    return BadRequest(new { success = false, message = "Chỉ có thể chỉnh sửa PO ở trạng thái Draft" });
+                }
+
+                // Update order properties
+                order.SupplierId = dto.SupplierId;
+                order.OrderDate = dto.OrderDate;
+                order.ExpectedDeliveryDate = dto.ExpectedDeliveryDate;
+                order.PaymentTerms = dto.PaymentTerms;
+                order.DeliveryAddress = dto.DeliveryAddress;
+                order.VATRate = dto.VATRate;
+                order.Notes = dto.Notes;
+                order.UpdatedAt = DateTime.Now;
+
+                // Remove existing items
+                var existingItems = await _unitOfWork.Repository<PurchaseOrderItem>()
+                    .GetAllAsync();
+                
+                var itemsToDelete = existingItems.Where(x => x.PurchaseOrderId == id).ToList();
+                
+                foreach (var item in itemsToDelete)
+                {
+                    await _unitOfWork.Repository<PurchaseOrderItem>().DeleteAsync(item);
+                }
+
+                // Add new items
+                decimal totalAmount = 0;
+                foreach (var itemDto in dto.Items)
+                {
+                    var item = new PurchaseOrderItem
+                    {
+                        PurchaseOrderId = id,
+                        PartId = itemDto.PartId,
+                        QuantityOrdered = itemDto.QuantityOrdered,
+                        UnitPrice = itemDto.UnitPrice,
+                        Notes = itemDto.Notes,
+                        CreatedAt = DateTime.Now,
+                        UpdatedAt = DateTime.Now
+                    };
+                    
+                    await _unitOfWork.Repository<PurchaseOrderItem>().AddAsync(item);
+                    totalAmount += itemDto.QuantityOrdered * itemDto.UnitPrice;
+                }
+
+                // Update total amount
+                order.TotalAmount = totalAmount;
+                // Note: ItemCount is calculated property, no need to set it
+
+                await _unitOfWork.Repository<PurchaseOrder>().UpdateAsync(order);
+                await _unitOfWork.SaveChangesAsync();
+
+                // Get supplier information
+                var supplier = await _unitOfWork.Repository<Supplier>().GetByIdAsync(order.SupplierId);
+                
+                // Get updated items
+                var items = await _unitOfWork.Repository<PurchaseOrderItem>().GetAllAsync();
+                var orderItems = items.Where(i => i.PurchaseOrderId == order.Id).ToList();
+                
+                // Get all parts for the items
+                var partIds = orderItems.Select(i => i.PartId).Distinct().ToList();
+                var parts = await _unitOfWork.Repository<Part>().GetAllAsync();
+                var partsDict = parts.Where(p => partIds.Contains(p.Id)).ToDictionary(p => p.Id, p => p);
+
+                // Return DTO instead of entity to avoid circular references
+                var responseDto = new PurchaseOrderDto
+                {
+                    Id = order.Id,
+                    OrderNumber = order.OrderNumber,
+                    OrderDate = order.OrderDate,
+                    SupplierId = order.SupplierId,
+                    SupplierName = supplier?.SupplierName ?? "N/A",
+                    TotalAmount = order.TotalAmount,
+                    ItemCount = orderItems.Count,
+                    Status = order.Status,
+                    Notes = order.Notes,
+                    ExpectedDeliveryDate = order.ExpectedDeliveryDate,
+                    PaymentTerms = order.PaymentTerms,
+                    DeliveryAddress = order.DeliveryAddress,
+                    VATRate = order.VATRate,
+                    Items = orderItems.Select(item => new PurchaseOrderItemDto
+                    {
+                        Id = item.Id,
+                        PartId = item.PartId,
+                        PartName = partsDict.ContainsKey(item.PartId) ? partsDict[item.PartId].PartName : null,
+                        QuantityOrdered = item.QuantityOrdered,
+                        UnitPrice = item.UnitPrice,
+                        TotalPrice = item.QuantityOrdered * item.UnitPrice,
+                        Notes = item.Notes
+                    }).ToList()
+                };
+
+                return Ok(new { success = true, data = responseDto, message = "Đã cập nhật PO thành công" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating purchase order");
+                return StatusCode(500, new { success = false, message = $"Lỗi khi cập nhật PO: {ex.Message}", error = ex.Message });
             }
         }
 

@@ -13,6 +13,27 @@ window.PurchaseOrderManagement = {
     itemCounter: 0, // Counter for dynamic item rows
     allParts: [], // Cache all parts for dropdown
 
+    // Helper function to parse error message from API response
+    parseErrorMessage: function(xhr) {
+        var errorMessage = 'Có lỗi xảy ra';
+        try {
+            var errorResponse = JSON.parse(xhr.responseText);
+            if (errorResponse.error) {
+                errorMessage = errorResponse.error;
+            } else if (errorResponse.message) {
+                errorMessage = errorResponse.message;
+            } else if (errorResponse.details) {
+                errorMessage = errorResponse.details;
+            }
+        } catch (e) {
+            // If parsing fails, use the raw response text
+            if (xhr.responseText) {
+                errorMessage = xhr.responseText;
+            }
+        }
+        return errorMessage;
+    },
+
     // Initialize module
     init: function() {
         // Guard clause to prevent duplicate initialization
@@ -138,7 +159,7 @@ window.PurchaseOrderManagement = {
             if ($('#purchaseOrderItemsBody tr').length === 0) {
                 $('#purchaseOrderItemsBody').html(`
                     <tr>
-                        <td colspan="7" class="text-center text-muted">
+                        <td colspan="8" class="text-center text-muted">
                             <i class="fas fa-info-circle"></i> Chưa có phụ tùng nào. Nhấn "Thêm Phụ Tùng" để bắt đầu.
                         </td>
                     </tr>
@@ -155,7 +176,12 @@ window.PurchaseOrderManagement = {
             self.updateTotalAmount();
         });
         
-        // Update total when VAT rate changes
+        // Update total when VAT rate changes (for individual items)
+        $(document).on('change', '.item-vat-rate', function() {
+            self.updateTotalAmount();
+        });
+        
+        // Update total when VAT rate changes (for PO level)
         $(document).on('change', '#createVATRate', function() {
             self.updateTotalAmount();
         });
@@ -221,6 +247,38 @@ window.PurchaseOrderManagement = {
             var poId = $(this).data('id');
             self.editPurchaseOrder(poId);
         });
+
+        // Edit Purchase Order form submit
+        $(document).on('submit', '#editPurchaseOrderForm', function(e) {
+            e.preventDefault();
+            self.updatePurchaseOrder();
+        });
+
+        // Add edit purchase order item button
+        $(document).on('click', '#addEditPurchaseOrderItemBtn', function() {
+            self.addEditPurchaseOrderItem();
+        });
+
+        // Remove item button for edit modal
+        $(document).on('click', '.remove-item-btn', function() {
+            $(this).closest('tr').remove();
+            self.updateEditTotalAmount();
+        });
+
+        // Quantity and unit price change for edit modal
+        $(document).on('input', '#editPurchaseOrderItemsBody .item-quantity, #editPurchaseOrderItemsBody .item-unit-price', function() {
+            self.updateEditTotalAmount();
+        });
+
+        // VAT rate change for edit modal (individual items)
+        $(document).on('change', '#editPurchaseOrderItemsBody .item-vat-rate', function() {
+            self.updateEditTotalAmount();
+        });
+
+        // VAT rate change for edit modal (PO level)
+        $(document).on('change', '#editVATRate', function() {
+            self.updateEditTotalAmount();
+        });
         
         // Mark events as bound
         this.eventsBound = true;
@@ -242,8 +300,8 @@ window.PurchaseOrderManagement = {
                             <div class="col-md-6">
                                 <h5><strong>Thông Tin Phiếu Nhập</strong></h5>
                                 <table class="table table-sm">
-                                    <tr><td><strong>Số phiếu:</strong></td><td>${data.referenceNumber}</td></tr>
-                                    <tr><td><strong>Ngày tạo:</strong></td><td>${new Date(data.transactionDate).toLocaleDateString('vi-VN')}</td></tr>
+                                    <tr><td><strong>Số phiếu:</strong></td><td>${data.orderNumber}</td></tr>
+                                    <tr><td><strong>Ngày tạo:</strong></td><td>${new Date(data.orderDate).toLocaleDateString('vi-VN')}</td></tr>
                                     <tr><td><strong>Nhà cung cấp:</strong></td><td>${data.supplierName}</td></tr>
                                     <tr><td><strong>Số loại:</strong></td><td>${data.itemCount}</td></tr>
                                     <tr><td><strong>Tổng tiền:</strong></td><td>${(data.totalAmount || 0).toLocaleString('vi-VN')} VNĐ</td></tr>
@@ -258,6 +316,7 @@ window.PurchaseOrderManagement = {
                                                 <th>Phụ Tùng</th>
                                                 <th>Số Lượng</th>
                                                 <th>Đơn Giá</th>
+                                                <th>VAT (%)</th>
                                                 <th>Thành Tiền</th>
                                             </tr>
                                         </thead>
@@ -265,12 +324,15 @@ window.PurchaseOrderManagement = {
                     `;
                     
                     data.items.forEach(function(item) {
+                        var subtotal = item.totalPrice || ((item.quantity || 0) * (item.unitPrice || 0));
+                        var vatRate = item.vatRate || 0;
                         html += `
                             <tr>
                                 <td>${item.partName || 'N/A'}</td>
                                 <td class="text-center">${item.quantity || 0}</td>
                                 <td class="text-right">${(item.unitPrice || 0).toLocaleString('vi-VN')} VNĐ</td>
-                                <td class="text-right">${(item.totalAmount || 0).toLocaleString('vi-VN')} VNĐ</td>
+                                <td class="text-center">${vatRate}%</td>
+                                <td class="text-right">${subtotal.toLocaleString('vi-VN')} VNĐ</td>
                             </tr>
                         `;
                     });
@@ -442,11 +504,27 @@ window.PurchaseOrderManagement = {
             type: 'GET',
             success: function(response) {
                 if (response.success && response.data) {
-                    var $select = $('#createSupplierId');
+                    // Populate create modal dropdown
+                    self.populateSupplierDropdown('#createSupplierId');
+                }
+            }
+        });
+    },
+
+    // Populate supplier dropdown
+    populateSupplierDropdown: function(selector, selectedValue) {
+        var self = this;
+        $.ajax({
+            url: '/SupplierManagement/GetSuppliers?pageNumber=1&pageSize=1000',
+            type: 'GET',
+            success: function(response) {
+                if (response.success && response.data) {
+                    var $select = $(selector);
                     $select.empty().append('<option value="">-- Chọn Nhà Cung Cấp --</option>');
                     
                     response.data.forEach(function(supplier) {
-                        $select.append(`<option value="${supplier.id}">${supplier.supplierName}</option>`);
+                        var isSelected = selectedValue && supplier.id == selectedValue ? 'selected' : '';
+                        $select.append(`<option value="${supplier.id}" ${isSelected}>${supplier.supplierName}</option>`);
                     });
                 }
             }
@@ -498,6 +576,189 @@ window.PurchaseOrderManagement = {
         });
     },
 
+    // Edit Purchase Order
+    editPurchaseOrder: function(poId) {
+        var self = this;
+        
+        $.ajax({
+            url: '/PurchaseOrder/GetPurchaseOrderById/' + poId,
+            type: 'GET',
+            success: function(response) {
+                if (response.success && response.data) {
+                    var data = response.data;
+                    
+                    // Populate form fields
+                    $('#editPurchaseOrderId').val(data.id);
+                    
+                    // Format dates for HTML input type="date"
+                    var orderDate = data.orderDate ? data.orderDate.split('T')[0] : '';
+                    var expectedDeliveryDate = data.expectedDeliveryDate ? data.expectedDeliveryDate.split('T')[0] : '';
+                    
+                    $('#editOrderDate').val(orderDate);
+                    $('#editExpectedDeliveryDate').val(expectedDeliveryDate);
+                    $('#editPaymentTerms').val(data.paymentTerms || '');
+                    $('#editVATRate').val(data.vatRate || 0);
+                    $('#editDeliveryAddress').val(data.deliveryAddress || '');
+                    $('#editNotes').val(data.notes || '');
+                    
+                    // Populate supplier dropdown and set value
+                    self.populateSupplierDropdown('#editSupplierId', data.supplierId);
+                    
+                    // Clear existing items
+                    $('#editPurchaseOrderItemsBody').empty();
+                    
+                    // Add items
+                    if (data.items && data.items.length > 0) {
+                        data.items.forEach(function(item, index) {
+                            self.addEditPurchaseOrderItemWithData(item, index + 1);
+                        });
+                    } else {
+                        $('#editPurchaseOrderItemsBody').html(`
+                            <tr>
+                                <td colspan="8" class="text-center text-muted">
+                                    <i class="fas fa-info-circle"></i> Chưa có phụ tùng nào. Nhấn "Thêm Phụ Tùng" để bắt đầu.
+                                </td>
+                            </tr>
+                        `);
+                    }
+                    
+                    // Update VAT rate display and totals
+                    $('#editVatRateDisplay').text(data.vatRate || 0);
+                    self.updateEditTotalAmount();
+                    
+                    $('#editPurchaseOrderModal').modal('show');
+                } else {
+                    Swal.fire({
+                        title: 'Lỗi!',
+                        text: 'Không thể tải thông tin phiếu nhập hàng',
+                        icon: 'error',
+                        confirmButtonText: 'OK'
+                    });
+                }
+            },
+            error: function(xhr, status, error) {
+                Swal.fire({
+                    title: 'Lỗi!',
+                    text: 'Có lỗi xảy ra khi tải thông tin phiếu nhập hàng',
+                    icon: 'error',
+                    confirmButtonText: 'OK'
+                });
+            }
+        });
+    },
+
+    // Update Purchase Order
+    updatePurchaseOrder: function() {
+        var self = this;
+        
+        // Validate items
+        var itemRows = $('#editPurchaseOrderItemsBody tr').filter(function() {
+            return !$(this).find('td').attr('colspan');
+        });
+        
+        if (itemRows.length === 0) {
+            Swal.fire({
+                title: 'Cảnh báo!',
+                text: 'Vui lòng thêm ít nhất một phụ tùng',
+                icon: 'warning',
+                confirmButtonText: 'OK'
+            });
+            return;
+        }
+        
+        // Collect items
+        var items = [];
+        var isValid = true;
+        
+        itemRows.each(function() {
+            var partId = $(this).find('.part-id-input').val();
+            var quantity = parseFloat($(this).find('.item-quantity').val());
+            var unitPrice = parseFloat($(this).find('.item-unit-price').val());
+            var vatRate = parseFloat($(this).find('.item-vat-rate').val()) || 0;
+            var notes = $(this).find('.item-notes').val();
+            
+            if (!partId || !quantity || !unitPrice) {
+                isValid = false;
+                return false;
+            }
+            
+            var itemSubtotal = quantity * unitPrice;
+            var vatAmount = itemSubtotal * (vatRate / 100);
+            
+            items.push({
+                PartId: parseInt(partId),
+                QuantityOrdered: quantity,
+                UnitPrice: unitPrice,
+                VATRate: vatRate,
+                VATAmount: vatAmount,
+                Notes: notes
+            });
+        });
+        
+        if (!isValid) {
+            Swal.fire({
+                title: 'Cảnh báo!',
+                text: 'Vui lòng điền đầy đủ thông tin cho tất cả phụ tùng',
+                icon: 'warning',
+                confirmButtonText: 'OK'
+            });
+            return;
+        }
+        
+        var formData = {
+            Id: parseInt($('#editPurchaseOrderId').val()),
+            SupplierId: parseInt($('#editSupplierId').val()),
+            OrderDate: $('#editOrderDate').val(),
+            ExpectedDeliveryDate: $('#editExpectedDeliveryDate').val() || null,
+            PaymentTerms: $('#editPaymentTerms').val(),
+            DeliveryAddress: $('#editDeliveryAddress').val(),
+            VATRate: parseFloat($('#editVATRate').val()) || 0,
+            Notes: $('#editNotes').val(),
+            Items: items
+        };
+        
+        console.log('Updating Purchase Order:', formData);
+        
+        $.ajax({
+            url: '/PurchaseOrder/Update',
+            type: 'PUT',
+            contentType: 'application/json',
+            data: JSON.stringify(formData),
+            success: function(response) {
+                if (response.success) {
+                    Swal.fire({
+                        title: 'Thành công!',
+                        text: response.message || 'Đã cập nhật phiếu nhập hàng thành công',
+                        icon: 'success',
+                        confirmButtonText: 'OK'
+                    }).then(() => {
+                        $('#editPurchaseOrderModal').modal('hide');
+                        self.purchaseOrderTable.ajax.reload();
+                    });
+                } else {
+                    Swal.fire({
+                        title: 'Lỗi!',
+                        text: response.error || 'Có lỗi xảy ra khi cập nhật phiếu nhập hàng',
+                        icon: 'error',
+                        confirmButtonText: 'OK'
+                    });
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Update PO Error:', xhr.responseText);
+                
+                var errorMessage = self.parseErrorMessage(xhr);
+                
+                Swal.fire({
+                    title: 'Lỗi!',
+                    text: errorMessage,
+                    icon: 'error',
+                    confirmButtonText: 'OK'
+                });
+            }
+        });
+    },
+
     // Add purchase order item row
     addPurchaseOrderItem: function() {
         var self = this;
@@ -516,6 +777,13 @@ window.PurchaseOrderManagement = {
                 <td>
                     <input type="number" class="form-control form-control-sm item-unit-price" min="0" step="0.01" required>
                 </td>
+                <td>
+                    <select class="form-control form-control-sm item-vat-rate">
+                        <option value="0">0%</option>
+                        <option value="8">8%</option>
+                        <option value="10" selected>10%</option>
+                    </select>
+                </td>
                 <td class="text-right item-subtotal">0 VNĐ</td>
                 <td>
                     <input type="text" class="form-control form-control-sm item-notes" placeholder="Ghi chú...">
@@ -529,7 +797,7 @@ window.PurchaseOrderManagement = {
         `;
         
         // Remove empty message if exists
-        if ($('#purchaseOrderItemsBody tr td').length === 1) {
+        if ($('#purchaseOrderItemsBody tr').length === 1 && $('#purchaseOrderItemsBody tr td').attr('colspan')) {
             $('#purchaseOrderItemsBody').empty();
         }
         
@@ -537,6 +805,132 @@ window.PurchaseOrderManagement = {
         
         // Initialize typeahead for the new part input
         self.initializePartTypeahead($('#purchaseOrderItemsBody .part-typeahead').last());
+    },
+
+    // Add edit purchase order item row
+    addEditPurchaseOrderItem: function() {
+        var self = this;
+        self.itemCounter++;
+        
+        var row = `
+            <tr data-item-id="${self.itemCounter}">
+                <td class="text-center">${self.itemCounter}</td>
+                <td>
+                    <input type="text" class="form-control form-control-sm part-typeahead" placeholder="Tìm kiếm phụ tùng..." required>
+                    <input type="hidden" class="part-id-input" value="">
+                </td>
+                <td>
+                    <input type="number" class="form-control form-control-sm item-quantity" min="1" value="1" required>
+                </td>
+                <td>
+                    <input type="number" class="form-control form-control-sm item-unit-price" min="0" step="0.01" required>
+                </td>
+                <td>
+                    <select class="form-control form-control-sm item-vat-rate">
+                        <option value="0">0%</option>
+                        <option value="8">8%</option>
+                        <option value="10" selected>10%</option>
+                    </select>
+                </td>
+                <td class="text-right item-subtotal">0 VNĐ</td>
+                <td>
+                    <input type="text" class="form-control form-control-sm item-notes" placeholder="Ghi chú...">
+                </td>
+                <td class="text-center">
+                    <button type="button" class="btn btn-danger btn-sm remove-item-btn">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+        
+        // Remove empty message if exists
+        if ($('#editPurchaseOrderItemsBody tr').length === 1 && $('#editPurchaseOrderItemsBody tr td').attr('colspan')) {
+            $('#editPurchaseOrderItemsBody').empty();
+        }
+        
+        $('#editPurchaseOrderItemsBody').append(row);
+        
+        // Initialize typeahead for the new part input
+        self.initializePartTypeahead($('#editPurchaseOrderItemsBody .part-typeahead').last());
+    },
+
+    // Add edit purchase order item with data
+    addEditPurchaseOrderItemWithData: function(item, index) {
+        var self = this;
+        
+        var row = `
+            <tr data-item-id="${index}">
+                <td class="text-center">${index}</td>
+                <td>
+                    <input type="text" class="form-control form-control-sm part-typeahead" placeholder="Tìm kiếm phụ tùng..." required value="${item.partName || ''}">
+                    <input type="hidden" class="part-id-input" value="${item.partId || ''}">
+                </td>
+                <td>
+                    <input type="number" class="form-control form-control-sm item-quantity" min="1" value="${item.quantity || 1}" required>
+                </td>
+                <td>
+                    <input type="number" class="form-control form-control-sm item-unit-price" min="0" step="0.01" value="${item.unitPrice || 0}" required>
+                </td>
+                <td>
+                    <select class="form-control form-control-sm item-vat-rate">
+                        <option value="0" ${(item.vatRate || 0) === 0 ? 'selected' : ''}>0%</option>
+                        <option value="8" ${(item.vatRate || 0) === 8 ? 'selected' : ''}>8%</option>
+                        <option value="10" ${(item.vatRate || 0) === 10 ? 'selected' : ''}>10%</option>
+                    </select>
+                </td>
+                <td class="text-right item-subtotal">${(item.unitPrice * item.quantity || 0).toLocaleString('vi-VN')} VNĐ</td>
+                <td>
+                    <input type="text" class="form-control form-control-sm item-notes" placeholder="Ghi chú..." value="${item.notes || ''}">
+                </td>
+                <td class="text-center">
+                    <button type="button" class="btn btn-danger btn-sm remove-item-btn">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+        
+        // Remove empty message if exists
+        if ($('#editPurchaseOrderItemsBody tr').length === 1 && $('#editPurchaseOrderItemsBody tr td').attr('colspan')) {
+            $('#editPurchaseOrderItemsBody').empty();
+        }
+        
+        $('#editPurchaseOrderItemsBody').append(row);
+        
+        // Initialize typeahead for the new part input
+        self.initializePartTypeahead($('#editPurchaseOrderItemsBody .part-typeahead').last());
+    },
+
+    // Calculate and update edit total amount with VAT
+    updateEditTotalAmount: function() {
+        var subtotal = 0;
+        var totalVatAmount = 0;
+        
+        // Calculate subtotal and VAT for each item
+        $('#editPurchaseOrderItemsBody tr').each(function() {
+            if (!$(this).find('td').attr('colspan')) {
+                var quantity = parseFloat($(this).find('.item-quantity').val()) || 0;
+                var unitPrice = parseFloat($(this).find('.item-unit-price').val()) || 0;
+                var vatRate = parseFloat($(this).find('.item-vat-rate').val()) || 0;
+                
+                var itemSubtotal = quantity * unitPrice;
+                var itemVatAmount = itemSubtotal * (vatRate / 100);
+                
+                subtotal += itemSubtotal;
+                totalVatAmount += itemVatAmount;
+                
+                // Update item subtotal display
+                $(this).find('.item-subtotal').text(itemSubtotal.toLocaleString('vi-VN') + ' VNĐ');
+            }
+        });
+        
+        var totalAmount = subtotal + totalVatAmount;
+        
+        // Update display
+        $('#editSubTotalAmount').text(subtotal.toLocaleString('vi-VN') + ' VNĐ');
+        $('#editVatAmount').text(totalVatAmount.toLocaleString('vi-VN') + ' VNĐ');
+        $('#editTotalAmount').text(totalAmount.toLocaleString('vi-VN') + ' VNĐ');
     },
 
     // Initialize part typeahead
@@ -581,8 +975,12 @@ window.PurchaseOrderManagement = {
                 // Auto-fill cost price
                 row.find('.item-unit-price').val(item.costPrice || 0);
                 
-                // Update subtotal
-                self.updateTotalAmount();
+                // Update subtotal - check which modal we're in
+                if (row.closest('#editPurchaseOrderItemsBody').length > 0) {
+                    self.updateEditTotalAmount();
+                } else {
+                    self.updateTotalAmount();
+                }
                 
                 // Set input value
                 input.val(item.name);
@@ -594,27 +992,32 @@ window.PurchaseOrderManagement = {
     // Calculate and update total amount with VAT
     updateTotalAmount: function() {
         var subtotal = 0;
-        var vatRate = parseFloat($('#createVATRate').val()) || 0;
+        var totalVatAmount = 0;
         
-        // Calculate subtotal
+        // Calculate subtotal and VAT for each item
         $('#purchaseOrderItemsBody tr').each(function() {
-            var quantity = parseFloat($(this).find('.item-quantity').val()) || 0;
-            var unitPrice = parseFloat($(this).find('.item-unit-price').val()) || 0;
-            var itemSubtotal = quantity * unitPrice;
-            
-            $(this).find('.item-subtotal').text(itemSubtotal.toLocaleString('vi-VN') + ' VNĐ');
-            subtotal += itemSubtotal;
+            if (!$(this).find('td').attr('colspan')) {
+                var quantity = parseFloat($(this).find('.item-quantity').val()) || 0;
+                var unitPrice = parseFloat($(this).find('.item-unit-price').val()) || 0;
+                var vatRate = parseFloat($(this).find('.item-vat-rate').val()) || 0;
+                
+                var itemSubtotal = quantity * unitPrice;
+                var itemVatAmount = itemSubtotal * (vatRate / 100);
+                
+                subtotal += itemSubtotal;
+                totalVatAmount += itemVatAmount;
+                
+                // Update item subtotal display
+                $(this).find('.item-subtotal').text(itemSubtotal.toLocaleString('vi-VN') + ' VNĐ');
+            }
         });
         
-        // Calculate VAT amount
-        var vatAmount = subtotal * (vatRate / 100);
-        var totalAmount = subtotal + vatAmount;
+        var totalAmount = subtotal + totalVatAmount;
         
         // Update display
         $('#subTotalAmount').text(subtotal.toLocaleString('vi-VN') + ' VNĐ');
-        $('#vatAmount').text(vatAmount.toLocaleString('vi-VN') + ' VNĐ');
+        $('#vatAmount').text(totalVatAmount.toLocaleString('vi-VN') + ' VNĐ');
         $('#totalAmount').text(totalAmount.toLocaleString('vi-VN') + ' VNĐ');
-        $('#vatRateDisplay').text(vatRate);
     },
 
     // Create purchase order
@@ -622,7 +1025,11 @@ window.PurchaseOrderManagement = {
         var self = this;
         
         // Validate items
-        if ($('#purchaseOrderItemsBody tr').length === 0 || $('#purchaseOrderItemsBody tr td').length === 1) {
+        var itemRows = $('#purchaseOrderItemsBody tr').filter(function() {
+            return !$(this).find('td').attr('colspan');
+        });
+        
+        if (itemRows.length === 0) {
             Swal.fire({
                 title: 'Cảnh báo!',
                 text: 'Vui lòng thêm ít nhất một phụ tùng',
@@ -636,10 +1043,11 @@ window.PurchaseOrderManagement = {
         var items = [];
         var isValid = true;
         
-        $('#purchaseOrderItemsBody tr').each(function() {
+        itemRows.each(function() {
             var partId = $(this).find('.part-id-input').val();
             var quantity = parseFloat($(this).find('.item-quantity').val());
             var unitPrice = parseFloat($(this).find('.item-unit-price').val());
+            var vatRate = parseFloat($(this).find('.item-vat-rate').val()) || 0;
             var notes = $(this).find('.item-notes').val();
             
             if (!partId || !quantity || !unitPrice) {
@@ -647,10 +1055,15 @@ window.PurchaseOrderManagement = {
                 return false;
             }
             
+            var itemSubtotal = quantity * unitPrice;
+            var vatAmount = itemSubtotal * (vatRate / 100);
+            
             items.push({
                 PartId: parseInt(partId),
                 QuantityOrdered: quantity,
                 UnitPrice: unitPrice,
+                VATRate: vatRate,
+                VATAmount: vatAmount,
                 Notes: notes
             });
         });
@@ -710,9 +1123,12 @@ window.PurchaseOrderManagement = {
             },
             error: function(xhr, status, error) {
                 console.error('Create PO Error:', xhr.responseText);
+                
+                var errorMessage = self.parseErrorMessage(xhr);
+                
                 Swal.fire({
                     title: 'Lỗi!',
-                    text: 'Có lỗi xảy ra khi tạo phiếu nhập hàng: ' + error,
+                    text: errorMessage,
                     icon: 'error',
                     confirmButtonText: 'OK'
                 });
@@ -777,9 +1193,11 @@ window.PurchaseOrderManagement = {
                         }
                     },
                     error: function(xhr, status, error) {
+                        var errorMessage = self.parseErrorMessage(xhr);
+                        
                         Swal.fire({
                             title: 'Lỗi!',
-                            text: 'Có lỗi xảy ra khi gửi PO: ' + error,
+                            text: errorMessage,
                             icon: 'error',
                             confirmButtonText: 'OK'
                         });
@@ -843,23 +1261,15 @@ window.PurchaseOrderManagement = {
                 }
             },
             error: function(xhr, status, error) {
+                var errorMessage = self.parseErrorMessage(xhr);
+                
                 Swal.fire({
                     title: 'Lỗi!',
-                    text: 'Có lỗi xảy ra khi hủy PO: ' + error,
+                    text: errorMessage,
                     icon: 'error',
                     confirmButtonText: 'OK'
                 });
             }
-        });
-    },
-
-    // Edit Purchase Order (placeholder - cần implement modal edit)
-    editPurchaseOrder: function(poId) {
-        Swal.fire({
-            title: 'Chức năng đang phát triển',
-            text: 'Chức năng chỉnh sửa PO sẽ được implement trong phiên bản tiếp theo',
-            icon: 'info',
-            confirmButtonText: 'OK'
         });
     }
 };
