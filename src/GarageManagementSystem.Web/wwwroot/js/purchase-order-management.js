@@ -181,11 +181,6 @@ window.PurchaseOrderManagement = {
             self.updateTotalAmount();
         });
         
-        // Update total when VAT rate changes (for PO level)
-        $(document).on('change', '#createVATRate', function() {
-            self.updateTotalAmount();
-        });
-        
         // Submit create purchase order form
         $('#createPurchaseOrderForm').on('submit', function(e) {
             e.preventDefault();
@@ -274,11 +269,6 @@ window.PurchaseOrderManagement = {
         $(document).on('change', '#editPurchaseOrderItemsBody .item-vat-rate', function() {
             self.updateEditTotalAmount();
         });
-
-        // VAT rate change for edit modal (PO level)
-        $(document).on('change', '#editVATRate', function() {
-            self.updateEditTotalAmount();
-        });
         
         // Mark events as bound
         this.eventsBound = true;
@@ -324,12 +314,12 @@ window.PurchaseOrderManagement = {
                     `;
                     
                     data.items.forEach(function(item) {
-                        var subtotal = item.totalPrice || ((item.quantity || 0) * (item.unitPrice || 0));
+                        var subtotal = item.totalPrice || ((item.quantityOrdered || 0) * (item.unitPrice || 0));
                         var vatRate = item.vatRate || 0;
                         html += `
                             <tr>
                                 <td>${item.partName || 'N/A'}</td>
-                                <td class="text-center">${item.quantity || 0}</td>
+                                <td class="text-center">${item.quantityOrdered || 0}</td>
                                 <td class="text-right">${(item.unitPrice || 0).toLocaleString('vi-VN')} VNĐ</td>
                                 <td class="text-center">${vatRate}%</td>
                                 <td class="text-right">${subtotal.toLocaleString('vi-VN')} VNĐ</td>
@@ -622,8 +612,7 @@ window.PurchaseOrderManagement = {
                         `);
                     }
                     
-                    // Update VAT rate display and totals
-                    $('#editVatRateDisplay').text(data.vatRate || 0);
+                    // Update totals
                     self.updateEditTotalAmount();
                     
                     $('#editPurchaseOrderModal').modal('show');
@@ -712,7 +701,7 @@ window.PurchaseOrderManagement = {
             ExpectedDeliveryDate: $('#editExpectedDeliveryDate').val() || null,
             PaymentTerms: $('#editPaymentTerms').val(),
             DeliveryAddress: $('#editDeliveryAddress').val(),
-            VATRate: parseFloat($('#editVATRate').val()) || 0,
+            VATRate: 0, // Will be calculated from items
             Notes: $('#editNotes').val(),
             Items: items
         };
@@ -867,7 +856,7 @@ window.PurchaseOrderManagement = {
                     <input type="hidden" class="part-id-input" value="${item.partId || ''}">
                 </td>
                 <td>
-                    <input type="number" class="form-control form-control-sm item-quantity" min="1" value="${item.quantity || 1}" required>
+                    <input type="number" class="form-control form-control-sm item-quantity" min="1" value="${item.quantityOrdered || 1}" required>
                 </td>
                 <td>
                     <input type="number" class="form-control form-control-sm item-unit-price" min="0" step="0.01" value="${item.unitPrice || 0}" required>
@@ -879,7 +868,7 @@ window.PurchaseOrderManagement = {
                         <option value="10" ${(item.vatRate || 0) === 10 ? 'selected' : ''}>10%</option>
                     </select>
                 </td>
-                <td class="text-right item-subtotal">${(item.unitPrice * item.quantity || 0).toLocaleString('vi-VN')} VNĐ</td>
+                <td class="text-right item-subtotal">${(item.unitPrice * item.quantityOrdered || 0).toLocaleString('vi-VN')} VNĐ</td>
                 <td>
                     <input type="text" class="form-control form-control-sm item-notes" placeholder="Ghi chú..." value="${item.notes || ''}">
                 </td>
@@ -1084,7 +1073,7 @@ window.PurchaseOrderManagement = {
             ExpectedDeliveryDate: $('#createExpectedDeliveryDate').val() || null,
             PaymentTerms: $('#createPaymentTerms').val(),
             DeliveryAddress: $('#createDeliveryAddress').val(),
-            VATRate: parseFloat($('#createVATRate').val()) || 0,
+            VATRate: 0, // Will be calculated from items
             Notes: $('#createNotes').val(),
             Items: items
         };

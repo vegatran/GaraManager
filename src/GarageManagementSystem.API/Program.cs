@@ -190,11 +190,11 @@ app.UseMiddleware<GarageManagementSystem.API.Middleware.RequestLoggingMiddleware
 app.UseMiddleware<GarageManagementSystem.API.Middleware.RateLimitingMiddleware>();
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
+//if (app.Environment.IsDevelopment())
+//{
     app.UseSwagger();
     app.UseSwaggerUI();
-}
+//}
 
 app.UseHttpsRedirection();
 app.UseCors("AllowWebApp");

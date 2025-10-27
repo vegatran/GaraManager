@@ -120,6 +120,10 @@ namespace GarageManagementSystem.Shared.DTOs
         [Required]
         public decimal TotalPrice { get; set; }
         
+        public decimal VATRate { get; set; } = 10; // Thuế suất VAT (%) cho item này
+        
+        public decimal VATAmount { get; set; } = 0; // Tiền thuế VAT cho item này
+        
         [StringLength(50)]
         public string? SupplierPartNumber { get; set; }
         
@@ -218,6 +222,10 @@ namespace GarageManagementSystem.Shared.DTOs
         [Required(ErrorMessage = "Giá đơn vị là bắt buộc")]
         [Range(0.01, double.MaxValue, ErrorMessage = "Giá phải lớn hơn 0")]
         public decimal UnitPrice { get; set; }
+        
+        public decimal VATRate { get; set; } = 10; // Thuế suất VAT (%) cho item này
+        
+        public decimal VATAmount { get; set; } = 0; // Tiền thuế VAT cho item này
         
         [StringLength(50)]
         public string? SupplierPartNumber { get; set; }

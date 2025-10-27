@@ -136,6 +136,8 @@ namespace GarageManagementSystem.API.Controllers
                     QuantityOrdered = item.QuantityOrdered,
                     UnitPrice = item.UnitPrice,
                     TotalPrice = item.QuantityOrdered * item.UnitPrice,
+                    VATRate = item.VATRate,
+                    VATAmount = item.VATAmount,
                     Notes = item.Notes
                 }).ToList();
                 
@@ -196,6 +198,8 @@ namespace GarageManagementSystem.API.Controllers
                         QuantityOrdered = item.QuantityOrdered,
                         UnitPrice = item.UnitPrice,
                         TotalPrice = item.QuantityOrdered * item.UnitPrice,
+                        VATRate = item.VATRate,
+                        VATAmount = item.VATAmount,
                         Notes = item.Notes
                     }).ToList()
                 };
@@ -222,6 +226,20 @@ namespace GarageManagementSystem.API.Controllers
                 var count = (await _unitOfWork.Repository<PurchaseOrder>().GetAllAsync()).Count();
                 order.OrderNumber = $"PO-{DateTime.Now:yyyyMMdd}-{(count + 1):D4}";
                 order.CreatedAt = DateTime.Now;
+                
+                // Calculate totals from items
+                if (createDto.Items != null && createDto.Items.Any())
+                {
+                    order.SubTotal = createDto.Items.Sum(item => item.QuantityOrdered * item.UnitPrice);
+                    order.TaxAmount = createDto.Items.Sum(item => item.VATAmount);
+                    order.TotalAmount = order.SubTotal + order.TaxAmount;
+                    
+                    // Calculate average VAT rate
+                    if (order.SubTotal > 0)
+                    {
+                        order.VATRate = (order.TaxAmount / order.SubTotal) * 100;
+                    }
+                }
                 
                 await _unitOfWork.Repository<PurchaseOrder>().AddAsync(order);
                 await _unitOfWork.SaveChangesAsync();
@@ -299,7 +317,6 @@ namespace GarageManagementSystem.API.Controllers
                 order.ExpectedDeliveryDate = dto.ExpectedDeliveryDate;
                 order.PaymentTerms = dto.PaymentTerms;
                 order.DeliveryAddress = dto.DeliveryAddress;
-                order.VATRate = dto.VATRate;
                 order.Notes = dto.Notes;
                 order.UpdatedAt = DateTime.Now;
 
@@ -314,8 +331,10 @@ namespace GarageManagementSystem.API.Controllers
                     await _unitOfWork.Repository<PurchaseOrderItem>().DeleteAsync(item);
                 }
 
-                // Add new items
-                decimal totalAmount = 0;
+                // Add new items and calculate totals
+                decimal subtotal = 0;
+                decimal totalVatAmount = 0;
+                
                 foreach (var itemDto in dto.Items)
                 {
                     var item = new PurchaseOrderItem
@@ -324,17 +343,29 @@ namespace GarageManagementSystem.API.Controllers
                         PartId = itemDto.PartId,
                         QuantityOrdered = itemDto.QuantityOrdered,
                         UnitPrice = itemDto.UnitPrice,
+                        VATRate = itemDto.VATRate,
+                        VATAmount = itemDto.VATAmount,
                         Notes = itemDto.Notes,
                         CreatedAt = DateTime.Now,
                         UpdatedAt = DateTime.Now
                     };
                     
                     await _unitOfWork.Repository<PurchaseOrderItem>().AddAsync(item);
-                    totalAmount += itemDto.QuantityOrdered * itemDto.UnitPrice;
+                    
+                    subtotal += itemDto.QuantityOrdered * itemDto.UnitPrice;
+                    totalVatAmount += itemDto.VATAmount;
                 }
 
-                // Update total amount
-                order.TotalAmount = totalAmount;
+                // Update totals
+                order.SubTotal = subtotal;
+                order.TaxAmount = totalVatAmount;
+                order.TotalAmount = subtotal + totalVatAmount;
+                
+                // Calculate average VAT rate
+                if (subtotal > 0)
+                {
+                    order.VATRate = (totalVatAmount / subtotal) * 100;
+                }
                 // Note: ItemCount is calculated property, no need to set it
 
                 await _unitOfWork.Repository<PurchaseOrder>().UpdateAsync(order);
@@ -376,6 +407,8 @@ namespace GarageManagementSystem.API.Controllers
                         QuantityOrdered = item.QuantityOrdered,
                         UnitPrice = item.UnitPrice,
                         TotalPrice = item.QuantityOrdered * item.UnitPrice,
+                        VATRate = item.VATRate,
+                        VATAmount = item.VATAmount,
                         Notes = item.Notes
                     }).ToList()
                 };
@@ -468,12 +501,73 @@ namespace GarageManagementSystem.API.Controllers
 
                 await _unitOfWork.Repository<PurchaseOrder>().UpdateAsync(order);
 
-                // Update LastOrderDate and LastCostPrice in PartSupplier
+                // Get supplier info
+                var supplier = await _unitOfWork.Repository<Supplier>().GetByIdAsync(order.SupplierId);
+                
+                // Get all parts for stock calculation
+                var parts = await _unitOfWork.Repository<Part>().GetAllAsync();
+                var partsDict = parts.ToDictionary(p => p.Id, p => p);
+
+                // Get purchase order items
                 var poItems = await _unitOfWork.Repository<PurchaseOrderItem>().GetAllAsync();
                 var orderItems = poItems.Where(i => i.PurchaseOrderId == id).ToList();
 
+                // Generate transaction numbers
+                var txCount = (await _unitOfWork.Repository<StockTransaction>().GetAllAsync()).Count() + 1;
+                var dateStr = DateTime.Now.ToString("yyyyMMdd");
+                
+                // Create Stock Transactions for each item
                 foreach (var item in orderItems)
                 {
+                    if (!partsDict.ContainsKey(item.PartId)) continue;
+                    
+                    var part = partsDict[item.PartId];
+                    
+                    // Calculate current stock
+                    var allStockTxs = await _unitOfWork.Repository<StockTransaction>().GetAllAsync();
+                    var partTransactions = allStockTxs.Where(t => t.PartId == item.PartId);
+                    
+                    int currentStock = 0;
+                    foreach (var tx in partTransactions.OrderBy(t => t.TransactionDate))
+                    {
+                        if (tx.TransactionType == Core.Enums.StockTransactionType.NhapKho)
+                            currentStock += tx.Quantity;
+                        else if (tx.TransactionType == Core.Enums.StockTransactionType.XuatKho)
+                            currentStock -= tx.Quantity;
+                    }
+                    
+                    // Create Stock Transaction
+                    var stockTx = new Core.Entities.StockTransaction
+                    {
+                        TransactionNumber = $"STK-{dateStr}-{txCount++:D4}",
+                        TransactionType = Core.Enums.StockTransactionType.NhapKho,
+                        PartId = item.PartId,
+                        Quantity = item.QuantityOrdered,
+                        UnitCost = item.UnitPrice,
+                        UnitPrice = part.SellPrice,
+                        TotalCost = item.QuantityOrdered * item.UnitPrice,
+                        TotalAmount = item.QuantityOrdered * part.SellPrice,
+                        TransactionDate = DateTime.Now,
+                        SupplierId = order.SupplierId,
+                        SupplierName = supplier?.SupplierName,
+                        RelatedEntity = "PurchaseOrder",
+                        RelatedEntityId = order.Id,
+                        Notes = $"Nhập hàng từ PO: {order.OrderNumber}",
+                        Condition = "New",
+                        SourceType = "Purchased",
+                        StockAfter = currentStock + item.QuantityOrdered,
+                        QuantityBefore = currentStock,
+                        QuantityAfter = currentStock + item.QuantityOrdered
+                    };
+                    
+                    await _unitOfWork.Repository<StockTransaction>().AddAsync(stockTx);
+                    
+                    // Update Part Stock
+                    part.QuantityInStock += item.QuantityOrdered;
+                    part.UpdatedAt = DateTime.Now;
+                    await _unitOfWork.Repository<Part>().UpdateAsync(part);
+                    
+                    // Update LastOrderDate and LastCostPrice in PartSupplier
                     var partSuppliers = await _unitOfWork.Repository<PartSupplier>().GetAllAsync();
                     var partSupplier = partSuppliers.FirstOrDefault(ps => ps.PartId == item.PartId && ps.SupplierId == order.SupplierId);
                     
@@ -488,7 +582,34 @@ namespace GarageManagementSystem.API.Controllers
 
                 await _unitOfWork.SaveChangesAsync();
 
-                return Ok(new { success = true, data = order, message = "Đã nhận hàng" });
+                // Create Financial Transaction (Expense)
+                var finCount = (await _unitOfWork.Repository<Core.Entities.FinancialTransaction>().GetAllAsync()).Count() + 1;
+                var finNumber = $"FIN-{dateStr}-{finCount:D4}";
+                
+                var financialTx = new Core.Entities.FinancialTransaction
+                {
+                    TransactionNumber = finNumber,
+                    TransactionType = "Expense",
+                    Category = "Parts Purchase",
+                    SubCategory = "Purchase Order",
+                    Amount = order.TotalAmount,
+                    Currency = order.Currency,
+                    TransactionDate = DateTime.Now,
+                    PaymentMethod = order.PaymentTerms ?? "Cash",
+                    ReferenceNumber = order.OrderNumber,
+                    Description = $"Chi mua phụ tùng từ nhà cung cấp: {supplier?.SupplierName}",
+                    RelatedEntity = "PurchaseOrder",
+                    RelatedEntityId = order.Id,
+                    EmployeeId = order.EmployeeId,
+                    Notes = $"Thanh toán cho PO: {order.OrderNumber}",
+                    Status = "Pending", // Chưa thanh toán thực tế
+                    IsApproved = false
+                };
+                
+                await _unitOfWork.Repository<Core.Entities.FinancialTransaction>().AddAsync(financialTx);
+                await _unitOfWork.SaveChangesAsync();
+
+                return Ok(new { success = true, data = order, message = "Đã nhận hàng, nhập kho và tạo phiếu chi" });
             }
             catch (Exception ex)
             {

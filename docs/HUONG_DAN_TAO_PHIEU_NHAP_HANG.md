@@ -119,10 +119,32 @@ Phiếu nhập hàng (Purchase Order) là tài liệu quan trọng trong quy tr�
 3. Kiểm tra số lượng thực tế nhận được
 4. Điều chỉnh nếu có chênh lệch
 5. Click **"Xác Nhận Nhận Hàng"**
-6. Hệ thống tự động:
-   - Cập nhật tồn kho
-   - Tạo giao dịch kho
-   - Chuyển trạng thái thành "Đã Nhận"
+6. **Hệ thống tự động thực hiện:**
+
+   #### ✅ **1. Stock Transaction (Phiếu Nhập Kho)**
+   - Tạo **phiếu nhập kho** cho MỖI phụ tùng
+   - Transaction Number: `STK-YYYYMMDD-XXXX`
+   - Type: `NhapKho`
+   - Tự động cập nhật `QuantityInStock` trong Parts table
+   - Lưu thông tin: Supplier, RelatedEntity, Notes
+   
+   #### ✅ **2. Financial Transaction (Phiếu Chi)**
+   - Tạo **phiếu chi** cho kế toán
+   - Transaction Number: `FIN-YYYYMMDD-XXXX`
+   - Type: `Expense`
+   - Category: `Parts Purchase`
+   - SubCategory: `Purchase Order`
+   - Amount: Tổng tiền PO (bao gồm VAT)
+   - Status: `Pending` (chờ thanh toán thực tế)
+   - Reference: Số phiếu nhập hàng
+   
+   #### ✅ **3. PartSupplier Update**
+   - Cập nhật `LastOrderDate`: Ngày mới nhất đặt hàng
+   - Cập nhật `LastCostPrice`: Giá mới nhất của phụ tùng
+   
+   #### ✅ **4. Status Update**
+   - Chuyển trạng thái PO thành "Đã Nhận"
+   - Hiển thị ngày nhận hàng thực tế
 
 ### **✏️ Chỉnh sửa phiếu:**
 1. Click **"Chỉnh Sửa"** (icon ✏️)
@@ -341,9 +363,12 @@ Hệ thống quản lý nhập kho đã được thiết kế với quy trình h
 - Phân trang tự động
 
 #### **Responsive Design**
-- Hỗ trợ mobile và desktop
-- Modal responsive
-- Print-friendly
+- ✅ **Desktop**: Table hiển thị đầy đủ columns
+- ✅ **Tablet (≤768px)**: Table có thể scroll ngang, buttons nhỏ hơn
+- ✅ **Mobile (≤576px)**: Buttons xếp dọc, dễ bấm
+- ✅ Modal responsive với overflow fix
+- ✅ Typeahead dropdown CSS optimized cho mobile
+- ✅ Print-friendly
 
 ### **🔧 Công Nghệ Sử Dụng**
 

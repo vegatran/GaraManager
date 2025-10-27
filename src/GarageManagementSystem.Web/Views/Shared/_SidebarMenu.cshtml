@@ -123,8 +123,8 @@
         </li>
 
         <!-- QUẢN LÝ TÀI CHÍNH (Multilevel) -->
-        <li class="nav-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "PaymentManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "InsuranceInvoice" ? "menu-open" : "")">
-            <a href="#" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "PaymentManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "InsuranceInvoice" ? "active" : "")">
+        <li class="nav-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "PaymentManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "InsuranceInvoice" || ViewContext.RouteData.Values["Controller"]?.ToString() == "FinancialTransactionManagement" ? "menu-open" : "")">
+            <a href="#" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "PaymentManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "InsuranceInvoice" || ViewContext.RouteData.Values["Controller"]?.ToString() == "FinancialTransactionManagement" ? "active" : "")">
                 <i class="nav-icon fas fa-money-bill-wave text-success"></i>
                 <p>
                     Tài Chính
@@ -132,6 +132,12 @@
                 </p>
             </a>
             <ul class="nav nav-treeview">
+                <li class="nav-item">
+                    <a href="@Url.Action("Index", "FinancialTransactionManagement")" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "FinancialTransactionManagement" ? "active" : "")">
+                        <i class="far fa-circle nav-icon text-primary"></i>
+                        <p>Phiếu Thu/Chi</p>
+                    </a>
+                </li>
                 <li class="nav-item">
                     <a href="@Url.Action("Index", "PaymentManagement")" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "PaymentManagement" ? "active" : "")">
                         <i class="far fa-circle nav-icon text-success"></i>
