@@ -122,6 +122,11 @@ window.GarageApp = {
 
     // Parse error message from API response
     parseErrorMessage: function(response) {
+        // Nếu có error trực tiếp (từ Web controller), dùng nó
+        if (response.error && response.error.trim() !== '') {
+            return response.error;
+        }
+        
         // Nếu có message trực tiếp, dùng nó
         if (response.message && response.message.trim() !== '') {
             return response.message;

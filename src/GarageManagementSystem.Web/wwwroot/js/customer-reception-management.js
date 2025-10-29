@@ -60,9 +60,13 @@ window.CustomerReceptionManagement = (function() {
                 searchable: false,
                 render: function(data, type, row) {
                     let actions = `
-                        <button class="btn btn-info btn-sm view-reception" data-id="${row.id}">
-                            <i class="fas fa-eye"></i>
-                        </button>
+                        <div class="btn-group" role="group">
+                            <button class="btn btn-info btn-sm view-reception" data-id="${row.id}" title="Xem">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="btn btn-primary btn-sm print-reception" data-id="${row.id}" title="In Biên Bản">
+                                <i class="fas fa-print"></i>
+                            </button>
                     `;
 
                     if (row.status !== 3 && row.status !== 4) {
@@ -78,12 +82,13 @@ window.CustomerReceptionManagement = (function() {
 
                     if (row.status === 0 || (row.status === 1 && (!row.technicianName || row.technicianName === 'Chưa phân công'))) {
                         actions += `
-                            <button class="btn btn-success btn-sm assign-technician" data-id="${row.id}">
+                            <button class="btn btn-success btn-sm assign-technician" data-id="${row.id}" title="Phân Công KTV">
                                 <i class="fas fa-user-plus"></i>
                             </button>
                         `;
                     }
 
+                    actions += `</div>`;
                     return actions;
                 }
             }
@@ -256,6 +261,16 @@ window.CustomerReceptionManagement = (function() {
             assignTechnician(id);
         });
 
+        // Print reception
+        $(document).on('click', '.print-reception, #printReceptionBtn', function() {
+            var id = $(this).data('id') || $('#viewReceptionModal').data('reception-id');
+            if (id) {
+                window.open(`/CustomerReception/PrintReception/${id}`, '_blank');
+            } else {
+                GarageApp.showError('Không tìm thấy ID phiếu tiếp đón');
+            }
+        });
+
         // Create form submission
         $(document).on('submit', '#createReceptionForm', function(e) {
             e.preventDefault();
@@ -349,6 +364,8 @@ window.CustomerReceptionManagement = (function() {
             success: function(response) {
                 if (response.success && response.data) {
                     populateViewModal(response.data);
+                    // Store reception ID for print button
+                    $('#viewReceptionModal').data('reception-id', id);
                     $('#viewReceptionModal').modal('show');
                 } else {
                     GarageApp.showError(GarageApp.parseErrorMessage(response) || 'Lỗi khi tải thông tin phiếu tiếp đón');

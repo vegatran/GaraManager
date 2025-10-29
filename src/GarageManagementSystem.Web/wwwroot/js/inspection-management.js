@@ -67,6 +67,9 @@ window.InspectionManagement = {
                             <button type="button" class="btn btn-info btn-sm view-inspection" data-id="${row.id}" title="Xem">
                                 <i class="fas fa-eye"></i>
                             </button>
+                            <button type="button" class="btn btn-primary btn-sm print-inspection" data-id="${row.id}" title="In Phiếu Chẩn Đoán">
+                                <i class="fas fa-print"></i>
+                            </button>
                     `;
                     
                     // Kiểm tra trạng thái để hiển thị nút phù hợp
@@ -159,6 +162,16 @@ window.InspectionManagement = {
         $(document).on('click', '.complete-inspection', function() {
             var id = $(this).data('id');
             self.completeInspection(id);
+        });
+
+        // Print inspection
+        $(document).on('click', '.print-inspection, #printInspectionBtn', function() {
+            var id = $(this).data('id') || $('#viewInspectionModal').data('inspection-id');
+            if (id) {
+                window.open(`/InspectionManagement/PrintInspection/${id}`, '_blank');
+            } else {
+                GarageApp.showError('Không tìm thấy ID phiếu kiểm tra xe');
+            }
         });
 
         // Create inspection form
@@ -410,6 +423,8 @@ window.InspectionManagement = {
                     if (response.success && response.data) {
                         var inspection = response.data;
                         self.populateViewModal(inspection);
+                        // Store inspection ID for print button
+                        $('#viewInspectionModal').data('inspection-id', id);
                         $('#viewInspectionModal').modal('show');
                     } else {
                         GarageApp.showError(GarageApp.parseErrorMessage(response) || 'Lỗi khi tải thông tin kiểm tra xe');

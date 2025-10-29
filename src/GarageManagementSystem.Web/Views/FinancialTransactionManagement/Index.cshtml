@@ -1,0 +1,152 @@
+@{
+    ViewData["Title"] = "Quản Lý Phiếu Thu/Chi";
+}
+
+@Html.AntiForgeryToken()
+
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1 class="m-0">Quản Lý Phiếu Thu/Chi</h1>
+            </div>
+            <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-right">
+                    <li class="breadcrumb-item"><a href="@Url.Action("Index", "Home")">Trang Chủ</a></li>
+                    <li class="breadcrumb-item"><a href="#">Tài Chính</a></li>
+                    <li class="breadcrumb-item active">Phiếu Thu/Chi</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+
+<section class="content">
+    <div class="container-fluid">
+        <!-- Summary Cards -->
+        <div class="row mb-3">
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-success">
+                    <div class="inner">
+                        <h3 id="totalIncome">0</h3>
+                        <p>Tổng Thu</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-arrow-up"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-danger">
+                    <div class="inner">
+                        <h3 id="totalExpense">0</h3>
+                        <p>Tổng Chi</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-arrow-down"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-info">
+                    <div class="inner">
+                        <h3 id="pendingCount">0</h3>
+                        <p>Chờ Xử Lý</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-warning">
+                    <div class="inner">
+                        <h3 id="netAmount">0</h3>
+                        <p>Số Dư</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-balance-scale"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Table -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Danh Sách Phiếu Thu/Chi</h3>
+                        <div class="card-tools">
+                            <button type="button" class="btn btn-success btn-sm mr-1" id="filterIncomeBtn">
+                                <i class="fas fa-arrow-up"></i> Phiếu Thu
+                            </button>
+                            <button type="button" class="btn btn-danger btn-sm" id="filterExpenseBtn">
+                                <i class="fas fa-arrow-down"></i> Phiếu Chi
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <!-- Filters -->
+                        <div class="row mb-3">
+                            <div class="col-md-3">
+                                <label for="transactionTypeFilter">Loại Giao Dịch:</label>
+                                <select class="form-control form-control-sm" id="transactionTypeFilter">
+                                    <option value="">Tất cả</option>
+                                    <option value="Income">Thu</option>
+                                    <option value="Expense">Chi</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="categoryFilter">Danh Mục:</label>
+                                <select class="form-control form-control-sm" id="categoryFilter">
+                                    <option value="">Tất cả</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="statusFilter">Trạng Thái:</label>
+                                <select class="form-control form-control-sm" id="statusFilter">
+                                    <option value="">Tất cả</option>
+                                    <option value="Pending">Chờ Xử Lý</option>
+                                    <option value="Approved">Đã Duyệt</option>
+                                    <option value="Completed">Hoàn Thành</option>
+                                    <option value="Cancelled">Đã Hủy</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label>&nbsp;</label>
+                                <button type="button" class="btn btn-secondary btn-sm btn-block" id="clearFiltersBtn">
+                                    <i class="fas fa-times"></i> Xóa Bộ Lọc
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table id="financialTransactionsTable" class="table table-bordered table-striped dt-responsive nowrap" width="100%">
+                                <thead>
+                                    <tr>
+                                        <th>Mã Phiếu</th>
+                                        <th>Loại</th>
+                                        <th>Danh Mục</th>
+                                        <th>Số Tiền</th>
+                                        <th>Ngày GD</th>
+                                        <th>Người Tạo</th>
+                                        <th>Trạng Thái</th>
+                                        <th>Ghi Chú</th>
+                                        <th>Thao Tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script src="~/js/financial-transaction-management.js" asp-append-version="true"></script>
+}

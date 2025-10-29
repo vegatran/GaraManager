@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using GarageManagementSystem.Web.Services;
 using GarageManagementSystem.Web.Configuration;
+using GarageManagementSystem.Web.Models;
+using GarageManagementSystem.Shared.Models;
 
 namespace GarageManagementSystem.Web.Controllers
 {
@@ -274,6 +276,46 @@ namespace GarageManagementSystem.Web.Controllers
                 "Cancelled" => "Đã Hủy",
                 _ => status
             };
+        }
+
+        /// <summary>
+        /// In phiếu chẩn đoán kỹ thuật
+        /// </summary>
+        [HttpGet("PrintInspection/{id}")]
+        public async Task<IActionResult> PrintInspection(int id)
+        {
+            try
+            {
+                // Load inspection data
+                var inspectionResponse = await _apiService.GetAsync<ApiResponse<VehicleInspectionDto>>(
+                    ApiEndpoints.VehicleInspections.GetById.Replace("{0}", id.ToString()));
+                
+                if (!inspectionResponse.Success || inspectionResponse.Data?.Data == null)
+                {
+                    return NotFound("Không tìm thấy phiếu kiểm tra xe");
+                }
+
+                // Load print template
+                var templateResponse = await _apiService.GetAsync<PrintTemplateDto>(
+                    ApiEndpoints.PrintTemplates.GetDefault.Replace("{0}", "Inspection"));
+                
+                var template = templateResponse.Success ? templateResponse.Data : null;
+
+                var inspection = inspectionResponse.Data.Data;
+
+                // Create view model
+                var viewModel = new PrintInspectionViewModel
+                {
+                    Inspection = inspection,
+                    Template = template
+                };
+                
+                return View(viewModel);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Lỗi khi tải phiếu kiểm tra xe: {ex.Message}");
+            }
         }
     }
 }

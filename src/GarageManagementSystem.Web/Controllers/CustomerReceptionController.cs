@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using GarageManagementSystem.Web.Services;
 using GarageManagementSystem.Web.Configuration;
+using GarageManagementSystem.Web.Models;
 
 namespace GarageManagementSystem.Web.Controllers
 {
@@ -324,6 +325,46 @@ namespace GarageManagementSystem.Web.Controllers
                 "Other" => "Khác",
                 _ => serviceType
             };
+        }
+
+        /// <summary>
+        /// In biên bản tiếp nhận xe
+        /// </summary>
+        [HttpGet("PrintReception/{id}")]
+        public async Task<IActionResult> PrintReception(int id)
+        {
+            try
+            {
+                // Load reception data
+                var receptionResponse = await _apiService.GetAsync<ApiResponse<CustomerReceptionDto>>(
+                    ApiEndpoints.CustomerReceptions.GetById.Replace("{0}", id.ToString()));
+                
+                if (!receptionResponse.Success || receptionResponse.Data?.Data == null)
+                {
+                    return NotFound("Không tìm thấy phiếu tiếp đón");
+                }
+
+                // Load print template
+                var templateResponse = await _apiService.GetAsync<PrintTemplateDto>(
+                    ApiEndpoints.PrintTemplates.GetDefault.Replace("{0}", "Reception"));
+                
+                var template = templateResponse.Success ? templateResponse.Data : null;
+
+                var reception = receptionResponse.Data.Data;
+
+                // Create view model
+                var viewModel = new PrintReceptionViewModel
+                {
+                    Reception = reception,
+                    Template = template
+                };
+                
+                return View(viewModel);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"Lỗi khi tải biên bản tiếp nhận: {ex.Message}");
+            }
         }
     }
 }

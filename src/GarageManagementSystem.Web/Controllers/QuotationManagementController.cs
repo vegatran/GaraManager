@@ -255,12 +255,40 @@ namespace GarageManagementSystem.Web.Controllers
                 }
                 else
                 {
-                    return Json(new { success = false, error = response.ErrorMessage ?? "Lỗi khi cập nhật báo giá" });
+                    // Xây dựng thông báo lỗi chi tiết
+                    var errorMessage = "Lỗi khi cập nhật báo giá";
+                    
+                    if (!string.IsNullOrEmpty(response.Message))
+                    {
+                        errorMessage = response.Message;
+                    }
+                    
+                    if (!string.IsNullOrEmpty(response.ErrorMessage))
+                    {
+                        errorMessage += ": " + response.ErrorMessage;
+                    }
+                    
+                    // Thêm errors chi tiết nếu có
+                    if (response.Errors != null && response.Errors.Any())
+                    {
+                        errorMessage += "\n" + string.Join("\n", response.Errors);
+                    }
+                    
+                    return Json(new { success = false, error = errorMessage });
                 }
             }
             catch (Exception ex)
             {
-                return Json(new { success = false, error = "Lỗi khi cập nhật báo giá: " + ex.Message });
+                var errorMessage = "Lỗi khi cập nhật báo giá";
+                if (ex.InnerException != null)
+                {
+                    errorMessage += $": {ex.InnerException.Message}";
+                }
+                else
+                {
+                    errorMessage += $": {ex.Message}";
+                }
+                return Json(new { success = false, error = errorMessage });
             }
         }
 

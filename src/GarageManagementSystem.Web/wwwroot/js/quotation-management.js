@@ -360,31 +360,63 @@ window.QuotationManagement = {
             var isPartsTab = row.closest('#createPartsItems, #editPartsItems').length > 0;
             var hasPartId = row.find('.service-id-input').val() && row.find('.service-id-input').val() !== '';
             
-            if (isPartsTab && hasPartId) {
+            // ✅ SỬA: Kiểm tra ServiceType để xác định Parts item
+            var serviceTypeInput = row.find('.service-type-input').val();
+            var actualIsPartsItem = serviceTypeInput && serviceTypeInput.toLowerCase() === 'parts';
+            
+            if (isPartsTab && (hasPartId || actualIsPartsItem)) {
                 // ✅ THÊM: Đối với phụ tùng từ kho, VAT không được chỉnh sửa
                 if (isChecked) {
                     // Enable VAT input nhưng vẫn readonly
                     vatRateInput.prop('disabled', false).prop('readonly', true);
                     vatAmountInput.prop('disabled', false);
+                    
+                    // ✅ SỬA: Khôi phục VAT rate nếu đã bị set về 0
+                    var currentVATRate = parseFloat(vatRateInput.val()) || 0;
+                    if (currentVATRate === 0) {
+                        // Lấy VAT rate từ data attribute hoặc default 10
+                        var restoredVATRate = vatRateInput.data('original-vat-rate') || 10;
+                        vatRateInput.val(restoredVATRate);
+                    }
+                    
                     row.addClass('table-success');
                 } else {
                     // Disable VAT input và set về 0
+                    // ✅ SỬA: Lưu VAT rate hiện tại vào data attribute để khôi phục sau
+                    var currentVATRate = parseFloat(vatRateInput.val()) || 0;
+                    if (currentVATRate > 0) {
+                        vatRateInput.data('original-vat-rate', currentVATRate);
+                    }
                     vatRateInput.prop('disabled', true).val('0');
                     vatAmountInput.prop('disabled', true).val('0 VNĐ');
                     row.removeClass('table-success');
                 }
             } else {
-                // ✅ GIỮ NGUYÊN: Logic cũ cho Services (có thể chỉnh sửa VAT)
-            if (isChecked) {
-                    // Enable VAT input và set default value
+                // ✅ SỬA: Logic cho Services (có thể chỉnh sửa VAT)
+                if (isChecked) {
+                    // Enable VAT input và set default value nếu cần
                     vatRateInput.prop('disabled', false).prop('readonly', false);
                     vatAmountInput.prop('disabled', false);
-                row.addClass('table-success');
-            } else {
+                    
+                    // ✅ SỬA: Khôi phục VAT rate nếu đã bị set về 0
+                    var currentVATRate = parseFloat(vatRateInput.val()) || 0;
+                    if (currentVATRate === 0) {
+                        // Lấy VAT rate từ data attribute hoặc default 10
+                        var restoredVATRate = vatRateInput.data('original-vat-rate') || 10;
+                        vatRateInput.val(restoredVATRate);
+                    }
+                    
+                    row.addClass('table-success');
+                } else {
                     // Disable VAT input và set về 0
+                    // ✅ SỬA: Lưu VAT rate hiện tại vào data attribute để khôi phục sau
+                    var currentVATRate = parseFloat(vatRateInput.val()) || 0;
+                    if (currentVATRate > 0) {
+                        vatRateInput.data('original-vat-rate', currentVATRate);
+                    }
                     vatRateInput.prop('disabled', true).val('0');
                     vatAmountInput.prop('disabled', true).val('0 VNĐ');
-                row.removeClass('table-success');
+                    row.removeClass('table-success');
                 }
             }
             
@@ -924,24 +956,60 @@ window.QuotationManagement = {
         // ✅ CẬP NHẬT: Tính toán VAT từ dữ liệu
         var quantity = itemData.quantity || 1;
         var unitPrice = itemData.unitPrice || 0;
-        var vatRate = itemData.vatRate || itemData.VATRate || 10;
-        var hasInvoice = itemData.hasInvoice || itemData.HasInvoice || false;
+        var serviceType = itemData.serviceType || itemData.ServiceType || '';
+        var isPartsItem = serviceType.toLowerCase() === 'parts';
+        
+        // ✅ SỬA: Lấy VAT rate từ API - ưu tiên PartVATRate nếu là Parts, nếu không thì dùng vatRate từ item
+        var partVATRate = itemData.partVATRate !== undefined ? itemData.partVATRate : 
+                          (itemData.PartVATRate !== undefined ? itemData.PartVATRate : null);
+        var itemVATRate = itemData.vatRate !== undefined ? itemData.vatRate : 
+                          (itemData.VATRate !== undefined ? itemData.VATRate : null);
+        
+        var vatRate;
+        if (isPartsItem && partVATRate !== null && partVATRate !== undefined) {
+            // Nếu là Parts và có PartVATRate, dùng VAT từ Part (READ-ONLY)
+            vatRate = partVATRate;
+        } else if (itemVATRate !== null && itemVATRate !== undefined) {
+            // Nếu có VATRate từ item, dùng nó (trường hợp này luôn ưu tiên)
+            vatRate = itemVATRate;
+        } else {
+            // Default fallback
+            vatRate = 10;
+        }
+        
+        // ✅ SỬA: Đảm bảo vatRate là số hợp lệ
+        vatRate = parseFloat(vatRate) || 0;
+        
+        var hasInvoice = itemData.hasInvoice !== undefined ? itemData.hasInvoice : 
+                        (itemData.HasInvoice !== undefined ? itemData.HasInvoice : false);
+        var isVATApplicable = itemData.isVATApplicable !== undefined ? itemData.isVATApplicable : 
+                             (itemData.IsVATApplicable !== undefined ? itemData.IsVATApplicable : 
+                              (hasInvoice || false));
         
         // ✅ DEBUG: Log các giá trị được parse
         console.log('🔍 DEBUG addServiceItemWithData - Parsed values:', {
             quantity: quantity,
             unitPrice: unitPrice,
             vatRate: vatRate,
-            hasInvoice: hasInvoice
+            hasInvoice: hasInvoice,
+            isVATApplicable: isVATApplicable,
+            isPartsItem: isPartsItem,
+            serviceType: serviceType,
+            partVATRate: partVATRate,
+            itemDataVATRate: itemData.vatRate || itemData.VATRate
         });
         
         var subtotal = quantity * unitPrice;
         var vatAmount = 0;
         var totalPrice = subtotal;
         
-        if (hasInvoice && vatRate > 0) {
+        // ✅ SỬA: Tính VAT dựa trên isVATApplicable - luôn tính nếu có isVATApplicable và vatRate > 0
+        if (isVATApplicable && vatRate > 0) {
             vatAmount = subtotal * (vatRate / 100);
             totalPrice = subtotal + vatAmount;
+        } else {
+            vatAmount = 0;
+            totalPrice = subtotal;
         }
         
         var serviceItemHtml = `
@@ -950,7 +1018,8 @@ window.QuotationManagement = {
                     <input type="text" class="form-control form-control-sm service-typeahead" 
                            placeholder="Gõ tên dịch vụ..." data-service-id="${itemData.serviceId || ''}"
                            value="${itemData.itemName || ''}">
-                    <input type="hidden" class="service-id-input" value="${itemData.serviceId || ''}">
+                    <input type="hidden" class="service-id-input" value="${itemData.serviceId || itemData.ServiceId || ''}">
+                    <input type="hidden" class="service-type-input" value="${serviceType || ''}">
                     <input type="hidden" class="item-category-input" value="${itemData.itemCategory || itemData.ItemCategory || 'Material'}">
                 </td>
                 <td>
@@ -968,7 +1037,8 @@ window.QuotationManagement = {
                 <td>
                     <input type="number" class="form-control form-control-sm vat-rate-input text-center" 
                            value="${vatRate}" min="0" max="100" step="0.1" 
-                           placeholder="10" title="VAT (%)">
+                           placeholder="10" title="${isPartsItem ? 'VAT từ phụ tùng (Không được chỉnh sửa)' : 'VAT (%)'}"
+                           ${isPartsItem && partVATRate !== null ? 'readonly' : ''}>
                 </td>
                 <td>
                     <input type="text" class="form-control form-control-sm vat-amount-input text-right" 
@@ -978,7 +1048,7 @@ window.QuotationManagement = {
                     <div class="custom-control custom-checkbox">
                         <input class="custom-control-input invoice-checkbox" type="checkbox" 
                                name="Items[${itemIndex}].HasInvoice" id="invoice_${mode}_${itemIndex}"
-                               ${(itemData.hasInvoice || itemData.HasInvoice || (itemData.notes && itemData.notes.includes('Có hóa đơn'))) ? 'checked' : ''}>
+                               ${(isVATApplicable || itemData.hasInvoice || itemData.HasInvoice || (itemData.notes && itemData.notes.includes('Có hóa đơn'))) ? 'checked' : ''}>
                         <label class="custom-control-label" for="invoice_${mode}_${itemIndex}"></label>
                     </div>
                 </td>
@@ -998,19 +1068,39 @@ window.QuotationManagement = {
             lastRow.find('.service-typeahead').val(itemData.service.name);
         }
         
-        // ✅ THÊM: Disable VAT input nếu checkbox không được check
+        // ✅ SỬA: Xử lý VAT input dựa trên isVATApplicable từ API và ServiceType
         var isInvoiceChecked = lastRow.find('.invoice-checkbox').is(':checked');
-        var isPartsTab = lastRow.closest('#editPartsItems').length > 0;
-        var hasPartId = lastRow.find('.service-id-input').val() && lastRow.find('.service-id-input').val() !== '';
+        var serviceTypeInput = lastRow.find('.service-type-input').val();
+        var actualIsPartsItem = isPartsItem || (serviceTypeInput && serviceTypeInput.toLowerCase() === 'parts');
         
-        if (!isInvoiceChecked) {
-            lastRow.find('.vat-rate-input').prop('disabled', true).val('0');
+        // ✅ SỬA: Ưu tiên isVATApplicable từ API thay vì chỉ dựa vào checkbox
+        // Đảm bảo VAT rate và amount được set đúng giá trị từ API
+        lastRow.find('.vat-rate-input').val(vatRate);
+        // ✅ SỬA: Lưu VAT rate vào data attribute để khôi phục khi check checkbox
+        if (vatRate > 0) {
+            lastRow.find('.vat-rate-input').data('original-vat-rate', vatRate);
+        }
+        lastRow.find('.vat-amount-input').val(vatAmount.toLocaleString() + ' VNĐ');
+        
+        if (!isVATApplicable && !isInvoiceChecked) {
+            // Nếu không có VAT và checkbox không check, disable VAT
+            lastRow.find('.vat-rate-input').prop('disabled', true).prop('readonly', false).val('0');
             lastRow.find('.vat-amount-input').prop('disabled', true).val('0 VNĐ');
-        } else if (isPartsTab && hasPartId) {
-            // ✅ THÊM: Đối với phụ tùng từ kho, VAT không được chỉnh sửa
-            lastRow.find('.vat-rate-input').prop('disabled', false).prop('readonly', true);
-            lastRow.find('.vat-rate-input').addClass('bg-light text-muted');
-            lastRow.find('.vat-rate-input').attr('title', 'VAT từ phụ tùng (Không được chỉnh sửa)');
+        } else {
+            // ✅ SỬA: Nếu có VAT (isVATApplicable = true), đảm bảo VAT được enable
+            lastRow.find('.vat-amount-input').prop('disabled', false);
+            
+            if (actualIsPartsItem) {
+                // ✅ SỬA: Đối với phụ tùng (ServiceType = "parts"), VAT không được chỉnh sửa - READ-ONLY
+                lastRow.find('.vat-rate-input').prop('disabled', false).prop('readonly', true);
+                lastRow.find('.vat-rate-input').addClass('bg-light text-muted');
+                lastRow.find('.vat-rate-input').attr('title', `VAT từ phụ tùng: ${vatRate}% (Không được chỉnh sửa)`);
+            } else {
+                // Đối với Service items, cho phép chỉnh sửa VAT
+                lastRow.find('.vat-rate-input').prop('disabled', false).prop('readonly', false);
+                lastRow.find('.vat-rate-input').removeClass('bg-light text-muted');
+                lastRow.find('.vat-rate-input').attr('title', 'VAT (%)');
+            }
         }
         
         // Initialize typeahead for new service input

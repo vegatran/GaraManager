@@ -5,6 +5,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseBrowserLink>false</UseBrowserLink>
+    <NoWarn>$(NoWarn);CS0105;CS8625;CS8600;CS8603;CS8604;CS8602;CS8601</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

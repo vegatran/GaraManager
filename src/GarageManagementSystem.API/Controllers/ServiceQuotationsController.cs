@@ -432,38 +432,93 @@ namespace GarageManagementSystem.API.Controllers
                             // ✅ SỬA: Dùng AutoMapper để map tất cả properties từ DTO sang Entity
                             var newItem = _mapper.Map<QuotationItem>(itemDto);
                             newItem.ServiceQuotationId = id;
+                            newItem.QuotationId = id; // ✅ THÊM: Set QuotationId (alias của ServiceQuotationId)
                             newItem.CreatedAt = DateTime.Now;
                             newItem.UpdatedAt = DateTime.Now;
+                            
+                            // ✅ SỬA: Validate và fix foreign keys để tránh constraint errors
+                            // Validate ServiceId nếu có - phải tồn tại trong database
+                            if (itemDto.ServiceId.HasValue && itemDto.ServiceId.Value > 0)
+                            {
+                                var serviceExists = await _unitOfWork.Services.GetByIdAsync(itemDto.ServiceId.Value);
+                                if (serviceExists == null)
+                                {
+                                    // Service không tồn tại, set về null để tránh foreign key constraint error
+                                    newItem.ServiceId = null;
+                                }
+                            }
+                            else
+                            {
+                                // Không có ServiceId hoặc = 0, set về null
+                                newItem.ServiceId = null;
+                            }
+                            
+                            // Nếu là Parts item (ServiceType = "parts"), đảm bảo không có ServiceId
+                            if (!string.IsNullOrEmpty(itemDto.ServiceType) && itemDto.ServiceType.ToLower() == "parts")
+                            {
+                                if (newItem.ServiceId.HasValue)
+                                {
+                                    newItem.ServiceId = null; // Parts không cần ServiceId
+                                }
+                            }
+                            
+                            // ✅ SỬA: Validate required fields
+                            if (string.IsNullOrWhiteSpace(newItem.ItemName))
+                            {
+                                throw new Exception($"ItemName là bắt buộc cho item {itemDto.ItemName ?? "không xác định"}");
+                            }
+                            
+                            if (newItem.Quantity <= 0)
+                            {
+                                throw new Exception($"Số lượng phải lớn hơn 0 cho item {newItem.ItemName}");
+                            }
+                            
+                            if (newItem.UnitPrice < 0)
+                            {
+                                throw new Exception($"Đơn giá không được âm cho item {newItem.ItemName}");
+                            }
                             
                             // ✅ SỬA: Chỉ tính toán lại những field cần thiết, giữ nguyên VATRate từ user
                             newItem.SubTotal = newItem.Quantity * newItem.UnitPrice;
                             
                             // Tính VATAmount dựa trên VATRate từ user input
+                            // VATRate có thể là decimal (0.10) hoặc phần trăm (10)
                             if (newItem.IsVATApplicable && newItem.VATRate > 0)
                             {
-                                newItem.VATAmount = newItem.SubTotal * (newItem.VATRate / 100);
+                                if (newItem.VATRate > 1)
+                                {
+                                    // Phần trăm: chia cho 100
+                                    newItem.VATAmount = newItem.SubTotal * (newItem.VATRate / 100);
+                                }
+                                else
+                                {
+                                    // Decimal: dùng trực tiếp
+                                    newItem.VATAmount = newItem.SubTotal * newItem.VATRate;
+                                }
                             }
                             else
                             {
                                 newItem.VATAmount = 0;
                             }
                             
-                            // Tính TotalPrice (bao gồm VAT)
+                            // Tính TotalPrice (bao gồm VAT) - Required field
                             newItem.TotalPrice = newItem.SubTotal + newItem.VATAmount;
                             newItem.TotalAmount = newItem.TotalPrice - newItem.DiscountAmount;
 
                             await _unitOfWork.ServiceQuotationItems.AddAsync(newItem);
                         }
+                        
+                        // ✅ SỬA: Tính toán tổng từ items đã add vào context (không cần reload)
+                        if (updateDto.Items != null && updateDto.Items.Any())
+                        {
+                            // Lấy items đã được add từ context hoặc tính trực tiếp từ DTO
+                            quotation.SubTotal = updateDto.Items.Sum(item => item.Quantity * item.UnitPrice);
+                            quotation.TaxAmount = updateDto.Items
+                                .Where(item => item.IsVATApplicable && item.VATRate > 0)
+                                .Sum(item => (item.Quantity * item.UnitPrice) * (item.VATRate / 100));
+                            quotation.TotalAmount = quotation.SubTotal + quotation.TaxAmount - quotation.DiscountAmount;
+                        }
                     }
-
-                    // ✅ SỬA: Recalculate totals từ items mới
-                    // Reload quotation với items mới
-                    quotation = await _unitOfWork.ServiceQuotations.GetByIdWithDetailsAsync(id);
-                    
-                    // ✅ SỬA: Sử dụng SubTotal và VATAmount đã tính từ từng item
-                    quotation.SubTotal = quotation.Items.Where(x => !x.IsDeleted).Sum(item => item.SubTotal);
-                    quotation.TaxAmount = quotation.Items.Where(x => !x.IsDeleted).Sum(item => item.VATAmount);
-                    quotation.TotalAmount = quotation.SubTotal + quotation.TaxAmount - quotation.DiscountAmount;
 
                     // Save all changes
                     await _unitOfWork.SaveChangesAsync();
@@ -471,22 +526,41 @@ namespace GarageManagementSystem.API.Controllers
                     // Commit transaction nếu thành công
                     await _unitOfWork.CommitTransactionAsync();
                 }
-                catch
+                catch (Exception innerEx)
                 {
                     // Rollback transaction nếu có lỗi
                     await _unitOfWork.RollbackTransactionAsync();
-                    throw;
+                    // Log chi tiết exception để debug
+                    var innerMessage = innerEx.Message;
+                    if (innerEx.InnerException != null)
+                    {
+                        innerMessage += $" | Inner: {innerEx.InnerException.Message}";
+                        // Thêm stack trace nếu là Entity Framework exception
+                        if (innerEx.InnerException.InnerException != null)
+                        {
+                            innerMessage += $" | Deep: {innerEx.InnerException.InnerException.Message}";
+                        }
+                    }
+                    // Re-throw với thông điệp chi tiết hơn
+                    throw new Exception($"Lỗi khi cập nhật items hoặc tính toán tổng tiền: {innerMessage}", innerEx);
                 }
 
                 // Reload with details
                 quotation = await _unitOfWork.ServiceQuotations.GetByIdWithDetailsAsync(id);
                 var quotationDto = MapToDto(quotation!);
 
-                return Ok(ApiResponse<ServiceQuotationDto>.SuccessResult(quotationDto, "Quotation updated successfully"));
+                return Ok(ApiResponse<ServiceQuotationDto>.SuccessResult(quotationDto, "Cập nhật báo giá thành công"));
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ApiResponse<ServiceQuotationDto>.ErrorResult("Error updating quotation", ex.Message));
+                // Log chi tiết exception để debug
+                var errorDetails = ex.Message;
+                if (ex.InnerException != null)
+                {
+                    errorDetails += $" | Chi tiết: {ex.InnerException.Message}";
+                }
+                // Chỉ trả về error message chi tiết, không trả về stack trace
+                return StatusCode(500, ApiResponse<ServiceQuotationDto>.ErrorResult("Lỗi khi cập nhật báo giá", errorDetails));
             }
         }
 

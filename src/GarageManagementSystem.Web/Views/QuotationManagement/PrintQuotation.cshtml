@@ -494,10 +494,39 @@
                 paintItems = Model.Quotation.Items.Where(i => i.ServiceType == "paint").ToList();
             }
             
+            // Tính subtotal cho tất cả items
             decimal subtotal = Model.Quotation.Items?.Sum(i => i.UnitPrice * i.Quantity) ?? 0;
+            
+            // Tính thuế theo từng item: chỉ tính cho items có IsVATApplicable = true
+            decimal totalTaxAmount = 0;
+            if (Model.Quotation.Items != null)
+            {
+                foreach (var item in Model.Quotation.Items)
+                {
+                    if (item.IsVATApplicable && item.Quantity > 0)
+                    {
+                        decimal itemSubtotal = item.UnitPrice * item.Quantity;
+                        // VATRate có thể là decimal (0.10) hoặc phần trăm (10)
+                        // Nếu > 1 thì coi như phần trăm, ngược lại là decimal
+                        decimal itemVATRate = item.VATRate ?? 0;
+                        if (itemVATRate > 1)
+                        {
+                            // Phần trăm: chia cho 100
+                            totalTaxAmount += itemSubtotal * (itemVATRate / 100);
+                        }
+                        else
+                        {
+                            // Decimal: dùng trực tiếp
+                            totalTaxAmount += itemSubtotal * itemVATRate;
+                        }
+                    }
+                }
+            }
+            
+            decimal grandTotal = subtotal + totalTaxAmount;
+            
+            // TaxRate tổng thể cho hiển thị (nếu cần)
             decimal taxRate = Model.Quotation.TaxRate;
-            decimal taxAmount = subtotal * taxRate;
-            decimal grandTotal = subtotal + taxAmount;
         }
         @if (Model.Quotation.Items != null && Model.Quotation.Items.Any())
         {
@@ -667,11 +696,11 @@
                             <td colspan="5" class="text-right"><strong>TỔNG (01+02+03)</strong></td>
                             <td style="width:20%"><strong>@subtotal.ToString("N0") VNĐ</strong></td>
                         </tr>
-                        @if (taxRate > 0)
+                        @if (totalTaxAmount > 0)
                         {
                             <tr class="grand-total-row">
-                                <td colspan="5" class="text-right"><strong>THUẾ @((taxRate * 100).ToString("F0"))% (VAT)</strong></td>
-                                <td style="width:20%"><strong>@taxAmount.ToString("N0") VNĐ</strong></td>
+                                <td colspan="5" class="text-right"><strong>THUẾ VAT</strong></td>
+                                <td style="width:20%"><strong>@totalTaxAmount.ToString("N0") VNĐ</strong></td>
                             </tr>
                         }
                         <tr class="grand-total-row" style="background: #ff6b35 !important; color: white;">
@@ -684,14 +713,21 @@
             
             <!-- Tổng bằng chữ -->
             <div style="margin-top: 10px; text-align: right; font-weight: bold; font-size: 12px;">
-                @ConvertToWords(grandTotal) gồm VAT @((taxRate * 100).ToString("F0"))%
+                @if (totalTaxAmount > 0)
+                {
+                    <text>@ConvertToWords(grandTotal) gồm VAT</text>
+                }
+                else
+                {
+                    <text>@ConvertToWords(grandTotal) chưa bao gồm VAT</text>
+                }
             </div>
         }
         <!-- Notes Section -->
         <div class="notes-section">
             <div class="notes-title">GHI CHÚ: Thời hạn bảo hành phụ tùng đại tu máy thời gian bảo hành 24 tháng kể từ giao xe</div>
             <div class="notes-content">
-                <div class="note-item"> @(taxRate > 0 ? "Báo giá đã bao gồm VAT " + (taxRate * 100).ToString("F0") + "%" : "Báo giá chưa bao gồm VAT")</div>
+                <div class="note-item"> @(totalTaxAmount > 0 ? "Báo giá đã bao gồm VAT cho các hạng mục áp dụng thuế" : "Báo giá chưa bao gồm VAT")</div>
                 <div class="note-item"> Báo giá chỉ có giá trị trong vòng 30 ngày kể từ ngày báo giá và không có giá trị thanh toán. Những chi phí phát sinh thêm sẽ được thông báo trước khi thực hiện.</div>
                 <div class="note-item"> Thời hạn bảo hành phụ tùng vật tư chính hãng là 12 tháng hoặc 10000 km tùy theo điều kiện nào đến trước.</div>
             </div>

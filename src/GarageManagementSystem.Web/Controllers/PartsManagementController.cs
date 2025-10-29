@@ -200,6 +200,44 @@ namespace GarageManagementSystem.Web.Controllers
         }
 
         /// <summary>
+        /// Tìm kiếm phụ tùng cho Typeahead trong Quotation Management
+        /// </summary>
+        [HttpGet("SearchParts")]
+        public async Task<IActionResult> SearchParts(string searchTerm)
+        {
+            try
+            {
+                var response = await _apiService.GetAsync<ApiResponse<List<PartDto>>>(
+                    ApiEndpoints.Parts.Search + "?searchTerm=" + Uri.EscapeDataString(searchTerm ?? ""));
+                
+                if (response.Success && response.Data != null)
+                {
+                    var parts = response.Data.Data.Select(p => new
+                    {
+                        id = p.Id,
+                        partId = p.Id,
+                        partName = p.PartName,
+                        partNumber = p.PartNumber,
+                        text = $"{p.PartName} ({p.PartNumber}) - {p.SellPrice.ToString("N0")} VNĐ",
+                        costPrice = p.CostPrice,
+                        sellPrice = p.SellPrice,
+                        vatRate = p.VATRate,
+                        isVATApplicable = p.IsVATApplicable,
+                        hasInvoice = p.HasInvoice
+                    }).Cast<object>().ToList();
+                    
+                    return Json(new { success = true, data = parts });
+                }
+
+                return Json(new { success = true, data = new List<object>() });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Lỗi khi tìm kiếm phụ tùng: {ex.Message}" });
+            }
+        }
+
+        /// <summary>
         /// Lấy danh sách nhà cung cấp có sẵn cho dropdown
         /// </summary>
         [HttpGet("GetAvailableSuppliers")]

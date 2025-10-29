@@ -5,7 +5,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <NoWarn>$(NoWarn);1591</NoWarn>
+    <NoWarn>$(NoWarn);1591;CS8602;CS8603;CS8604;CS8625;CS8600;CS8601;CS8629;CS8632;CS0168</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

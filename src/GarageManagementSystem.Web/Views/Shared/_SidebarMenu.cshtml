@@ -11,7 +11,7 @@
             </a>
         </li>
 
-        <!-- QUY TRÌNH NGHIỆP VỤ (Multilevel) -->
+        <!-- QUY TRÌNH NGHIỆP VỤ - GIAI ĐOẠN 1 (Multilevel) -->
         <li class="nav-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "CustomerReception" || ViewContext.RouteData.Values["Controller"]?.ToString() == "InspectionManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "QuotationManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "OrderManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "AppointmentManagement" ? "menu-open" : "")">
             <a href="#" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "CustomerReception" || ViewContext.RouteData.Values["Controller"]?.ToString() == "InspectionManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "QuotationManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "OrderManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "AppointmentManagement" ? "active" : "")">
                 <i class="nav-icon fas fa-tasks text-primary"></i>
@@ -21,30 +21,61 @@
                 </p>
             </a>
             <ul class="nav nav-treeview">
+                <!-- GIAI ĐOẠN 1: TIẾP NHẬN XE & BÁO GIÁ (Front Office) -->
+                <li class="nav-header text-sm" style="padding: 8px 16px; color: #6c757d; font-weight: bold;">
+                    <i class="fas fa-flag text-primary"></i> GIAI ĐOẠN 1: Tiếp Nhận & Báo Giá
+                </li>
+                
+                <!-- Bước 1: Tiếp nhận & Kiểm tra sơ bộ (CVDV) -->
                 <li class="nav-item">
                     <a href="@Url.Action("Index", "CustomerReception")" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "CustomerReception" ? "active" : "")">
                         <i class="far fa-circle nav-icon text-primary"></i>
-                        <p>Tiếp Đón Khách Hàng</p>
+                        <p>
+                            <span class="badge badge-primary" style="margin-right: 8px;">1</span>
+                            Tiếp Đón Khách Hàng
+                        </p>
                     </a>
                 </li>
+                
+                <!-- Bước 2: Chẩn đoán & Lập kế hoạch (KTV) -->
                 <li class="nav-item">
                     <a href="@Url.Action("Index", "InspectionManagement")" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "InspectionManagement" ? "active" : "")">
                         <i class="far fa-circle nav-icon text-warning"></i>
-                        <p>Kiểm Tra Xe</p>
+                        <p>
+                            <span class="badge badge-warning" style="margin-right: 8px;">2</span>
+                            Kiểm Tra Xe
+                        </p>
                     </a>
                 </li>
+                
+                <!-- Bước 3: Báo giá & Thỏa thuận (CVDV) -->
                 <li class="nav-item">
                     <a href="@Url.Action("Index", "QuotationManagement")" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "QuotationManagement" ? "active" : "")">
                         <i class="far fa-circle nav-icon text-success"></i>
-                        <p>Báo Giá</p>
+                        <p>
+                            <span class="badge badge-success" style="margin-right: 8px;">3</span>
+                            Báo Giá
+                        </p>
                     </a>
                 </li>
+                
+                <!-- GIAI ĐOẠN 2: THỰC HIỆN SỬA CHỮA (Back Office) -->
+                <li class="nav-header text-sm" style="padding: 8px 16px; color: #6c757d; font-weight: bold; margin-top: 10px;">
+                    <i class="fas fa-wrench text-danger"></i> GIAI ĐOẠN 2: Sửa Chữa & Thanh Toán
+                </li>
+                
+                <!-- Bước 4: Tạo đơn sửa chữa -->
                 <li class="nav-item">
                     <a href="@Url.Action("Index", "OrderManagement")" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "OrderManagement" ? "active" : "")">
                         <i class="far fa-circle nav-icon text-danger"></i>
-                        <p>Phiếu Sửa Chữa</p>
+                        <p>
+                            <span class="badge badge-danger" style="font-size: 11px; margin-right: 5px;">4</span>
+                            Phiếu Sửa Chữa
+                        </p>
                     </a>
                 </li>
+                
+                <!-- Lịch Hẹn (Có thể ở GĐ1 hoặc riêng) -->
                 <li class="nav-item">
                     <a href="@Url.Action("Index", "AppointmentManagement")" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "AppointmentManagement" ? "active" : "")">
                         <i class="far fa-circle nav-icon text-info"></i>
