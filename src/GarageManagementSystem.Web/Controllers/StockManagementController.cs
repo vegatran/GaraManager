@@ -275,34 +275,6 @@ namespace GarageManagementSystem.Web.Controllers
         }
 
         /// <summary>
-        /// ✅ THÊM: Tạo đơn nhập hàng với nhiều phụ tùng
-        /// </summary>
-        [HttpPost("CreatePurchaseOrder")]
-        public async Task<IActionResult> CreatePurchaseOrder([FromBody] CreatePurchaseOrderDto dto)
-        {
-            try
-            {
-                if (!ModelState.IsValid)
-                {
-                    return BadRequest(new { success = false, message = "Dữ liệu không hợp lệ" });
-                }
-
-                if (dto.Items == null || dto.Items.Count == 0)
-                {
-                    return BadRequest(new { success = false, message = "Vui lòng thêm ít nhất một phụ tùng vào đơn hàng" });
-                }
-
-                var response = await _apiService.PostAsync<List<StockTransactionDto>>(ApiEndpoints.StockTransactions.CreatePurchaseOrder, dto);
-                
-                return Json(response);
-            }
-            catch (Exception ex)
-            {
-                return Json(new { success = false, message = $"Lỗi khi tạo đơn nhập hàng: {ex.Message}" });
-            }
-        }
-
-        /// <summary>
         /// Lấy danh sách loại giao dịch kho
         /// </summary>
         [HttpGet("GetTransactionTypes")]

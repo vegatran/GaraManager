@@ -33,16 +33,32 @@ window.Dashboard = {
 
     // Update statistics display
     updateStatistics: function(data) {
+        console.log('Dashboard data received:', data);
+        
+        // Map data to view elements
+        // bg-info = Khách hàng (Customers)
+        // bg-success = Xe (Vehicles)  
+        // bg-warning = Dịch vụ (Services) - should be service count but API returns newOrders
+        // bg-danger = Đơn hàng (Orders) - should be active/pending orders
+        
+        // Get counts in order
+        var customerCount = data.totalCustomers || 0;
+        var vehicleCount = data.totalVehicles || 0;
+        var serviceCount = data.completedOrders || data.newOrders || 0; // Fallback to newOrders
+        var orderCount = data.pendingOrders || 0;
+        
+        console.log('Updating cards:', {customerCount, vehicleCount, serviceCount, orderCount});
+        
         // Update the small boxes (stat cards)
-        $('.small-box.bg-info h3').text(data.totalCustomers || 0);
-        $('.small-box.bg-success h3').text(data.totalVehicles || 0);
-        $('.small-box.bg-warning h3').text(data.pendingOrders || 0);
-        $('.small-box.bg-danger h3').text(data.pendingOrders || 0);
+        $('.small-box.bg-info h3').text(customerCount);
+        $('.small-box.bg-success h3').text(vehicleCount);
+        $('.small-box.bg-warning h3').text(serviceCount);
+        $('.small-box.bg-danger h3').text(orderCount);
         
         // Update other elements if they exist
-        $('#totalCustomers').text(data.totalCustomers || 0);
-        $('#totalVehicles').text(data.totalVehicles || 0);
-        $('#pendingOrders').text(data.pendingOrders || 0);
+        $('#totalCustomers').text(customerCount);
+        $('#totalVehicles').text(vehicleCount);
+        $('#pendingOrders').text(orderCount);
         $('#todayAppointments').text(data.todayAppointments || 0);
         $('#monthlyRevenue').text('₫' + (data.monthlyRevenue || 0).toLocaleString());
     },

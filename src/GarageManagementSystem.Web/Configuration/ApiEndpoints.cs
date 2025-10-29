@@ -222,6 +222,8 @@ namespace GarageManagementSystem.Web.Configuration
             public const string ImportOpeningBalance = "stocktransactions/opening-balance";
             public const string ValidateOpeningBalance = "stocktransactions/opening-balance/validate";
             public const string ImportExcel = "stocktransactions/import-excel";
+            public const string ValidateExcel = "stocktransactions/validate-excel";
+            public const string DownloadTemplate = "stocktransactions/download-template";
         }
 
         /// <summary>
@@ -236,10 +238,6 @@ namespace GarageManagementSystem.Web.Configuration
             public const string Delete = "financialtransactions/{0}";
             public const string GetCategories = "financialtransactions/categories";
             public const string GetByDateRange = "financialtransactions/date-range";
-        }
-            public const string ValidateExcel = "stocktransactions/validate-excel";
-            public const string DownloadTemplate = "stocktransactions/download-template";
-            public const string CreatePurchaseOrder = "stocktransactions/purchase-order";
         }
 
         /// <summary>

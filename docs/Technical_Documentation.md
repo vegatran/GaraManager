@@ -22,6 +22,10 @@ Hệ thống quản lý garage ô tô toàn diện, hỗ trợ quản lý phụ 
 - ✅ Quản lý nhân viên và phân quyền
 - ✅ Báo giá và đơn hàng
 - ✅ Thanh toán và báo cáo
+- ✅ Phiếu nhập hàng với quản lý VAT
+- ✅ Phiếu thu/chi (Financial Transactions)
+- ✅ Dashboard Analytics
+- ✅ Responsive Design cho tất cả views
 
 ### **Công nghệ sử dụng**
 - **Backend**: ASP.NET Core 8.0 (.NET 8.0)
@@ -239,17 +243,37 @@ GET    /api/suppliers              # Lấy danh sách nhà cung cấp
 POST   /api/suppliers              # Tạo nhà cung cấp mới
 GET    /api/suppliers/{id}         # Lấy thông tin nhà cung cấp
 PUT    /api/suppliers/{id}         # Cập nhật nhà cung cấp
-DELETE /api/suppliers/{id}         # Xóa nhà cung cấp
 ```
 
-#### **8. Purchase Orders**
+#### **8. Purchase Orders Management**
 ```http
-GET    /api/purchase-orders        # Lấy danh sách đơn đặt hàng
-POST   /api/purchase-orders        # Tạo đơn đặt hàng mới
-GET    /api/purchase-orders/{id}   # Lấy thông tin đơn đặt hàng
-PUT    /api/purchase-orders/{id}   # Cập nhật đơn đặt hàng
-POST   /api/purchase-orders/{id}/receive # Nhận hàng
-POST   /api/purchase-orders/{id}/approve # Phê duyệt đơn hàng
+GET    /api/purchaseorders                    # Lấy danh sách phiếu nhập
+POST   /api/purchaseorders                    # Tạo phiếu nhập mới
+GET    /api/purchaseorders/{orderNumber}       # Lấy phiếu nhập theo số phiếu
+GET    /api/purchaseorders/{id}                # Lấy phiếu nhập theo ID
+PUT    /api/purchaseorders/{id}                # Cập nhật phiếu nhập
+DELETE /api/purchaseorders/{id}                # Xóa phiếu nhập
+POST   /api/purchaseorders/{id}/send          # Gửi phiếu nhập
+POST   /api/purchaseorders/{id}/cancel        # Hủy phiếu nhập
+POST   /api/purchaseorders/{id}/receive       # Nhận hàng (tạo stock + financial)
+```
+
+#### **9. Financial Transactions Management**
+```http
+GET    /api/financialtransactions             # Lấy danh sách phiếu thu/chi
+GET    /api/financialtransactions/categories  # Lấy danh sách categories
+POST   /api/financialtransactions             # Tạo phiếu thu/chi
+GET    /api/financialtransactions/{id}        # Lấy chi tiết phiếu thu/chi
+PUT    /api/financialtransactions/{id}        # Cập nhật phiếu thu/chi
+DELETE /api/financialtransactions/{id}        # Xóa phiếu thu/chi
+```
+
+#### **10. Dashboard & Analytics**
+```http
+GET    /api/analytics/dashboard               # Lấy thống kê dashboard
+GET    /api/analytics/parts-turnover          # Phân tích vòng quay phụ tùng
+GET    /api/analytics/completion-time          # Phân tích thời gian hoàn thành
+GET    /api/analytics/payment-methods         # Thống kê phương thức thanh toán
 ```
 
 ### **Response Format**

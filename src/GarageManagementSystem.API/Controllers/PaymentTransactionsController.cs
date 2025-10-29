@@ -1,3 +1,4 @@
+using AutoMapper;
 using GarageManagementSystem.Core.Interfaces;
 using GarageManagementSystem.Core.Extensions;
 using GarageManagementSystem.Shared.DTOs;
@@ -14,11 +15,13 @@ namespace GarageManagementSystem.API.Controllers
     public class PaymentTransactionsController : ControllerBase
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IMapper _mapper;
         private readonly ICacheService _cacheService;
 
-        public PaymentTransactionsController(IUnitOfWork unitOfWork, ICacheService cacheService)
+        public PaymentTransactionsController(IUnitOfWork unitOfWork, IMapper mapper, ICacheService cacheService)
         {
             _unitOfWork = unitOfWork;
+            _mapper = mapper;
             _cacheService = cacheService;
         }
 
@@ -58,7 +61,7 @@ namespace GarageManagementSystem.API.Controllers
                 
                 // Apply pagination
                 var pagedPayments = query.ApplyPagination(pageNumber, pageSize).ToList();
-                var paymentDtos = pagedPayments.Select(MapToDto).ToList();
+                var paymentDtos = pagedPayments.Select(p => _mapper.Map<PaymentTransactionDto>(p)).ToList();
                 
                 return Ok(PagedResponse<PaymentTransactionDto>.CreateSuccessResult(
                     paymentDtos, pageNumber, pageSize, totalCount, "Payment transactions retrieved successfully"));
@@ -79,7 +82,7 @@ namespace GarageManagementSystem.API.Controllers
                 {
                     return NotFound(ApiResponse<PaymentTransactionDto>.ErrorResult("Giao dịch thanh toán không tồn tại"));
                 }
-                return Ok(ApiResponse<PaymentTransactionDto>.SuccessResult(MapToDto(payment)));
+                return Ok(ApiResponse<PaymentTransactionDto>.SuccessResult(_mapper.Map<PaymentTransactionDto>(payment)));
             }
             catch (Exception ex)
             {
@@ -93,7 +96,7 @@ namespace GarageManagementSystem.API.Controllers
             try
             {
                 var payments = await _unitOfWork.PaymentTransactions.GetByServiceOrderIdAsync(serviceOrderId);
-                return Ok(ApiResponse<List<PaymentTransactionDto>>.SuccessResult(payments.Select(MapToDto).ToList()));
+                return Ok(ApiResponse<List<PaymentTransactionDto>>.SuccessResult(payments.Select(p => _mapper.Map<PaymentTransactionDto>(p)).ToList()));
             }
             catch (Exception ex)
             {
@@ -152,7 +155,7 @@ namespace GarageManagementSystem.API.Controllers
                     throw;
                 }
 
-                return Ok(ApiResponse<PaymentTransactionDto>.SuccessResult(MapToDto(payment), "Payment recorded"));
+                return Ok(ApiResponse<PaymentTransactionDto>.SuccessResult(_mapper.Map<PaymentTransactionDto>(payment), "Payment recorded"));
             }
             catch (Exception ex)
             {
@@ -160,17 +163,6 @@ namespace GarageManagementSystem.API.Controllers
             }
         }
 
-        private static PaymentTransactionDto MapToDto(Core.Entities.PaymentTransaction pt) => new()
-        {
-            Id = pt.Id, ReceiptNumber = pt.ReceiptNumber, ServiceOrderId = pt.ServiceOrderId,
-            PaymentDate = pt.PaymentDate, Amount = pt.Amount, PaymentMethod = pt.PaymentMethod,
-            TransactionReference = pt.TransactionReference, CardType = pt.CardType,
-            CardLastFourDigits = pt.CardLastFourDigits, ReceivedById = pt.ReceivedById,
-            Notes = pt.Notes, IsRefund = pt.IsRefund, RefundReason = pt.RefundReason,
-            ReceivedBy = pt.ReceivedBy != null ? new EmployeeDto { Id = pt.ReceivedBy.Id, Name = pt.ReceivedBy.Name } : null,
-            CreatedAt = pt.CreatedAt, CreatedBy = pt.CreatedBy,
-            UpdatedAt = pt.UpdatedAt, UpdatedBy = pt.UpdatedBy
-        };
     }
 }
 

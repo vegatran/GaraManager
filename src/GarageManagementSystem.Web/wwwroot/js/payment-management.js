@@ -10,19 +10,8 @@ window.PaymentManagement = {
 
     initDataTable: function() {
         var self = this;
-        this.paymentTable = DataTablesVietnamese.init('#paymentTable', {
-            ajax: {
-                url: '/PaymentManagement/GetPayments',
-                type: 'GET',
-                error: function(xhr, status, error) {
-                    if (AuthHandler.isUnauthorized(xhr)) {
-                        AuthHandler.handleUnauthorized(xhr, true);
-                    } else {
-                        GarageApp.showError('Lỗi khi tải danh sách thanh toán');
-                    }
-                }
-            },
-            columns: [
+        
+        var columns = [
                 { data: 'id', title: 'ID', width: '5%' },
                 { data: 'paymentNumber', title: 'Số Biên Nhận', width: '12%' },
                 { data: 'invoiceNumber', title: 'Mã Đơn Hàng', width: '10%' },
@@ -30,8 +19,13 @@ window.PaymentManagement = {
                     data: 'amount', 
                     title: 'Số Tiền', 
                     width: '12%',
-                    render: function(data) {
-                        return data + ' VNĐ';
+                    className: 'text-right',
+                    render: function(data, type, row) {
+                        if (type === 'display') {
+                            var amount = parseFloat(data) || 0;
+                            return amount.toLocaleString('vi-VN') + ' VNĐ';
+                        }
+                        return data;
                     }
                 },
                 { data: 'paymentMethod', title: 'Phương Thức', width: '12%' },
@@ -62,14 +56,27 @@ window.PaymentManagement = {
                         `;
                     }
                 }
-            ],
-            order: [[0, 'desc']],
-            pageLength: 25
-        });
+            ];
+        
+        this.paymentTable = DataTablesUtility.initServerSideTable(
+            '#paymentTable',
+            '/PaymentManagement/GetPayments',
+            columns,
+            {
+                order: [[0, 'desc']],
+                pageLength: 10
+            }
+        );
     },
 
     bindEvents: function() {
         var self = this;
+
+        // Unbind existing events to prevent duplicates
+        $('#createPaymentForm').off('submit');
+        $(document).off('click', '.view-payment');
+        $(document).off('click', '.delete-payment');
+        $('#searchInput').off('keyup');
 
         // Create payment
         $('#createPaymentForm').on('submit', function(e) {
@@ -89,9 +96,11 @@ window.PaymentManagement = {
             self.deletePayment(paymentId);
         });
 
-        // Search
+        // Search (client-side - server-side search is handled by DataTables)
         $('#searchInput').on('keyup', function() {
-            self.paymentTable.search(this.value).draw();
+            if (self.paymentTable) {
+                self.paymentTable.search(this.value).draw();
+            }
         });
     },
 

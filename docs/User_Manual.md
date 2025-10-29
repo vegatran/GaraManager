@@ -10,8 +10,10 @@
 7. [Quản lý dịch vụ](#quản-lý-dịch-vụ)
 8. [Tạo đơn hàng sửa chữa](#tạo-đơn-hàng-sửa-chữa)
 9. [Quản lý thanh toán](#quản-lý-thanh-toán)
-10. [Báo cáo và thống kê](#báo-cáo-và-thống-kê)
-11. [Troubleshooting](#troubleshooting)
+10. [Phiếu Nhập Hàng](#phiếu-nhập-hàng)
+11. [Phiếu Thu/Chi](#phiếu-thu-chi)
+12. [Báo cáo và thống kê](#báo-cáo-và-thống-kê)
+13. [Troubleshooting](#troubleshooting)
 
 ---
 

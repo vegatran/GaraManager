@@ -205,28 +205,35 @@ namespace GarageManagementSystem.Web.Controllers
         {
             try
             {
-                var response = await _apiService.GetAsync<dynamic>(ApiEndpoints.Dashboard.Statistics);
+                var response = await _apiService.GetAsync<object>(ApiEndpoints.Dashboard.Statistics);
                 
-                if (response.Success)
+                if (response.Success && response.Data != null)
                 {
-                    var stats = response.Data;
+                    // API trả về { success: true, data: { Total: {...}, ThisMonth: {...}, ... } }
+                    // Cần parse response.Data để lấy stats
+                    var apiData = response.Data as System.Text.Json.JsonElement?;
                     
-                    // Safe property access with try-catch for each property
-                    var dashboardData = new
+                    if (apiData.HasValue)
                     {
-                        totalCustomers = GetPropertyValue(stats, "Total", "Customers", 0),
-                        totalVehicles = GetPropertyValue(stats, "Total", "Vehicles", 0),
-                        pendingOrders = GetPropertyValue(stats, "Total", "ActiveOrders", 0),
-                        todayAppointments = GetPropertyValue(stats, "Today", "Appointments", 0),
-                        monthlyRevenue = GetPropertyValue(stats, "ThisMonth", "Revenue", 0m),
-                        lastMonthRevenue = GetPropertyValue(stats, "LastMonth", "Revenue", 0m),
-                        completedOrders = GetPropertyValue(stats, "OrderStatus", "Completed", 0),
-                        inProgressOrders = GetPropertyValue(stats, "OrderStatus", "InProgress", 0),
-                        newCustomers = GetPropertyValue(stats, "ThisMonth", "NewCustomers", 0),
-                        newOrders = GetPropertyValue(stats, "ThisMonth", "NewOrders", 0)
-                    };
-                    
-                    return Json(new { success = true, data = dashboardData });
+                        var jsonElement = apiData.Value;
+                        
+                        // Parse data from JSON
+                        var dashboardData = new
+                        {
+                            totalCustomers = GetJsonValue(jsonElement, "data.Total.Customers", 0),
+                            totalVehicles = GetJsonValue(jsonElement, "data.Total.Vehicles", 0),
+                            pendingOrders = GetJsonValue(jsonElement, "data.Total.ActiveOrders", 0),
+                            todayAppointments = GetJsonValue(jsonElement, "data.Today.Appointments", 0),
+                            monthlyRevenue = GetJsonValue(jsonElement, "data.ThisMonth.Revenue", 0m),
+                            lastMonthRevenue = GetJsonValue(jsonElement, "data.LastMonth.Revenue", 0m),
+                            completedOrders = GetJsonValue(jsonElement, "data.OrderStatus.Completed", 0),
+                            inProgressOrders = GetJsonValue(jsonElement, "data.OrderStatus.InProgress", 0),
+                            newCustomers = GetJsonValue(jsonElement, "data.ThisMonth.NewCustomers", 0),
+                            newOrders = GetJsonValue(jsonElement, "data.ThisMonth.NewOrders", 0)
+                        };
+                        
+                        return Json(new { success = true, data = dashboardData });
+                    }
                 }
                 
                 return Json(new { success = false, message = "Không thể tải thống kê" });
@@ -234,6 +241,40 @@ namespace GarageManagementSystem.Web.Controllers
             catch (Exception ex)
             {
                 return Json(new { success = false, message = "Lỗi: " + ex.Message });
+            }
+        }
+
+        private T GetJsonValue<T>(System.Text.Json.JsonElement jsonElement, string path, T defaultValue)
+        {
+            try
+            {
+                var pathParts = path.Split('.');
+                var current = jsonElement;
+                
+                foreach (var part in pathParts)
+                {
+                    if (current.TryGetProperty(part, out var property))
+                    {
+                        current = property;
+                    }
+                    else
+                    {
+                        return defaultValue;
+                    }
+                }
+                
+                if (typeof(T) == typeof(int))
+                    return (T)(object)current.GetInt32();
+                else if (typeof(T) == typeof(decimal))
+                    return (T)(object)current.GetDecimal();
+                else if (typeof(T) == typeof(string))
+                    return (T)(object)(current.GetString() ?? "");
+                
+                return defaultValue;
+            }
+            catch
+            {
+                return defaultValue;
             }
         }
 

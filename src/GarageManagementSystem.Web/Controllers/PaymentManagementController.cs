@@ -1,4 +1,6 @@
+using AutoMapper;
 using GarageManagementSystem.Shared.DTOs;
+using GarageManagementSystem.Shared.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using GarageManagementSystem.Web.Services;
@@ -30,44 +32,79 @@ namespace GarageManagementSystem.Web.Controllers
         }
 
         /// <summary>
-        /// Lấy danh sách tất cả thanh toán cho DataTable thông qua API
+        /// Lấy danh sách thanh toán với pagination theo pattern chung
         /// </summary>
         [HttpGet("GetPayments")]
-        public async Task<IActionResult> GetPayments()
+        public async Task<IActionResult> GetPayments(
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 10,
+            [FromQuery] string? searchTerm = null,
+            [FromQuery] string? paymentMethod = null,
+            [FromQuery] string? status = null)
         {
-            var response = await _apiService.GetAsync<List<PaymentTransactionDto>>(ApiEndpoints.PaymentTransactions.GetAll);
-            
-            if (response.Success)
+            try
             {
-                var paymentList = new List<object>();
-                
-                if (response.Data != null)
+                // Build query parameters
+                var queryParams = new List<string>
                 {
-                    paymentList = response.Data.Select(p => new
+                    $"pageNumber={pageNumber}",
+                    $"pageSize={pageSize}"
+                };
+                
+                if (!string.IsNullOrEmpty(searchTerm))
+                    queryParams.Add($"searchTerm={Uri.EscapeDataString(searchTerm)}");
+                if (!string.IsNullOrEmpty(paymentMethod))
+                    queryParams.Add($"paymentMethod={Uri.EscapeDataString(paymentMethod)}");
+                if (!string.IsNullOrEmpty(status))
+                    queryParams.Add($"status={Uri.EscapeDataString(status)}");
+
+                var queryString = string.Join("&", queryParams);
+                var endpoint = $"{ApiEndpoints.PaymentTransactions.GetAll}?{queryString}";
+
+                // Use PagedResponse pattern like EmployeeManagement
+                var response = await _apiService.GetAsync<PagedResponse<PaymentTransactionDto>>(endpoint);
+                
+                if (response.Success && response.Data != null)
+                {
+                    var paymentList = response.Data.Data.Select(p => new
                     {
                         id = p.Id,
                         paymentNumber = p.ReceiptNumber,
-                        invoiceNumber = p.ServiceOrderId.ToString(),
-                        customerName = "N/A", // PaymentTransaction không có Customer trực tiếp
-                        amount = p.Amount.ToString("N0"),
-                        paymentMethod = p.PaymentMethod,
-                        paymentDate = p.PaymentDate,
+                        invoiceNumber = p.ServiceOrderId != null ? p.ServiceOrderId.ToString() : "N/A",
+                        customerName = "N/A",
+                        amount = p.Amount,
+                        paymentMethod = p.PaymentMethod ?? "N/A",
+                        paymentDate = p.PaymentDate.ToString("yyyy-MM-dd"),
                         status = p.IsRefund ? "Refund" : "Completed",
                         referenceNumber = p.TransactionReference ?? "N/A",
-                        notes = p.Notes ?? "N/A",
-                        createdDate = p.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss")
-                    }).Cast<object>().ToList();
-                }
+                        notes = p.Notes ?? "N/A"
+                    }).ToList();
 
-                return Json(new { 
-                    success = true,
-                    data = paymentList,
-                    message = "Lấy danh sách thanh toán thành công"
-                });
+                    return Json(new { 
+                        success = true,
+                        data = paymentList,
+                        totalCount = response.Data.TotalCount,
+                        message = "Lấy danh sách thanh toán thành công"
+                    });
+                }
+                else
+                {
+                    return Json(new { 
+                        success = false,
+                        data = new List<object>(),
+                        totalCount = 0,
+                        error = response.ErrorMessage ?? "Lỗi khi lấy danh sách thanh toán"
+                    });
+                }
             }
-            else
+            catch (Exception ex)
             {
-                return Json(new { error = response.ErrorMessage });
+                return Json(new { 
+                    success = false,
+                    data = new List<object>(),
+                    totalCount = 0,
+                    error = "Lỗi khi lấy danh sách thanh toán: " + ex.Message
+                });
             }
         }
 
