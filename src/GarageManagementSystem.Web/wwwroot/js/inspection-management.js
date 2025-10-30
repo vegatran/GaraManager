@@ -319,6 +319,51 @@ window.InspectionManagement = {
         });
     },
 
+    // ✅ THÊM: Load vehicles cho edit modal
+    loadVehiclesForEdit: function(selectedVehicleId, callback) {
+        var self = this;
+        $.ajax({
+            url: '/VehicleManagement/GetAvailableVehicles',
+            type: 'GET',
+            success: function(response) {
+                if (response && Array.isArray(response)) {
+                    var vehicles = response;
+                    var $select = $('#editVehicleId');
+                    
+                    // Clear và thêm options
+                    $select.empty().append('<option value="">Chọn xe</option>');
+                    vehicles.forEach(function(vehicle) {
+                        var selected = (selectedVehicleId && vehicle.value == selectedVehicleId) ? 'selected' : '';
+                        $select.append(`<option value="${vehicle.value}" data-customer-id="${vehicle.customerId}" data-customer-name="${vehicle.customerName}" ${selected}>${vehicle.text}</option>`);
+                    });
+                    
+                    // Reinitialize Select2
+                    if ($select.hasClass('select2-hidden-accessible')) {
+                        $select.select2('destroy');
+                    }
+                    $select.select2({
+                        placeholder: 'Chọn xe',
+                        allowClear: false,
+                        width: '100%',
+                        disabled: true // Vehicle không thể thay đổi sau khi đã tạo kiểm tra
+                    });
+                    
+                    // Set value và trigger change
+                    if (selectedVehicleId) {
+                        $select.val(selectedVehicleId).trigger('change');
+                    }
+                    
+                    if (callback) callback();
+                } else {
+                    if (callback) callback();
+                }
+            },
+            error: function(xhr, status, error) {
+                if (callback) callback();
+            }
+        });
+    },
+
     setupVehicleChangeHandler: function() {
         var self = this;
         
@@ -450,11 +495,15 @@ window.InspectionManagement = {
                 if (AuthHandler.validateApiResponse(response)) {
                     if (response.success && response.data) {
                         var inspection = response.data;
-                        self.populateEditModal(inspection);
-                        $('#editInspectionModal').modal('show');
                         
-                        // Reset trạng thái dropdown khách hàng
-                        $('#editCustomerId').prop('disabled', true);
+                        // ✅ THÊM: Load vehicles vào editVehicleId dropdown trước khi populate
+                        self.loadVehiclesForEdit(inspection.vehicleId, function() {
+                            self.populateEditModal(inspection);
+                            $('#editInspectionModal').modal('show');
+                            
+                            // Reset trạng thái dropdown khách hàng
+                            $('#editCustomerId').prop('disabled', true);
+                        });
                     } else {
                         GarageApp.showError(GarageApp.parseErrorMessage(response) || 'Lỗi khi tải thông tin kiểm tra xe');
                     }
@@ -848,7 +897,7 @@ window.InspectionManagement = {
         }).then((result) => {
             if (result.isConfirmed) {
                 $.ajax({
-                    url: '/VehicleManagement/CompleteInspection/' + id,
+                    url: '/InspectionManagement/CompleteInspection/' + id,
                     type: 'POST',
                     success: function(response) {
                         if (response.success) {
@@ -859,15 +908,26 @@ window.InspectionManagement = {
                                 timer: 2000,
                                 showConfirmButton: false,
                             });
-                            self.dataTable.ajax.reload();
+                            self.inspectionTable.ajax.reload();
                         } else {
-                            GarageApp.showError(response.message || 'Có lỗi xảy ra khi hoàn thành kiểm tra');
+                            GarageApp.showError(response.message || response.error || 'Có lỗi xảy ra khi hoàn thành kiểm tra');
                         }
                     },
                     error: function(xhr, status, error) {
                         var errorMessage = 'Lỗi khi hoàn thành kiểm tra xe';
-                        if (xhr.responseJSON && xhr.responseJSON.message) {
-                            errorMessage = xhr.responseJSON.message;
+                        if (xhr.responseJSON) {
+                            if (xhr.responseJSON.message) {
+                                errorMessage = xhr.responseJSON.message;
+                            } else if (xhr.responseJSON.error) {
+                                errorMessage = xhr.responseJSON.error;
+                            }
+                        } else if (xhr.responseText) {
+                            try {
+                                var errorObj = JSON.parse(xhr.responseText);
+                                errorMessage = errorObj.message || errorObj.error || errorMessage;
+                            } catch (e) {
+                                // If parsing fails, use default message
+                            }
                         }
                         GarageApp.showError(errorMessage);
                     }

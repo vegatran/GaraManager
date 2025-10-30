@@ -24,8 +24,9 @@ namespace GarageManagementSystem.API.Controllers
         {
             try
             {
-                var items = await _unitOfWork.Repository<PurchaseOrderItem>().GetAllAsync();
-                var result = items.Where(i => i.PurchaseOrderId == purchaseOrderId).ToList();
+                // ✅ OPTIMIZED: Filter ở database level thay vì load all rồi filter trong memory
+                var result = (await _unitOfWork.Repository<PurchaseOrderItem>()
+                    .FindAsync(i => i.PurchaseOrderId == purchaseOrderId)).ToList();
 
                 return Ok(new { success = true, data = result });
             }

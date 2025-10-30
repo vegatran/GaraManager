@@ -32,8 +32,13 @@ namespace GarageManagementSystem.Core.Entities
         [StringLength(20)]
         public string? Status { get; set; } = "Pending"; // "Pending", "InProgress", "Completed", "Cancelled"
 
+        // ✅ THÊM: Phân công KTV và giờ công dự kiến cho item
+        public int? AssignedTechnicianId { get; set; } // KTV được phân công cho item này
+        public decimal? EstimatedHours { get; set; }   // Giờ công dự kiến cho item này
+
         // Navigation properties
         public virtual ServiceOrder ServiceOrder { get; set; } = null!;
         public virtual Service Service { get; set; } = null!;
+        public virtual Employee? AssignedTechnician { get; set; } // Navigation to assigned technician
     }
 }

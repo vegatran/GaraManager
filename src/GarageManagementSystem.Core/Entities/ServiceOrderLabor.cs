@@ -11,6 +11,7 @@ namespace GarageManagementSystem.Core.Entities
         public int LaborItemId { get; set; }
         public int? EmployeeId { get; set; } // Thợ thực hiện
         
+        public decimal EstimatedHours { get; set; } = 0; // ✅ THÊM: Giờ công dự kiến
         [Required]
         public decimal ActualHours { get; set; } = 1; // Số giờ thực tế
         

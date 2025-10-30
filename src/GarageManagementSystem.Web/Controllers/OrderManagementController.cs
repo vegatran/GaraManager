@@ -1,4 +1,5 @@
 using GarageManagementSystem.Shared.DTOs;
+using GarageManagementSystem.Shared.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using GarageManagementSystem.Web.Services;
@@ -53,6 +54,7 @@ namespace GarageManagementSystem.Web.Controllers
                         scheduledDate = o.ScheduledDate?.ToString("yyyy-MM-dd HH:mm") ?? "Chưa lên lịch",
                         completedDate = o.CompletedDate?.ToString("yyyy-MM-dd HH:mm") ?? "Chưa hoàn thành",
                         status = TranslateOrderStatus(o.Status),
+                        statusOriginal = o.Status, // ✅ THÊM: Giữ nguyên status gốc để JS xử lý
                         finalAmount = o.FinalAmount.ToString("N0"),
                         paymentStatus = TranslatePaymentStatus(o.PaymentStatus ?? "Pending"),
                         serviceCount = o.ServiceOrderItems.Count
@@ -68,6 +70,88 @@ namespace GarageManagementSystem.Web.Controllers
             else
             {
                 return Json(new { error = response.ErrorMessage });
+            }
+        }
+
+        /// <summary>
+        /// ✅ THÊM: Lấy danh sách đơn hàng với server-side pagination cho DataTable
+        /// </summary>
+        [HttpGet("GetOrdersPaged")]
+        public async Task<IActionResult> GetOrdersPaged(
+            int pageNumber = 1,
+            int pageSize = 10,
+            string? searchTerm = null,
+            string? status = null)
+        {
+            try
+            {
+                // Build query string
+                var queryParams = new List<string>
+                {
+                    $"pageNumber={pageNumber}",
+                    $"pageSize={pageSize}"
+                };
+
+                if (!string.IsNullOrEmpty(searchTerm))
+                    queryParams.Add($"searchTerm={Uri.EscapeDataString(searchTerm)}");
+                if (!string.IsNullOrEmpty(status))
+                    queryParams.Add($"status={Uri.EscapeDataString(status)}");
+
+                var endpoint = ApiEndpoints.ServiceOrders.GetAll + "?" + string.Join("&", queryParams);
+                var response = await _apiService.GetAsync<PagedResponse<ServiceOrderDto>>(endpoint);
+
+                if (response.Success && response.Data != null)
+                {
+                    var orderList = response.Data.Data.Select(o => new
+                    {
+                        id = o.Id,
+                        orderNumber = o.OrderNumber,
+                        customerName = o.Customer?.Name ?? "Không xác định",
+                        vehiclePlate = o.Vehicle?.LicensePlate ?? "Không xác định",
+                        orderDate = o.OrderDate.ToString("yyyy-MM-dd HH:mm"),
+                        scheduledDate = o.ScheduledDate?.ToString("yyyy-MM-dd HH:mm") ?? "Chưa lên lịch",
+                        completedDate = o.CompletedDate?.ToString("yyyy-MM-dd HH:mm") ?? "Chưa hoàn thành",
+                        status = TranslateOrderStatus(o.Status),
+                        statusOriginal = o.Status, // ✅ THÊM: Giữ nguyên status gốc để JS xử lý
+                        finalAmount = o.FinalAmount.ToString("N0"),
+                        paymentStatus = TranslatePaymentStatus(o.PaymentStatus ?? "Pending"),
+                        serviceCount = o.ServiceOrderItems?.Count ?? 0,
+                        serviceOrderId = o.Id // ✅ THÊM: Để check trong JS
+                    }).Cast<object>().ToList();
+
+                    return Json(new
+                    {
+                        success = true,
+                        data = orderList,
+                        totalCount = response.Data.TotalCount,
+                        pageNumber = response.Data.PageNumber,
+                        pageSize = response.Data.PageSize
+                    });
+                }
+                else
+                {
+                    return Json(new
+                    {
+                        success = false,
+                        data = new List<object>(),
+                        totalCount = 0,
+                        pageNumber = pageNumber,
+                        pageSize = pageSize,
+                        message = response.ErrorMessage ?? "Lỗi khi lấy danh sách đơn hàng"
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                return Json(new
+                {
+                    success = false,
+                    data = new List<object>(),
+                    totalCount = 0,
+                    pageNumber = pageNumber,
+                    pageSize = pageSize,
+                    message = $"Lỗi: {ex.Message}"
+                });
             }
         }
 
@@ -88,29 +172,62 @@ namespace GarageManagementSystem.Web.Controllers
         [HttpGet("GetAvailableQuotations")]
         public async Task<IActionResult> GetAvailableQuotations()
         {
-            var response = await _apiService.GetAsync<List<ServiceQuotationDto>>(ApiEndpoints.ServiceQuotations.GetAll);
-            
-            if (response.Success && response.Data != null)
+            try
             {
-                // Chỉ lấy những quotation đã được phê duyệt và chưa có service order
-                var availableQuotations = response.Data
-                    .Where(q => q.Status == "Approved")
-                    .Select(q => new
-                    {
-                        value = q.Id.ToString(),
-                        text = $"{q.QuotationNumber} - {q.Vehicle?.Brand} {q.Vehicle?.Model} ({q.Vehicle?.LicensePlate}) - {q.Customer?.Name}",
-                        vehicleId = q.VehicleId,
-                        customerId = q.CustomerId,
-                        vehicleInfo = $"{q.Vehicle?.Brand} {q.Vehicle?.Model} - {q.Vehicle?.LicensePlate}",
-                        customerName = q.Customer?.Name ?? "Không xác định",
-                        totalAmount = q.TotalAmount,
-                        quotationDate = q.CreatedAt
-                    }).Cast<object>().ToList();
+                // ✅ SỬA: API trả về PagedResponse, cần gọi với pagination lớn để lấy tất cả
+                var endpoint = $"{ApiEndpoints.ServiceQuotations.GetAll}?pageNumber=1&pageSize=1000";
+                var response = await _apiService.GetAsync<PagedResponse<ServiceQuotationDto>>(endpoint);
                 
-                return Json(availableQuotations);
+                if (response.Success && response.Data != null && response.Data.Data != null)
+                {
+                    // ✅ DEBUG: Log tất cả quotations để debug
+                    var allQuotations = response.Data.Data.ToList();
+                    Console.WriteLine($"[GetAvailableQuotations] Total quotations from API: {allQuotations.Count}");
+                    
+                    var approvedQuotations = allQuotations.Where(q => q.Status == "Approved").ToList();
+                    Console.WriteLine($"[GetAvailableQuotations] Approved quotations: {approvedQuotations.Count}");
+                    foreach (var q in approvedQuotations)
+                    {
+                        Console.WriteLine($"[GetAvailableQuotations]   - ID: {q.Id}, Number: {q.QuotationNumber}, Status: {q.Status}, ServiceOrderId: {q.ServiceOrderId}");
+                    }
+                    
+                    // ✅ SỬA: Chỉ lấy những quotation đã được phê duyệt và chưa có service order
+                    var availableQuotations = allQuotations
+                        .Where(q => q.Status == "Approved" && !q.ServiceOrderId.HasValue) // ✅ THÊM: Filter ServiceOrderId == null
+                        .Select(q => new
+                        {
+                            value = q.Id.ToString(),
+                            text = $"{q.QuotationNumber} - {q.Vehicle?.Brand} {q.Vehicle?.Model} ({q.Vehicle?.LicensePlate}) - {q.Customer?.Name}",
+                            vehicleId = q.VehicleId,
+                            customerId = q.CustomerId,
+                            vehicleInfo = $"{q.Vehicle?.Brand} {q.Vehicle?.Model} - {q.Vehicle?.LicensePlate}",
+                            customerName = q.Customer?.Name ?? "Không xác định",
+                            totalAmount = q.TotalAmount,
+                            quotationDate = q.CreatedAt
+                        }).Cast<object>().ToList();
+                    
+                    // ✅ DEBUG: Log số lượng quotation available
+                    Console.WriteLine($"[GetAvailableQuotations] Available (no ServiceOrder): {availableQuotations.Count}");
+                    
+                    return Json(availableQuotations);
+                }
+                else
+                {
+                    // ✅ THÊM: Log lỗi nếu có
+                    Console.WriteLine($"[GetAvailableQuotations] API Error: {response.ErrorMessage ?? "Unknown error"}");
+                    if (response.Data == null)
+                    {
+                        Console.WriteLine($"[GetAvailableQuotations] Response.Data is null");
+                    }
+                    return Json(new List<object>());
+                }
             }
-
-            return Json(new List<object>());
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[GetAvailableQuotations] Exception: {ex.Message}");
+                Console.WriteLine($"[GetAvailableQuotations] StackTrace: {ex.StackTrace}");
+                return Json(new List<object>());
+            }
         }
 
         /// <summary>
@@ -265,11 +382,60 @@ namespace GarageManagementSystem.Web.Controllers
             return Json(new List<object>());
         }
 
+        /// <summary>
+        /// ✅ 2.1.1: Chuyển trạng thái ServiceOrder
+        /// </summary>
+        [HttpPut("ChangeOrderStatus/{id}")]
+        public async Task<IActionResult> ChangeOrderStatus(int id, [FromBody] ChangeServiceOrderStatusDto statusDto)
+        {
+            var response = await _apiService.PutAsync<ServiceOrderDto>(
+                ApiEndpoints.Builder.WithId(ApiEndpoints.ServiceOrders.ChangeStatus, id),
+                statusDto
+            );
+            return Json(response);
+        }
+
+        /// <summary>
+        /// ✅ 2.1.2: Phân công KTV cho một item
+        /// </summary>
+        [HttpPut("AssignTechnician/{orderId}/items/{itemId}")]
+        public async Task<IActionResult> AssignTechnicianToItem(int orderId, int itemId, [FromBody] AssignTechnicianDto assignDto)
+        {
+            var endpoint = $"/api/ServiceOrders/{orderId}/items/{itemId}/assign-technician";
+            var response = await _apiService.PutAsync<ServiceOrderDto>(endpoint, assignDto);
+            return Json(response);
+        }
+
+        /// <summary>
+        /// ✅ 2.1.2: Phân công hàng loạt
+        /// </summary>
+        [HttpPut("BulkAssignTechnician/{orderId}")]
+        public async Task<IActionResult> BulkAssignTechnician(int orderId, [FromBody] BulkAssignTechnicianDto bulkDto)
+        {
+            var endpoint = $"/api/ServiceOrders/{orderId}/bulk-assign-technician";
+            var response = await _apiService.PutAsync<ServiceOrderDto>(endpoint, bulkDto);
+            return Json(response);
+        }
+
+        /// <summary>
+        /// ✅ 2.1.2: Cập nhật giờ công dự kiến
+        /// </summary>
+        [HttpPut("SetEstimatedHours/{orderId}/items/{itemId}")]
+        public async Task<IActionResult> SetEstimatedHours(int orderId, int itemId, [FromBody] decimal estimatedHours)
+        {
+            var endpoint = $"/api/ServiceOrders/{orderId}/items/{itemId}/set-estimated-hours";
+            var response = await _apiService.PutAsync<ServiceOrderDto>(endpoint, estimatedHours);
+            return Json(response);
+        }
+
         private static string TranslateOrderStatus(string status)
         {
             return status switch
             {
                 "Pending" => "Chờ Xử Lý",
+                "PendingAssignment" => "Chờ Phân Công",
+                "WaitingForParts" => "Đang Chờ Vật Tư",
+                "ReadyToWork" => "Sẵn Sàng Làm",
                 "Confirmed" => "Đã Xác Nhận",
                 "InProgress" => "Đang Thực Hiện",
                 "Completed" => "Hoàn Thành",

@@ -403,6 +403,18 @@ namespace GarageManagementSystem.API.Controllers
                     return NotFound(ApiResponse<ServiceQuotationDto>.ErrorResult("Không tìm thấy báo giá"));
                 }
 
+                // ✅ 2.1.1: Business Rule: Khóa chỉnh sửa nếu đã có ServiceOrder
+                if (quotation.ServiceOrderId.HasValue)
+                {
+                    var serviceOrder = await _unitOfWork.ServiceOrders.GetByIdAsync(quotation.ServiceOrderId.Value);
+                    if (serviceOrder != null && serviceOrder.Status != "Cancelled")
+                    {
+                        return BadRequest(ApiResponse<ServiceQuotationDto>.ErrorResult(
+                            $"Không thể chỉnh sửa báo giá. Báo giá đã được chuyển thành phiếu sửa chữa (JO: {serviceOrder.OrderNumber}). " +
+                            "Vui lòng chỉnh sửa trong phiếu sửa chữa thay vì báo giá."));
+                    }
+                }
+
                 // Update quotation using AutoMapper
                 _mapper.Map(updateDto, quotation);
 
@@ -417,9 +429,9 @@ namespace GarageManagementSystem.API.Controllers
                     // Update Items if provided
                     if (updateDto.Items != null && updateDto.Items.Any())
                     {
-                        // Remove existing items (hard delete để tránh duplicate)
-                        var existingItems = await _unitOfWork.ServiceQuotationItems.GetAllAsync();
-                        var itemsToDelete = existingItems.Where(i => i.ServiceQuotationId == id).ToList();
+                        // ✅ OPTIMIZED: Filter existing items ở database level
+                        var itemsToDelete = (await _unitOfWork.ServiceQuotationItems
+                            .FindAsync(i => i.ServiceQuotationId == id)).ToList();
                         foreach (var item in itemsToDelete)
                         {
                             // Hard delete thay vì soft delete để tránh duplicate
@@ -691,32 +703,102 @@ namespace GarageManagementSystem.API.Controllers
         }
 
         [HttpPost("{id}/reject")]
-        public async Task<ActionResult<ApiResponse<ServiceQuotationDto>>> RejectQuotation(int id, [FromBody] string rejectionReason)
+        public async Task<ActionResult<ApiResponse<ServiceQuotationDto>>> RejectQuotation(int id, [FromBody] RejectQuotationDto rejectDto)
         {
             try
             {
-                var quotation = await _unitOfWork.ServiceQuotations.GetByIdAsync(id);
+                var quotation = await _unitOfWork.ServiceQuotations.GetByIdWithDetailsAsync(id);
                 if (quotation == null)
                 {
                     return NotFound(ApiResponse<ServiceQuotationDto>.ErrorResult("Không tìm thấy báo giá"));
                 }
 
-                quotation.Status = "Rejected";
-                quotation.RejectedDate = DateTime.Now;
-                quotation.RejectionReason = rejectionReason;
+                if (quotation.Status == "Rejected")
+                {
+                    return BadRequest(ApiResponse<ServiceQuotationDto>.ErrorResult("Báo giá đã được từ chối trước đó"));
+                }
 
-                await _unitOfWork.ServiceQuotations.UpdateAsync(quotation);
-                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.BeginTransactionAsync();
 
-                // Reload with details
-                quotation = await _unitOfWork.ServiceQuotations.GetByIdWithDetailsAsync(id);
-                var quotationDto = MapToDto(quotation!);
+                try
+                {
+                    quotation.Status = "Rejected";
+                    quotation.RejectedDate = DateTime.Now;
+                    quotation.RejectionReason = rejectDto.Reason;
 
-                return Ok(ApiResponse<ServiceQuotationDto>.SuccessResult(quotationDto, "Quotation rejected"));
+                    // ✅ THÊM: Tính phí kiểm tra nếu được yêu cầu
+                    if (rejectDto.ChargeInspectionFee)
+                    {
+                        // Lấy phí kiểm tra từ configuration hoặc mặc định
+                        // Có thể lấy từ bảng VehicleInspection nếu có
+                        decimal inspectionFee = 0;
+                        
+                        if (quotation.VehicleInspectionId.HasValue)
+                        {
+                            var inspection = await _unitOfWork.VehicleInspections.GetByIdAsync(quotation.VehicleInspectionId.Value);
+                            if (inspection != null)
+                            {
+                                // Có thể lưu inspection fee trong inspection entity hoặc lấy từ config
+                                // Tạm thời dùng giá trị mặc định hoặc từ config
+                                inspectionFee = 500000; // 500.000 VNĐ - có thể lấy từ config
+                            }
+                        }
+                        else
+                        {
+                            // Nếu không có inspection, vẫn tính phí mặc định
+                            inspectionFee = 500000; // 500.000 VNĐ - có thể lấy từ config
+                        }
+
+                        // ✅ THÊM: Tạo Financial Transaction cho phí kiểm tra
+                        if (inspectionFee > 0)
+                        {
+                            // ✅ OPTIMIZED: Use CountAsync thay vì GetAllAsync().Count()
+                            var count = await _unitOfWork.Repository<Core.Entities.FinancialTransaction>().CountAsync();
+                            var transactionNumber = $"FT-{DateTime.Now:yyyyMMdd}-{(count + 1):D4}";
+                            
+                            var financialTransaction = new Core.Entities.FinancialTransaction
+                            {
+                                TransactionNumber = transactionNumber,
+                                TransactionDate = DateTime.Now,
+                                TransactionType = "Income", // Revenue = Income
+                                Category = "Inspection",
+                                Amount = inspectionFee,
+                                Description = $"Phí kiểm tra xe cho báo giá {quotation.QuotationNumber}",
+                                RelatedEntity = "Quotation",
+                                RelatedEntityId = quotation.Id,
+                                Status = "Completed",
+                                PaymentMethod = "Cash",
+                                Notes = $"Phí kiểm tra do khách hàng từ chối báo giá. Lý do: {rejectDto.Reason}",
+                                CreatedAt = DateTime.Now
+                            };
+
+                            await _unitOfWork.Repository<Core.Entities.FinancialTransaction>().AddAsync(financialTransaction);
+                        }
+                    }
+
+                    await _unitOfWork.ServiceQuotations.UpdateAsync(quotation);
+                    await _unitOfWork.SaveChangesAsync();
+                    await _unitOfWork.CommitTransactionAsync();
+
+                    // Reload with details
+                    quotation = await _unitOfWork.ServiceQuotations.GetByIdWithDetailsAsync(id);
+                    var quotationDto = MapToDto(quotation!);
+
+                    var message = rejectDto.ChargeInspectionFee 
+                        ? "Đã từ chối báo giá và tính phí kiểm tra" 
+                        : "Đã từ chối báo giá";
+
+                    return Ok(ApiResponse<ServiceQuotationDto>.SuccessResult(quotationDto, message));
+                }
+                catch (Exception innerEx)
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    throw;
+                }
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ApiResponse<ServiceQuotationDto>.ErrorResult("Error rejecting quotation", ex.Message));
+                return StatusCode(500, ApiResponse<ServiceQuotationDto>.ErrorResult("Lỗi khi từ chối báo giá", ex.Message));
             }
         }
 

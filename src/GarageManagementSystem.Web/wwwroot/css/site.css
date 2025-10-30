@@ -204,7 +204,8 @@ body {
 }
 
 /* Prevent typeahead from being clipped by modal overflow */
-.modal .form-control.part-typeahead {
+.modal .form-control.part-typeahead,
+.modal .form-control.service-typeahead {
     position: relative !important;
 }
 
@@ -221,4 +222,17 @@ body {
 .modal .card-body {
     position: relative;
     overflow: visible !important;
+}
+
+/* Ensure typeahead input and dropdown match PurchaseOrder styling on Quotation */
+.service-item-row .twitter-typeahead,
+.service-item-row .tt-menu,
+.service-item-row .typeahead.dropdown-menu {
+    width: 100% !important;
+    min-width: 100% !important;
+}
+
+/* Visual cue similar to PO for active typing field */
+.service-typeahead:focus {
+    box-shadow: 0 0 0 0.1rem rgba(13,110,253,.25) !important;
 }

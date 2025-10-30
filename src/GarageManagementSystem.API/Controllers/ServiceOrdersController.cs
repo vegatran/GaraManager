@@ -424,7 +424,22 @@ namespace GarageManagementSystem.API.Controllers
 
         private ServiceOrderDto MapToDto(Core.Entities.ServiceOrder order)
         {
-            return _mapper.Map<ServiceOrderDto>(order);
+            var dto = _mapper.Map<ServiceOrderDto>(order);
+            
+            // ✅ THÊM: Map AssignedTechnicianName cho từng item
+            if (dto.ServiceOrderItems != null)
+            {
+                foreach (var itemDto in dto.ServiceOrderItems)
+                {
+                    var item = order.ServiceOrderItems.FirstOrDefault(i => i.Id == itemDto.Id);
+                    if (item != null && item.AssignedTechnician != null)
+                    {
+                        itemDto.AssignedTechnicianName = item.AssignedTechnician.Name;
+                    }
+                }
+            }
+            
+            return dto;
         }
 
         /// <summary>
@@ -683,6 +698,397 @@ namespace GarageManagementSystem.API.Controllers
             }
 
             return reasons;
+        }
+
+        /// <summary>
+        /// ✅ 2.1.1: Chuyển trạng thái ServiceOrder
+        /// </summary>
+        [HttpPut("{id}/change-status")]
+        public async Task<ActionResult<ApiResponse<ServiceOrderDto>>> ChangeOrderStatus(int id, ChangeServiceOrderStatusDto statusDto)
+        {
+            try
+            {
+                var order = await _unitOfWork.ServiceOrders.GetByIdWithDetailsAsync(id);
+                if (order == null)
+                {
+                    return NotFound(ApiResponse<ServiceOrderDto>.ErrorResult("Không tìm thấy phiếu sửa chữa"));
+                }
+
+                // Validate status transition
+                var currentStatus = order.Status;
+                var newStatus = statusDto.Status;
+
+                // Allowed transitions:
+                // "Pending" -> "PendingAssignment" -> "WaitingForParts" / "ReadyToWork" -> "InProgress" -> "Completed"
+                bool isValidTransition = (currentStatus == "Pending" && newStatus == "PendingAssignment") ||
+                                         (currentStatus == "PendingAssignment" && (newStatus == "WaitingForParts" || newStatus == "ReadyToWork")) ||
+                                         ((currentStatus == "WaitingForParts" || currentStatus == "ReadyToWork") && newStatus == "InProgress") ||
+                                         (currentStatus == "InProgress" && newStatus == "Completed");
+
+                if (!isValidTransition && currentStatus != newStatus)
+                {
+                    return BadRequest(ApiResponse<ServiceOrderDto>.ErrorResult(
+                        $"Không thể chuyển từ trạng thái '{currentStatus}' sang '{newStatus}'. Chuyển đổi không hợp lệ."));
+                }
+
+                await _unitOfWork.BeginTransactionAsync();
+                try
+                {
+                    order.Status = newStatus;
+                    if (!string.IsNullOrEmpty(statusDto.Notes))
+                    {
+                        order.Notes = string.IsNullOrEmpty(order.Notes) 
+                            ? statusDto.Notes 
+                            : $"{order.Notes}\n{statusDto.Notes}";
+                    }
+
+                    // Nếu chuyển sang "PendingAssignment", khóa Quotation editing
+                    if (newStatus == "PendingAssignment" && order.ServiceQuotationId.HasValue)
+                    {
+                        var quotation = await _unitOfWork.ServiceQuotations.GetByIdAsync(order.ServiceQuotationId.Value);
+                        if (quotation != null)
+                        {
+                            // Set flag để lock (có thể thêm field IsLocked nếu cần)
+                            // Tạm thời check qua ServiceOrderId
+                        }
+                    }
+
+                    await _unitOfWork.ServiceOrders.UpdateAsync(order);
+                    await _unitOfWork.SaveChangesAsync();
+                    await _unitOfWork.CommitTransactionAsync();
+
+                    // Reload with details
+                    order = await _unitOfWork.ServiceOrders.GetByIdWithDetailsAsync(id);
+                    var orderDto = MapToDto(order!);
+
+                    return Ok(ApiResponse<ServiceOrderDto>.SuccessResult(orderDto, $"Đã chuyển trạng thái thành '{newStatus}'"));
+                }
+                catch (Exception innerEx)
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    throw;
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<ServiceOrderDto>.ErrorResult("Lỗi khi chuyển trạng thái", ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// ✅ 2.1.2: Phân công KTV cho một item cụ thể
+        /// </summary>
+        [HttpPut("{id}/items/{itemId}/assign-technician")]
+        public async Task<ActionResult<ApiResponse<ServiceOrderDto>>> AssignTechnicianToItem(
+            int id, int itemId, AssignTechnicianDto assignDto)
+        {
+            try
+            {
+                // ✅ BỔ SUNG: Kiểm tra quyền - Chỉ Quản đốc/Tổ trưởng mới có quyền phân công
+                var currentUserId = User.FindFirst("sub")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                if (!string.IsNullOrEmpty(currentUserId) && int.TryParse(currentUserId, out var userId))
+                {
+                    var currentEmployee = await _unitOfWork.Employees.GetByIdAsync(userId);
+                    if (currentEmployee != null)
+                    {
+                        var position = (currentEmployee.Position ?? "").ToLower();
+                        var positionName = currentEmployee.PositionNavigation?.Name?.ToLower() ?? "";
+                        
+                        // Kiểm tra Position: Quản đốc, Tổ trưởng, Quản lý, Manager, Supervisor
+                        bool isAuthorized = position.Contains("quản đốc") || position.Contains("tổ trưởng") || 
+                                           position.Contains("quản lý") || position.Contains("manager") ||
+                                           position.Contains("supervisor") || position.Contains("supervise") ||
+                                           positionName.Contains("quản đốc") || positionName.Contains("tổ trưởng") ||
+                                           positionName.Contains("quản lý") || positionName.Contains("manager") ||
+                                           positionName.Contains("supervisor");
+                        
+                        // Kiểm tra roles từ claims
+                        var userRoles = User.Claims.Where(c => c.Type == System.Security.Claims.ClaimTypes.Role || c.Type == "role")
+                                                   .Select(c => c.Value.ToLower()).ToList();
+                        isAuthorized = isAuthorized || userRoles.Contains("manager") || userRoles.Contains("supervisor") || 
+                                      userRoles.Contains("admin") || userRoles.Contains("superadmin");
+                        
+                        if (!isAuthorized)
+                        {
+                            return Forbid("Chỉ Quản đốc, Tổ trưởng hoặc Quản lý mới có quyền phân công KTV");
+                        }
+                    }
+                }
+
+                var order = await _unitOfWork.ServiceOrders.GetByIdWithDetailsAsync(id);
+                if (order == null)
+                {
+                    return NotFound(ApiResponse<ServiceOrderDto>.ErrorResult("Không tìm thấy phiếu sửa chữa"));
+                }
+
+                var item = order.ServiceOrderItems.FirstOrDefault(i => i.Id == itemId);
+                if (item == null)
+                {
+                    return NotFound(ApiResponse<ServiceOrderDto>.ErrorResult("Không tìm thấy hạng mục"));
+                }
+
+                // Validate technician exists
+                var technician = await _unitOfWork.Employees.GetByIdAsync(assignDto.TechnicianId);
+                if (technician == null)
+                {
+                    return BadRequest(ApiResponse<ServiceOrderDto>.ErrorResult("Không tìm thấy KTV"));
+                }
+
+                await _unitOfWork.BeginTransactionAsync();
+                try
+                {
+                    item.AssignedTechnicianId = assignDto.TechnicianId;
+                    item.EstimatedHours = assignDto.EstimatedHours;
+                    if (!string.IsNullOrEmpty(assignDto.Notes))
+                    {
+                        item.Notes = string.IsNullOrEmpty(item.Notes) 
+                            ? assignDto.Notes 
+                            : $"{item.Notes}\nPhân công: {assignDto.Notes}";
+                    }
+
+                    await _unitOfWork.Repository<Core.Entities.ServiceOrderItem>().UpdateAsync(item);
+                    await _unitOfWork.SaveChangesAsync();
+
+                    // ✅ OPTIMIZED: Find Appointment ở database level
+                    var appointment = await _unitOfWork.Appointments
+                        .FirstOrDefaultAsync(a => a.ServiceOrderId == id && !a.IsDeleted);
+                    
+                    if (appointment != null)
+                    {
+                        // Nếu chưa có AssignedToId, set KTV đầu tiên được phân công
+                        if (!appointment.AssignedToId.HasValue)
+                        {
+                            appointment.AssignedToId = assignDto.TechnicianId;
+                            await _unitOfWork.Appointments.UpdateAsync(appointment);
+                        }
+                        // Hoặc nếu muốn update EstimatedDuration dựa trên tổng EstimatedHours
+                        if (assignDto.EstimatedHours.HasValue && order.ServiceOrderItems.Any())
+                        {
+                            var totalEstimatedHours = order.ServiceOrderItems
+                                .Where(i => i.EstimatedHours.HasValue)
+                                .Sum(i => i.EstimatedHours!.Value);
+                            // Convert hours to minutes
+                            appointment.EstimatedDuration = (int)(totalEstimatedHours * 60);
+                            await _unitOfWork.Appointments.UpdateAsync(appointment);
+                        }
+                        await _unitOfWork.SaveChangesAsync();
+                    }
+                    else if (order.ScheduledDate.HasValue)
+                    {
+                        // ✅ Tạo Appointment mới nếu chưa có (tùy chọn)
+                        // Chỉ tạo nếu có ScheduledDate và CustomerId
+                        if (order.CustomerId > 0 && order.VehicleId > 0)
+                        {
+                            // ✅ OPTIMIZED: Count appointments ở database level
+                            var todayPrefix = $"APT-{DateTime.Now:yyyyMMdd}";
+                            var appointments = (await _unitOfWork.Appointments
+                                .FindAsync(a => !a.IsDeleted && a.AppointmentNumber.StartsWith(todayPrefix))).ToList();
+                            var count = appointments.Count;
+                            var appointmentNumber = $"{todayPrefix}-{(count + 1):D4}";
+                            
+                            var newAppointment = new Core.Entities.Appointment
+                            {
+                                AppointmentNumber = appointmentNumber,
+                                CustomerId = order.CustomerId,
+                                VehicleId = order.VehicleId,
+                                ScheduledDateTime = order.ScheduledDate.Value,
+                                EstimatedDuration = assignDto.EstimatedHours.HasValue 
+                                    ? (int)(assignDto.EstimatedHours.Value * 60) 
+                                    : 60,
+                                AppointmentType = "Service",
+                                ServiceRequested = $"Sửa chữa theo JO: {order.OrderNumber}",
+                                Status = "Scheduled",
+                                AssignedToId = assignDto.TechnicianId,
+                                ServiceOrderId = id,
+                                CreatedAt = DateTime.Now
+                            };
+                            
+                            await _unitOfWork.Appointments.AddAsync(newAppointment);
+                            await _unitOfWork.SaveChangesAsync();
+                        }
+                    }
+
+                    // Update order status if needed
+                    if (order.Status == "PendingAssignment" && order.ServiceOrderItems.All(i => i.AssignedTechnicianId.HasValue))
+                    {
+                        // Tất cả items đã được phân công -> chuyển sang "ReadyToWork"
+                        order.Status = "ReadyToWork";
+                        await _unitOfWork.ServiceOrders.UpdateAsync(order);
+                        await _unitOfWork.SaveChangesAsync();
+                    }
+
+                    await _unitOfWork.CommitTransactionAsync();
+
+                    // Reload with details
+                    order = await _unitOfWork.ServiceOrders.GetByIdWithDetailsAsync(id);
+                    var orderDto = MapToDto(order!);
+
+                    return Ok(ApiResponse<ServiceOrderDto>.SuccessResult(orderDto, "Đã phân công KTV thành công"));
+                }
+                catch (Exception innerEx)
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    throw;
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<ServiceOrderDto>.ErrorResult("Lỗi khi phân công KTV", ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// ✅ 2.1.2: Phân công hàng loạt cho nhiều items
+        /// </summary>
+        [HttpPut("{id}/bulk-assign-technician")]
+        public async Task<ActionResult<ApiResponse<ServiceOrderDto>>> BulkAssignTechnician(
+            int id, BulkAssignTechnicianDto bulkDto)
+        {
+            try
+            {
+                // ✅ BỔ SUNG: Kiểm tra quyền - Chỉ Quản đốc/Tổ trưởng mới có quyền phân công
+                var currentUserId = User.FindFirst("sub")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                if (!string.IsNullOrEmpty(currentUserId) && int.TryParse(currentUserId, out var userId))
+                {
+                    var currentEmployee = await _unitOfWork.Employees.GetByIdAsync(userId);
+                    if (currentEmployee != null)
+                    {
+                        var position = (currentEmployee.Position ?? "").ToLower();
+                        var positionName = currentEmployee.PositionNavigation?.Name?.ToLower() ?? "";
+                        
+                        bool isAuthorized = position.Contains("quản đốc") || position.Contains("tổ trưởng") || 
+                                           position.Contains("quản lý") || position.Contains("manager") ||
+                                           position.Contains("supervisor") || position.Contains("supervise") ||
+                                           positionName.Contains("quản đốc") || positionName.Contains("tổ trưởng") ||
+                                           positionName.Contains("quản lý") || positionName.Contains("manager") ||
+                                           positionName.Contains("supervisor");
+                        
+                        var userRoles = User.Claims.Where(c => c.Type == System.Security.Claims.ClaimTypes.Role || c.Type == "role")
+                                                   .Select(c => c.Value.ToLower()).ToList();
+                        isAuthorized = isAuthorized || userRoles.Contains("manager") || userRoles.Contains("supervisor") || 
+                                      userRoles.Contains("admin") || userRoles.Contains("superadmin");
+                        
+                        if (!isAuthorized)
+                        {
+                            return Forbid("Chỉ Quản đốc, Tổ trưởng hoặc Quản lý mới có quyền phân công KTV");
+                        }
+                    }
+                }
+
+                var order = await _unitOfWork.ServiceOrders.GetByIdWithDetailsAsync(id);
+                if (order == null)
+                {
+                    return NotFound(ApiResponse<ServiceOrderDto>.ErrorResult("Không tìm thấy phiếu sửa chữa"));
+                }
+
+                // Validate technician exists
+                var technician = await _unitOfWork.Employees.GetByIdAsync(bulkDto.TechnicianId);
+                if (technician == null)
+                {
+                    return BadRequest(ApiResponse<ServiceOrderDto>.ErrorResult("Không tìm thấy KTV"));
+                }
+
+                await _unitOfWork.BeginTransactionAsync();
+                try
+                {
+                    var itemsToUpdate = bulkDto.ItemIds == null || !bulkDto.ItemIds.Any()
+                        ? order.ServiceOrderItems.ToList()
+                        : order.ServiceOrderItems.Where(i => bulkDto.ItemIds.Contains(i.Id)).ToList();
+
+                    foreach (var item in itemsToUpdate)
+                    {
+                        item.AssignedTechnicianId = bulkDto.TechnicianId;
+                        if (bulkDto.EstimatedHours.HasValue)
+                        {
+                            item.EstimatedHours = bulkDto.EstimatedHours;
+                        }
+                    }
+
+                    foreach (var item in itemsToUpdate)
+                    {
+                        await _unitOfWork.Repository<Core.Entities.ServiceOrderItem>().UpdateAsync(item);
+                    }
+                    
+                    await _unitOfWork.SaveChangesAsync();
+
+                    // Update order status if needed
+                    if (order.Status == "PendingAssignment" && order.ServiceOrderItems.All(i => i.AssignedTechnicianId.HasValue))
+                    {
+                        order.Status = "ReadyToWork";
+                        await _unitOfWork.ServiceOrders.UpdateAsync(order);
+                        await _unitOfWork.SaveChangesAsync();
+                    }
+
+                    await _unitOfWork.CommitTransactionAsync();
+
+                    // Reload with details
+                    order = await _unitOfWork.ServiceOrders.GetByIdWithDetailsAsync(id);
+                    var orderDto = MapToDto(order!);
+
+                    return Ok(ApiResponse<ServiceOrderDto>.SuccessResult(orderDto, $"Đã phân công KTV cho {itemsToUpdate.Count} hạng mục"));
+                }
+                catch (Exception innerEx)
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    throw;
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<ServiceOrderDto>.ErrorResult("Lỗi khi phân công KTV", ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// ✅ 2.1.2: Cập nhật giờ công dự kiến cho một item
+        /// </summary>
+        [HttpPut("{id}/items/{itemId}/set-estimated-hours")]
+        public async Task<ActionResult<ApiResponse<ServiceOrderDto>>> SetEstimatedHours(
+            int id, int itemId, [FromBody] decimal estimatedHours)
+        {
+            try
+            {
+                if (estimatedHours <= 0 || estimatedHours > 24)
+                {
+                    return BadRequest(ApiResponse<ServiceOrderDto>.ErrorResult("Giờ công dự kiến phải từ 0.1 đến 24 giờ"));
+                }
+
+                var order = await _unitOfWork.ServiceOrders.GetByIdWithDetailsAsync(id);
+                if (order == null)
+                {
+                    return NotFound(ApiResponse<ServiceOrderDto>.ErrorResult("Không tìm thấy phiếu sửa chữa"));
+                }
+
+                var item = order.ServiceOrderItems.FirstOrDefault(i => i.Id == itemId);
+                if (item == null)
+                {
+                    return NotFound(ApiResponse<ServiceOrderDto>.ErrorResult("Không tìm thấy hạng mục"));
+                }
+
+                await _unitOfWork.BeginTransactionAsync();
+                try
+                {
+                    item.EstimatedHours = estimatedHours;
+                    await _unitOfWork.Repository<Core.Entities.ServiceOrderItem>().UpdateAsync(item);
+                    await _unitOfWork.SaveChangesAsync();
+                    await _unitOfWork.CommitTransactionAsync();
+
+                    // Reload with details
+                    order = await _unitOfWork.ServiceOrders.GetByIdWithDetailsAsync(id);
+                    var orderDto = MapToDto(order!);
+
+                    return Ok(ApiResponse<ServiceOrderDto>.SuccessResult(orderDto, "Đã cập nhật giờ công dự kiến"));
+                }
+                catch (Exception innerEx)
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    throw;
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<ServiceOrderDto>.ErrorResult("Lỗi khi cập nhật giờ công", ex.Message));
+            }
         }
     }
 }

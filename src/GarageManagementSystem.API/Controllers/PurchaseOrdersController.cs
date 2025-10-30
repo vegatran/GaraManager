@@ -60,20 +60,22 @@ namespace GarageManagementSystem.API.Controllers
                 var orderIds = purchaseOrderDtos.Select(dto => dto.Id).ToList();
                 var supplierIds = purchaseOrderDtos.Select(dto => dto.SupplierId).Distinct().ToList();
                 
-                // Load suppliers from cache (they change rarely)
+                // ✅ OPTIMIZED: Load suppliers from cache (they change rarely) - filter ở database level
                 var suppliers = await _cacheService.GetOrSetAsync($"suppliers_{string.Join(",", supplierIds)}", 
                     async () =>
                     {
-                        var allSuppliers = await _unitOfWork.Repository<Supplier>().GetAllAsync();
-                        return allSuppliers.Where(s => supplierIds.Contains(s.Id)).ToList();
+                        var filteredSuppliers = (await _unitOfWork.Repository<Supplier>()
+                            .FindAsync(s => supplierIds.Contains(s.Id))).ToList();
+                        return filteredSuppliers;
                     }, 
                     TimeSpan.FromMinutes(30)); // Cache for 30 minutes
                 
-                // Load all items for all orders at once
-                var allItems = await _unitOfWork.Repository<PurchaseOrderItem>().GetAllAsync();
-                var itemsByOrderId = allItems.Where(i => orderIds.Contains(i.PurchaseOrderId))
-                                           .GroupBy(i => i.PurchaseOrderId)
-                                           .ToDictionary(g => g.Key, g => g.ToList());
+                // ✅ OPTIMIZED: Filter items ở database level thay vì load all
+                var allItems = (await _unitOfWork.Repository<PurchaseOrderItem>()
+                    .FindAsync(i => orderIds.Contains(i.PurchaseOrderId))).ToList();
+                var itemsByOrderId = allItems
+                    .GroupBy(i => i.PurchaseOrderId)
+                    .ToDictionary(g => g.Key, g => g.ToList());
                 
                 // Map supplier names and item counts efficiently
                 foreach (var dto in purchaseOrderDtos)
@@ -105,8 +107,9 @@ namespace GarageManagementSystem.API.Controllers
         {
             try
             {
-                var orders = await _unitOfWork.Repository<PurchaseOrder>().GetAllAsync();
-                var order = orders.FirstOrDefault(o => o.OrderNumber == orderNumber);
+                // ✅ OPTIMIZED: Filter ở database level thay vì load all rồi filter trong memory
+                var order = await _unitOfWork.Repository<PurchaseOrder>()
+                    .FirstOrDefaultAsync(o => o.OrderNumber == orderNumber);
                 
                 if (order == null)
                     return NotFound(ApiResponse<PurchaseOrderDto>.ErrorResult("Không tìm thấy đơn mua hàng"));
@@ -114,16 +117,28 @@ namespace GarageManagementSystem.API.Controllers
                 // Get supplier information
                 var supplier = await _unitOfWork.Repository<Supplier>().GetByIdAsync(order.SupplierId);
                 
-                // Get purchase order items
-                var items = await _unitOfWork.Repository<PurchaseOrderItem>().GetAllAsync();
-                var orderItems = items.Where(i => i.PurchaseOrderId == order.Id).ToList();
+                // ✅ OPTIMIZED: Filter items ở database level
+                var orderItems = (await _unitOfWork.Repository<PurchaseOrderItem>()
+                    .FindAsync(i => i.PurchaseOrderId == order.Id)).ToList();
                 
                 _logger.LogInformation($"Purchase Order {orderNumber} has {orderItems.Count} items");
                 
-                // Get all parts for the items
-                var partIds = orderItems.Select(i => i.PartId).Distinct().ToList();
-                var parts = await _unitOfWork.Repository<Part>().GetAllAsync();
-                var partsDict = parts.Where(p => partIds.Contains(p.Id)).ToDictionary(p => p.Id, p => p);
+                // ✅ OPTIMIZED: Load only parts that are needed (filter ở database level)
+                var partsDict = new Dictionary<int, Part>();
+                if (orderItems.Any())
+                {
+                    var partIds = orderItems
+                        .Select(i => i.PartId)
+                        .Distinct()
+                        .ToList();
+                    
+                    if (partIds.Any())
+                    {
+                        var parts = (await _unitOfWork.Repository<Part>()
+                            .FindAsync(p => partIds.Contains(p.Id))).ToList();
+                        partsDict = parts.ToDictionary(p => p.Id, p => p);
+                    }
+                }
                 
                 var orderDto = _mapper.Map<PurchaseOrderDto>(order);
                 orderDto.SupplierName = supplier?.SupplierName ?? "N/A";
@@ -132,7 +147,9 @@ namespace GarageManagementSystem.API.Controllers
                 {
                     Id = item.Id,
                     PartId = item.PartId,
-                    PartName = partsDict.ContainsKey(item.PartId) ? partsDict[item.PartId].PartName : null,
+                    PartName = partsDict.ContainsKey(item.PartId) 
+                        ? partsDict[item.PartId].PartName 
+                        : null,
                     QuantityOrdered = item.QuantityOrdered,
                     UnitPrice = item.UnitPrice,
                     TotalPrice = item.QuantityOrdered * item.UnitPrice,
@@ -165,14 +182,26 @@ namespace GarageManagementSystem.API.Controllers
                 // Get supplier information
                 var supplier = await _unitOfWork.Repository<Supplier>().GetByIdAsync(order.SupplierId);
                 
-                // Get purchase order items
-                var items = await _unitOfWork.Repository<PurchaseOrderItem>().GetAllAsync();
-                var orderItems = items.Where(i => i.PurchaseOrderId == order.Id).ToList();
+                // ✅ OPTIMIZED: Filter purchase order items ở database level
+                var orderItems = (await _unitOfWork.Repository<PurchaseOrderItem>()
+                    .FindAsync(i => i.PurchaseOrderId == order.Id)).ToList();
 
-                // Get all parts for the items
-                var partIds = orderItems.Select(i => i.PartId).Distinct().ToList();
-                var parts = await _unitOfWork.Repository<Part>().GetAllAsync();
-                var partsDict = parts.Where(p => partIds.Contains(p.Id)).ToDictionary(p => p.Id, p => p);
+                // ✅ OPTIMIZED: Load only parts that are needed
+                var partsDict = new Dictionary<int, Part>();
+                if (orderItems.Any())
+                {
+                    var partIds = orderItems
+                        .Select(i => i.PartId)
+                        .Distinct()
+                        .ToList();
+                    
+                    if (partIds.Any())
+                    {
+                        var parts = (await _unitOfWork.Repository<Part>()
+                            .FindAsync(p => partIds.Contains(p.Id))).ToList();
+                        partsDict = parts.ToDictionary(p => p.Id, p => p);
+                    }
+                }
 
                 // Map to DTO
                 var orderDto = new PurchaseOrderDto
@@ -194,7 +223,9 @@ namespace GarageManagementSystem.API.Controllers
                     {
                         Id = item.Id,
                         PartId = item.PartId,
-                        PartName = partsDict.ContainsKey(item.PartId) ? partsDict[item.PartId].PartName : null,
+                        PartName = partsDict.ContainsKey(item.PartId) 
+                        ? partsDict[item.PartId].PartName 
+                        : null,
                         QuantityOrdered = item.QuantityOrdered,
                         UnitPrice = item.UnitPrice,
                         TotalPrice = item.QuantityOrdered * item.UnitPrice,
@@ -222,8 +253,8 @@ namespace GarageManagementSystem.API.Controllers
             {
                 var order = _mapper.Map<PurchaseOrder>(createDto);
                 
-                // Generate PO number
-                var count = (await _unitOfWork.Repository<PurchaseOrder>().GetAllAsync()).Count();
+                // ✅ OPTIMIZED: Use CountAsync thay vì GetAllAsync().Count()
+                var count = await _unitOfWork.Repository<PurchaseOrder>().CountAsync();
                 order.OrderNumber = $"PO-{DateTime.Now:yyyyMMdd}-{(count + 1):D4}";
                 order.CreatedAt = DateTime.Now;
                 
@@ -320,11 +351,9 @@ namespace GarageManagementSystem.API.Controllers
                 order.Notes = dto.Notes;
                 order.UpdatedAt = DateTime.Now;
 
-                // Remove existing items
-                var existingItems = await _unitOfWork.Repository<PurchaseOrderItem>()
-                    .GetAllAsync();
-                
-                var itemsToDelete = existingItems.Where(x => x.PurchaseOrderId == id).ToList();
+                // ✅ OPTIMIZED: Filter existing items ở database level
+                var itemsToDelete = (await _unitOfWork.Repository<PurchaseOrderItem>()
+                    .FindAsync(x => x.PurchaseOrderId == id)).ToList();
                 
                 foreach (var item in itemsToDelete)
                 {
@@ -374,14 +403,26 @@ namespace GarageManagementSystem.API.Controllers
                 // Get supplier information
                 var supplier = await _unitOfWork.Repository<Supplier>().GetByIdAsync(order.SupplierId);
                 
-                // Get updated items
-                var items = await _unitOfWork.Repository<PurchaseOrderItem>().GetAllAsync();
-                var orderItems = items.Where(i => i.PurchaseOrderId == order.Id).ToList();
+                // ✅ OPTIMIZED: Filter updated items ở database level
+                var orderItems = (await _unitOfWork.Repository<PurchaseOrderItem>()
+                    .FindAsync(i => i.PurchaseOrderId == order.Id)).ToList();
                 
-                // Get all parts for the items
-                var partIds = orderItems.Select(i => i.PartId).Distinct().ToList();
-                var parts = await _unitOfWork.Repository<Part>().GetAllAsync();
-                var partsDict = parts.Where(p => partIds.Contains(p.Id)).ToDictionary(p => p.Id, p => p);
+                // ✅ OPTIMIZED: Load only parts that are needed
+                var partsDict = new Dictionary<int, Part>();
+                if (orderItems.Any())
+                {
+                    var partIds = orderItems
+                        .Select(i => i.PartId)
+                        .Distinct()
+                        .ToList();
+                    
+                    if (partIds.Any())
+                    {
+                        var parts = (await _unitOfWork.Repository<Part>()
+                            .FindAsync(p => partIds.Contains(p.Id))).ToList();
+                        partsDict = parts.ToDictionary(p => p.Id, p => p);
+                    }
+                }
 
                 // Return DTO instead of entity to avoid circular references
                 var responseDto = new PurchaseOrderDto
@@ -403,7 +444,9 @@ namespace GarageManagementSystem.API.Controllers
                     {
                         Id = item.Id,
                         PartId = item.PartId,
-                        PartName = partsDict.ContainsKey(item.PartId) ? partsDict[item.PartId].PartName : null,
+                        PartName = partsDict.ContainsKey(item.PartId) 
+                        ? partsDict[item.PartId].PartName 
+                        : null,
                         QuantityOrdered = item.QuantityOrdered,
                         UnitPrice = item.UnitPrice,
                         TotalPrice = item.QuantityOrdered * item.UnitPrice,
@@ -508,12 +551,13 @@ namespace GarageManagementSystem.API.Controllers
                 var parts = await _unitOfWork.Repository<Part>().GetAllAsync();
                 var partsDict = parts.ToDictionary(p => p.Id, p => p);
 
-                // Get purchase order items
-                var poItems = await _unitOfWork.Repository<PurchaseOrderItem>().GetAllAsync();
-                var orderItems = poItems.Where(i => i.PurchaseOrderId == id).ToList();
+                // ✅ OPTIMIZED: Filter purchase order items ở database level
+                var orderItems = (await _unitOfWork.Repository<PurchaseOrderItem>()
+                    .FindAsync(i => i.PurchaseOrderId == id)).ToList();
 
                 // Generate transaction numbers
-                var txCount = (await _unitOfWork.Repository<StockTransaction>().GetAllAsync()).Count() + 1;
+                // ✅ OPTIMIZED: Use CountAsync thay vì GetAllAsync().Count()
+                var txCount = await _unitOfWork.Repository<StockTransaction>().CountAsync() + 1;
                 var dateStr = DateTime.Now.ToString("yyyyMMdd");
                 
                 // Create Stock Transactions for each item
@@ -523,9 +567,9 @@ namespace GarageManagementSystem.API.Controllers
                     
                     var part = partsDict[item.PartId];
                     
-                    // Calculate current stock
-                    var allStockTxs = await _unitOfWork.Repository<StockTransaction>().GetAllAsync();
-                    var partTransactions = allStockTxs.Where(t => t.PartId == item.PartId);
+                    // ✅ OPTIMIZED: Filter stock transactions ở database level
+                    var partTransactions = (await _unitOfWork.Repository<StockTransaction>()
+                        .FindAsync(t => t.PartId == item.PartId)).ToList();
                     
                     int currentStock = 0;
                     foreach (var tx in partTransactions.OrderBy(t => t.TransactionDate))
@@ -567,9 +611,9 @@ namespace GarageManagementSystem.API.Controllers
                     part.UpdatedAt = DateTime.Now;
                     await _unitOfWork.Repository<Part>().UpdateAsync(part);
                     
-                    // Update LastOrderDate and LastCostPrice in PartSupplier
-                    var partSuppliers = await _unitOfWork.Repository<PartSupplier>().GetAllAsync();
-                    var partSupplier = partSuppliers.FirstOrDefault(ps => ps.PartId == item.PartId && ps.SupplierId == order.SupplierId);
+                    // ✅ OPTIMIZED: Find PartSupplier ở database level
+                    var partSupplier = await _unitOfWork.Repository<PartSupplier>()
+                        .FirstOrDefaultAsync(ps => ps.PartId == item.PartId && ps.SupplierId == order.SupplierId);
                     
                     if (partSupplier != null)
                     {
@@ -583,7 +627,8 @@ namespace GarageManagementSystem.API.Controllers
                 await _unitOfWork.SaveChangesAsync();
 
                 // Create Financial Transaction (Expense)
-                var finCount = (await _unitOfWork.Repository<Core.Entities.FinancialTransaction>().GetAllAsync()).Count() + 1;
+                // ✅ OPTIMIZED: Use CountAsync thay vì GetAllAsync().Count()
+                var finCount = await _unitOfWork.Repository<Core.Entities.FinancialTransaction>().CountAsync() + 1;
                 var finNumber = $"FIN-{dateStr}-{finCount:D4}";
                 
                 var financialTx = new Core.Entities.FinancialTransaction

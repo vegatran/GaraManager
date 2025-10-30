@@ -77,8 +77,8 @@ namespace GarageManagementSystem.API.Controllers
         {
             try
             {
-                // Generate batch number
-                var count = (await _unitOfWork.Repository<PartInventoryBatch>().GetAllAsync()).Count();
+                // ✅ OPTIMIZED: Use CountAsync thay vì GetAllAsync().Count()
+                var count = await _unitOfWork.Repository<PartInventoryBatch>().CountAsync();
                 batch.BatchNumber = $"BATCH-{DateTime.Now:yyyyMMdd}-{(count + 1):D4}";
                 batch.CreatedAt = DateTime.Now;
                 

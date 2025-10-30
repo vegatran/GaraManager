@@ -124,8 +124,8 @@ namespace GarageManagementSystem.API.Controllers
             {
                 var transaction = _mapper.Map<FinancialTransaction>(createDto);
                 
-                // Generate transaction number
-                var count = (await _unitOfWork.Repository<FinancialTransaction>().GetAllAsync()).Count();
+                // ✅ OPTIMIZED: Use CountAsync thay vì GetAllAsync().Count()
+                var count = await _unitOfWork.Repository<FinancialTransaction>().CountAsync();
                 transaction.TransactionNumber = $"FT-{DateTime.Now:yyyyMMdd}-{(count + 1):D4}";
                 transaction.CreatedAt = DateTime.Now;
                 

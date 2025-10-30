@@ -91,9 +91,10 @@ namespace GarageManagementSystem.API.Controllers
                 var customer = await _unitOfWork.Customers.GetByIdAsync(order.CustomerId);
                 var vehicle = await _unitOfWork.Vehicles.GetByIdAsync(order.VehicleId);
 
-                // Get service items
-                var serviceItems = await _unitOfWork.Repository<ServiceOrderItem>().GetAllAsync();
-                var items = serviceItems.Where(i => i.ServiceOrderId == id).Select(i => new
+                // ✅ OPTIMIZED: Filter service items ở database level
+                var serviceItems = (await _unitOfWork.Repository<ServiceOrderItem>()
+                    .FindAsync(i => i.ServiceOrderId == id)).ToList();
+                var items = serviceItems.Select(i => new
                 {
                     i.Id,
                     i.ServiceId,
@@ -103,9 +104,10 @@ namespace GarageManagementSystem.API.Controllers
                     Total = i.Quantity * i.UnitPrice
                 }).ToList();
 
-                // Get parts
-                var orderParts = await _unitOfWork.Repository<ServiceOrderPart>().GetAllAsync();
-                var parts = orderParts.Where(p => p.ServiceOrderId == id).Select(p => new
+                // ✅ OPTIMIZED: Filter parts ở database level
+                var orderParts = (await _unitOfWork.Repository<ServiceOrderPart>()
+                    .FindAsync(p => p.ServiceOrderId == id)).ToList();
+                var parts = orderParts.Select(p => new
                 {
                     p.Id,
                     p.PartId,
@@ -502,17 +504,15 @@ namespace GarageManagementSystem.API.Controllers
             var order = await _unitOfWork.ServiceOrders.GetByIdAsync(orderId);
             if (order == null) return;
 
-            // Calculate service items total
-            var serviceItems = await _unitOfWork.Repository<ServiceOrderItem>().GetAllAsync();
-            var serviceTotal = serviceItems
-                .Where(i => i.ServiceOrderId == orderId)
-                .Sum(i => i.Quantity * i.UnitPrice);
+            // ✅ OPTIMIZED: Filter service items ở database level
+            var serviceItems = (await _unitOfWork.Repository<ServiceOrderItem>()
+                .FindAsync(i => i.ServiceOrderId == orderId)).ToList();
+            var serviceTotal = serviceItems.Sum(i => i.Quantity * i.UnitPrice);
 
-            // Calculate parts total
-            var parts = await _unitOfWork.Repository<ServiceOrderPart>().GetAllAsync();
-            var partsTotal = parts
-                .Where(p => p.ServiceOrderId == orderId)
-                .Sum(p => p.Quantity * p.UnitPrice);
+            // ✅ OPTIMIZED: Filter parts ở database level
+            var parts = (await _unitOfWork.Repository<ServiceOrderPart>()
+                .FindAsync(p => p.ServiceOrderId == orderId)).ToList();
+            var partsTotal = parts.Sum(p => p.Quantity * p.UnitPrice);
 
             order.EstimatedAmount = serviceTotal + partsTotal;
             order.UpdatedAt = DateTime.Now;

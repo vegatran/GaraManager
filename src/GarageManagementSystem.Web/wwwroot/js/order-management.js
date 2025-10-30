@@ -48,14 +48,34 @@ window.OrderManagement = {
                 searchable: false,
                 render: function(data, type, row) {
                     var actions = `
-                        <button class="btn btn-info btn-sm view-order" data-id="${row.id}">
-                            <i class="fas fa-eye"></i>
-                        </button>
+                        <div class="btn-group" role="group">
+                            <button class="btn btn-info btn-sm view-order" data-id="${row.id}" title="Xem">
+                                <i class="fas fa-eye"></i>
+                            </button>
                     `;
+                    
+                    // ✅ 2.1.1: Nút "Chuyển sang Chờ Phân công" (chỉ hiện khi status = "Pending")
+                    var status = row.status || row.statusOriginal || '';
+                    if (status === 'Pending' || status === 'Chờ Xử Lý') {
+                        actions += `
+                            <button class="btn btn-primary btn-sm change-status-btn" data-id="${row.id}" data-status="PendingAssignment" title="Chuyển sang Chờ Phân công">
+                                <i class="fas fa-arrow-right"></i>
+                            </button>
+                        `;
+                    }
+                    
+                    // ✅ 2.1.2: Nút "Phân công" (hiện khi status = "PendingAssignment" hoặc "Chờ Phân công")
+                    if (status === 'PendingAssignment' || status === 'Chờ Phân Công') {
+                        actions += `
+                            <button class="btn btn-success btn-sm assign-technician-btn" data-id="${row.id}" title="Phân công KTV">
+                                <i class="fas fa-user-tie"></i>
+                            </button>
+                        `;
+                    }
                     
                     // Chỉ hiển thị nút Edit và Delete khi trạng thái chưa hoàn thành
                     var isCompleted = row.status === 'Completed' || 
-                                     row.status === 'Hoàn Thành' ||  // Chữ T viết hoa (từ TranslateStatus)
+                                     row.status === 'Hoàn Thành' ||
                                      row.status === 'Hoàn thành' || 
                                      row.status === 'completed' || 
                                      row.status === 'hoàn thành' ||
@@ -64,21 +84,24 @@ window.OrderManagement = {
                     
                     if (!isCompleted) {
                         actions += `
-                            <button class="btn btn-warning btn-sm edit-order" data-id="${row.id}">
+                            <button class="btn btn-warning btn-sm edit-order" data-id="${row.id}" title="Sửa">
                                 <i class="fas fa-edit"></i>
                             </button>
-                            <button class="btn btn-danger btn-sm delete-order" data-id="${row.id}">
+                            <button class="btn btn-danger btn-sm delete-order" data-id="${row.id}" title="Xóa">
                                 <i class="fas fa-trash"></i>
                             </button>
                         `;
                     }
                     
+                    actions += `</div>`;
                     return actions;
                 }
             }
         ];
         
-        this.orderTable = DataTablesUtility.initServerSideTable('#orderTable', '/api/serviceorders', columns, {
+        // ✅ SỬA: Sử dụng endpoint Web controller thay vì API trực tiếp
+        // Endpoint này sẽ return format phù hợp với DataTablesUtility
+        this.orderTable = DataTablesUtility.initServerSideTable('#orderTable', '/OrderManagement/GetOrdersPaged', columns, {
             order: [[0, 'desc']],
             pageLength: 10
         });
@@ -88,9 +111,14 @@ window.OrderManagement = {
     bindEvents: function() {
         var self = this;
 
-        // Search functionality
-        $('#searchInput').on('keyup', function() {
-            self.orderTable.search(this.value).draw();
+        // ✅ SỬA: Thêm button handler theo pattern EmployeeManagement
+        $(document).on('click', '#addOrderBtn', function() {
+            self.showCreateModal();
+        });
+
+        // ✅ THÊM: Reset form khi modal đóng
+        $('#createOrderModal').on('hidden.bs.modal', function() {
+            self.resetCreateModal();
         });
 
         // Create order form
@@ -117,6 +145,38 @@ window.OrderManagement = {
             self.deleteOrder(id);
         });
 
+        // ✅ 2.1.1: Chuyển trạng thái
+        $(document).on('click', '.change-status-btn', function() {
+            var id = $(this).data('id');
+            var newStatus = $(this).data('status');
+            self.changeOrderStatus(id, newStatus);
+        });
+
+        // ✅ 2.1.2: Mở modal phân công KTV
+        $(document).on('click', '.assign-technician-btn', function() {
+            var id = $(this).data('id');
+            self.openAssignTechnicianModal(id);
+        });
+
+        // ✅ 2.1.2: Phân công từng item
+        $(document).on('click', '.btn-assign-item', function() {
+            var orderId = $('#assignTechnicianOrderId').val();
+            var itemId = $(this).closest('tr').data('item-id');
+            self.assignTechnicianToItem(orderId, itemId);
+        });
+
+        // ✅ 2.1.2: Phân công hàng loạt
+        $(document).on('click', '#btnBulkAssign', function() {
+            var orderId = $('#assignTechnicianOrderId').val();
+            self.bulkAssignTechnician(orderId);
+        });
+
+        // ✅ 2.1.2: Lưu tất cả phân công
+        $(document).on('click', '#btnSaveAssignments', function() {
+            var orderId = $('#assignTechnicianOrderId').val();
+            self.saveAllAssignments(orderId);
+        });
+
         // Update order status
         $(document).on('click', '.update-status', function() {
             var id = $(this).data('id');
@@ -127,6 +187,62 @@ window.OrderManagement = {
         $(document).on('change', '#createServiceQuotationId', function() {
             self.onQuotationChange();
         });
+    },
+
+    // ✅ THÊM: Reset modal form về trạng thái ban đầu
+    resetCreateModal: function() {
+        var self = this;
+        
+        // Reset form
+        $('#createOrderForm')[0]?.reset();
+        
+        // ✅ SỬA: Destroy Select2 để reset hoàn toàn
+        if ($('#createServiceQuotationId').hasClass('select2-hidden-accessible')) {
+            $('#createServiceQuotationId').select2('destroy');
+        }
+        if ($('#createCustomerId').hasClass('select2-hidden-accessible')) {
+            $('#createCustomerId').select2('destroy');
+        }
+        if ($('#createVehicleId').hasClass('select2-hidden-accessible')) {
+            $('#createVehicleId').select2('destroy');
+        }
+        
+        // Clear và reset dropdowns
+        $('#createServiceQuotationId').empty().append('<option value="">-- Chọn Báo Giá --</option>');
+        $('#createCustomerId').empty().append('<option value="">Sẽ tự động chọn theo báo giá</option>');
+        $('#createVehicleId').empty().append('<option value="">Sẽ tự động chọn theo báo giá</option>');
+        
+        // Reset textareas
+        $('#createNotes').val('');
+        
+        // Reset Priority dropdown
+        $('#createPriority').val('Normal');
+        
+        // Reset disabled state
+        $('#createCustomerId').prop('disabled', true);
+        $('#createVehicleId').prop('disabled', true);
+    },
+
+    // ✅ THÊM: Show create modal theo pattern EmployeeManagement
+    showCreateModal: function() {
+        var self = this;
+        
+        // ✅ SỬA: Reset form trước khi mở modal
+        self.resetCreateModal();
+        
+        // Set default dates to today
+        var today = new Date().toISOString().split('T')[0];
+        $('#createOrderDate').val(today);
+        $('#createEstimatedStartDate').val(today); // ✅ THÊM: Ngày dự kiến bắt đầu = hôm nay
+        $('#createEstimatedEndDate').val(today);   // ✅ THÊM: Ngày dự kiến kết thúc = hôm nay
+        
+        // ✅ SỬA: Luôn load lại quotations khi mở modal để đảm bảo có data mới nhất
+        self.loadQuotations();
+        
+        // ✅ THÊM: Đợi một chút để Select2 được khởi tạo xong
+        setTimeout(function() {
+            $('#createOrderModal').modal('show');
+        }, 150);
     },
 
     // Create order
@@ -283,10 +399,13 @@ window.OrderManagement = {
             url: '/OrderManagement/GetAvailableQuotations',
             type: 'GET',
             success: function(data) {
+                console.log('[loadQuotations] Response:', data);
+                
                 var $select = $('#createServiceQuotationId');
                 $select.empty().append('<option value="">-- Chọn Báo Giá --</option>');
                 
                 if (data && data.length > 0) {
+                    console.log(`[loadQuotations] Found ${data.length} available quotations`);
                     $.each(data, function(index, item) {
                         $select.append(`<option value="${item.value}" 
                             data-vehicle-id="${item.vehicleId}" 
@@ -296,15 +415,41 @@ window.OrderManagement = {
                             data-total-amount="${item.totalAmount}" 
                             data-quotation-date="${item.quotationDate}">${item.text}</option>`);
                     });
+                    
+                    // ✅ SỬA: Reinitialize Select2 sau khi append options
+                    if ($select.hasClass('select2-hidden-accessible')) {
+                        $select.select2('destroy');
+                    }
+                    $select.select2({
+                        placeholder: '-- Chọn Báo Giá --',
+                        allowClear: true,
+                        width: '100%'
+                    });
+                } else {
+                    console.warn('[loadQuotations] No available quotations found');
+                    // ✅ THÊM: Hiển thị thông báo nếu không có báo giá
+                    if ($select.find('option').length <= 1) {
+                        $select.append('<option value="" disabled>Không có báo giá nào sẵn sàng</option>');
+                    }
+                    
+                    // Reinitialize Select2
+                    if ($select.hasClass('select2-hidden-accessible')) {
+                        $select.select2('destroy');
+                    }
+                    $select.select2({
+                        placeholder: 'Không có báo giá sẵn sàng',
+                        allowClear: false,
+                        width: '100%'
+                    });
                 }
-                
-                $select.select2({
-                    placeholder: '-- Chọn Báo Giá --',
-                    allowClear: true
-                });
             },
             error: function(xhr, status, error) {
-                GarageApp.showError('Lỗi khi tải danh sách báo giá');
+                console.error('[loadQuotations] Error:', xhr, status, error);
+                var errorMsg = 'Lỗi khi tải danh sách báo giá';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMsg += ': ' + xhr.responseJSON.message;
+                }
+                GarageApp.showError(errorMsg);
             }
         });
     },
@@ -355,24 +500,91 @@ window.OrderManagement = {
             var totalAmount = selectedOption.data('total-amount');
             var quotationDate = selectedOption.data('quotation-date');
             
-            // Điền thông tin xe
-            $('#createVehicleId').val(vehicleId).trigger('change');
-            
-            // Điền thông tin khách hàng
-            $('#createCustomerId').val(customerId).trigger('change');
-            
-            // Hiển thị thông tin đã chọn
+            console.log('[onQuotationChange] Selected quotation:', {
                 vehicleId: vehicleId,
                 customerId: customerId,
                 vehicleInfo: vehicleInfo,
-                customerName: customerName,
-                totalAmount: totalAmount,
-                quotationDate: quotationDate
+                customerName: customerName
             });
+            
+            // ✅ SỬA: Load và set Customer dropdown
+            var $customerSelect = $('#createCustomerId');
+            if (customerId && customerName) {
+                // Clear và thêm option mới
+                $customerSelect.empty();
+                $customerSelect.append(`<option value="${customerId}">${customerName}</option>`);
+                
+                // Enable và set value
+                $customerSelect.prop('disabled', false);
+                $customerSelect.val(customerId);
+                
+                // Reinitialize Select2 để update display
+                if ($customerSelect.hasClass('select2-hidden-accessible')) {
+                    $customerSelect.select2('destroy');
+                }
+                $customerSelect.select2({
+                    placeholder: customerName,
+                    allowClear: false,
+                    width: '100%'
+                });
+            }
+            
+            // ✅ SỬA: Load và set Vehicle dropdown
+            var $vehicleSelect = $('#createVehicleId');
+            if (vehicleId && vehicleInfo) {
+                // Clear và thêm option mới
+                $vehicleSelect.empty();
+                $vehicleSelect.append(`<option value="${vehicleId}">${vehicleInfo}</option>`);
+                
+                // Enable và set value
+                $vehicleSelect.prop('disabled', false);
+                $vehicleSelect.val(vehicleId);
+                
+                // Reinitialize Select2 để update display
+                if ($vehicleSelect.hasClass('select2-hidden-accessible')) {
+                    $vehicleSelect.select2('destroy');
+                }
+                $vehicleSelect.select2({
+                    placeholder: vehicleInfo,
+                    allowClear: false,
+                    width: '100%'
+                });
+            }
+            
+            console.log('[onQuotationChange] Set customer and vehicle values successfully');
         } else {
             // Reset các field khi không chọn quotation
-            $('#createVehicleId').val('').trigger('change');
-            $('#createCustomerId').val('').trigger('change');
+            var $customerSelect = $('#createCustomerId');
+            var $vehicleSelect = $('#createVehicleId');
+            
+            $customerSelect.val('').trigger('change');
+            $vehicleSelect.val('').trigger('change');
+            
+            // Reset to placeholder options
+            $customerSelect.empty().append('<option value="">Sẽ tự động chọn theo báo giá</option>');
+            $vehicleSelect.empty().append('<option value="">Sẽ tự động chọn theo báo giá</option>');
+            
+            // Disable lại
+            $customerSelect.prop('disabled', true);
+            $vehicleSelect.prop('disabled', true);
+            
+            // Reinitialize Select2
+            if ($customerSelect.hasClass('select2-hidden-accessible')) {
+                $customerSelect.select2('destroy');
+            }
+            if ($vehicleSelect.hasClass('select2-hidden-accessible')) {
+                $vehicleSelect.select2('destroy');
+            }
+            $customerSelect.select2({
+                placeholder: 'Sẽ tự động chọn theo báo giá',
+                allowClear: false,
+                width: '100%'
+            });
+            $vehicleSelect.select2({
+                placeholder: 'Sẽ tự động chọn theo báo giá',
+                allowClear: false,
+                width: '100%'
+            });
         }
     },
 
@@ -426,22 +638,24 @@ window.OrderManagement = {
         $('#viewStatus').text(order.status || '');
         $('#viewDescription').text(order.description || '');
         
-        // Populate order items if available
+        // ✅ THÊM: Populate order items với thông tin phân công
         if (order.serviceOrderItems && order.serviceOrderItems.length > 0) {
             var itemsHtml = '';
             order.serviceOrderItems.forEach(function(item) {
                 itemsHtml += `
                     <tr>
-                        <td>${item.service?.name || item.partName || ''}</td>
+                        <td>${item.service?.name || item.serviceName || ''}</td>
                         <td>${item.quantity || 1}</td>
                         <td>${(item.unitPrice || 0).toLocaleString()} VNĐ</td>
                         <td>${(item.totalPrice || 0).toLocaleString()} VNĐ</td>
+                        <td>${item.assignedTechnicianName || '<span class="text-muted">Chưa phân công</span>'}</td>
+                        <td>${item.estimatedHours ? item.estimatedHours + ' giờ' : '<span class="text-muted">-</span>'}</td>
                     </tr>
                 `;
             });
             $('#viewOrderItems').html(itemsHtml);
         } else {
-            $('#viewOrderItems').html('<tr><td colspan="4" class="text-center text-muted">Không có dịch vụ nào</td></tr>');
+            $('#viewOrderItems').html('<tr><td colspan="6" class="text-center text-muted">Không có dịch vụ nào</td></tr>');
         }
     },
 
@@ -451,6 +665,363 @@ window.OrderManagement = {
         $('#editOrderNumber').val(order.orderNumber);
         $('#editStatus').val(order.status);
         $('#editDescription').val(order.description);
+    },
+
+    // ✅ 2.1.1: Chuyển trạng thái ServiceOrder
+    changeOrderStatus: function(id, newStatus) {
+        var self = this;
+        
+        Swal.fire({
+            title: 'Chuyển trạng thái?',
+            text: `Bạn có chắc muốn chuyển trạng thái sang "${newStatus}"?`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Xác nhận',
+            cancelButtonText: 'Hủy'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: '/OrderManagement/ChangeOrderStatus/' + id,
+                    type: 'PUT',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ Status: newStatus }),
+                    success: function(response) {
+                        if (AuthHandler.validateApiResponse(response)) {
+                            if (response.success) {
+                                GarageApp.showSuccess('Đã chuyển trạng thái thành công!');
+                                self.orderTable.ajax.reload();
+                            } else {
+                                GarageApp.showError(GarageApp.parseErrorMessage(response) || 'Lỗi khi chuyển trạng thái');
+                            }
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        if (AuthHandler.isUnauthorized(xhr)) {
+                            AuthHandler.handleUnauthorized(xhr, true);
+                        } else {
+                            GarageApp.showError('Lỗi khi chuyển trạng thái');
+                        }
+                    }
+                });
+            }
+        });
+    },
+
+    // ✅ 2.1.2: Mở modal phân công KTV
+    openAssignTechnicianModal: function(orderId) {
+        var self = this;
+        
+        // Load order details
+        $.ajax({
+            url: '/OrderManagement/GetOrder/' + orderId,
+            type: 'GET',
+            success: function(response) {
+                if (AuthHandler.validateApiResponse(response) && response.success) {
+                    var order = response.data;
+                    $('#assignTechnicianOrderId').val(order.id);
+                    $('#assignTechnicianOrderNumber').val(order.orderNumber || '');
+                    
+                    // Populate items
+                    self.populateAssignTechnicianItems(order);
+                    
+                    // Load technicians with workload
+                    self.loadTechniciansForAssignment();
+                    
+                    $('#assignTechnicianModal').modal('show');
+                } else {
+                    GarageApp.showError('Lỗi khi tải thông tin đơn hàng');
+                }
+            },
+            error: function(xhr) {
+                if (AuthHandler.isUnauthorized(xhr)) {
+                    AuthHandler.handleUnauthorized(xhr, true);
+                } else {
+                    GarageApp.showError('Lỗi khi tải thông tin đơn hàng');
+                }
+            }
+        });
+    },
+
+    // ✅ BỔ SUNG: Load technicians với workload info
+    loadTechniciansForAssignment: function() {
+        var self = this;
+        
+        $.ajax({
+            url: '/OrderManagement/GetActiveEmployees',
+            type: 'GET',
+            success: function(employees) {
+                // Load workload for each employee
+                var technicianPromises = employees.map(function(emp) {
+                    return $.ajax({
+                        url: '/api/employees/' + emp.id + '/workload',
+                        type: 'GET'
+                    }).then(function(workloadResponse) {
+                        var workload = workloadResponse.success && workloadResponse.data ? workloadResponse.data : null;
+                        return {
+                            employee: emp,
+                            workload: workload
+                        };
+                    }).catch(function() {
+                        return { employee: emp, workload: null };
+                    });
+                });
+                
+                Promise.all(technicianPromises).then(function(techniciansWithWorkload) {
+                    self.populateTechnicianDropdowns(techniciansWithWorkload);
+                });
+            },
+            error: function() {
+                GarageApp.showError('Lỗi khi tải danh sách KTV');
+            }
+        });
+    },
+
+    // ✅ BỔ SUNG: Populate technician dropdowns với workload
+    populateTechnicianDropdowns: function(techniciansWithWorkload) {
+        var defaultOption = '<option value="">-- Chọn KTV --</option>';
+        
+        // Populate bulk dropdown
+        var $bulkSelect = $('#bulkTechnicianSelect');
+        $bulkSelect.empty().append(defaultOption);
+        
+        techniciansWithWorkload.forEach(function(item) {
+            var emp = item.employee;
+            var workload = item.workload;
+            var displayText = emp.text || (emp.name + ' - ' + (emp.position || ''));
+            
+            // ✅ THÊM: Hiển thị workload nếu có
+            if (workload && workload.statistics) {
+                var totalHours = workload.activeOrders.totalEstimatedHours || 0;
+                var activeCount = workload.activeOrders.count || 0;
+                var capacity = workload.statistics.capacityUsed || 0;
+                displayText += ` (${totalHours.toFixed(1)}h/8h, ${activeCount} JO, ${capacity.toFixed(0)}% tải)`;
+            }
+            
+            $bulkSelect.append(`<option value="${emp.id}" data-workload='${JSON.stringify(workload || {})}'>${displayText}</option>`);
+        });
+        
+        $bulkSelect.select2({
+            placeholder: '-- Chọn KTV --',
+            allowClear: true
+        });
+        
+        // Populate individual dropdowns in table rows (will be done in populateAssignTechnicianItems)
+    },
+
+    // ✅ BỔ SUNG: Populate items vào modal table
+    populateAssignTechnicianItems: function(order) {
+        var self = this;
+        var tbody = $('#assignTechnicianItemsBody');
+        tbody.empty();
+        
+        if (!order.serviceOrderItems || order.serviceOrderItems.length === 0) {
+            tbody.append('<tr><td colspan="6" class="text-center text-muted">Không có hạng mục nào</td></tr>');
+            return;
+        }
+        
+        // Load technicians first
+        $.ajax({
+            url: '/OrderManagement/GetActiveEmployees',
+            type: 'GET',
+            success: function(employees) {
+                order.serviceOrderItems.forEach(function(item, index) {
+                    var row = `
+                        <tr data-item-id="${item.id}">
+                            <td class="text-center">${index + 1}</td>
+                            <td><strong>${item.service?.name || item.serviceName || ''}</strong></td>
+                            <td>
+                                <select class="form-control form-control-sm technician-select" data-item-id="${item.id}">
+                                    <option value="">-- Chọn KTV --</option>
+                    `;
+                    
+                    employees.forEach(function(emp) {
+                        var selected = item.assignedTechnicianId == emp.id ? 'selected' : '';
+                        row += `<option value="${emp.id}" ${selected}>${emp.text || (emp.name + ' - ' + (emp.position || ''))}</option>`;
+                    });
+                    
+                    row += `
+                                </select>
+                            </td>
+                            <td>
+                                <input type="number" class="form-control form-control-sm estimated-hours-input" 
+                                       data-item-id="${item.id}" 
+                                       value="${item.estimatedHours || ''}" 
+                                       step="0.1" min="0.1" max="24" 
+                                       placeholder="Giờ công">
+                            </td>
+                            <td class="text-center">
+                                <span class="badge badge-${item.status === 'Completed' ? 'success' : 'warning'}">
+                                    ${item.status || 'Pending'}
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <button type="button" class="btn btn-sm btn-success btn-assign-item" title="Phân công">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                    
+                    tbody.append(row);
+                });
+            },
+            error: function() {
+                GarageApp.showError('Lỗi khi tải danh sách KTV');
+            }
+        });
+    },
+
+    // ✅ 2.1.2: Phân công KTV cho một item
+    assignTechnicianToItem: function(orderId, itemId) {
+        var self = this;
+        var row = $(`tr[data-item-id="${itemId}"]`);
+        var technicianId = row.find('.technician-select').val();
+        var estimatedHours = row.find('.estimated-hours-input').val();
+        
+        if (!technicianId) {
+            GarageApp.showError('Vui lòng chọn KTV');
+            return;
+        }
+        
+        $.ajax({
+            url: '/OrderManagement/AssignTechnician/' + orderId + '/items/' + itemId,
+            type: 'PUT',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                TechnicianId: parseInt(technicianId),
+                EstimatedHours: estimatedHours ? parseFloat(estimatedHours) : null,
+                Notes: ''
+            }),
+            success: function(response) {
+                if (AuthHandler.validateApiResponse(response)) {
+                    if (response.success) {
+                        GarageApp.showSuccess('Phân công KTV thành công!');
+                        // Optionally reload modal to show updated info
+                        self.openAssignTechnicianModal(orderId);
+                    } else {
+                        GarageApp.showError(GarageApp.parseErrorMessage(response) || 'Lỗi khi phân công KTV');
+                    }
+                }
+            },
+            error: function(xhr) {
+                if (AuthHandler.isUnauthorized(xhr)) {
+                    AuthHandler.handleUnauthorized(xhr, true);
+                } else {
+                    GarageApp.showError('Lỗi khi phân công KTV');
+                }
+            }
+        });
+    },
+
+    // ✅ 2.1.2: Phân công hàng loạt
+    bulkAssignTechnician: function(orderId) {
+        var self = this;
+        var technicianId = $('#bulkTechnicianSelect').val();
+        var estimatedHours = $('#bulkEstimatedHours').val();
+        
+        if (!technicianId) {
+            GarageApp.showError('Vui lòng chọn KTV');
+            return;
+        }
+        
+        // Get all unassigned items
+        var unassignedItems = [];
+        $('#assignTechnicianItemsBody tr[data-item-id]').each(function() {
+            var itemId = $(this).data('item-id');
+            var currentTechnician = $(this).find('.technician-select').val();
+            if (!currentTechnician || currentTechnician === '') {
+                unassignedItems.push(itemId);
+            }
+        });
+        
+        if (unassignedItems.length === 0) {
+            GarageApp.showWarning('Tất cả hạng mục đã được phân công');
+            return;
+        }
+        
+        $.ajax({
+            url: '/OrderManagement/BulkAssignTechnician/' + orderId,
+            type: 'PUT',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                TechnicianId: parseInt(technicianId),
+                EstimatedHours: estimatedHours ? parseFloat(estimatedHours) : null,
+                ItemIds: unassignedItems,
+                Notes: 'Phân công hàng loạt'
+            }),
+            success: function(response) {
+                if (AuthHandler.validateApiResponse(response)) {
+                    if (response.success) {
+                        GarageApp.showSuccess(`Đã phân công ${unassignedItems.length} hạng mục thành công!`);
+                        self.openAssignTechnicianModal(orderId);
+                    } else {
+                        GarageApp.showError(GarageApp.parseErrorMessage(response) || 'Lỗi khi phân công hàng loạt');
+                    }
+                }
+            },
+            error: function(xhr) {
+                if (AuthHandler.isUnauthorized(xhr)) {
+                    AuthHandler.handleUnauthorized(xhr, true);
+                } else {
+                    GarageApp.showError('Lỗi khi phân công hàng loạt');
+                }
+            }
+        });
+    },
+
+    // ✅ 2.1.2: Lưu tất cả phân công
+    saveAllAssignments: function(orderId) {
+        var self = this;
+        var assignments = [];
+        
+        $('#assignTechnicianItemsBody tr[data-item-id]').each(function() {
+            var itemId = $(this).data('item-id');
+            var technicianId = $(this).find('.technician-select').val();
+            var estimatedHours = $(this).find('.estimated-hours-input').val();
+            
+            if (technicianId) {
+                assignments.push({
+                    itemId: itemId,
+                    technicianId: parseInt(technicianId),
+                    estimatedHours: estimatedHours ? parseFloat(estimatedHours) : null
+                });
+            }
+        });
+        
+        if (assignments.length === 0) {
+            GarageApp.showWarning('Không có phân công nào để lưu');
+            return;
+        }
+        
+        // Save all assignments
+        var promises = assignments.map(function(assignment) {
+            return $.ajax({
+                url: '/OrderManagement/AssignTechnician/' + orderId + '/items/' + assignment.itemId,
+                type: 'PUT',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    TechnicianId: assignment.technicianId,
+                    EstimatedHours: assignment.estimatedHours,
+                    Notes: ''
+                })
+            });
+        });
+        
+        Promise.all(promises).then(function(responses) {
+            var successCount = responses.filter(function(r) {
+                return AuthHandler.validateApiResponse(r) && r.success;
+            }).length;
+            
+            if (successCount === assignments.length) {
+                GarageApp.showSuccess(`Đã lưu ${successCount} phân công thành công!`);
+                self.orderTable.ajax.reload();
+                $('#assignTechnicianModal').modal('hide');
+            } else {
+                GarageApp.showError(`Lưu ${successCount}/${assignments.length} phân công. Vui lòng kiểm tra lại.`);
+            }
+        }).catch(function() {
+            GarageApp.showError('Lỗi khi lưu phân công');
+        });
     }
 };
 

@@ -13,7 +13,13 @@
 10. [Phiếu Nhập Hàng](#phiếu-nhập-hàng)
 11. [Phiếu Thu/Chi](#phiếu-thu-chi)
 12. [Báo cáo và thống kê](#báo-cáo-và-thống-kê)
-13. [Troubleshooting](#troubleshooting)
+13. [QUY TRÌNH NGHIỆP VỤ](#quy-trình-nghiệp-vụ)
+    - [Giai đoạn 1: Tiếp Nhận & Báo Giá](#giai-đoạn-1-tiếp-nhận--báo-giá)
+    - [Giai đoạn 2: Sửa Chữa & Thanh Toán](#giai-đoạn-2-sửa-chữa--thanh-toán)
+      - [2.1: Lập Kế Hoạch & Phân Công](#21-lập-kế-hoạch--phân-công)
+        - [2.1.1: Chuyển JO sang "Chờ Phân công"](#211-chuyển-jo-sang-chờ-phân-công)
+        - [2.1.2: Phân công KTV & Thời gian](#212-phân-công-ktv--thời-gian)
+14. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -2914,6 +2920,354 @@ Người mua hàng          Người bán hàng         Thủ quỹ
 - **📧 Email**: support@garamanager.com
 - **💬 Chat**: Trực tiếp trên website
 - **🕐 Giờ làm việc**: 8:00 - 17:30 (Thứ 2 - Thứ 6)
+
+---
+
+## 13. QUY TRÌNH NGHIỆP VỤ
+
+### **Tổng quan:**
+Hệ thống quản lý garage theo quy trình nghiệp vụ từ Tiếp nhận → Sửa chữa → Thanh toán.
+
+---
+
+### **Giai đoạn 1: Tiếp Nhận & Báo Giá**
+
+Quy trình tiếp nhận khách hàng, kiểm tra xe và tạo báo giá.
+
+*(Chi tiết sẽ được bổ sung sau)*
+
+---
+
+### **Giai đoạn 2: Sửa Chữa & Thanh Toán**
+
+Quy trình thực hiện sửa chữa và quản lý thanh toán.
+
+---
+
+## 2.1. LẬP KẾ HOẠCH & PHÂN CÔNG
+
+### **📍 Vị trí trong hệ thống:**
+
+**Menu Navigation:**
+```
+Sidebar Menu
+└── Quy Trình Nghiệp Vụ
+    ├── GIAI ĐOẠN 1: Tiếp Nhận & Báo Giá
+    │   ├── 1. Tiếp Đón Khách Hàng
+    │   ├── 2. Kiểm Tra Xe
+    │   └── 3. Báo Giá
+    │
+    └── GIAI ĐOẠN 2: Sửa Chữa & Thanh Toán
+        └── 4. Phiếu Sửa Chữa ⬅️ **GIAI ĐOẠN 2.1 NẰM ĐÂY**
+```
+
+**URL/Route:**
+- Controller: `OrderManagement`
+- Action: `Index`
+- URL: `/OrderManagement` hoặc `/OrderManagement/Index`
+
+**Màn hình chính:**
+Trang **"Quản Lý Phiếu Sửa Chữa"** với DataTable hiển thị danh sách ServiceOrder (JO)
+
+---
+
+### **🎯 Tổng quan quy trình:**
+
+**Giai đoạn 2.1** được thực hiện sau khi:
+- ✅ Báo giá đã được khách hàng duyệt (Approve)
+- ✅ ServiceOrder (JO) đã được tạo từ Quotation
+- ✅ JO có trạng thái **"Pending"** (Chờ Xử Lý)
+
+**Workflow:**
+```
+Pending → PendingAssignment → ReadyToWork → InProgress → Completed
+   ↑              ↑                    ↑
+   │              │                    │
+   │         2.1.1 Chuyển      2.1.2 Phân công
+   │         trạng thái        KTV hoàn tất
+```
+
+---
+
+## 2.1.1. CHUYỂN JO SANG "CHỜ PHÂN CÔNG"
+
+### **Mục đích:**
+Chuyển JO từ trạng thái "Pending" sang "PendingAssignment" để bắt đầu quy trình phân công KTV.
+
+### **Yêu cầu:**
+- ✅ Quyền: **Bất kỳ user nào** đều có thể chuyển trạng thái
+- ✅ JO phải ở trạng thái **"Pending"** (Chờ Xử Lý)
+
+### **Các bước thực hiện:**
+
+#### **Bước 1: Vào trang Quản Lý Phiếu Sửa Chữa**
+
+1. Đăng nhập vào hệ thống
+2. Click menu **"Quy Trình Nghiệp Vụ"** ở sidebar bên trái
+3. Click **"4. Phiếu Sửa Chữa"** (trong GIAI ĐOẠN 2)
+4. Màn hình hiển thị danh sách các JO (ServiceOrder) với các cột:
+   - ID
+   - Số Đơn Hàng
+   - Khách Hàng
+   - Xe
+   - Ngày Đặt
+   - Tổng Tiền
+   - Trạng Thái
+   - Thao Tác
+
+#### **Bước 2: Tìm JO có trạng thái "Pending"**
+
+- Trong cột "Trạng Thái", tìm các JO có status = **"Chờ Xử Lý"** hoặc **"Pending"**
+
+#### **Bước 3: Click nút chuyển trạng thái**
+
+- Trong cột "Thao Tác", tìm nút **"→"** (mũi tên phải, màu xanh dương)
+- Nút này chỉ hiển thị khi status = "Pending"
+- Tooltip: **"Chuyển sang Chờ Phân công"**
+
+#### **Bước 4: Xác nhận**
+
+- Popup SweetAlert hiện: **"Chuyển trạng thái?"**
+- Click **"Xác nhận"**
+
+#### **Kết quả:**
+- ✅ JO chuyển sang trạng thái **"Chờ Phân Công"** (PendingAssignment)
+- ✅ Báo giá (Quotation) tự động bị khóa - không thể chỉnh sửa nữa
+- ✅ DataTable tự động reload để hiển thị trạng thái mới
+
+**Lưu ý:**
+- Sau khi chuyển, nút **"→"** sẽ biến mất
+- Nút **"👔 Phân công"** sẽ xuất hiện ở bước tiếp theo
+
+---
+
+## 2.1.2. PHÂN CÔNG KTV & THỜI GIAN
+
+### **Mục đích:**
+Phân công KTV phù hợp cho từng hạng mục sửa chữa và nhập giờ công dự kiến.
+
+### **Yêu cầu:**
+- ✅ Quyền: **Chỉ Quản đốc/Tổ trưởng/Quản lý** mới có quyền phân công
+- ✅ JO phải ở trạng thái **"PendingAssignment"** (Chờ Phân Công)
+
+---
+
+### **A. Mở Modal Phân Công**
+
+1. **Tìm JO có trạng thái "Chờ Phân Công"**
+   - Trong cột "Trạng Thái", tìm JO có status = **"Chờ Phân Công"** hoặc **"PendingAssignment"**
+
+2. **Click nút phân công**
+   - Trong cột "Thao Tác", click nút **"👔"** (màu xanh lá)
+   - Tooltip: **"Phân công KTV"**
+   - Nút này chỉ hiển thị khi status = "PendingAssignment"
+
+3. **Modal hiện ra** với:
+   - Header: **"Phân Công KTV - JO: [Số đơn hàng]"**
+   - Phần **"Phân Công Hàng Loạt"** (tùy chọn)
+   - Bảng danh sách các hạng mục (items)
+
+---
+
+### **B. Phân Công Từng Item (Chi tiết)**
+
+**Các cột trong bảng:**
+- **#**: Số thứ tự
+- **Hạng Mục**: Tên dịch vụ/phụ tùng
+- **KTV Được Phân Công**: Dropdown chọn KTV (có hiển thị workload)
+- **Giờ Công Dự Kiến**: Input số giờ (0.1 - 24 giờ)
+- **Trạng Thái**: Status của item
+- **Thao Tác**: Nút **"✓"** để phân công
+
+**Workload trong Dropdown:**
+Khi chọn KTV, dropdown hiển thị:
+```
+"Nguyễn Văn A - KTV (6.5h/8h, 3 JO, 81% tải)"
+         ↑              ↑     ↑        ↑
+      Tên + Chức vụ   Đã phân   Số JO   % capacity
+```
+
+**Thao tác:**
+
+1. **Chọn KTV cho item**
+   - Click dropdown "KTV Được Phân Công" ở item muốn phân công
+   - Chọn KTV từ danh sách (có hiển thị workload)
+   - Workload hiển thị: tổng giờ công, số JO đang làm, % capacity
+
+2. **Nhập Giờ Công Dự Kiến** (tùy chọn)
+   - Click vào ô "Giờ Công Dự Kiến"
+   - Nhập số giờ (ví dụ: 2.5 cho 2 giờ rưỡi)
+   - Validation: 0.1 - 24 giờ
+
+3. **Phân công item**
+   - Click nút **"✓"** (màu xanh lá) ở cột "Thao Tác"
+   - Hệ thống gửi request đến API
+   - Thông báo: **"Phân công KTV thành công!"**
+   - Modal tự động reload để hiển thị thông tin mới
+
+**Lặp lại** cho các items khác nếu cần.
+
+---
+
+### **C. Phân Công Hàng Loạt (Nhanh)**
+
+**Mục đích:** Phân công cùng một KTV và giờ công cho tất cả items chưa được phân công.
+
+**Thao tác:**
+
+1. **Ở phần "Phân Công Hàng Loạt"** (phía trên bảng items)
+
+2. **Chọn KTV**
+   - Dropdown **"KTV:"** (có hiển thị workload)
+
+3. **Nhập Giờ Công Dự Kiến** (tùy chọn)
+   - Input **"Giờ Công Dự Kiến:"**
+   - Số giờ này sẽ áp dụng cho TẤT CẢ items chưa được phân công
+
+4. **Click "Áp Dụng"**
+   - Button màu xanh lá
+   - Hệ thống tự động phân công cho tất cả items chưa có KTV
+   - Thông báo: **"Đã phân công X hạng mục thành công!"**
+
+**Lưu ý:**
+- Chỉ áp dụng cho items **chưa được phân công** (KTV = "-- Chọn KTV --")
+- Items đã có KTV sẽ không bị thay đổi
+
+---
+
+### **D. Lưu Tất Cả Phân Công**
+
+**Mục đích:** Lưu tất cả các thay đổi phân công đã chọn nhưng chưa submit.
+
+**Khi nào dùng:**
+- Đã chọn KTV cho nhiều items nhưng chưa click "✓" từng cái
+- Đã dùng phân công hàng loạt nhưng muốn đảm bảo tất cả được lưu
+
+**Thao tác:**
+
+1. **Đảm bảo đã chọn KTV cho các items cần phân công**
+   - Kiểm tra trong dropdown của từng item
+
+2. **Click "Lưu Tất Cả Phân Công"**
+   - Button màu xanh dương ở footer modal
+   - Icon: 💾 (save)
+
+3. **Hệ thống xử lý:**
+   - Gửi requests song song cho tất cả items đã chọn KTV
+   - Thông báo: **"Đã lưu X phân công thành công!"**
+   - Modal tự động đóng
+   - DataTable reload
+
+**Kết quả:**
+- ✅ Tất cả items đã được phân công
+- ✅ Nếu **TẤT CẢ items đã có KTV** → JO tự động chuyển sang **"Sẵn Sàng Làm"** (ReadyToWork)
+
+---
+
+### **🔒 Phân quyền:**
+
+**Chỉ các role sau mới có quyền phân công:**
+- ✅ **Quản đốc** (Position chứa "quản đốc")
+- ✅ **Tổ trưởng** (Position chứa "tổ trưởng")
+- ✅ **Quản lý** (Position chứa "quản lý")
+- ✅ **Manager** (Role trong IdentityServer)
+- ✅ **Supervisor** (Role trong IdentityServer)
+- ✅ **Admin** / **SuperAdmin** (Role trong IdentityServer)
+
+**Nếu không có quyền:**
+- API sẽ trả về **403 Forbidden**
+- Thông báo: **"Chỉ Quản đốc, Tổ trưởng hoặc Quản lý mới có quyền phân công KTV"**
+
+---
+
+### **📊 Hiển thị thông tin phân công:**
+
+#### **Trong View Modal:**
+
+1. **Mở View Modal:**
+   - Click nút **"👁️"** (màu xanh dương) trong cột "Thao Tác"
+
+2. **Xem thông tin:**
+   - Trong bảng "Danh Sách Hạng Mục", có 2 cột mới:
+     - **"KTV Được Phân Công"**: Tên KTV (hoặc "Chưa phân công")
+     - **"Giờ Công Dự Kiến"**: Số giờ (hoặc "-" nếu chưa có)
+
+---
+
+### **⚠️ Lưu ý quan trọng:**
+
+1. **Workflow States:**
+   - Phải tuân thủ đúng workflow: **Pending → PendingAssignment → ReadyToWork**
+   - Không thể nhảy bước hoặc quay lại (trừ khi là Admin)
+
+2. **Lock Quotation:**
+   - Khi JO đã chuyển sang **"PendingAssignment"**, Báo giá (Quotation) sẽ **bị khóa**
+   - Không thể chỉnh sửa Quotation nữa
+   - Nút "Sửa" trong Quotation Management sẽ bị ẩn hoặc hiển thị warning
+
+3. **Validation:**
+   - **EstimatedHours**: Phải từ 0.1 đến 24 giờ
+   - **TechnicianId**: Bắt buộc phải chọn (không thể để trống)
+
+4. **Auto-transition:**
+   - Khi **TẤT CẢ items** đã được phân công → JO tự động chuyển sang **"Sẵn Sàng Làm"** (ReadyToWork)
+   - Điều này xảy ra ngay sau khi phân công item cuối cùng
+
+5. **Appointment Integration:**
+   - Khi phân công KTV, hệ thống tự động:
+     - Tìm Appointment liên quan đến ServiceOrder
+     - Cập nhật `AssignedToId` nếu chưa có
+     - Cập nhật `EstimatedDuration` dựa trên tổng EstimatedHours
+     - Tạo Appointment mới nếu chưa có (khi có ScheduledDate)
+
+---
+
+### **💡 Ví dụ thực tế:**
+
+**Scenario: Phân công sửa chữa xe**
+
+**Tình huống:**
+- JO có 3 items:
+  - Item 1: "Thay dầu máy" (chưa phân công)
+  - Item 2: "Sửa phanh" (chưa phân công)
+  - Item 3: "Bảo dưỡng" (chưa phân công)
+
+**Cách làm:**
+
+**Option 1: Phân công từng item**
+1. Chọn KTV "Nguyễn Văn A - KTV" cho Item 1, nhập 1.5 giờ → Click "✓"
+2. Chọn KTV "Trần Thị B - KTV" cho Item 2, nhập 2 giờ → Click "✓"
+3. Chọn KTV "Nguyễn Văn A - KTV" cho Item 3, nhập 1 giờ → Click "✓"
+
+**Option 2: Phân công hàng loạt**
+1. Chọn KTV "Nguyễn Văn A - KTV" trong dropdown hàng loạt
+2. Nhập 1.5 giờ
+3. Click "Áp Dụng" → Tất cả 3 items đều được phân công cho KTV A với 1.5 giờ
+
+**Option 3: Kết hợp**
+1. Phân công hàng loạt Item 1, 3 cho KTV A (1.5 giờ)
+2. Phân công riêng Item 2 cho KTV B (2 giờ)
+
+---
+
+### **❓ Xử lý sự cố:**
+
+**Không thấy nút "Phân công":**
+- ✅ Kiểm tra JO có status = "PendingAssignment" chưa?
+- ✅ Kiểm tra có quyền Quản đốc/Tổ trưởng không?
+
+**Không thể chọn KTV:**
+- ✅ Kiểm tra danh sách KTV có được load không?
+- ✅ Kiểm tra network console xem có lỗi API không?
+
+**Lỗi khi phân công:**
+- ✅ Kiểm tra EstimatedHours có trong khoảng 0.1 - 24 không?
+- ✅ Kiểm tra KTV có tồn tại không?
+- ✅ Kiểm tra console để xem lỗi chi tiết
+
+**Workload không hiển thị:**
+- ✅ Kiểm tra API endpoint `/api/employees/{id}/workload` có hoạt động không?
+- ✅ Workload chỉ hiển thị khi có dữ liệu phân công
 
 ---
 

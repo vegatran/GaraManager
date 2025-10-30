@@ -79,6 +79,7 @@ namespace GarageManagementSystem.Web.Configuration
             public const string Delete = "serviceorders/{0}"; // serviceorders/{id}
             public const string GetByCustomerId = "serviceorders/customer/{0}"; // serviceorders/customer/{customerId}
             public const string GetByVehicleId = "serviceorders/vehicle/{0}"; // serviceorders/vehicle/{vehicleId}
+            public const string ChangeStatus = "serviceorders/{0}/change-status"; // ✅ 2.1.1: Chuyển trạng thái
         }
 
         /// <summary>
@@ -86,6 +87,7 @@ namespace GarageManagementSystem.Web.Configuration
         /// </summary>
         public static class Employees
         {
+            public const string GetWorkload = "employees/{0}/workload"; // ✅ BỔ SUNG: Workload endpoint
             public const string GetAll = "employees";
             public const string GetActive = "employees/active";
             public const string GetById = "employees/{0}"; // employees/{id}

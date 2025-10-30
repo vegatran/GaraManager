@@ -91,7 +91,10 @@ window.QuotationManagement = {
                 width: '14%',
                 orderable: false,
                 render: function(data, type, row) {
-                    var status = row.status;
+                    // ✅ SỬA: Lấy cả status đã dịch và status gốc để check chính xác
+                    var status = row.status || row.statusOriginal; // Status đã dịch (tiếng Việt)
+                    var statusOriginal = row.statusOriginal || row.status; // Status gốc (tiếng Anh)
+                    
                     var buttons = `
                         <div class="btn-group" role="group">
                             <button type="button" class="btn btn-info btn-sm view-quotation" data-id="${row.id}" title="Xem">
@@ -102,8 +105,12 @@ window.QuotationManagement = {
                             </button>
                     `;
                     
-                    // Chỉ hiển thị nút Edit khi chưa được duyệt
-                    if (status !== 'Approved' && status !== 'Đã duyệt' && status !== 'Completed' && status !== 'Hoàn thành') {
+                    // ✅ 2.1.1: Chỉ hiển thị nút Edit khi chưa được duyệt và chưa có ServiceOrder
+                    var hasServiceOrder = row.serviceOrderId !== null && row.serviceOrderId !== undefined && row.serviceOrderId > 0;
+                    if (!hasServiceOrder && 
+                        (status !== 'Approved' && status !== 'Đã duyệt') && 
+                        (statusOriginal !== 'Approved') &&
+                        (status !== 'Completed' && status !== 'Hoàn thành')) {
                         buttons += `
                             <button type="button" class="btn btn-warning btn-sm edit-quotation" data-id="${row.id}" title="Sửa">
                                 <i class="fas fa-edit"></i>
@@ -111,7 +118,22 @@ window.QuotationManagement = {
                         `;
                     }
                     
-                    if (status === 'Draft' || status === 'Nháp' || status === 'Sent' || status === 'Đã gửi') {
+                    // ✅ SỬA: Hiển thị nút Duyệt/Từ chối - check cả status tiếng Việt và tiếng Anh
+                    var canApproveReject = false;
+                    
+                    // Check theo status đã dịch (tiếng Việt)
+                    if (status === 'Draft' || status === 'Nháp' || 
+                        status === 'Sent' || status === 'Đã gửi' || status === 'Đã Gửi' ||
+                        status === 'Pending' || status === 'Chờ duyệt' || status === 'Chờ Duyệt') {
+                        canApproveReject = true;
+                    }
+                    
+                    // Check theo status gốc (tiếng Anh) để đảm bảo
+                    if (statusOriginal === 'Draft' || statusOriginal === 'Sent' || statusOriginal === 'Pending') {
+                        canApproveReject = true;
+                    }
+                    
+                    if (canApproveReject) {
                         buttons += `
                             <button type="button" class="btn btn-success btn-sm approve-quotation" data-id="${row.id}" title="Duyệt">
                                 <i class="fas fa-check"></i>
@@ -236,6 +258,16 @@ window.QuotationManagement = {
         $(document).on('click', '.reject-quotation', function() {
             var id = $(this).data('id');
             self.rejectQuotation(id);
+        });
+        
+        // ✅ THÊM: Submit approve form
+        $(document).on('click', '#btnSubmitApproveQuotation', function() {
+            self.submitApproveQuotation();
+        });
+        
+        // ✅ THÊM: Submit reject form
+        $(document).on('click', '#btnSubmitRejectQuotation', function() {
+            self.submitRejectQuotation();
         });
 
         // Delete quotation
@@ -571,7 +603,7 @@ window.QuotationManagement = {
         $('#createCustomerId').val('').trigger('change');
         $('#createVehicleId').val('').trigger('change');
         $('#createQuotationType').val('Personal');
-        $('#createTaxRate').val('10');
+        // ✅ REMOVED: Không còn field VAT ở cấp độ báo giá, VAT được tính tự động theo từng item
         $('#createDiscountAmount').val('0');
         $('#createStatus').val('Draft');
         $('#createDescription').val('');
@@ -611,7 +643,7 @@ window.QuotationManagement = {
         
         // Reset specific fields to defaults
         $('#createQuotationType').val('Personal');
-        $('#createTaxRate').val('10');
+        // ✅ REMOVED: Không còn field VAT ở cấp độ báo giá, VAT được tính tự động theo từng item
         $('#createDiscountAmount').val('0');
         $('#createStatus').val('Draft');
         
@@ -1431,6 +1463,20 @@ window.QuotationManagement = {
                 if (AuthHandler.validateApiResponse(response)) {
                     if (response.success && response.data) {
                         var quotation = response.data;
+                        
+                        // ✅ 2.1.1: Check nếu Quotation đã có ServiceOrder -> Lock editing
+                        if (quotation.serviceOrderId) {
+                            GarageApp.showWarning(
+                                'Báo giá đã được chuyển thành phiếu sửa chữa. ' +
+                                'Không thể chỉnh sửa báo giá. Vui lòng chỉnh sửa trong phiếu sửa chữa thay vì báo giá.',
+                                function() {
+                                    // Redirect to ServiceOrder nếu cần
+                                    window.location.href = '/OrderManagement';
+                                }
+                            );
+                            return;
+                        }
+                        
                         self.populateEditModal(quotation);
                         $('#editQuotationModal').modal('show');
                     } else {
@@ -1538,7 +1584,7 @@ window.QuotationManagement = {
             CustomerId: parseInt($('#createCustomerId').val()),
             Description: $('#createDescription').val() || null,
             ValidUntil: $('#createValidUntil').val() || null,
-            TaxRate: parseFloat($('#createTaxRate').val()) || 0,
+            TaxRate: 0, // ✅ REMOVED: VAT được tính tự động theo từng item (phụ tùng có VAT từ kho, dịch vụ có thể có VAT)
             DiscountAmount: parseFloat($('#createDiscountAmount').val()) || 0,
             Items: items,
         };
@@ -1674,7 +1720,7 @@ window.QuotationManagement = {
             Description: $('#editDescription').val() || null,
             Terms: $('#editTerms').val() || null,
             ValidUntil: $('#editValidUntil').val() || null,
-            TaxRate: parseFloat($('#editTaxRate').val()) || 0,
+            TaxRate: 0, // ✅ REMOVED: VAT được tính tự động theo từng item (phụ tùng có VAT từ kho, dịch vụ có thể có VAT)
             DiscountAmount: parseFloat($('#editDiscountAmount').val()) || 0,
             QuotationType: $('#editQuotationType').val() || 'Personal',
             Status: $('#editStatus').val() || 'Draft',
@@ -1722,38 +1768,55 @@ window.QuotationManagement = {
     approveQuotation: function(id) {
         var self = this;
         
-        Swal.fire({
-            title: 'Duyệt báo giá?',
-            text: "Bạn có chắc chắn muốn duyệt báo giá này?",
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonColor: '#28a745',
-            cancelButtonColor: '#6c757d',
-            confirmButtonText: 'Có, duyệt!',
-            cancelButtonText: 'Hủy',
-        }).then((result) => {
-            if (result.isConfirmed) {
-                $.ajax({
-                    url: '/QuotationManagement/ApproveQuotation/' + id,
-                    type: 'POST',
-                    success: function(response) {
-                        if (AuthHandler.validateApiResponse(response)) {
-                            if (response.success) {
-                                GarageApp.showSuccess('Duyệt báo giá thành công!');
-                                self.quotationTable.ajax.reload();
-                            } else {
-                                GarageApp.showError(GarageApp.parseErrorMessage(response) || 'Lỗi khi duyệt báo giá');
-                            }
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        if (AuthHandler.isUnauthorized(xhr)) {
-                            AuthHandler.handleUnauthorized(xhr, true);
-                        } else {
-                            GarageApp.showError('Lỗi khi duyệt báo giá');
-                        }
+        // ✅ SỬA: Sử dụng modal form thay vì Swal đơn giản
+        // Clear form
+        $('#approveCustomerNotes').val('');
+        $('#approveCreateServiceOrder').prop('checked', true);
+        $('#approveScheduledDate').val('');
+        
+        // Show modal
+        $('#approveQuotationModal').data('quotation-id', id);
+        $('#approveQuotationModal').modal('show');
+    },
+    
+    // ✅ THÊM: Xử lý submit approve form
+    submitApproveQuotation: function() {
+        var self = this;
+        var id = $('#approveQuotationModal').data('quotation-id');
+        
+        if (!id) {
+            GarageApp.showError('Không tìm thấy ID báo giá');
+            return;
+        }
+        
+        var approveData = {
+            CreateServiceOrder: $('#approveCreateServiceOrder').is(':checked'),
+            CustomerNotes: $('#approveCustomerNotes').val() || '',
+            ScheduledDate: $('#approveScheduledDate').val() ? new Date($('#approveScheduledDate').val()).toISOString() : null
+        };
+        
+        $.ajax({
+            url: '/QuotationManagement/ApproveQuotation/' + id,
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(approveData),
+            success: function(response) {
+                if (AuthHandler.validateApiResponse(response)) {
+                    if (response.success) {
+                        $('#approveQuotationModal').modal('hide');
+                        GarageApp.showSuccess('Duyệt báo giá thành công! ' + (approveData.CreateServiceOrder ? 'Đã tạo phiếu sửa chữa.' : ''));
+                        self.quotationTable.ajax.reload();
+                    } else {
+                        GarageApp.showError(GarageApp.parseErrorMessage(response) || 'Lỗi khi duyệt báo giá');
                     }
-                });
+                }
+            },
+            error: function(xhr, status, error) {
+                if (AuthHandler.isUnauthorized(xhr)) {
+                    AuthHandler.handleUnauthorized(xhr, true);
+                } else {
+                    GarageApp.showError('Lỗi khi duyệt báo giá: ' + error);
+                }
             }
         });
     },
@@ -1761,40 +1824,63 @@ window.QuotationManagement = {
     rejectQuotation: function(id) {
         var self = this;
         
-        Swal.fire({
-            title: 'Từ chối báo giá?',
-            text: "Bạn có chắc chắn muốn từ chối báo giá này?",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#dc3545',
-            cancelButtonColor: '#6c757d',
-            confirmButtonText: 'Có, từ chối!',
-            cancelButtonText: 'Hủy',
-        }).then((result) => {
-            if (result.isConfirmed) {
-                $.ajax({
-                    url: '/QuotationManagement/RejectQuotation/' + id,
-                    type: 'POST',
-                    contentType: 'application/json',
-                    data: JSON.stringify({ reason: 'Từ chối bởi quản lý' }),
-                    success: function(response) {
-                        if (AuthHandler.validateApiResponse(response)) {
-                            if (response.success) {
-                                GarageApp.showSuccess('Từ chối báo giá thành công!');
-                                self.quotationTable.ajax.reload();
-                            } else {
-                                GarageApp.showError(GarageApp.parseErrorMessage(response) || 'Lỗi khi từ chối báo giá');
-                            }
+        // ✅ SỬA: Sử dụng modal form thay vì Swal đơn giản
+        // Clear form
+        $('#rejectReason').val('');
+        $('#rejectChargeInspectionFee').prop('checked', false);
+        
+        // Show modal
+        $('#rejectQuotationModal').data('quotation-id', id);
+        $('#rejectQuotationModal').modal('show');
+    },
+    
+    // ✅ THÊM: Xử lý submit reject form
+    submitRejectQuotation: function() {
+        var self = this;
+        var id = $('#rejectQuotationModal').data('quotation-id');
+        
+        if (!id) {
+            GarageApp.showError('Không tìm thấy ID báo giá');
+            return;
+        }
+        
+        var rejectionReason = $('#rejectReason').val();
+        if (!rejectionReason || rejectionReason.trim() === '') {
+            GarageApp.showError('Vui lòng nhập lý do từ chối');
+            return;
+        }
+        
+        var chargeInspectionFee = $('#rejectChargeInspectionFee').is(':checked');
+        
+        $.ajax({
+            url: '/QuotationManagement/RejectQuotation/' + id,
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ 
+                reason: rejectionReason,
+                chargeInspectionFee: chargeInspectionFee
+            }),
+            success: function(response) {
+                if (AuthHandler.validateApiResponse(response)) {
+                    if (response.success) {
+                        $('#rejectQuotationModal').modal('hide');
+                        var message = 'Từ chối báo giá thành công!';
+                        if (chargeInspectionFee) {
+                            message += ' Đã tính phí kiểm tra.';
                         }
-                    },
-                    error: function(xhr, status, error) {
-                        if (AuthHandler.isUnauthorized(xhr)) {
-                            AuthHandler.handleUnauthorized(xhr, true);
-                        } else {
-                            GarageApp.showError('Lỗi khi từ chối báo giá');
-                        }
+                        GarageApp.showSuccess(message);
+                        self.quotationTable.ajax.reload();
+                    } else {
+                        GarageApp.showError(GarageApp.parseErrorMessage(response) || 'Lỗi khi từ chối báo giá');
                     }
-                });
+                }
+            },
+            error: function(xhr, status, error) {
+                if (AuthHandler.isUnauthorized(xhr)) {
+                    AuthHandler.handleUnauthorized(xhr, true);
+                } else {
+                    GarageApp.showError('Lỗi khi từ chối báo giá: ' + error);
+                }
             }
         });
     },
@@ -2573,24 +2659,24 @@ window.QuotationManagement = {
                     var pricing = response.data;
                     
                     // Populate form fields
-                    $('#insuranceCompany').val(pricing.insuranceCompany);
-                    $('#taxCode').val(pricing.taxCode);
-                    $('#policyNumber').val(pricing.policyNumber);
-                    $('#approvalDate').val(pricing.approvalDate ? new Date(pricing.approvalDate).toISOString().split('T')[0] : '');
-                    $('#approvedAmount').val(pricing.approvedAmount);
-                    $('#customerCoPayment').val(pricing.customerCoPayment);
-                    $('#approvalNotes').val(pricing.approvalNotes);
+                    window.$('#insuranceCompany').val(pricing.insuranceCompany);
+                    window.$('#taxCode').val(pricing.taxCode);
+                    window.$('#policyNumber').val(pricing.policyNumber);
+                    window.$('#approvalDate').val(pricing.approvalDate ? new Date(pricing.approvalDate).toISOString().split('T')[0] : '');
+                    window.$('#approvedAmount').val(pricing.approvedAmount);
+                    window.$('#customerCoPayment').val(pricing.customerCoPayment);
+                    window.$('#approvalNotes').val(pricing.approvalNotes);
                     
                     // Show current file if exists (from API)
                     if (pricing.insuranceFilePath) {
                         var fileName = pricing.insuranceFilePath.split('/').pop();
-                        $('#currentFileName').text(fileName);
-                        $('#downloadCurrentFile').attr('href', pricing.insuranceFilePath);
-                        $('#currentFileRow').css('display', 'flex');
-                        $('#currentFileRow .alert').css('display', 'block');
+                        window.$('#currentFileName').text(fileName);
+                        window.$('#downloadCurrentFile').attr('href', pricing.insuranceFilePath);
+                        window.$('#currentFileRow').css('display', 'flex');
+                        window.$('#currentFileRow .alert').css('display', 'block');
                     } else {
-                        $('#currentFileRow').hide();
-                        $('#currentFileRow .alert').hide();
+                        window.$('#currentFileRow').hide();
+                        window.$('#currentFileRow .alert').hide();
                     }
                     
                     // Kiểm tra nếu approvedItems empty thì load từ quotation
@@ -2666,7 +2752,7 @@ window.QuotationManagement = {
 
     // ✅ THÊM: Populate insurance items from quotation data
     populateInsuranceItemsFromQuotation: function(quotationItems) {
-        var tbody = $('#insuranceItemsTable tbody');
+        var tbody = window.$('#insuranceItemsTable tbody');
         tbody.empty();
         
         if (quotationItems && quotationItems.length > 0) {

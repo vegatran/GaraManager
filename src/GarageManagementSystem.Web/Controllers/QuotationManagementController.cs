@@ -72,6 +72,8 @@ namespace GarageManagementSystem.Web.Controllers
                         // ✅ SỬA: Tính lại totalAmount từ SubTotal + TaxAmount - DiscountAmount
                         totalAmount = (q.SubTotal + q.TaxAmount - q.DiscountAmount).ToString("N0"),
                         status = TranslateQuotationStatus(q.Status),
+                        statusOriginal = q.Status, // ✅ THÊM: Lưu status gốc (tiếng Anh) để JavaScript check
+                        serviceOrderId = q.ServiceOrderId, // ✅ 2.1.1: Thêm ServiceOrderId để check lock
                         validUntil = q.ValidUntil?.ToString("yyyy-MM-dd") ?? "",
                         createdDate = q.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss")
                     }).ToList();
@@ -323,11 +325,11 @@ namespace GarageManagementSystem.Web.Controllers
         /// Duyệt báo giá
         /// </summary>
         [HttpPost("ApproveQuotation/{id}")]
-        public async Task<IActionResult> ApproveQuotation(int id)
+        public async Task<IActionResult> ApproveQuotation(int id, [FromBody] ApproveQuotationDto approveDto)
         {
             var response = await _apiService.PostAsync<ServiceQuotationDto>(
                 ApiEndpoints.Builder.WithId(ApiEndpoints.ServiceQuotations.Approve, id),
-                new { }
+                approveDto
             );
 
             return Json(response);
@@ -337,11 +339,11 @@ namespace GarageManagementSystem.Web.Controllers
         /// Từ chối báo giá
         /// </summary>
         [HttpPost("RejectQuotation/{id}")]
-        public async Task<IActionResult> RejectQuotation(int id, [FromBody] object rejectionData)
+        public async Task<IActionResult> RejectQuotation(int id, [FromBody] RejectQuotationDto rejectDto)
         {
             var response = await _apiService.PostAsync<ServiceQuotationDto>(
                 ApiEndpoints.Builder.WithId(ApiEndpoints.ServiceQuotations.Reject, id),
-                rejectionData
+                rejectDto
             );
 
             return Json(response);

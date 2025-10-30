@@ -11,6 +11,12 @@ namespace GarageManagementSystem.Shared.DTOs
         public decimal UnitPrice { get; set; }
         public decimal TotalPrice { get; set; }
         public string? Notes { get; set; }
+        public string? Status { get; set; }
+        
+        // ✅ THÊM: Thông tin phân công KTV và giờ công dự kiến
+        public int? AssignedTechnicianId { get; set; }
+        public string? AssignedTechnicianName { get; set; }
+        public decimal? EstimatedHours { get; set; }
     }
 
     public class CreateServiceOrderItemDto

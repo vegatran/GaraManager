@@ -46,18 +46,27 @@
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label for="createServiceId">Dịch Vụ <span class="text-danger">*</span></label>
-                                <select class="form-control form-control-sm select2" id="createServiceId" name="ServiceId" required style="width: 100%;">
-                                    <option value="">-- Chọn Dịch Vụ --</option>
+                                <label for="createPriority">Ưu Tiên</label>
+                                <select class="form-control form-control-sm" id="createPriority" name="Priority">
+                                    <option value="Normal" selected>Bình Thường</option>
+                                    <option value="High">Cao</option>
+                                    <option value="Urgent">Khẩn Cấp</option>
+                                    <option value="Low">Thấp</option>
                                 </select>
                             </div>
                         </div>
                     </div>
                     <div class="row">
-                        <div class="col-md-12">
+                        <div class="col-md-6">
                             <div class="form-group">
-                                <label for="createDescription">Mô Tả</label>
-                                <textarea class="form-control form-control-sm" id="createDescription" name="Description" rows="3" maxlength="500"></textarea>
+                                <label for="createEstimatedStartDate">Ngày Dự Kiến Bắt Đầu</label>
+                                <input type="date" class="form-control form-control-sm" id="createEstimatedStartDate" name="EstimatedStartDate">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createEstimatedEndDate">Ngày Dự Kiến Kết Thúc</label>
+                                <input type="date" class="form-control form-control-sm" id="createEstimatedEndDate" name="EstimatedEndDate">
                             </div>
                         </div>
                     </div>

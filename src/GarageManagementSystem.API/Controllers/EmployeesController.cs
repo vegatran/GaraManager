@@ -435,6 +435,122 @@ namespace GarageManagementSystem.API.Controllers
             }
         }
 
+        /// <summary>
+        /// ✅ BỔ SUNG: Get employee workload (total assigned hours, active orders)
+        /// </summary>
+        [HttpGet("{id}/workload")]
+        public async Task<ActionResult<ApiResponse<object>>> GetEmployeeWorkload(int id, [FromQuery] DateTime? date = null)
+        {
+            try
+            {
+                var employee = await _unitOfWork.Employees.GetByIdAsync(id);
+                if (employee == null)
+                {
+                    return NotFound(ApiResponse<object>.ErrorResult("Employee not found"));
+                }
+
+                // Default to today if not specified
+                date ??= DateTime.Today;
+
+                // ✅ OPTIMIZED: Filter assigned items ở database level
+                // Note: Filter theo AssignedTechnicianId first, then filter by ServiceOrder properties in memory
+                // (Vì navigation properties không thể filter trực tiếp trong FindAsync)
+                var allAssignedItems = (await _unitOfWork.Repository<Core.Entities.ServiceOrderItem>()
+                    .FindAsync(item => item.AssignedTechnicianId == id)).ToList();
+                
+                // Filter by ServiceOrder properties after loading (for navigation properties)
+                var assignedItems = allAssignedItems
+                    .Where(item => item.ServiceOrder != null &&
+                                   !item.ServiceOrder.IsDeleted &&
+                                   item.ServiceOrder.Status != "Cancelled" &&
+                                   item.ServiceOrder.Status != "Completed")
+                    .ToList();
+
+                // Calculate total estimated hours
+                var totalEstimatedHours = assignedItems
+                    .Where(i => i.EstimatedHours.HasValue)
+                    .Sum(i => i.EstimatedHours!.Value);
+
+                // Get items assigned today
+                var todayItems = assignedItems.Where(item =>
+                    item.UpdatedAt.HasValue && item.UpdatedAt.Value.Date == date.Value.Date)
+                    .ToList();
+                var todayEstimatedHours = todayItems
+                    .Where(i => i.EstimatedHours.HasValue)
+                    .Sum(i => i.EstimatedHours!.Value);
+
+                // Get active service orders (unique order IDs)
+                var activeOrderIds = assignedItems
+                    .Select(i => i.ServiceOrderId)
+                    .Distinct()
+                    .ToList();
+
+                // Get ServiceOrders for these IDs
+                var activeOrders = (await _unitOfWork.ServiceOrders.GetAllWithDetailsAsync())
+                    .Where(so => activeOrderIds.Contains(so.Id) && 
+                                 !so.IsDeleted && 
+                                 so.Status != "Cancelled" && 
+                                 so.Status != "Completed")
+                    .ToList();
+
+                // Get completed items (for historical context)
+                var completedItems = allAssignedItems.Where(item =>
+                    item.AssignedTechnicianId == id &&
+                    item.ServiceOrder != null &&
+                    item.ServiceOrder.Status == "Completed")
+                    .ToList();
+                var completedOrdersCount = completedItems
+                    .Select(i => i.ServiceOrderId)
+                    .Distinct()
+                    .Count();
+
+                var workload = new
+                {
+                    Employee = new
+                    {
+                        employee.Id,
+                        employee.Name,
+                        employee.Position,
+                        PositionName = employee.PositionNavigation?.Name
+                    },
+                    Date = date,
+                    ActiveOrders = new
+                    {
+                        Count = activeOrders.Count,
+                        TotalEstimatedHours = totalEstimatedHours,
+                        Items = activeOrders.Select(so => new
+                        {
+                            so.Id,
+                            so.OrderNumber,
+                            so.Status,
+                            so.ScheduledDate,
+                            ItemsCount = assignedItems.Count(i => i.ServiceOrderId == so.Id),
+                            ItemsEstimatedHours = assignedItems
+                                .Where(i => i.ServiceOrderId == so.Id && i.EstimatedHours.HasValue)
+                                .Sum(i => i.EstimatedHours!.Value)
+                        }).ToList()
+                    },
+                    Today = new
+                    {
+                        AssignedItemsCount = todayItems.Count,
+                        EstimatedHours = todayEstimatedHours
+                    },
+                    Statistics = new
+                    {
+                        TotalActiveItems = assignedItems.Count,
+                        TotalCompletedOrders = completedOrdersCount,
+                        CapacityUsed = totalEstimatedHours > 0 ? Math.Min(100, (totalEstimatedHours / 8.0m) * 100) : 0 // Assuming 8 hours/day capacity
+                    }
+                };
+
+                return Ok(ApiResponse<object>.SuccessResult(workload));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<object>.ErrorResult("Error retrieving workload", ex.Message));
+            }
+        }
+
     }
 }
 
