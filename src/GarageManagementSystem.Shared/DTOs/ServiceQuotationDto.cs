@@ -138,6 +138,7 @@ namespace GarageManagementSystem.Shared.DTOs
         public int Id { get; set; }
         public int ServiceQuotationId { get; set; }
         public int? ServiceId { get; set; }
+        public int? PartId { get; set; } // ✅ THÊM: ID của phụ tùng (nếu item là phụ tùng)
         public int? InspectionIssueId { get; set; }
         public string ItemName { get; set; } = string.Empty;
         public string? Description { get; set; }

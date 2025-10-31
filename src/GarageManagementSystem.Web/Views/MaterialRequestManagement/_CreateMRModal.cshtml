@@ -9,12 +9,38 @@
             </div>
             <div class="modal-body">
                 <div class="form-group">
-                    <label>Phiếu Sửa Chữa (JO)</label>
-                    <input type="number" class="form-control form-control-sm" id="mrServiceOrderId" placeholder="Nhập ID JO">
+                    <label>Phiếu Sửa Chữa (JO) <span class="text-danger">*</span></label>
+                    <select class="form-control form-control-sm select2" id="mrServiceOrderId" style="width: 100%;">
+                        <option value="">-- Chọn Phiếu Sửa Chữa --</option>
+                    </select>
+                    <small class="form-text text-muted">Chọn phiếu sửa chữa cần yêu cầu vật tư</small>
                 </div>
                 <div class="form-group">
                     <label>Ghi chú</label>
-                    <textarea class="form-control form-control-sm" id="mrNotes" rows="2"></textarea>
+                    <textarea class="form-control form-control-sm" id="mrNotes" rows="2" placeholder="Ghi chú về yêu cầu vật tư (tùy chọn)"></textarea>
+                </div>
+
+                <!-- ✅ THÊM: Section hiển thị phụ tùng từ JO để gợi ý -->
+                <div id="joPartsSection" class="alert alert-info" style="display: none;">
+                    <h6 class="alert-heading"><i class="fas fa-info-circle"></i> Phụ tùng từ Phiếu Sửa Chữa</h6>
+                    <div id="joPartsInfo" class="small mb-2"></div>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered mb-0" id="joPartsTable">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th style="width:40px"></th>
+                                    <th>Phụ tùng</th>
+                                    <th style="width:100px">Số lượng</th>
+                                    <th style="width:120px">Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="joPartsTableBody"></tbody>
+                        </table>
+                    </div>
+                    <div class="mt-2">
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="btnAddAllParts"><i class="fas fa-plus-circle"></i> Thêm tất cả</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="btnClearSelectedParts"><i class="fas fa-times"></i> Xóa đã chọn</button>
+                    </div>
                 </div>
 
                 <div class="table-responsive">

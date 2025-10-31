@@ -21,6 +21,8 @@ namespace GarageManagementSystem.Infrastructure.Repositories
                 .Include(sq => sq.Items.Where(i => !i.IsDeleted))
                     .ThenInclude(i => i.Service)
                 .Include(sq => sq.Items.Where(i => !i.IsDeleted))
+                    .ThenInclude(i => i.Part) // ✅ THÊM: Include Part để có PartId
+                .Include(sq => sq.Items.Where(i => !i.IsDeleted))
                     .ThenInclude(i => i.InspectionIssue)
                 .Include(sq => sq.ServiceOrder)
                 .FirstOrDefaultAsync(sq => sq.Id == id && !sq.IsDeleted);

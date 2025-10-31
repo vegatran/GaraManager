@@ -7,27 +7,27 @@
 
 window.AuthHandler = {
     // Configuration will be loaded from server
-    _config: null,
+    //_config: null,
 
     /**
      * Load configuration from server
      */
-    loadConfig: function() {
-        var self = this;
-        if (this._config) return Promise.resolve(this._config);
+    //loadConfig: function() {
+    //    var self = this;
+    //    if (this._config) return Promise.resolve(this._config);
         
-        return $.get('/Home/GetConfig')
-            .done(function(config) {
-                self._config = config;
-            })
-            .fail(function(xhr, status, error) {
+    //    return $.get('/Home/GetConfig')
+    //        .done(function(config) {
+    //            self._config = config;
+    //        })
+    //        .fail(function(xhr, status, error) {
                 
-                self._config = {
-                    IdentityServerAuthority: 'https://ids.ladtechs.com',
-                    ApiBaseUrl: 'https://localhost:44303/api/'
-                };
-            });
-    },
+    //            self._config = {
+    //                IdentityServerAuthority: 'https://ids.ladtechs.com',
+    //                ApiBaseUrl: 'https://localhost:44303/api/'
+    //            };
+    //        });
+    //},
 
     /**
      * Check if response is unauthorized or requires login
@@ -93,14 +93,14 @@ window.AuthHandler = {
         var self = this;
         
         // Load config before setting up handler
-        this.loadConfig().then(function() {
-            $(document).ajaxError(function(event, xhr, settings, error) {
-                if (self.isUnauthorized(xhr)) {
-                    self.handleUnauthorized(xhr, true);
-                    return false; // Prevent default error handling
-                }
-            });
-        });
+        //this.loadConfig().then(function() {
+        //    $(document).ajaxError(function(event, xhr, settings, error) {
+        //        if (self.isUnauthorized(xhr)) {
+        //            self.handleUnauthorized(xhr, true);
+        //            return false; // Prevent default error handling
+        //        }
+        //    });
+        //});
     },
 
     /**

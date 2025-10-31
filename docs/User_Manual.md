@@ -894,6 +894,76 @@ Sau khi đăng nhập thành công, chọn vai trò:
 └─────────────────────────────────────────────────────────┘
 ```
 
+#### **Bước 6: Sau khi tạo phiếu sửa chữa xong**
+
+Sau khi click **"Lưu"** và tạo phiếu sửa chữa thành công, phiếu sẽ có trạng thái **"Chờ Xử Lý" (Pending)**. Tiếp theo cần thực hiện:
+
+**📋 QUY TRÌNH SAU KHI TẠO PHIẾU SỬA CHỮA:**
+
+1. **✅ Bước 1: Chuyển sang "Chờ Phân Công"** (Xem chi tiết tại [2.1.1: Chuyển JO sang "Chờ Phân công"](#211-chuyển-jo-sang-chờ-phân-công))
+   - Tìm phiếu vừa tạo (status = "Chờ Xử Lý")
+   - Click nút **"→"** (Chuyển trạng thái) trong cột "Thao Tác"
+   - Xác nhận → Phiếu chuyển sang **"Chờ Phân Công" (PendingAssignment)**
+
+2. **✅ Bước 2: Phân Công KTV & Giờ Công** (Xem chi tiết tại [2.1.2: Phân công KTV & Thời gian](#212-phân-công-ktv--thời-gian))
+   - Click nút **"👔 Phân Công KTV"** (màu xanh lá)
+   - Chọn KTV cho từng hạng mục
+   - Nhập Giờ Công Dự Kiến (0.1 - 24 giờ)
+   - Click **"Lưu Tất Cả Phân Công"**
+   - Nếu tất cả items đã phân công → Phiếu tự động chuyển sang **"Sẵn Sàng Làm" (ReadyToWork)**
+
+3. **✅ Bước 3: Quản Lý Vật Tư (MR) - Tùy chọn** (Chỉ khi cần phụ tùng từ kho)
+   - **❓ Khi nào cần tạo MR?**
+     - ✅ Đơn hàng có phụ tùng (parts) cần xuất kho → **CẦN** tạo MR
+     - ❌ Đơn hàng chỉ có dịch vụ và tiền công → **KHÔNG CẦN** tạo MR, bỏ qua bước này
+   - **📝 Cách kiểm tra:**
+     - Vào **"Yêu Cầu Vật Tư (MR)"** → Click **"+ Tạo MR"**
+     - Chọn phiếu sửa chữa (JO)
+     - Nếu hệ thống hiển thị thông báo "Không có phụ tùng cần xuất kho" → **Bỏ qua bước này**, chuyển sang Bước 4
+     - Nếu có danh sách phụ tùng hiển thị → Tạo MR → Submit → Chờ phê duyệt → Xuất kho
+   - **📊 Workflow MR:**
+     - Tạo MR → Submit → Phê duyệt → Xuất kho
+     - Phiếu sẽ chuyển sang **"Chờ Vật Tư" (WaitingForParts)** → **"Sẵn Sàng Làm" (ReadyToWork)**
+
+4. **✅ Bước 4: Bắt Đầu Sửa Chữa**
+   - Khi status = **"Sẵn Sàng Làm"**, click **"Chuyển Trạng Thái"**
+   - Chọn **"Đang Sửa Chữa" (InProgress)**
+   - Phiếu chuyển sang **"Đang Sửa Chữa"**
+
+5. **✅ Bước 5: Hoàn Thành**
+   - Khi hoàn thành công việc, click **"Chuyển Trạng Thái"**
+   - Chọn **"Đã Hoàn Thành" (Completed)**
+   - Phiếu chuyển sang **"Đã Hoàn Thành"** → Workflow kết thúc
+
+**⚠️ Lưu ý quan trọng:**
+- ✅ Khi phiếu ở trạng thái **"Sẵn Sàng Làm" (ReadyToWork)** hoặc **"Đang Sửa Chữa" (InProgress)**:
+  - ✅ **Có thể đổi KTV** nếu cần (nút "Đổi KTV" màu vàng)
+  - ❌ **Không thể Edit/Delete** phiếu trực tiếp (phải dùng workflow)
+- ✅ Sau khi tạo phiếu, Báo Giá sẽ bị **khóa** (không thể chỉnh sửa)
+
+**📊 Tóm tắt workflow:**
+```
+Tạo Phiếu (Pending)
+    ↓
+Chuyển sang Chờ Phân Công (PendingAssignment)
+    ↓
+Phân Công KTV → Sẵn Sàng Làm (ReadyToWork)
+    ↓
+[❓ Có phụ tùng?]
+    ├─ CÓ → Tạo MR → Xuất kho → Sẵn Sàng Làm
+    └─ KHÔNG → Bỏ qua MR
+    ↓
+Bắt Đầu Sửa Chữa → Đang Sửa Chữa (InProgress)
+    ↓
+Hoàn Thành → Đã Hoàn Thành (Completed)
+```
+
+**💡 Lưu ý:**
+- ✅ Nếu đơn hàng **chỉ có dịch vụ và tiền công** (không có phụ tùng):
+  - ❌ **KHÔNG CẦN** tạo MR
+  - ✅ **Bỏ qua** Bước 3, chuyển thẳng sang Bước 4 (Bắt Đầu Sửa Chữa)
+- ✅ Hệ thống sẽ tự động phát hiện và thông báo khi không có phụ tùng
+
 ---
 
 ## 📦 QUẢN LÝ KHO CHI TIẾT
@@ -3268,6 +3338,217 @@ Khi chọn KTV, dropdown hiển thị:
 **Workload không hiển thị:**
 - ✅ Kiểm tra API endpoint `/api/employees/{id}/workload` có hoạt động không?
 - ✅ Workload chỉ hiển thị khi có dữ liệu phân công
+
+---
+
+## 2.2. YÊU CẦU VẬT TƯ (MATERIAL REQUEST - MR)
+
+### **📍 Vị trí trong hệ thống:**
+
+**Menu Navigation:**
+```
+Sidebar Menu
+└── Quy Trình Nghiệp Vụ
+    └── GIAI ĐOẠN 2: Sửa Chữa & Thanh Toán
+        ├── 4. Phiếu Sửa Chữa (JO)
+        └── 5. Yêu Cầu Vật Tư (MR) ⬅️ **GIAI ĐOẠN 2.2 NẰM ĐÂY**
+```
+
+**URL/Route:**
+- Controller: `MaterialRequestManagement`
+- Action: `Index`
+- URL: `/MaterialRequestManagement` hoặc `/MaterialRequestManagement/Index`
+
+**Màn hình chính:**
+Trang **"Quản Lý Yêu Cầu Vật Tư"** với DataTable hiển thị danh sách Material Request (MR)
+
+---
+
+### **🎯 Mục đích:**
+
+Yêu Cầu Vật Tư (MR) được sử dụng để:
+- 📦 Yêu cầu phụ tùng từ kho cho Phiếu Sửa Chữa (JO)
+- ✅ Quản lý quy trình phê duyệt và xuất kho vật tư
+- 📊 Theo dõi trạng thái yêu cầu vật tư từ khi tạo đến khi xuất kho
+
+**Workflow:**
+```
+Draft → PendingApproval → Approved → Picked → Issued → Delivered
+   ↑            ↑              ↑         ↑        ↑
+   │       Submit MR      Approve    Pick   Issue to JO
+   │
+Tạo MR
+```
+
+---
+
+### **📋 TẠO PHIẾU YÊU CẦU VẬT TƯ MỚI**
+
+#### **Bước 1: Vào trang Quản Lý Yêu Cầu Vật Tư**
+
+1. Đăng nhập vào hệ thống
+2. Click menu **"Quy Trình Nghiệp Vụ"** ở sidebar bên trái
+3. Click **"5. Yêu Cầu Vật Tư (MR)"** (trong GIAI ĐOẠN 2)
+4. Màn hình hiển thị danh sách các MR với các cột:
+   - MR #
+   - Service Order (JO)
+   - Trạng thái
+   - Thao Tác
+
+#### **Bước 2: Click nút "Tạo MR"**
+
+- Ở góc phải trên màn hình, click nút **"➕ Tạo MR"**
+- Modal **"Tạo Phiếu Yêu Cầu Vật Tư"** sẽ hiện ra
+
+#### **Bước 3: Chọn Phiếu Sửa Chữa (JO)**
+
+```
+┌─────────────────────────────────────────────────────────┐
+│        TẠO PHIẾU YÊU CẦU VẬT TƯ                         │
+├─────────────────────────────────────────────────────────┤
+│ Phiếu Sửa Chữa (JO) *                                    │
+│ ┌─────────────────────────────────────────────────────┐ │
+│ │ [JO-2024-001 - Nguyễn Văn A (30A-12345) ▼]        │ │
+│ └─────────────────────────────────────────────────────┘ │
+│ ℹ️ Chọn phiếu sửa chữa cần yêu cầu vật tư              │
+│                                                         │
+```
+
+**Lưu ý:**
+- ✅ Dropdown chỉ hiển thị các Phiếu Sửa Chữa ở trạng thái:
+  - **"Chờ Xử Lý" (Pending)**
+  - **"Chờ Phân Công" (PendingAssignment)**
+  - **"Chờ Vật Tư" (WaitingForParts)**
+  - **"Sẵn Sàng Làm" (ReadyToWork)**
+  - **"Đang Sửa Chữa" (InProgress)**
+- ✅ Format hiển thị: **"Số JO - Tên KH (Biển số xe)"**
+- ✅ Có thể tìm kiếm trong dropdown bằng cách gõ số JO hoặc tên khách hàng
+
+#### **Bước 4: Thêm Vật Tư**
+
+1. Click nút **"➕ Thêm vật tư"** ở dưới bảng
+2. Một dòng mới sẽ được thêm vào bảng với 2 cột:
+   - **Phụ tùng**: Input với typeahead để tìm kiếm phụ tùng
+   - **Số lượng**: Input số lượng (mặc định = 1)
+   - **Xóa**: Nút để xóa dòng
+
+**Thao tác thêm phụ tùng:**
+```
+┌─────────────────────────────────────────────────────────┐
+│ Bảng Vật Tư:                                            │
+├──────────────┬──────────────┬──────────────────────────┤
+│ Phụ tùng     │ Số lượng     │                           │
+├──────────────┼──────────────┼──────────────────────────┤
+│ [Bộ lọc gió ▼]│ [1        ] │ [🗑️ Xóa]                 │
+│              │              │                           │
+│ ℹ️ Gõ tên phụ tùng để tìm kiếm                          │
+│ ✅ Chọn từ danh sách gợi ý                             │
+└──────────────┴──────────────┴──────────────────────────┘
+```
+
+**Hướng dẫn:**
+1. Click vào ô **"Phụ tùng"** trong dòng mới
+2. Gõ tên phụ tùng (ví dụ: "lọc gió", "dầu máy", "bugi")
+3. Danh sách gợi ý sẽ hiện ra → Click chọn phụ tùng phù hợp
+4. Nhập **Số lượng** cần yêu cầu (mặc định = 1)
+5. Nếu muốn xóa dòng, click nút **"🗑️ Xóa"** ở cột cuối
+
+**Lặp lại** để thêm nhiều phụ tùng khác nhau.
+
+#### **Bước 5: Ghi chú (Tùy chọn)**
+
+- Nhập ghi chú về yêu cầu vật tư (nếu cần)
+- Ví dụ: "Cần gấp để hoàn thành JO", "Phụ tùng thay thế"
+
+#### **Bước 6: Click "Tạo MR"**
+
+- Click nút **"Tạo MR"** ở footer modal
+- Hệ thống sẽ:
+  - ✅ Validate dữ liệu (phải có JO và ít nhất 1 vật tư)
+  - ✅ Tạo MR với trạng thái **"Draft" (Bản nháp)**
+  - ✅ Tự động tạo số MR (MR-YYYY-MMDD-XXX)
+  - ✅ Hiển thị thông báo: **"Tạo MR thành công"**
+  - ✅ Modal đóng, DataTable tự động reload
+
+**Kết quả:**
+- ✅ MR mới xuất hiện trong danh sách với trạng thái **"Bản nháp"**
+- ✅ Có thể xem chi tiết MR bằng nút **"👁️ Xem"**
+
+---
+
+### **📊 CÁC TRẠNG THÁI CỦA MATERIAL REQUEST**
+
+1. **Bản nháp (Draft)**: MR vừa được tạo, chưa submit
+2. **Chờ Phê Duyệt (PendingApproval)**: MR đã submit, chờ Quản đốc/Thủ kho phê duyệt
+3. **Đã Phê Duyệt (Approved)**: MR được phê duyệt, sẵn sàng để pick vật tư
+4. **Đã Lấy (Picked)**: Vật tư đã được lấy từ kho
+5. **Đã Xuất (Issued)**: Vật tư đã được xuất cho Phiếu Sửa Chữa
+6. **Đã Giao (Delivered)**: Vật tư đã được giao đến nơi sửa chữa
+7. **Đã Từ Chối (Rejected)**: MR bị từ chối bởi người phê duyệt
+8. **Đã Hủy (Cancelled)**: MR bị hủy
+
+---
+
+### **⚠️ Lưu ý quan trọng:**
+
+1. **JO phải tồn tại và ở trạng thái phù hợp:**
+   - ✅ Không thể tạo MR cho JO đã hoàn thành (Completed)
+   - ✅ Không thể tạo MR cho JO đã hủy (Cancelled)
+
+2. **Validation:**
+   - ✅ Phải chọn **Phiếu Sửa Chữa (JO)**
+   - ✅ Phải thêm **ít nhất 1 vật tư**
+   - ✅ Số lượng phải > 0
+
+3. **Phụ tùng:**
+   - ✅ Chỉ có thể chọn phụ tùng có trong hệ thống
+   - ✅ Typeahead giúp tìm kiếm nhanh phụ tùng
+
+4. **Số MR:**
+   - ✅ Tự động tạo theo format: **MR-YYYY-MMDD-XXX** (ví dụ: MR-2024-0115-001)
+
+---
+
+### **💡 Ví dụ thực tế:**
+
+**Scenario: Tạo MR cho JO cần thay dầu máy**
+
+**Tình huống:**
+- JO-2024-001: Khách hàng Nguyễn Văn A, xe 30A-12345
+- Cần vật tư: Dầu máy 5W-30 (2 lít), Bộ lọc dầu (1 cái)
+
+**Các bước:**
+
+1. Vào **"Yêu Cầu Vật Tư (MR)"** → Click **"➕ Tạo MR"**
+2. Chọn **"JO-2024-001 - Nguyễn Văn A (30A-12345)"** từ dropdown
+3. Click **"➕ Thêm vật tư"** → Gõ "dầu máy" → Chọn "Dầu máy 5W-30" → Nhập số lượng = 2
+4. Click **"➕ Thêm vật tư"** lần nữa → Gõ "lọc dầu" → Chọn "Bộ lọc dầu" → Nhập số lượng = 1
+5. Ghi chú: "Thay dầu máy định kỳ"
+6. Click **"Tạo MR"** → Thành công!
+
+**Kết quả:**
+- ✅ MR-2024-0115-001 được tạo với trạng thái "Bản nháp"
+- ✅ Sau đó có thể **Submit** để gửi phê duyệt
+
+---
+
+### **❓ Xử lý sự cố:**
+
+**Dropdown "Phiếu Sửa Chữa" không có dữ liệu:**
+- ✅ Kiểm tra xem có JO nào ở trạng thái phù hợp không (Pending, PendingAssignment, WaitingForParts, ReadyToWork, InProgress)
+- ✅ Kiểm tra console để xem có lỗi API không
+- ✅ Thử refresh trang (F5)
+
+**Không tìm thấy phụ tùng trong typeahead:**
+- ✅ Kiểm tra phụ tùng có tồn tại trong hệ thống không (vào "Quản Lý Phụ Tùng")
+- ✅ Thử gõ tên khác hoặc mã phụ tùng
+- ✅ Kiểm tra network console xem endpoint `/StockManagement/SearchParts` có hoạt động không
+
+**Lỗi khi tạo MR:**
+- ✅ Kiểm tra đã chọn JO chưa?
+- ✅ Kiểm tra đã thêm ít nhất 1 vật tư chưa?
+- ✅ Kiểm tra số lượng > 0 chưa?
+- ✅ Kiểm tra console để xem lỗi chi tiết từ API
 
 ---
 

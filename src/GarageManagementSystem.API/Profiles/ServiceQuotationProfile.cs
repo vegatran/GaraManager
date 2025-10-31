@@ -58,7 +58,8 @@ namespace GarageManagementSystem.API.Profiles
                 .ForMember(dest => dest.OverrideIsVATApplicable, opt => opt.MapFrom(src => src.OverrideIsVATApplicable)) // ✅ THÊM: Map OverrideIsVATApplicable
                 .ForMember(dest => dest.PartVATRate, opt => opt.MapFrom(src => src.Part != null ? src.Part.VATRate : (decimal?)null)) // ✅ THÊM: Map VATRate từ Part
                 .ForMember(dest => dest.PartIsVATApplicable, opt => opt.MapFrom(src => src.Part != null ? src.Part.IsVATApplicable : (bool?)null)) // ✅ THÊM: Map IsVATApplicable từ Part
-                .ForMember(dest => dest.ItemCategory, opt => opt.MapFrom(src => src.ItemCategory));
+                .ForMember(dest => dest.ItemCategory, opt => opt.MapFrom(src => src.ItemCategory))
+                .ForMember(dest => dest.PartId, opt => opt.MapFrom(src => src.PartId)); // ✅ THÊM: Map PartId
 
             CreateMap<CreateQuotationItemDto, QuotationItem>()
                 .ForMember(dest => dest.Id, opt => opt.Ignore())

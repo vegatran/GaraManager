@@ -18,6 +18,7 @@ namespace GarageManagementSystem.Shared.DTOs
         public decimal DiscountAmount { get; set; }
         public decimal FinalAmount { get; set; }
         public string? PaymentStatus { get; set; }
+        public int? ServiceQuotationId { get; set; } // ✅ THÊM: ID của báo giá gốc
         public List<ServiceOrderItemDto> ServiceOrderItems { get; set; } = new();
     }
 

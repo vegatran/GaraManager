@@ -161,9 +161,25 @@ namespace GarageManagementSystem.Web.Controllers
         [HttpGet("GetOrder/{id}")]
         public async Task<IActionResult> GetOrder(int id)
         {
-            var response = await _apiService.GetAsync<ServiceOrderDto>(ApiEndpoints.Builder.WithId(ApiEndpoints.ServiceOrders.GetById, id));
-            
-            return Json(response);
+            try
+            {
+                var response = await _apiService.GetAsync<ApiResponse<ServiceOrderDto>>(
+                    ApiEndpoints.Builder.WithId(ApiEndpoints.ServiceOrders.GetById, id)
+                );
+                
+                if (response.Success && response.Data != null && response.Data?.Data !=null)
+                {
+                    return Json(new { success = true, data = response.Data.Data });
+                }
+                else
+                {
+                    return Json(new { success = false, error = response.Message ?? response.ErrorMessage ?? "Không tìm thấy phiếu sửa chữa" });
+                }
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, error = $"Lỗi: {ex.Message}" });
+            }
         }
 
         /// <summary>
@@ -341,11 +357,11 @@ namespace GarageManagementSystem.Web.Controllers
         [HttpGet("GetActiveEmployees")]
         public async Task<IActionResult> GetActiveEmployees()
         {
-            var response = await _apiService.GetAsync<List<EmployeeDto>>(ApiEndpoints.Employees.GetActive);
+            var response = await _apiService.GetAsync<ApiResponse<List<EmployeeDto>>>(ApiEndpoints.Employees.GetActive);
             
-            if (response.Success && response.Data != null)
+            if (response.Success && response.Data != null && response.Data?.Data != null)
             {
-                var employeeList = response.Data.Select(e => new
+                var employeeList = response.Data.Data.Select(e => new
                 {
                     id = e.Id,
                     text = e.Name + " - " + (e.Position ?? "")

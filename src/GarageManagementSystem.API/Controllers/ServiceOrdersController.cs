@@ -5,8 +5,10 @@ using GarageManagementSystem.Core.Extensions;
 using GarageManagementSystem.Shared.DTOs;
 using GarageManagementSystem.Shared.Models;
 using GarageManagementSystem.API.Services;
+using GarageManagementSystem.Infrastructure.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace GarageManagementSystem.API.Controllers
 {
@@ -18,12 +20,14 @@ namespace GarageManagementSystem.API.Controllers
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly ICacheService _cacheService;
+        private readonly GarageDbContext _context;
 
-        public ServiceOrdersController(IUnitOfWork unitOfWork, IMapper mapper, ICacheService cacheService)
+        public ServiceOrdersController(IUnitOfWork unitOfWork, IMapper mapper, ICacheService cacheService, GarageDbContext context)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _cacheService = cacheService;
+            _context = context;
         }
 
         [HttpGet]
@@ -165,11 +169,28 @@ namespace GarageManagementSystem.API.Controllers
                             $"Không thể tạo phiếu sửa chữa. Báo giá phải ở trạng thái 'Đã Phê Duyệt'. Trạng thái hiện tại: {quotation.Status}"));
                     }
 
-                    // Business Rule: Kiểm tra xem đã có phiếu sửa chữa cho báo giá này chưa
-                    var existingOrder = await _unitOfWork.ServiceOrders.GetByServiceQuotationIdAsync(createDto.ServiceQuotationId.Value);
-                    if (existingOrder != null)
+                    // ✅ SỬA: Kiểm tra xem đã có phiếu sửa chữa cho báo giá này chưa
+                    // Nếu có ServiceOrder chưa xóa (IsDeleted = false) thì không cho phép tạo mới
+                    var existingActiveOrder = await _unitOfWork.ServiceOrders.GetByServiceQuotationIdAsync(createDto.ServiceQuotationId.Value);
+                    if (existingActiveOrder != null)
                     {
                         return BadRequest(ApiResponse<ServiceOrderDto>.ErrorResult("Đã tồn tại phiếu sửa chữa cho báo giá này"));
+                    }
+                    
+                    // ✅ THÊM: Nếu có ServiceOrder đã bị xóa (IsDeleted = true), clear ServiceQuotationId của record cũ để tránh unique constraint
+                    // Sử dụng IgnoreQueryFilters() để query cả các record với IsDeleted = true
+                    var existingDeletedOrders = await _context.ServiceOrders
+                        .IgnoreQueryFilters() // Bỏ qua filter mặc định (!IsDeleted)
+                        .Where(so => so.ServiceQuotationId == createDto.ServiceQuotationId.Value && so.IsDeleted)
+                        .ToListAsync();
+                    
+                    if (existingDeletedOrders != null && existingDeletedOrders.Any())
+                    {
+                        foreach (var deletedOrder in existingDeletedOrders)
+                        {
+                            deletedOrder.ServiceQuotationId = null; // Clear để tránh unique constraint
+                        }
+                        await _context.SaveChangesAsync(); // Save ngay để clear ServiceQuotationId trước khi tạo mới
                     }
                 }
 
@@ -215,6 +236,11 @@ namespace GarageManagementSystem.API.Controllers
                 var order = _mapper.Map<Core.Entities.ServiceOrder>(createDto);
                 order.OrderNumber = GenerateOrderNumber();
                 order.PaymentStatus = paymentStatus;
+                // ✅ Đảm bảo Status được set mặc định là "Pending" nếu chưa có
+                if (string.IsNullOrEmpty(order.Status))
+                {
+                    order.Status = "Pending";
+                }
 
                 // Calculate totals and add service items
                 decimal totalAmount = 0;
@@ -295,18 +321,41 @@ namespace GarageManagementSystem.API.Controllers
                 {
                     foreach (var itemDto in createDto.ServiceOrderItems)
                     {
-                        var service = await _unitOfWork.Services.GetByIdAsync(itemDto.ServiceId);
+                        // ✅ SỬA: Kiểm tra ServiceId có giá trị không (có thể null cho labor items)
+                        if (!itemDto.ServiceId.HasValue)
+                        {
+                            // Labor items không có ServiceId, dùng ServiceName
+                            if (string.IsNullOrEmpty(itemDto.ServiceName))
+                            {
+                                return BadRequest(ApiResponse<ServiceOrderDto>.ErrorResult("Labor items phải có ServiceName"));
+                            }
+                            var laborItem = new Core.Entities.ServiceOrderItem
+                            {
+                                ServiceId = null,
+                                ServiceName = itemDto.ServiceName,
+                                Quantity = itemDto.Quantity,
+                                UnitPrice = 0, // Sẽ được tính sau
+                                TotalPrice = 0,
+                                Notes = itemDto.ServiceName
+                            };
+                            order.ServiceOrderItems.Add(laborItem);
+                            totalAmount += 0; // Sẽ được tính sau
+                            order.ServiceTotal += 0;
+                            continue;
+                        }
+                        
+                        var service = await _unitOfWork.Services.GetByIdAsync(itemDto.ServiceId.Value);
                         if (service == null)
                         {
-                            return BadRequest(ApiResponse<ServiceOrderDto>.ErrorResult($"Service with ID {itemDto.ServiceId} not found"));
+                            return BadRequest(ApiResponse<ServiceOrderDto>.ErrorResult($"Service with ID {itemDto.ServiceId.Value} not found"));
                         }
 
-                        var orderItem = _mapper.Map<Core.Entities.ServiceOrderItem>(itemDto);
-                        orderItem.UnitPrice = service.Price;
-                        orderItem.TotalPrice = service.Price * itemDto.Quantity;
+                        var serviceOrderItem = _mapper.Map<Core.Entities.ServiceOrderItem>(itemDto);
+                        serviceOrderItem.UnitPrice = service.Price;
+                        serviceOrderItem.TotalPrice = service.Price * itemDto.Quantity;
 
-                        order.ServiceOrderItems.Add(orderItem);
-                        totalAmount += orderItem.TotalPrice;
+                        order.ServiceOrderItems.Add(serviceOrderItem);
+                        totalAmount += serviceOrderItem.TotalPrice;
                     }
                 }
 
@@ -324,7 +373,7 @@ namespace GarageManagementSystem.API.Controllers
                     // Commit transaction nếu thành công
                     await _unitOfWork.CommitTransactionAsync();
                 }
-                catch
+                catch(Exception ex)
                 {
                     // Rollback transaction nếu có lỗi
                     await _unitOfWork.RollbackTransactionAsync();
@@ -374,10 +423,28 @@ namespace GarageManagementSystem.API.Controllers
                     return NotFound(ApiResponse<ServiceOrderDto>.ErrorResult("Không tìm thấy phiếu sửa chữa"));
                 }
 
-                // Update order properties
+                // ✅ Business Rule: Không cho phép edit khi đã ReadyToWork, InProgress, Completed
+                // Phải dùng endpoint /change-status để chuyển trạng thái theo workflow
+                var restrictedStatuses = new[] { "ReadyToWork", "InProgress", "Completed" };
+                if (restrictedStatuses.Contains(order.Status))
+                {
+                    return BadRequest(ApiResponse<ServiceOrderDto>.ErrorResult(
+                        $"Không thể chỉnh sửa phiếu sửa chữa ở trạng thái '{order.Status}'. " +
+                        $"Để thay đổi trạng thái, vui lòng sử dụng chức năng 'Chuyển Trạng Thái' theo workflow."));
+                }
+
+                // ✅ Business Rule: Không cho phép edit Status trực tiếp trong UpdateServiceOrder
+                // Status phải được thay đổi qua endpoint /change-status để đảm bảo workflow validation
+                if (!string.IsNullOrEmpty(updateDto.Status) && updateDto.Status != order.Status)
+                {
+                    return BadRequest(ApiResponse<ServiceOrderDto>.ErrorResult(
+                        "Không thể thay đổi trạng thái trực tiếp. Vui lòng sử dụng endpoint '/change-status' để chuyển trạng thái theo workflow."));
+                }
+
+                // Update order properties (không cho phép update Status)
                 order.ScheduledDate = updateDto.ScheduledDate;
                 order.CompletedDate = updateDto.CompletedDate;
-                order.Status = updateDto.Status ?? order.Status;
+                // order.Status = updateDto.Status ?? order.Status; // ❌ REMOVE: Không cho phép edit Status
                 order.Notes = updateDto.Notes;
                 order.DiscountAmount = updateDto.DiscountAmount;
                 order.PaymentStatus = updateDto.PaymentStatus ?? order.PaymentStatus;
@@ -512,15 +579,45 @@ namespace GarageManagementSystem.API.Controllers
         {
             var dto = _mapper.Map<ServiceOrderDto>(order);
             
-            // ✅ THÊM: Map AssignedTechnicianName cho từng item
+            // ✅ THÊM: Map ServiceQuotationId
+            dto.ServiceQuotationId = order.ServiceQuotationId;
+            
+            // ✅ THÊM: Map ServiceName, AssignedTechnicianName, EstimatedHours, AssignedTechnicianId cho từng item
             if (dto.ServiceOrderItems != null)
             {
                 foreach (var itemDto in dto.ServiceOrderItems)
                 {
                     var item = order.ServiceOrderItems.FirstOrDefault(i => i.Id == itemDto.Id);
-                    if (item != null && item.AssignedTechnician != null)
+                    if (item != null)
                     {
-                        itemDto.AssignedTechnicianName = item.AssignedTechnician.Name;
+                        // ✅ THÊM: Map ServiceName (ưu tiên từ ServiceName entity, fallback từ Service.Name)
+                        if (!string.IsNullOrEmpty(item.ServiceName))
+                        {
+                            itemDto.ServiceName = item.ServiceName;
+                        }
+                        else if (item.Service != null && !string.IsNullOrEmpty(item.Service.Name))
+                        {
+                            itemDto.ServiceName = item.Service.Name;
+                        }
+                        
+                        // ✅ SỬA: Map ServiceId (có thể null cho labor items)
+                        itemDto.ServiceId = item.ServiceId;
+                        
+                        // Map AssignedTechnicianName
+                        if (item.AssignedTechnician != null)
+                        {
+                            itemDto.AssignedTechnicianName = item.AssignedTechnician.Name;
+                        }
+                        // Map EstimatedHours
+                        if (item.EstimatedHours.HasValue)
+                        {
+                            itemDto.EstimatedHours = item.EstimatedHours;
+                        }
+                        // Map AssignedTechnicianId
+                        if (item.AssignedTechnicianId.HasValue)
+                        {
+                            itemDto.AssignedTechnicianId = item.AssignedTechnicianId;
+                        }
                     }
                 }
             }
@@ -923,13 +1020,35 @@ namespace GarageManagementSystem.API.Controllers
                 await _unitOfWork.BeginTransactionAsync();
                 try
                 {
+                    // ✅ THÊM: Ghi log khi đổi KTV (reassign)
+                    var oldTechnicianId = item.AssignedTechnicianId;
+                    var isReassign = oldTechnicianId.HasValue && oldTechnicianId.Value != assignDto.TechnicianId;
+                    
+                    if (isReassign)
+                    {
+                        var oldTechnician = await _unitOfWork.Employees.GetByIdAsync(oldTechnicianId.Value);
+                        var oldTechnicianName = oldTechnician?.Name ?? $"KTV ID {oldTechnicianId.Value}";
+                        
+                        // Ghi log vào Notes
+                        var reassignNote = $"\n[Đổi KTV] {DateTime.Now:dd/MM/yyyy HH:mm} - Từ: {oldTechnicianName} → Đến: {technician.Name}";
+                        item.Notes = string.IsNullOrEmpty(item.Notes) 
+                            ? reassignNote.Trim() 
+                            : $"{item.Notes}{reassignNote}";
+                    }
+                    
                     item.AssignedTechnicianId = assignDto.TechnicianId;
                     item.EstimatedHours = assignDto.EstimatedHours;
-                    if (!string.IsNullOrEmpty(assignDto.Notes))
+                    
+                    if (!string.IsNullOrEmpty(assignDto.Notes) && !isReassign)
                     {
                         item.Notes = string.IsNullOrEmpty(item.Notes) 
                             ? assignDto.Notes 
                             : $"{item.Notes}\nPhân công: {assignDto.Notes}";
+                    }
+                    else if (!string.IsNullOrEmpty(assignDto.Notes) && isReassign)
+                    {
+                        // Nếu là reassign và có Notes, thêm vào sau log reassign
+                        item.Notes = $"{item.Notes}\nLý do: {assignDto.Notes}";
                     }
 
                     await _unitOfWork.Repository<Core.Entities.ServiceOrderItem>().UpdateAsync(item);

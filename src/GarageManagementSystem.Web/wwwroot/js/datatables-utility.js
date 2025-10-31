@@ -255,15 +255,31 @@ window.DataTablesUtility = {
 
     // Render functions chung
     renderStatus: function(data, type, row) {
+        // Service Order statuses (ServiceOrderStatus enum)
+        if (data === 'Pending' || data === '0' || data === 0) {
+            return '<span class="badge badge-warning">Chờ Xử Lý</span>';
+        } else if (data === 'InProgress' || data === '1' || data === 1) {
+            return '<span class="badge badge-info">Đang Sửa Chữa</span>';
+        } else if (data === 'Completed' || data === '2' || data === 2) {
+            return '<span class="badge badge-success">Đã Hoàn Thành</span>';
+        } else if (data === 'Cancelled' || data === '3' || data === 3) {
+            return '<span class="badge badge-danger">Đã Hủy</span>';
+        }
+        // Additional ServiceOrder workflow statuses (Phase 2.1)
+        else if (data === 'PendingAssignment' || data === 'Pending Assignment') {
+            return '<span class="badge badge-warning">Chờ Phân Công</span>';
+        } else if (data === 'WaitingForParts' || data === 'Waiting For Parts') {
+            return '<span class="badge badge-warning">Chờ Vật Tư</span>';
+        } else if (data === 'ReadyToWork' || data === 'Ready To Work' || data === 'Ready') {
+            return '<span class="badge badge-success">Sẵn Sàng Làm</span>';
+        }
         // Purchase Order statuses
-        if (data === 'Draft') {
+        else if (data === 'Draft') {
             return '<span class="badge badge-secondary">Nháp</span>';
         } else if (data === 'Sent') {
             return '<span class="badge badge-info">Đã gửi</span>';
         } else if (data === 'Received') {
             return '<span class="badge badge-success">Đã nhận</span>';
-        } else if (data === 'Cancelled') {
-            return '<span class="badge badge-danger">Đã hủy</span>';
         }
         // Legacy statuses
         else if (data === true || data === 'true' || 
@@ -271,7 +287,7 @@ window.DataTablesUtility = {
             data === 'Đang Làm Việc' || data === 'Hoạt động') {
             return '<span class="badge badge-success">Hoạt động</span>';
         } else {
-            return '<span class="badge badge-danger">Không hoạt động</span>';
+            return '<span class="badge badge-secondary">' + (data || 'N/A') + '</span>';
         }
     },
 

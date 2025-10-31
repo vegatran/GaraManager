@@ -72,9 +72,7 @@ GarageApp.MR = {
     bindEvents: function() {
         var self = this;
         $(document).on('click', '#btnShowCreateMR', function(){
-            $('#mrItemsTable tbody').empty();
-            self.addItemRow();
-            $('#createMRModal').modal('show');
+            self.showCreateModal();
         });
 
         $(document).on('click', '#btnAddMRItem', function(){
@@ -88,6 +86,44 @@ GarageApp.MR = {
         $(document).on('click', '#btnSubmitCreateMR', function(){
             self.submitCreateMR();
         });
+
+        // ✅ THÊM: Event listeners cho JO parts section
+        $(document).on('click', '.jo-add-part-btn', function(){
+            var partId = $(this).data('part-id');
+            var partName = $(this).data('part-name');
+            var quantity = $(this).data('quantity');
+            self.addPartToMR(partId, partName, quantity);
+        });
+
+        $(document).on('click', '#btnAddAllParts', function(){
+            $('#joPartsTableBody tr').each(function(){
+                var checkbox = $(this).find('.jo-part-checkbox');
+                if (checkbox.length > 0) {
+                    var partId = checkbox.data('part-id');
+                    var partName = checkbox.data('part-name');
+                    var quantity = checkbox.data('quantity');
+                    self.addPartToMR(partId, partName, quantity);
+                }
+            });
+            GarageApp.showSuccess('Đã thêm tất cả phụ tùng vào MR');
+        });
+
+        $(document).on('click', '#btnClearSelectedParts', function(){
+            $('#joPartsTableBody tr').each(function(){
+                var checkbox = $(this).find('.jo-part-checkbox');
+                if (checkbox.is(':checked')) {
+                    var partId = checkbox.data('part-id');
+                    // Xóa từ bảng MR items nếu đã thêm
+                    $('#mrItemsTable tbody tr').each(function(){
+                        var rowPartId = parseInt($(this).find('.part-id').val() || '0');
+                        if (rowPartId === partId) {
+                            $(this).remove();
+                        }
+                    });
+                }
+            });
+            GarageApp.showSuccess('Đã xóa các phụ tùng đã chọn khỏi MR');
+        });
     },
 
     addItemRow: function(){
@@ -99,6 +135,201 @@ GarageApp.MR = {
         row.append($('<td style="width:60px">').append('<button type="button" class="btn btn-sm btn-outline-danger mr-remove-item"><i class="fas fa-times"></i></button>'));
         $('#mrItemsTable tbody').append(row);
         this.initPartTypeahead(partInput);
+    },
+
+    // ✅ THÊM: Hàm thêm phụ tùng từ JO vào MR
+    addPartToMR: function(partId, partName, quantity) {
+        var self = this;
+        
+        // Kiểm tra xem phụ tùng đã tồn tại chưa
+        var exists = false;
+        $('#mrItemsTable tbody tr').each(function(){
+            var rowPartId = parseInt($(this).find('.part-id').val() || '0');
+            if (rowPartId === partId) {
+                // Đã tồn tại, cập nhật số lượng
+                var currentQty = parseInt($(this).find('.qty').val() || '1');
+                $(this).find('.qty').val(currentQty + quantity);
+                exists = true;
+                return false; // Break loop
+            }
+        });
+        
+        if (!exists) {
+            // Thêm mới
+            var row = $('<tr>');
+            var partInput = $('<input type="text" class="form-control form-control-sm part-typeahead" placeholder="Tìm kiếm phụ tùng..." value="' + partName + '" readonly>');
+            var partIdHidden = $('<input type="hidden" class="part-id" value="' + partId + '">');
+            row.append($('<td>').append(partInput).append(partIdHidden));
+            row.append($('<td style="width:120px">').append('<input type="number" class="form-control form-control-sm qty" value="' + quantity + '" min="1">'));
+            row.append($('<td style="width:60px">').append('<button type="button" class="btn btn-sm btn-outline-danger mr-remove-item"><i class="fas fa-times"></i></button>'));
+            $('#mrItemsTable tbody').append(row);
+            
+            // Đánh dấu checkbox đã được thêm
+            $('#joPartsTableBody tr').each(function(){
+                var checkbox = $(this).find('.jo-part-checkbox');
+                if (checkbox.data('part-id') === partId) {
+                    checkbox.prop('checked', true);
+                }
+            });
+        }
+    },
+
+    showCreateModal: function() {
+        var self = this;
+        // Reset form
+        $('#mrServiceOrderId').val('').trigger('change');
+        $('#mrNotes').val('');
+        $('#mrItemsTable tbody').empty();
+        $('#joPartsSection').hide();
+        $('#joPartsTableBody').empty();
+        // ✅ THÊM: Reset nút "Tạo MR"
+        $('#btnSubmitCreateMR').prop('disabled', false).removeAttr('title');
+        self.addItemRow();
+        
+        // Load Service Orders vào dropdown
+        self.loadServiceOrders(function() {
+            // Hiển thị modal sau khi load xong
+            $('#createMRModal').modal('show');
+        });
+    },
+
+    loadServiceOrders: function(callback) {
+        var self = this;
+        
+        // Nếu Select2 chưa được khởi tạo, khởi tạo nó
+        if (!$('#mrServiceOrderId').hasClass('select2-hidden-accessible')) {
+            $('#mrServiceOrderId').select2({
+                placeholder: '-- Chọn Phiếu Sửa Chữa --',
+                allowClear: true,
+                width: '100%'
+            });
+        }
+        
+        // ✅ THÊM: Event listener khi chọn JO
+        $('#mrServiceOrderId').off('change').on('change', function() {
+            var serviceOrderId = $(this).val();
+            if (serviceOrderId && serviceOrderId !== '') {
+                self.loadServiceOrderParts(parseInt(serviceOrderId));
+            } else {
+                $('#joPartsSection').hide();
+                $('#joPartsTableBody').empty();
+            }
+        });
+        
+        // Load danh sách Service Orders
+        $.ajax({
+            url: '/MaterialRequestManagement/GetAvailableServiceOrders',
+            type: 'GET',
+            success: function(res) {
+                if (AuthHandler && !AuthHandler.validateApiResponse(res)) {
+                    if (callback) callback();
+                    return;
+                }
+                
+                if (res && res.success && res.data) {
+                    // Clear existing options (giữ option đầu tiên)
+                    $('#mrServiceOrderId').find('option').not(':first').remove();
+                    
+                    // Add Service Orders
+                    res.data.forEach(function(order) {
+                        var option = $('<option></option>')
+                            .attr('value', order.id)
+                            .text(order.text);
+                        $('#mrServiceOrderId').append(option);
+                    });
+                    
+                    // Refresh Select2
+                    $('#mrServiceOrderId').trigger('change');
+                } else {
+                    GarageApp.showError('Không thể tải danh sách phiếu sửa chữa');
+                }
+                
+                if (callback) callback();
+            },
+            error: function(xhr) {
+                if (AuthHandler && AuthHandler.isUnauthorized(xhr)) {
+                    AuthHandler.handleUnauthorized(xhr, true);
+                } else {
+                    GarageApp.showError('Lỗi khi tải danh sách phiếu sửa chữa');
+                }
+                if (callback) callback();
+            }
+        });
+    },
+
+    loadServiceOrderParts: function(serviceOrderId) {
+        var self = this;
+        
+        $.ajax({
+            url: '/MaterialRequestManagement/GetServiceOrderParts/' + serviceOrderId,
+            type: 'GET',
+            success: function(res) {
+                if (AuthHandler && !AuthHandler.validateApiResponse(res)) {
+                    return;
+                }
+                
+                // ✅ SỬA: Hiển thị thông báo nếu không có phụ tùng
+                if (res && res.success) {
+                    // ✅ THÊM: Kiểm tra hasParts flag
+                    if (!res.hasParts || !res.parts || res.parts.length === 0) {
+                        // Ẩn section phụ tùng
+                        $('#joPartsSection').hide();
+                        $('#joPartsTableBody').empty();
+                        
+                        // ✅ THÊM: Disable nút "Tạo MR" và hiển thị thông báo
+                        $('#btnSubmitCreateMR').prop('disabled', true)
+                            .attr('title', 'Không có phụ tùng cần xuất kho, không cần tạo MR');
+                        
+                        // ✅ THÊM: Hiển thị thông báo với hướng dẫn bước tiếp theo
+                        var message = res.message || 'Không có phụ tùng cần xuất kho cho đơn hàng này.\n\n' +
+                            '👉 Bước tiếp theo:\n' +
+                            '1. Đóng modal này\n' +
+                            '2. Vào "Phiếu Sửa Chữa"\n' +
+                            '3. Chuyển trạng thái sang "Chờ Phân Công"\n' +
+                            '4. Phân công KTV và bắt đầu sửa chữa';
+                        
+                        GarageApp.showInfo(message.replace(/\n/g, '<br>'), 'Không cần tạo MR');
+                        return;
+                    }
+                    
+                    // ✅ Có phụ tùng, enable nút "Tạo MR"
+                    $('#btnSubmitCreateMR').prop('disabled', false).removeAttr('title');
+                    
+                    // Có phụ tùng, hiển thị section
+                    $('#joPartsSection').show();
+                    
+                    // Cập nhật thông tin JO
+                    $('#joPartsInfo').html(
+                        '<strong>JO:</strong> ' + res.orderNumber + 
+                        ' | <strong>KH:</strong> ' + res.customerName + 
+                        ' | <strong>Xe:</strong> ' + res.vehiclePlate +
+                        (res.description && res.description !== 'Không có mô tả' ? ' | <strong>Mô tả:</strong> ' + res.description : '')
+                    );
+                    
+                    // Clear và populate bảng phụ tùng
+                    $('#joPartsTableBody').empty();
+                    res.parts.forEach(function(part) {
+                        var row = $('<tr>');
+                        row.append($('<td>').html('<input type="checkbox" class="jo-part-checkbox" data-part-id="' + part.partId + '" data-part-name="' + part.partName + '" data-quantity="' + part.quantity + '">'));
+                        row.append($('<td>').text(part.partName));
+                        row.append($('<td>').text(part.quantity));
+                        row.append($('<td>').html('<button type="button" class="btn btn-sm btn-outline-primary jo-add-part-btn" data-part-id="' + part.partId + '" data-part-name="' + part.partName + '" data-quantity="' + part.quantity + '"><i class="fas fa-plus"></i> Thêm</button>'));
+                        $('#joPartsTableBody').append(row);
+                    });
+                } else {
+                    // Ẩn section nếu không có phụ tùng
+                    $('#joPartsSection').hide();
+                }
+            },
+            error: function(xhr) {
+                if (AuthHandler && AuthHandler.isUnauthorized(xhr)) {
+                    AuthHandler.handleUnauthorized(xhr, true);
+                } else {
+                    console.error('Lỗi khi load phụ tùng từ JO:', xhr);
+                    $('#joPartsSection').hide();
+                }
+            }
+        });
     },
 
     initPartTypeahead: function(input){
@@ -126,7 +357,10 @@ GarageApp.MR = {
 
     submitCreateMR: function(){
         var serviceOrderId = parseInt($('#mrServiceOrderId').val() || '0');
-        if (!serviceOrderId || serviceOrderId <= 0) { GarageApp.showError('Vui lòng nhập ID Phiếu Sửa Chữa'); return; }
+        if (!serviceOrderId || serviceOrderId <= 0) { 
+            GarageApp.showError('Vui lòng chọn Phiếu Sửa Chữa'); 
+            return; 
+        }
         var items = [];
         $('#mrItemsTable tbody tr').each(function(){
             var partId = parseInt($(this).find('.part-id').val() || '0');

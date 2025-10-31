@@ -64,25 +64,66 @@ window.OrderManagement = {
                         `;
                     }
                     
-                    // ✅ 2.1.2: Nút "Phân công" (hiện khi status = "PendingAssignment" hoặc "Chờ Phân công")
-                    if (status === 'PendingAssignment' || status === 'Chờ Phân Công') {
+                    // ✅ 2.1.2: Nút "Phân công" hoặc "Đổi KTV"
+                    // Hiển thị khi status = PendingAssignment, ReadyToWork, InProgress (cho phép phân công/đổi KTV)
+                    var canAssignTechnician = status === 'PendingAssignment' || 
+                                             status === 'Chờ Phân Công' ||
+                                             status === 'ReadyToWork' || 
+                                             status === 'Sẵn Sàng' ||
+                                             status === 'Sẵn Sàng Làm' ||
+                                             status === 'InProgress' || 
+                                             status === 'Đang Sửa Chữa' ||
+                                             status === 'In Progress';
+                    
+                    if (canAssignTechnician) {
+                        // Nếu đã ReadyToWork/InProgress, button title là "Đổi KTV"
+                        var buttonTitle = (status === 'ReadyToWork' || status === 'Sẵn Sàng' || status === 'Sẵn Sàng Làm' || 
+                                          status === 'InProgress' || status === 'Đang Sửa Chữa' || status === 'In Progress')
+                                          ? 'Đổi KTV' : 'Phân công KTV';
+                        var buttonClass = (status === 'ReadyToWork' || status === 'Sẵn Sàng' || status === 'Sẵn Sàng Làm' || 
+                                          status === 'InProgress' || status === 'Đang Sửa Chữa' || status === 'In Progress')
+                                          ? 'btn-warning' : 'btn-success';
+                        
                         actions += `
-                            <button class="btn btn-success btn-sm assign-technician-btn" data-id="${row.id}" title="Phân công KTV">
+                            <button class="btn ${buttonClass} btn-sm assign-technician-btn" data-id="${row.id}" title="${buttonTitle}">
                                 <i class="fas fa-user-tie"></i>
                             </button>
                         `;
                     }
                     
                     // Chỉ hiển thị nút Edit và Delete khi trạng thái chưa hoàn thành
-                    var isCompleted = row.status === 'Completed' || 
-                                     row.status === 'Hoàn Thành' ||
-                                     row.status === 'Hoàn thành' || 
-                                     row.status === 'completed' || 
-                                     row.status === 'hoàn thành' ||
-                                     (row.status && row.status.toLowerCase().includes('hoàn thành')) ||
-                                     (row.status && row.status.toLowerCase().includes('completed'));
+                    // ✅ SỬA: Chỉ cho phép Edit/Delete khi status = Pending, PendingAssignment, WaitingForParts
+                    // Khi đã ReadyToWork/InProgress/Completed thì không cho phép edit (phải dùng workflow)
+                    // (status đã được khai báo ở trên)
                     
-                    if (!isCompleted) {
+                    // Kiểm tra Completed trước
+                    var isCompleted = status === 'Completed' || 
+                                     status === 'Hoàn Thành' ||
+                                     status === 'Hoàn thành' || 
+                                     status === 'completed' || 
+                                     status === 'hoàn thành' ||
+                                     (status && status.toLowerCase().includes('hoàn thành')) ||
+                                     (status && status.toLowerCase().includes('completed'));
+                    
+                    // ❌ Không cho phép edit khi đã ReadyToWork, InProgress, Completed
+                    var isRestrictedStatus = status === 'ReadyToWork' || 
+                                            status === 'Sẵn Sàng' ||
+                                            status === 'Sẵn Sàng Làm' ||
+                                            status === 'InProgress' || 
+                                            status === 'Đang Sửa Chữa' ||
+                                            status === 'In Progress' ||
+                                            isCompleted;
+                    
+                    // Chỉ cho phép Edit khi status = Pending, PendingAssignment, WaitingForParts
+                    var isEditableStatus = status === 'Pending' || 
+                                          status === 'Chờ Xử Lý' ||
+                                          status === 'PendingAssignment' || 
+                                          status === 'Chờ Phân Công' ||
+                                          status === 'WaitingForParts' || 
+                                          status === 'Chờ Vật Tư';
+                    
+                    // Chỉ hiển thị Edit/Delete khi status cho phép edit và không bị restricted
+                    if (isEditableStatus && !isRestrictedStatus) {
                         actions += `
                             <button class="btn btn-warning btn-sm edit-order" data-id="${row.id}" title="Sửa">
                                 <i class="fas fa-edit"></i>
@@ -643,11 +684,28 @@ window.OrderManagement = {
     // Populate view modal
     populateViewModal: function(order) {
         $('#viewOrderNumber').text(order.orderNumber || '');
-        $('#viewCustomerName').text(order.customerName || '');
-        $('#viewVehicleLicensePlate').text(order.vehicleLicensePlate || '');
-        $('#viewOrderDate').text(order.orderDate || '');
-        $('#viewTotalAmount').text(order.totalAmount || '');
-        $('#viewStatus').text(order.status || '');
+        // ✅ SỬA: Dùng nested objects cho Customer và Vehicle
+        $('#viewCustomerName').text(order.customer?.name || order.customerName || '');
+        $('#viewVehicleLicensePlate').text(order.vehicle?.licensePlate || order.vehicleLicensePlate || '');
+        // ✅ SỬA: Format date đúng cách (dd/MM/yyyy)
+        if (order.orderDate) {
+            var orderDate = new Date(order.orderDate);
+            var formattedDate = orderDate.toLocaleDateString('vi-VN', { 
+                day: '2-digit', 
+                month: '2-digit', 
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            $('#viewOrderDate').text(formattedDate);
+        } else {
+            $('#viewOrderDate').text('');
+        }
+        // ✅ SỬA: Format currency đúng cách
+        $('#viewTotalAmount').text(order.totalAmount ? order.totalAmount.toLocaleString('vi-VN') + ' VNĐ' : '0 VNĐ');
+        // ✅ THÊM: Format status sang tiếng Việt
+        var statusText = OrderManagement.formatServiceOrderStatus(order.status || '');
+        $('#viewStatus').html(statusText);
         $('#viewDescription').text(order.description || '');
         
         // ✅ THÊM: Populate order items với thông tin phân công
@@ -669,6 +727,28 @@ window.OrderManagement = {
         } else {
             $('#viewOrderItems').html('<tr><td colspan="6" class="text-center text-muted">Không có dịch vụ nào</td></tr>');
         }
+    },
+
+    // ✅ THÊM: Format Service Order status sang tiếng Việt
+    formatServiceOrderStatus: function(status) {
+        if (!status) return '<span class="badge badge-secondary">N/A</span>';
+        
+        var statusMap = {
+            'Pending': '<span class="badge badge-warning">Chờ Xử Lý</span>',
+            'PendingAssignment': '<span class="badge badge-warning">Chờ Phân Công</span>',
+            'Pending Assignment': '<span class="badge badge-warning">Chờ Phân Công</span>',
+            'WaitingForParts': '<span class="badge badge-warning">Chờ Vật Tư</span>',
+            'Waiting For Parts': '<span class="badge badge-warning">Chờ Vật Tư</span>',
+            'ReadyToWork': '<span class="badge badge-success">Sẵn Sàng Làm</span>',
+            'Ready To Work': '<span class="badge badge-success">Sẵn Sàng Làm</span>',
+            'Ready': '<span class="badge badge-success">Sẵn Sàng Làm</span>',
+            'InProgress': '<span class="badge badge-info">Đang Sửa Chữa</span>',
+            'In Progress': '<span class="badge badge-info">Đang Sửa Chữa</span>',
+            'Completed': '<span class="badge badge-success">Đã Hoàn Thành</span>',
+            'Cancelled': '<span class="badge badge-danger">Đã Hủy</span>'
+        };
+        
+        return statusMap[status] || '<span class="badge badge-secondary">' + status + '</span>';
     },
 
     // Populate edit modal

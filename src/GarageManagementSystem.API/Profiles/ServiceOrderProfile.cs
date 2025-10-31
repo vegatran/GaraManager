@@ -55,6 +55,8 @@ namespace GarageManagementSystem.API.Profiles
             // ServiceOrderItem mappings
             CreateMap<ServiceOrderItem, ServiceOrderItemDto>()
                 .ForMember(dest => dest.Service, opt => opt.MapFrom(src => src.Service))
+                .ForMember(dest => dest.ServiceName, opt => opt.MapFrom(src => !string.IsNullOrEmpty(src.ServiceName) ? src.ServiceName : (src.Service != null ? src.Service.Name : ""))) // ✅ THÊM: Map ServiceName
+                .ForMember(dest => dest.ServiceId, opt => opt.MapFrom(src => src.ServiceId)) // ✅ THÊM: Map ServiceId (nullable)
                 .ForMember(dest => dest.AssignedTechnicianName, opt => opt.MapFrom(src => src.AssignedTechnician != null ? src.AssignedTechnician.Name : null));
 
             CreateMap<CreateServiceOrderItemDto, ServiceOrderItem>()

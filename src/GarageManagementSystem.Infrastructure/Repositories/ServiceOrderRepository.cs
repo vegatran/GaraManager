@@ -18,6 +18,11 @@ namespace GarageManagementSystem.Infrastructure.Repositories
                 .Include(so => so.Vehicle)
                 .Include(so => so.ServiceOrderItems.Where(soi => !soi.IsDeleted))
                 .ThenInclude(soi => soi.Service)
+                .Include(so => so.ServiceOrderItems.Where(soi => !soi.IsDeleted))
+                .ThenInclude(soi => soi.AssignedTechnician) // ✅ THÊM: Include AssignedTechnician
+                .Include(so => so.ServiceOrderParts.Where(sop => !sop.IsDeleted)) // ✅ THÊM: Include ServiceOrderParts
+                .ThenInclude(sop => sop.Part) // ✅ THÊM: Include Part navigation property
+                .Include(so => so.ServiceQuotation) // ✅ THÊM: Include ServiceQuotation để lấy quotation gốc
                 .FirstOrDefaultAsync(so => so.Id == id && !so.IsDeleted);
         }
 
