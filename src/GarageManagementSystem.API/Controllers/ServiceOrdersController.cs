@@ -135,8 +135,18 @@ namespace GarageManagementSystem.API.Controllers
             {
                 if (!ModelState.IsValid)
                 {
-                    var errors = ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage)).ToList();
-                    return BadRequest(ApiResponse<ServiceOrderDto>.ErrorResult("Dữ liệu không hợp lệ", errors));
+                    // Cho phép thiếu ServiceOrderItems nếu có ServiceQuotationId (server sẽ tự copy từ báo giá)
+                    var itemsError = ModelState.ContainsKey(nameof(CreateServiceOrderDto.ServiceOrderItems))
+                        ? ModelState[nameof(CreateServiceOrderDto.ServiceOrderItems)]!.Errors.Count
+                        : 0;
+                    var totalErrors = ModelState.Values.Sum(v => v.Errors.Count);
+                    var allowByQuotation = createDto.ServiceQuotationId.HasValue && totalErrors == itemsError && itemsError > 0;
+
+                    if (!allowByQuotation)
+                    {
+                        var errors = ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage)).ToList();
+                        return BadRequest(ApiResponse<ServiceOrderDto>.ErrorResult("Dữ liệu không hợp lệ", errors));
+                    }
                 }
 
                 // Business Rule: Kiểm tra xem có ServiceQuotationId không
@@ -208,20 +218,96 @@ namespace GarageManagementSystem.API.Controllers
 
                 // Calculate totals and add service items
                 decimal totalAmount = 0;
-                foreach (var itemDto in createDto.ServiceOrderItems)
+                if (createDto.ServiceQuotationId.HasValue && (createDto.ServiceOrderItems == null || !createDto.ServiceOrderItems.Any()))
                 {
-                    var service = await _unitOfWork.Services.GetByIdAsync(itemDto.ServiceId);
-                    if (service == null)
+                    // Tự động copy items từ báo giá nếu client không gửi service items
+                    var quotationItems = await _unitOfWork.ServiceQuotationItems
+                        .FindAsync(i => i.ServiceQuotationId == createDto.ServiceQuotationId.Value);
+                    foreach (var qItem in quotationItems)
                     {
-                        return BadRequest(ApiResponse<ServiceOrderDto>.ErrorResult($"Service with ID {itemDto.ServiceId} not found"));
+                        // ✅ SỬA: Xử lý labor items (tiền công) không có ServiceId/PartId
+                        if (qItem.ItemCategory == "Labor" || (!qItem.ServiceId.HasValue && !qItem.PartId.HasValue))
+                        {
+                            // Labor items (tiền công) - ServiceId = null, dùng ItemName làm ServiceName
+                            var orderItem = new Core.Entities.ServiceOrderItem
+                            {
+                                ServiceId = null, // Labor items không có ServiceId
+                                ServiceName = qItem.ItemName, // Dùng ItemName (ví dụ: "Công sửa chữa động cơ")
+                                Quantity = qItem.Quantity,
+                                UnitPrice = qItem.UnitPrice,
+                                TotalPrice = qItem.Quantity * qItem.UnitPrice,
+                                Notes = qItem.Notes ?? qItem.ItemName,
+                                Description = qItem.Description
+                            };
+                            order.ServiceOrderItems.Add(orderItem);
+                            totalAmount += orderItem.TotalPrice;
+                            order.ServiceTotal += orderItem.TotalPrice;
+                        }
+                        else if (qItem.ServiceId.HasValue)
+                        {
+                            var service = await _unitOfWork.Services.GetByIdAsync(qItem.ServiceId.Value);
+                            if (service == null)
+                            {
+                                return BadRequest(ApiResponse<ServiceOrderDto>.ErrorResult($"Không tìm thấy dịch vụ ID {qItem.ServiceId} từ báo giá"));
+                            }
+                            var orderItem = new Core.Entities.ServiceOrderItem
+                            {
+                                ServiceId = qItem.ServiceId.Value,
+                                ServiceName = service.Name,
+                                Quantity = qItem.Quantity,
+                                UnitPrice = qItem.UnitPrice,
+                                TotalPrice = qItem.Quantity * qItem.UnitPrice,
+                                Notes = qItem.ItemName
+                            };
+                            order.ServiceOrderItems.Add(orderItem);
+                            totalAmount += orderItem.TotalPrice;
+                            order.ServiceTotal += orderItem.TotalPrice;
+                        }
+                        else if (qItem.PartId.HasValue)
+                        {
+                            var part = await _unitOfWork.Parts.GetByIdAsync(qItem.PartId.Value);
+                            if (part == null)
+                            {
+                                return BadRequest(ApiResponse<ServiceOrderDto>.ErrorResult($"Không tìm thấy phụ tùng ID {qItem.PartId} từ báo giá"));
+                            }
+                            var orderPart = new Core.Entities.ServiceOrderPart
+                            {
+                                PartId = part.Id,
+                                PartName = part.PartName,
+                                Quantity = qItem.Quantity,
+                                UnitCost = part.AverageCostPrice,
+                                UnitPrice = qItem.UnitPrice,
+                                TotalPrice = qItem.Quantity * qItem.UnitPrice,
+                                Notes = qItem.ItemName
+                            };
+                            order.ServiceOrderParts.Add(orderPart);
+                            totalAmount += orderPart.TotalPrice;
+                            order.PartsTotal += orderPart.TotalPrice;
+                        }
+                        else
+                        {
+                            // Trường hợp này không nên xảy ra, nhưng để an toàn vẫn log
+                            return BadRequest(ApiResponse<ServiceOrderDto>.ErrorResult($"Item báo giá không hợp lệ: {qItem.ItemName}"));
+                        }
                     }
+                }
+                else
+                {
+                    foreach (var itemDto in createDto.ServiceOrderItems)
+                    {
+                        var service = await _unitOfWork.Services.GetByIdAsync(itemDto.ServiceId);
+                        if (service == null)
+                        {
+                            return BadRequest(ApiResponse<ServiceOrderDto>.ErrorResult($"Service with ID {itemDto.ServiceId} not found"));
+                        }
 
-                    var orderItem = _mapper.Map<Core.Entities.ServiceOrderItem>(itemDto);
-                    orderItem.UnitPrice = service.Price;
-                    orderItem.TotalPrice = service.Price * itemDto.Quantity;
+                        var orderItem = _mapper.Map<Core.Entities.ServiceOrderItem>(itemDto);
+                        orderItem.UnitPrice = service.Price;
+                        orderItem.TotalPrice = service.Price * itemDto.Quantity;
 
-                    order.ServiceOrderItems.Add(orderItem);
-                    totalAmount += orderItem.TotalPrice;
+                        order.ServiceOrderItems.Add(orderItem);
+                        totalAmount += orderItem.TotalPrice;
+                    }
                 }
 
                 order.TotalAmount = totalAmount;

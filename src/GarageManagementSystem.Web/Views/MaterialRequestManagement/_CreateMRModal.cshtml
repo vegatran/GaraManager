@@ -1,0 +1,43 @@
+<div class="modal fade" id="createMRModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-primary">
+                <h5 class="modal-title">Tạo Phiếu Yêu Cầu Vật Tư</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Phiếu Sửa Chữa (JO)</label>
+                    <input type="number" class="form-control form-control-sm" id="mrServiceOrderId" placeholder="Nhập ID JO">
+                </div>
+                <div class="form-group">
+                    <label>Ghi chú</label>
+                    <textarea class="form-control form-control-sm" id="mrNotes" rows="2"></textarea>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-bordered" id="mrItemsTable">
+                        <thead>
+                            <tr>
+                                <th>Phụ tùng</th>
+                                <th style="width:120px">Số lượng</th>
+                                <th style="width:60px"></th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="btnAddMRItem"><i class="fas fa-plus"></i> Thêm vật tư</button>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Đóng</button>
+                <button type="button" class="btn btn-primary btn-sm" id="btnSubmitCreateMR">Tạo MR</button>
+            </div>
+        </div>
+    </div>
+ </div>
+
+

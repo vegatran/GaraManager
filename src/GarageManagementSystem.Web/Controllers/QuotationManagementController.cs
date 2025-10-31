@@ -467,31 +467,6 @@ namespace GarageManagementSystem.Web.Controllers
         }
 
         /// <summary>
-        /// Tìm kiếm dịch vụ theo từ khóa cho typeahead
-        /// </summary>
-        [HttpGet("SearchServices")]
-        public async Task<IActionResult> SearchServices(string q)
-        {
-            var response = await _apiService.GetAsync<List<ServiceDto>>(ApiEndpoints.Services.GetAll);
-            
-            if (response.Success && response.Data != null)
-            {
-                var services = response.Data
-                    .Where(s => string.IsNullOrEmpty(q) || s.Name.ToLower().Contains(q.ToLower()))
-                    .Select(s => new
-                    {
-                        value = s.Id.ToString(),
-                        text = s.Name,
-                        price = s.Price
-                    }).Cast<object>().ToList();
-                
-                return Json(services);
-            }
-
-            return Json(new List<object>());
-        }
-
-        /// <summary>
         /// In báo giá
         /// </summary>
         [HttpGet("PrintQuotation/{id}")]

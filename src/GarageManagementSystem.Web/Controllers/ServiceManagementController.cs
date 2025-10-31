@@ -1,4 +1,5 @@
 using GarageManagementSystem.Shared.DTOs;
+using GarageManagementSystem.Shared.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using GarageManagementSystem.Web.Services;
@@ -139,6 +140,43 @@ namespace GarageManagementSystem.Web.Controllers
                 success = response.Success, 
                 message = response.Success ? "Service deleted successfully" : response.ErrorMessage 
             });
+        }
+
+        /// <summary>
+        /// Tìm kiếm dịch vụ theo từ khóa cho typeahead (dùng cho QuotationManagement và các chức năng khác)
+        /// </summary>
+        [HttpGet("SearchServices")]
+        public async Task<IActionResult> SearchServices(string q)
+        {
+            try
+            {
+                // Filter ở database level thay vì memory level (tối ưu performance)
+                if (string.IsNullOrWhiteSpace(q))
+                {
+                    return Json(new List<object>());
+                }
+                
+                var response = await _apiService.GetAsync<ApiResponse<List<ServiceDto>>>(
+                    ApiEndpoints.Services.Search + "?searchTerm=" + Uri.EscapeDataString(q ?? ""));
+                
+                if (response.Success && response.Data != null && response.Data.Data != null)
+                {
+                    var services = response.Data.Data.Select(s => new
+                    {
+                        value = s.Id.ToString(),
+                        text = s.Name,
+                        price = s.Price
+                    }).Cast<object>().ToList();
+                    
+                    return Json(services);
+                }
+
+                return Json(new List<object>());
+            }
+            catch (Exception ex)
+            {
+                return Json(new List<object>());
+            }
         }
     }
 }

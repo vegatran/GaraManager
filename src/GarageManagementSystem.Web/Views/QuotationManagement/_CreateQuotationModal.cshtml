@@ -172,12 +172,14 @@
                                                 </tbody>
                                             </table>
                                         </div>
-                                        <button type="button" class="btn btn-sm btn-success mt-2" id="addCreatePartsItem">
-                                            <i class="fas fa-plus"></i> Thêm Phụ Tùng
-                                        </button>
-                                        <button type="button" class="btn btn-sm btn-info mt-2 ml-2" id="addCreatePartsLabor">
-                                            <i class="fas fa-tools"></i> Thêm Tiền Công Phụ Tùng
-                                        </button>
+                                        <div class="d-flex gap-2 mt-2">
+                                            <button type="button" class="btn btn-sm btn-success" id="addCreatePartsItem">
+                                                <i class="fas fa-plus"></i> Thêm Phụ Tùng
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-info" id="addCreatePartsLabor">
+                                                <i class="fas fa-tools"></i> Thêm Tiền Công Phụ Tùng
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                                 
@@ -206,12 +208,14 @@
                                                 </tbody>
                                             </table>
                                         </div>
-                                        <button type="button" class="btn btn-sm btn-success mt-2" id="addCreateRepairItem">
-                                            <i class="fas fa-plus"></i> Thêm Dịch Vụ Sửa Chữa
-                                        </button>
-                                        <button type="button" class="btn btn-sm btn-info mt-2 ml-2" id="addCreateRepairLabor">
-                                            <i class="fas fa-wrench"></i> Thêm Tiền Công Sửa Chữa
-                                        </button>
+                                        <div class="d-flex gap-2 mt-2">
+                                            <button type="button" class="btn btn-sm btn-success" id="addCreateRepairItem">
+                                                <i class="fas fa-plus"></i> Thêm Dịch Vụ Sửa Chữa
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-info" id="addCreateRepairLabor">
+                                                <i class="fas fa-wrench"></i> Thêm Tiền Công Sửa Chữa
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                                 
@@ -240,12 +244,14 @@
                                                 </tbody>
                                             </table>
                                         </div>
-                                        <button type="button" class="btn btn-sm btn-success mt-2" id="addCreatePaintItem">
-                                            <i class="fas fa-plus"></i> Thêm Dịch Vụ Sơn
-                                        </button>
-                                        <button type="button" class="btn btn-sm btn-info mt-2 ml-2" id="addCreatePaintLabor">
-                                            <i class="fas fa-paint-brush"></i> Thêm Tiền Công Sơn
-                                        </button>
+                                        <div class="d-flex gap-2 mt-2">
+                                            <button type="button" class="btn btn-sm btn-success" id="addCreatePaintItem">
+                                                <i class="fas fa-plus"></i> Thêm Dịch Vụ Sơn
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-info" id="addCreatePaintLabor">
+                                                <i class="fas fa-paint-brush"></i> Thêm Tiền Công Sơn
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -303,25 +309,16 @@
 th small.text-muted {
     font-size: 0.7em;
 }
+
+/* ✅ SỬA: Hiển thị dropdown typeahead trên các tab trong modal */
+.modal .table-responsive { overflow: visible !important; }
+.modal .typeahead.dropdown-menu { 
+    z-index: 2000; /* cao hơn phần nội dung modal */
+    display: block;
+    max-height: 260px;
+    overflow-y: auto;
+}
 </style>
 
-@section Scripts {
-<script>
-$(document).ready(function() {
-    // Set default ngày hiệu lực (30 ngày từ hôm nay)
-    var today = new Date();
-    var validUntil = new Date(today);
-    validUntil.setDate(today.getDate() + 30);
-    
-    var validUntilString = validUntil.getFullYear() + '-' + 
-                          String(validUntil.getMonth() + 1).padStart(2, '0') + '-' + 
-                          String(validUntil.getDate()).padStart(2, '0');
-    
-    $('#createValidUntil').val(validUntilString);
-    
-    // Initialize AdminLTE card widgets
-    $('[data-card-widget="collapse"]').CardWidget();
-});
-</script>
-}
+<!-- JS moved to quotation-management.js -->
 

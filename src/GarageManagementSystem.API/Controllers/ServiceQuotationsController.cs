@@ -802,6 +802,107 @@ namespace GarageManagementSystem.API.Controllers
             }
         }
 
+        /// <summary>
+        /// Dropdown: Danh sách báo giá đã duyệt, có thể tạo phiếu sửa chữa.
+        /// Bao gồm: Approved và (chưa có ServiceOrder) hoặc ServiceOrder đã Cancelled.
+        /// </summary>
+        [HttpGet("approved-available")]
+        public async Task<ActionResult<ApiResponse<List<object>>>> GetApprovedAvailableForOrder()
+        {
+            try
+            {
+                // Lấy Approved và chưa có SO (lọc ngay ở DB)
+                var approvedNoSO = await _unitOfWork.ServiceQuotations
+                    .FindAsync(q => q.Status == "Approved" && !q.ServiceOrderId.HasValue);
+
+                // Lấy Approved đã có SO để kiểm tra SO Cancelled / SO đã bị xóa (IsDeleted)
+                var approvedHasSO = await _unitOfWork.ServiceQuotations
+                    .FindAsync(q => q.Status == "Approved" && q.ServiceOrderId.HasValue);
+                var soIds = approvedHasSO.Select(q => q.ServiceOrderId!.Value).Distinct().ToList();
+                // Lấy các SO còn tồn tại (không bị soft-delete) theo danh sách id
+                var activeSOs = soIds.Any()
+                    ? await _unitOfWork.ServiceOrders.FindAsync(so => soIds.Contains(so.Id))
+                    : new List<Core.Entities.ServiceOrder>();
+                var activeSoIdSet = new HashSet<int>(activeSOs.Select(so => so.Id));
+                var cancelledIdSet = new HashSet<int>(activeSOs.Where(so => so.Status == "Cancelled").Select(so => so.Id));
+
+                var result = new List<object>();
+
+                // Eager-load Vehicle/Customer info for composing dropdown text
+                var allQuotations = approvedNoSO.Concat(approvedHasSO).ToList();
+                var vehicleIdsAll = allQuotations.Select(q => q.VehicleId).Distinct().ToList();
+                var customerIdsAll = allQuotations.Select(q => q.CustomerId).Distinct().ToList();
+
+                var vehicles = vehicleIdsAll.Any()
+                    ? await _unitOfWork.Vehicles.FindAsync(v => vehicleIdsAll.Contains(v.Id))
+                    : new List<Core.Entities.Vehicle>();
+                var customers = customerIdsAll.Any()
+                    ? await _unitOfWork.Customers.FindAsync(c => customerIdsAll.Contains(c.Id))
+                    : new List<Core.Entities.Customer>();
+
+                var vehicleDict = vehicles.ToDictionary(v => v.Id, v => v);
+                var customerDict = customers.ToDictionary(c => c.Id, c => c);
+
+                foreach (var q in approvedNoSO)
+                {
+                    vehicleDict.TryGetValue(q.VehicleId, out var v);
+                    customerDict.TryGetValue(q.CustomerId, out var c);
+                    var vehicleText = v != null ? $"{v.Brand} {v.Model} ({v.LicensePlate})" : "";
+                    var customerText = c?.Name ?? "";
+                    var text = string.IsNullOrEmpty(vehicleText) && string.IsNullOrEmpty(customerText)
+                        ? q.QuotationNumber
+                        : $"{q.QuotationNumber} - {vehicleText} - {customerText}";
+                    result.Add(new
+                    {
+                        value = q.Id,
+                        text = text,
+                        vehicleId = q.VehicleId,
+                        customerId = q.CustomerId,
+                        vehicleInfo = vehicleText,
+                        customerName = customerText,
+                        totalAmount = q.TotalAmount,
+                        quotationDate = q.CreatedAt
+                    });
+                }
+
+                foreach (var q in approvedHasSO)
+                {
+                    if (!q.ServiceOrderId.HasValue) continue;
+                    var soId = q.ServiceOrderId.Value;
+                    // Không có trong activeSoIdSet => đã bị xóa (IsDeleted = true)
+                    var isDeleted = !activeSoIdSet.Contains(soId);
+                    var isCancelled = cancelledIdSet.Contains(soId);
+                    if (isDeleted || isCancelled)
+                    {
+                        vehicleDict.TryGetValue(q.VehicleId, out var v);
+                        customerDict.TryGetValue(q.CustomerId, out var c);
+                        var vehicleText = v != null ? $"{v.Brand} {v.Model} ({v.LicensePlate})" : "";
+                        var customerText = c?.Name ?? "";
+                        var text = string.IsNullOrEmpty(vehicleText) && string.IsNullOrEmpty(customerText)
+                            ? q.QuotationNumber
+                            : $"{q.QuotationNumber} - {vehicleText} - {customerText}";
+                        result.Add(new
+                        {
+                            value = q.Id,
+                            text = text,
+                            vehicleId = q.VehicleId,
+                            customerId = q.CustomerId,
+                            vehicleInfo = vehicleText,
+                            customerName = customerText,
+                            totalAmount = q.TotalAmount,
+                            quotationDate = q.CreatedAt
+                        });
+                    }
+                }
+
+                return Ok(ApiResponse<List<object>>.SuccessResult(result));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<List<object>>.ErrorResult("Lỗi khi lấy danh sách báo giá khả dụng", ex.Message));
+            }
+        }
+
         [HttpPost("{id}/send")]
         public async Task<ActionResult<ApiResponse<ServiceQuotationDto>>> SendQuotation(int id)
         {
@@ -847,7 +948,7 @@ namespace GarageManagementSystem.API.Controllers
                     return NotFound(ApiResponse.ErrorResult("Quotation not found"));
                 }
 
-                if (quotation.Status == "Approved" && quotation.ServiceOrderId.HasValue)
+                if (quotation.Status == "Approved" && quotation.ServiceOrderId.HasValue && quotation.ServiceOrderId.Value !=0  && quotation.ServiceOrder?.IsDeleted == false)
                 {
                     return BadRequest(ApiResponse.ErrorResult("Cannot delete approved quotation with service order"));
                 }

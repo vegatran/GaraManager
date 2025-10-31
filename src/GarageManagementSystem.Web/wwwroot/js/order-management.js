@@ -286,9 +286,21 @@ window.OrderManagement = {
             error: function(xhr, status, error) {
                 if (AuthHandler.isUnauthorized(xhr)) {
                     AuthHandler.handleUnauthorized(xhr, true);
-                } else {
-                    GarageApp.showError('Lỗi khi tạo phiếu sửa chữa');
+                    return;
                 }
+                var msg = 'Lỗi khi tạo phiếu sửa chữa';
+                try {
+                    if (xhr.responseJSON) {
+                        // Chuẩn của ApiResponse/PagedResponse
+                        if (xhr.responseJSON.error) msg = xhr.responseJSON.error;
+                        else if (xhr.responseJSON.message) msg = xhr.responseJSON.message;
+                        else if (xhr.responseJSON.errorMessage) msg = xhr.responseJSON.errorMessage;
+                    } else if (xhr.responseText) {
+                        var obj = JSON.parse(xhr.responseText);
+                        msg = obj.error || obj.message || msg;
+                    }
+                } catch (e) { /* ignore parse errors */ }
+                GarageApp.showError(msg);
             }
         });
     },

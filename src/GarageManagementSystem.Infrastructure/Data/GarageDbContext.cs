@@ -68,6 +68,8 @@ namespace GarageManagementSystem.Infrastructure.Data
         public DbSet<PurchaseOrder> PurchaseOrders { get; set; }
         public DbSet<PurchaseOrderItem> PurchaseOrderItems { get; set; }
         public DbSet<PartInventoryBatch> PartInventoryBatches { get; set; }
+        public DbSet<MaterialRequest> MaterialRequests { get; set; }
+        public DbSet<MaterialRequestItem> MaterialRequestItems { get; set; }
         
         // Print Templates
         public DbSet<PrintTemplate> PrintTemplates { get; set; }
@@ -206,6 +208,29 @@ namespace GarageManagementSystem.Infrastructure.Data
                     .WithMany(s => s.ServiceOrderItems)
                     .HasForeignKey(e => e.ServiceId)
                     .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // MaterialRequest configuration
+            modelBuilder.Entity<MaterialRequest>(entity =>
+            {
+                entity.HasIndex(e => e.MRNumber).IsUnique();
+                entity.Property(e => e.Status).HasConversion<int>();
+                entity.HasOne(e => e.ServiceOrder)
+                      .WithMany()
+                      .HasForeignKey(e => e.ServiceOrderId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<MaterialRequestItem>(entity =>
+            {
+                entity.HasOne(i => i.MaterialRequest)
+                      .WithMany(mr => mr.Items)
+                      .HasForeignKey(i => i.MaterialRequestId)
+                      .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(i => i.Part)
+                      .WithMany()
+                      .HasForeignKey(i => i.PartId)
+                      .OnDelete(DeleteBehavior.Restrict);
             });
 
             // Department configuration

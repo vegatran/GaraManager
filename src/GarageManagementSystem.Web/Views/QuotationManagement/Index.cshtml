@@ -63,6 +63,15 @@
 @await Html.PartialAsync("_EditQuotationModal")
 @await Html.PartialAsync("_ViewQuotationModal")
 
+<!-- Include Modals -->
+@await Html.PartialAsync("_CreateQuotationModal")
+@await Html.PartialAsync("_EditQuotationModal")
+@await Html.PartialAsync("_ViewQuotationModal")
+@await Html.PartialAsync("_InsurancePricingModal")
+@await Html.PartialAsync("_CorporatePricingModal")
+@await Html.PartialAsync("_ApproveQuotationModal")
+@await Html.PartialAsync("_RejectQuotationModal")
+
 @section Scripts {
     <style>
         .border-left-primary {
@@ -81,15 +90,14 @@
             background-color: #f8f9fa;
             border-color: #dee2e6 #dee2e6 #f8f9fa;
         }
+        /* ✅ Đảm bảo dropdown typeahead phủ lên modal/tabs (plugin append vào body) */
+        .modal-open .typeahead.dropdown-menu {
+            z-index: 2000 !important;
+            display: block;
+            max-height: 260px;
+            overflow-y: auto;
+        }
     </style>
     <script src="~/js/quotation-management.js" asp-append-version="true"></script>
 }
 
-<!-- Include Modals -->
-@await Html.PartialAsync("_CreateQuotationModal")
-@await Html.PartialAsync("_EditQuotationModal")
-@await Html.PartialAsync("_ViewQuotationModal")
-@await Html.PartialAsync("_InsurancePricingModal")
-@await Html.PartialAsync("_CorporatePricingModal")
-@await Html.PartialAsync("_ApproveQuotationModal")
-@await Html.PartialAsync("_RejectQuotationModal")

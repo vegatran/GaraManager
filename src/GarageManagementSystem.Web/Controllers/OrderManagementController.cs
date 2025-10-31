@@ -174,51 +174,17 @@ namespace GarageManagementSystem.Web.Controllers
         {
             try
             {
-                // ✅ SỬA: API trả về PagedResponse, cần gọi với pagination lớn để lấy tất cả
-                var endpoint = $"{ApiEndpoints.ServiceQuotations.GetAll}?pageNumber=1&pageSize=1000";
-                var response = await _apiService.GetAsync<PagedResponse<ServiceQuotationDto>>(endpoint);
+                // ✅ Dùng API chuyên biệt để lấy danh sách báo giá đã duyệt, đủ điều kiện tạo SO
+                var response = await _apiService.GetAsync<ApiResponse<List<object>>>(ApiEndpoints.ServiceQuotations.GetApprovedAvailableForOrder);
                 
-                if (response.Success && response.Data != null && response.Data.Data != null)
+                if (response.Success && response.Data?.Data != null)
                 {
-                    // ✅ DEBUG: Log tất cả quotations để debug
-                    var allQuotations = response.Data.Data.ToList();
-                    Console.WriteLine($"[GetAvailableQuotations] Total quotations from API: {allQuotations.Count}");
-                    
-                    var approvedQuotations = allQuotations.Where(q => q.Status == "Approved").ToList();
-                    Console.WriteLine($"[GetAvailableQuotations] Approved quotations: {approvedQuotations.Count}");
-                    foreach (var q in approvedQuotations)
-                    {
-                        Console.WriteLine($"[GetAvailableQuotations]   - ID: {q.Id}, Number: {q.QuotationNumber}, Status: {q.Status}, ServiceOrderId: {q.ServiceOrderId}");
-                    }
-                    
-                    // ✅ SỬA: Chỉ lấy những quotation đã được phê duyệt và chưa có service order
-                    var availableQuotations = allQuotations
-                        .Where(q => q.Status == "Approved" && !q.ServiceOrderId.HasValue) // ✅ THÊM: Filter ServiceOrderId == null
-                        .Select(q => new
-                        {
-                            value = q.Id.ToString(),
-                            text = $"{q.QuotationNumber} - {q.Vehicle?.Brand} {q.Vehicle?.Model} ({q.Vehicle?.LicensePlate}) - {q.Customer?.Name}",
-                            vehicleId = q.VehicleId,
-                            customerId = q.CustomerId,
-                            vehicleInfo = $"{q.Vehicle?.Brand} {q.Vehicle?.Model} - {q.Vehicle?.LicensePlate}",
-                            customerName = q.Customer?.Name ?? "Không xác định",
-                            totalAmount = q.TotalAmount,
-                            quotationDate = q.CreatedAt
-                        }).Cast<object>().ToList();
-                    
-                    // ✅ DEBUG: Log số lượng quotation available
-                    Console.WriteLine($"[GetAvailableQuotations] Available (no ServiceOrder): {availableQuotations.Count}");
-                    
-                    return Json(availableQuotations);
+                    return Json(response.Data.Data);
                 }
                 else
                 {
                     // ✅ THÊM: Log lỗi nếu có
                     Console.WriteLine($"[GetAvailableQuotations] API Error: {response.ErrorMessage ?? "Unknown error"}");
-                    if (response.Data == null)
-                    {
-                        Console.WriteLine($"[GetAvailableQuotations] Response.Data is null");
-                    }
                     return Json(new List<object>());
                 }
             }
@@ -318,9 +284,18 @@ namespace GarageManagementSystem.Web.Controllers
         [Route("CreateOrder")]
         public async Task<IActionResult> CreateOrder([FromBody] CreateServiceOrderDto model)
         {
+            // Cho phép tạo từ Báo Giá mà không gửi kèm ServiceOrderItems (API sẽ tự copy từ Quotation)
             if (!ModelState.IsValid)
             {
-                return BadRequest(new { success = false, errorMessage = "Dữ liệu không hợp lệ" });
+                if (!model.ServiceQuotationId.HasValue)
+                {
+                    return BadRequest(new { success = false, errorMessage = "Dữ liệu không hợp lệ" });
+                }
+                // Bỏ qua lỗi validation của ServiceOrderItems khi có ServiceQuotationId
+                if (ModelState.ContainsKey("ServiceOrderItems"))
+                {
+                    ModelState.Remove("ServiceOrderItems");
+                }
             }
 
             var response = await _apiService.PostAsync<ServiceOrderDto>(ApiEndpoints.ServiceOrders.Create, model);

@@ -40,8 +40,6 @@ namespace GarageManagementSystem.Shared.DTOs
         [Range(0, double.MaxValue, ErrorMessage = "Số tiền giảm giá phải lớn hơn hoặc bằng 0")]
         public decimal DiscountAmount { get; set; } = 0;
 
-        [Required(ErrorMessage = "Danh sách dịch vụ là bắt buộc")]
-        [MinLength(1, ErrorMessage = "Phải có ít nhất một dịch vụ")]
         public List<CreateServiceOrderItemDto> ServiceOrderItems { get; set; } = new();
     }
 

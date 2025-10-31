@@ -65,6 +65,7 @@ namespace GarageManagementSystem.Web.Configuration
             public const string Create = "services";
             public const string Update = "services/{0}"; // services/{id}
             public const string Delete = "services/{0}"; // services/{id}
+            public const string Search = "services/search"; // services/search?searchTerm={searchTerm}
         }
 
         /// <summary>
@@ -138,6 +139,7 @@ namespace GarageManagementSystem.Web.Configuration
         public static class ServiceQuotations
         {
             public const string GetAll = "servicequotations";
+            public const string GetApprovedAvailableForOrder = "servicequotations/approved-available";
             public const string GetAllForDropdown = "servicequotations/dropdown";
             public const string GetById = "servicequotations/{0}";
             public const string GetByVehicle = "servicequotations/vehicle/{0}";
@@ -256,6 +258,18 @@ namespace GarageManagementSystem.Web.Configuration
             public const string ReceiveOrder = "purchaseorders/{0}/receive";
             public const string GetBySupplier = "purchaseorders?supplierId={0}";
             public const string GetByStatus = "purchaseorders?status={0}";
+        }
+
+        /// <summary>
+        /// Material Requests (MR) endpoints
+        /// </summary>
+        public static class MaterialRequests
+        {
+            public const string GetAll = "materialrequests"; // paged
+            public const string Create = "materialrequests";
+            public const string Submit = "materialrequests/{0}/submit";
+            public const string Approve = "materialrequests/{0}/approve";
+            public const string Reject = "materialrequests/{0}/reject";
         }
 
         /// <summary>

@@ -5,10 +5,10 @@ namespace GarageManagementSystem.Core.Entities
     public class ServiceOrderItem : BaseEntity
     {
         public int ServiceOrderId { get; set; }
-        public int ServiceId { get; set; }
+        public int? ServiceId { get; set; } // ✅ SỬA: Cho phép null cho labor items (tiền công)
         
         [StringLength(200)]
-        public string ServiceName { get; set; } = string.Empty; // Cached service name
+        public string ServiceName { get; set; } = string.Empty; // Cached service name (cho labor items, dùng ItemName)
         
         [StringLength(500)]
         public string? Description { get; set; } // Mô tả chi tiết
@@ -38,7 +38,7 @@ namespace GarageManagementSystem.Core.Entities
 
         // Navigation properties
         public virtual ServiceOrder ServiceOrder { get; set; } = null!;
-        public virtual Service Service { get; set; } = null!;
+        public virtual Service? Service { get; set; } // ✅ SỬA: Cho phép null cho labor items (tiền công)
         public virtual Employee? AssignedTechnician { get; set; } // Navigation to assigned technician
     }
 }

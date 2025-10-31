@@ -1,0 +1,52 @@
+@{
+    ViewData["Title"] = "Quản Lý Phiếu Yêu Cầu Vật Tư";
+}
+
+<section class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1>Phiếu Yêu Cầu Vật Tư (MR)</h1>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="content">
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Danh Sách Phiếu Yêu Cầu Vật Tư</h3>
+                        <div class="card-tools">
+                            <button class="btn btn-primary btn-sm" id="btnShowCreateMR"><i class="fas fa-plus"></i> Tạo MR</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table id="mrTable" class="table table-bordered table-striped dt-responsive nowrap table-sm" width="100%">
+                                <thead>
+                                    <tr>
+                                        <th>MR #</th>
+                                        <th>Service Order</th>
+                                        <th>Trạng thái</th>
+                                        <th>Thao tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<partial name="_CreateMRModal" />
+
+@section Scripts {
+    <script src="~/js/material-request-management.js"></script>
+}
+

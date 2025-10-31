@@ -372,10 +372,19 @@ window.QuotationManagement = {
         var currentActiveTab = 'edit-parts'; // Default tab
         
         $(document).on('shown.bs.tab', 'a[data-toggle="tab"]', function(e) {
-            var targetTab = $(e.target).attr('href'); // #edit-parts, #edit-repair, #edit-paint
-            var tabId = targetTab.replace('#', ''); // edit-parts, edit-repair, edit-paint
-            
+            var targetTab = $(e.target).attr('href'); // #edit-parts, #edit-repair, #edit-paint or create-*
+            var tabId = targetTab.replace('#', ''); // edit-parts, edit-repair, ...
             currentActiveTab = tabId; // ✅ LƯU tab active hiện tại
+
+            // ✅ SỬA: Re-init typeahead cho các input trong tab vừa hiển thị
+            var $container = $(targetTab);
+            $container.find('.service-typeahead').each(function() {
+                var $input = $(this);
+                // Nếu chưa gắn typeahead thì khởi tạo; nếu đã có, trigger refresh bằng cách reattach source
+                if (!$input.data('typeahead')) {
+                    self.initializeServiceTypeahead($input);
+                }
+            });
         });
         
         // ✅ THÊM: Event handler cho checkbox - sử dụng currentActiveTab
@@ -833,8 +842,17 @@ window.QuotationManagement = {
                         lastRow.find('.vat-rate-input').attr('title', 'VAT sẽ được lấy từ thông tin phụ tùng (Không được chỉnh sửa)');
                     }
                     
-                    // Initialize typeahead for new service input
-                    self.initializeServiceTypeahead($('#' + containerId + ' .service-typeahead').last(), prefix);
+                    // Initialize typeahead for new service input (ensure visible in current tab)
+                    var $newInput = $('#' + containerId + ' .service-typeahead').last();
+                    self.initializeServiceTypeahead($newInput, prefix);
+                    // In some cases, plugin needs a micro delay after append before lookup
+                    setTimeout(function() {
+                        if (!$newInput.data('typeahead')) {
+                            self.initializeServiceTypeahead($newInput, prefix);
+                        }
+                        $newInput.focus();
+                        try { $newInput.typeahead('lookup'); } catch(e) { /* no-op */ }
+                    }, 0);
                     
                     // Bind change events for new item
                     self.bindServiceItemEvents(prefix);
@@ -913,25 +931,65 @@ window.QuotationManagement = {
 
     // ✅ THÊM: Tạo HTML cho labor item
     createLaborItemHtml: function(prefix, serviceType) {
-        var laborNames = {
-            'parts': 'Công lắp đặt phụ tùng',
-            'repair': 'Công sửa chữa động cơ', 
-            'paint': 'Công sơn toàn thân xe'
+        var laborOptions = {
+            'parts': [
+                'Công lắp đặt phụ tùng',
+                'Công thay thế phụ tùng',
+                'Công kiểm tra và điều chỉnh'
+            ],
+            'repair': [
+                'Công sửa chữa động cơ',
+                'Công sửa chữa hệ thống điện',
+                'Công sửa chữa thân xe',
+                'Công sửa chữa gầm xe',
+                'Công sửa chữa hệ thống làm mát',
+                'Công sửa chữa hệ thống phanh',
+                'Công sửa chữa hệ thống lái',
+                'Công kiểm tra và chẩn đoán',
+                'Khác'
+            ],
+            'paint': [
+                'Công sơn cánh',
+                'Công sơn cửa',
+                'Công sơn nắp capo',
+                'Công sơn nắp thùng',
+                'Công sơn mui xe',
+                'Công sơn cản trước',
+                'Công sơn cản sau',
+                'Công sơn toàn thân xe',
+                'Công sơn chi tiết',
+                'Khác'
+            ]
         };
         
-        var laborName = laborNames[serviceType] || 'Công lao động';
+        var options = laborOptions[serviceType] || ['Công lao động', 'Khác'];
+        var defaultOption = options[0];
+        var optionsHtml = options.map(function(opt, index) {
+            var selected = index === 0 ? 'selected' : '';
+            return `<option value="${opt}" ${selected}>${opt}</option>`;
+        }).join('');
+        
         var itemId = 'item_' + Date.now();
         
-        // ✅ SỬA: Tính itemIndex global cho tất cả tabs
-        var itemIndex = $('#editPartsItems .service-item-row, #editRepairItems .service-item-row, #editPaintItems .service-item-row').length;
+        // ✅ SỬA: Tính itemIndex dựa trên prefix
+        var itemIndex;
+        if (prefix === 'create') {
+            itemIndex = $('#createPartsItems .service-item-row, #createRepairItems .service-item-row, #createPaintItems .service-item-row').length;
+        } else {
+            itemIndex = $('#editPartsItems .service-item-row, #editRepairItems .service-item-row, #editPaintItems .service-item-row').length;
+        }
         
         return `
             <tr class="service-item-row" data-item-id="${itemId}">
                 <td>
                     <input type="hidden" class="service-id-input" name="Items[${itemIndex}].ServiceId" value="">
                     <input type="hidden" class="item-category-input" name="Items[${itemIndex}].ItemCategory" value="Labor">
-                    <input type="text" class="form-control form-control-sm service-typeahead" 
-                           name="Items[${itemIndex}].ServiceName" value="${laborName}" readonly>
+                    <select class="form-control form-control-sm labor-name-select" 
+                            name="Items[${itemIndex}].ServiceName" data-service-type="${serviceType}">
+                        ${optionsHtml}
+                    </select>
+                    <input type="text" class="form-control form-control-sm labor-name-custom d-none mt-1" 
+                           placeholder="Nhập tên công..." style="display: none;">
                 </td>
                 <td>
                     <input type="number" class="form-control form-control-sm quantity-input" 
@@ -942,11 +1000,24 @@ window.QuotationManagement = {
                            name="Items[${itemIndex}].UnitPrice" placeholder="0" value="">
                 </td>
                 <td>
-                    <input type="text" class="form-control form-control-sm total-input text-right" 
-                           name="Items[${itemIndex}].TotalPrice" placeholder="0" readonly title="Thành tiền">
+                    <input type="text" class="form-control form-control-sm subtotal-input text-right" 
+                           name="Items[${itemIndex}].SubTotal" placeholder="0" readonly title="Thành tiền chưa VAT">
                 </td>
                 <td>
-                    <span class="badge badge-secondary">Không</span>
+                    <input type="number" class="form-control form-control-sm vat-rate-input text-center" 
+                           name="Items[${itemIndex}].VATRate" value="0" min="0" max="100" step="0.1"
+                           placeholder="0" title="Tỷ lệ VAT (%)" disabled>
+                </td>
+                <td>
+                    <input type="text" class="form-control form-control-sm vat-amount-input text-right" 
+                           placeholder="0" readonly title="Tiền VAT" disabled>
+                </td>
+                <td class="text-center">
+                    <div class="custom-control custom-checkbox">
+                        <input class="custom-control-input invoice-checkbox" type="checkbox" 
+                               name="Items[${itemIndex}].HasInvoice" id="invoice_labor_${prefix}_${itemIndex}">
+                        <label class="custom-control-label" for="invoice_labor_${prefix}_${itemIndex}"></label>
+                    </div>
                 </td>
                 <td class="text-center">
                     <button type="button" class="btn btn-sm btn-outline-danger remove-service-item" title="Xóa">
@@ -1136,7 +1207,15 @@ window.QuotationManagement = {
         }
         
         // Initialize typeahead for new service input
-        self.initializeServiceTypeahead($('#' + containerId + ' .service-typeahead').last(), prefix);
+        var $newInput2 = $('#' + containerId + ' .service-typeahead').last();
+        self.initializeServiceTypeahead($newInput2, prefix);
+        setTimeout(function() {
+            if (!$newInput2.data('typeahead')) {
+                self.initializeServiceTypeahead($newInput2, prefix);
+            }
+            $newInput2.focus();
+            try { $newInput2.typeahead('lookup'); } catch(e) { /* no-op */ }
+        }, 0);
         
         // Bind change events for new item
         self.bindServiceItemEvents(prefix);
@@ -1325,11 +1404,12 @@ window.QuotationManagement = {
                 delay: 300,
             });
         } else {
-            // ✅ GIỮ NGUYÊN: Logic cũ cho Services
+            // ✅ SỬA: Gọi ServiceManagement/SearchServices thay vì QuotationManagement/SearchServices
+            // ServiceManagement là nơi quản lý services, không phải QuotationManagement
         input.typeahead({
             source: function(query, process) {
                 $.ajax({
-                    url: '/QuotationManagement/SearchServices',
+                    url: '/ServiceManagement/SearchServices',
                     type: 'GET',
                     data: { q: query },
                     success: function(response) {
@@ -1356,16 +1436,18 @@ window.QuotationManagement = {
             },
             afterSelect: function(item) {
                 var row = input.closest('.service-item-row');
-                var price = item.price;
+                var price = item.price || 0;
                 var quantity = parseFloat(row.find('.quantity-input').val()) || 1;
-                var total = price * quantity;
-                
+                var subtotal = price * quantity;
                 // Set values
                 row.find('.service-id-input').val(item.id);
                 row.find('.unit-price-input').val(price.toLocaleString() + ' VNĐ');
-                row.find('.total-input').val(total.toLocaleString() + ' VNĐ');
-                
-                // Set input value
+                row.find('.subtotal-input').val(subtotal.toLocaleString() + ' VNĐ');
+                // Enable VAT inputs for non-parts items
+                row.find('.vat-rate-input').prop('disabled', false).prop('readonly', false);
+                // Recalc totals considering VAT checkbox state
+                self.calculateItemTotal(row);
+                // Set input value for display
                 input.val(item.name);
             },
             delay: 300,
@@ -1382,9 +1464,23 @@ window.QuotationManagement = {
             var priceText = lastRow.find('.unit-price-input').val() || '';
             var price = parseFloat(priceText.replace(/[^\d]/g, '')) || 0;
             var quantity = parseFloat(lastRow.find('.quantity-input').val()) || 1;
-            var total = price * quantity;
+            var subtotal = price * quantity;
             
-            lastRow.find('.total-input').val(total.toLocaleString() + ' VNĐ');
+            // Labor items thường không có VAT (disabled), nhưng vẫn tính để đồng nhất với service items
+            var hasInvoice = lastRow.find('.invoice-checkbox').is(':checked');
+            var vatRate = parseFloat(lastRow.find('.vat-rate-input').val()) || 0;
+            var vatAmount = 0;
+            
+            if (hasInvoice && vatRate > 0) {
+                vatAmount = subtotal * (vatRate / 100);
+            }
+            
+            var total = subtotal + vatAmount;
+            
+            // Cập nhật tất cả các cột để đồng nhất với service items
+            lastRow.find('.subtotal-input').val(subtotal.toLocaleString() + ' VNĐ');
+            lastRow.find('.vat-amount-input').val(vatAmount.toLocaleString() + ' VNĐ');
+            // Labor items không có cột "Total" riêng như service items, chỉ có subtotal
         }
     },
 
@@ -1422,6 +1518,35 @@ window.QuotationManagement = {
                 row.find('.service-id-input').val('');
                 row.find('.unit-price-input').val('');
                 row.find('.total-input').val('');
+            }
+        });
+        
+        // ✅ THÊM: Labor name select change (show/hide custom input)
+        $(document).off('change', '#' + prefix + 'PartsItems .labor-name-select, #' + prefix + 'RepairItems .labor-name-select, #' + prefix + 'PaintItems .labor-name-select').on('change', '#' + prefix + 'PartsItems .labor-name-select, #' + prefix + 'RepairItems .labor-name-select, #' + prefix + 'PaintItems .labor-name-select', function() {
+            var row = $(this).closest('.service-item-row');
+            var select = $(this);
+            var customInput = row.find('.labor-name-custom');
+            var selectedValue = select.val();
+            
+            if (selectedValue === 'Khác') {
+                customInput.removeClass('d-none').show().focus();
+                customInput.val('');
+            } else {
+                customInput.addClass('d-none').hide().val('');
+            }
+        });
+        
+        // ✅ THÊM: Custom labor name input change (sync with select)
+        $(document).off('input', '#' + prefix + 'PartsItems .labor-name-custom, #' + prefix + 'RepairItems .labor-name-custom, #' + prefix + 'PaintItems .labor-name-custom').on('input', '#' + prefix + 'PartsItems .labor-name-custom, #' + prefix + 'RepairItems .labor-name-custom, #' + prefix + 'PaintItems .labor-name-custom', function() {
+            var row = $(this).closest('.service-item-row');
+            var customInput = $(this);
+            var select = row.find('.labor-name-select');
+            
+            // Sync value from custom input to select when submitting
+            if (customInput.val().trim() !== '') {
+                select.data('custom-value', customInput.val().trim());
+            } else {
+                select.removeData('custom-value');
             }
         });
     },
@@ -1500,16 +1625,43 @@ window.QuotationManagement = {
         // Collect all service items from all tabs
         var items = [];
         
+        // ✅ Helper function để lấy service name từ row (hỗ trợ labor dropdown)
+        function getServiceNameFromRow(row) {
+            // ✅ SỬA: Kiểm tra labor dropdown trước
+            var laborSelect = row.find('.labor-name-select');
+            if (laborSelect.length > 0) {
+                var selectedValue = laborSelect.val();
+                // Nếu không có giá trị selected, lấy option đầu tiên (mặc định)
+                if (!selectedValue) {
+                    var firstOption = laborSelect.find('option:first').val();
+                    selectedValue = firstOption || '';
+                }
+                if (selectedValue === 'Khác') {
+                    var customInput = row.find('.labor-name-custom');
+                    var customValue = customInput.val() ? customInput.val().trim() : '';
+                    // Nếu "Khác" được chọn nhưng chưa nhập giá trị, vẫn trả về "Khác" để lưu
+                    return customValue || selectedValue;
+                }
+                return selectedValue || '';
+            }
+            // Nếu không phải labor item, lấy từ typeahead
+            return row.find('.service-typeahead').val() || '';
+        }
+        
         // Collect from Parts tab
         $('#createPartsItems .service-item-row').each(function() {
             var row = $(this);
             var serviceId = row.find('.service-id-input').val();
-            var serviceName = row.find('.service-typeahead').val();
+            var serviceName = getServiceNameFromRow(row);
             var quantity = parseInt(row.find('.quantity-input').val()) || 1;
             var unitPriceText = row.find('.unit-price-input').val() || '';
             var unitPrice = parseFloat(unitPriceText.replace(/[^\d]/g, '')) || 0;
             var hasInvoice = row.find('.invoice-checkbox').is(':checked');
             var itemCategory = row.find('.item-category-input').val() || 'Material';
+            // ✅ SỬA: Lấy VAT rate từ input (đã được set từ Part data khi chọn part)
+            var vatRate = parseFloat(row.find('.vat-rate-input').val()) || 0;
+            // ✅ SỬA: VAT chỉ áp dụng nếu checkbox checked VÀ vatRate > 0
+            var isVATApplicable = hasInvoice && vatRate > 0;
             
             if (serviceName && serviceName.trim() !== '') {
                 items.push({
@@ -1519,6 +1671,8 @@ window.QuotationManagement = {
                     UnitPrice: unitPrice,
                     IsOptional: false,
                     HasInvoice: hasInvoice,
+                    IsVATApplicable: isVATApplicable, // ✅ SỬA: Set từ checkbox và VAT rate
+                    VATRate: vatRate, // ✅ SỬA: Lấy từ input
                     Notes: hasInvoice ? 'Có hóa đơn' : 'Không có hóa đơn',
                     ServiceType: 'parts',
                     ItemCategory: itemCategory,  // ✅ THÊM ItemCategory
@@ -1530,12 +1684,16 @@ window.QuotationManagement = {
         $('#createRepairItems .service-item-row').each(function() {
             var row = $(this);
             var serviceId = row.find('.service-id-input').val();
-            var serviceName = row.find('.service-typeahead').val();
+            var serviceName = getServiceNameFromRow(row);
             var quantity = parseInt(row.find('.quantity-input').val()) || 1;
             var unitPriceText = row.find('.unit-price-input').val() || '';
             var unitPrice = parseFloat(unitPriceText.replace(/[^\d]/g, '')) || 0;
             var hasInvoice = row.find('.invoice-checkbox').is(':checked');
             var itemCategory = row.find('.item-category-input').val() || 'Material';
+            // ✅ SỬA: Lấy VAT rate từ input, không mặc định 10
+            var vatRate = parseFloat(row.find('.vat-rate-input').val()) || 0;
+            // ✅ SỬA: VAT chỉ áp dụng nếu checkbox checked VÀ vatRate > 0
+            var isVATApplicable = hasInvoice && vatRate > 0;
             
             if (serviceName && serviceName.trim() !== '') { // ✅ SỬA: Chỉ cần có tên dịch vụ
                 items.push({
@@ -1545,6 +1703,8 @@ window.QuotationManagement = {
                     UnitPrice: unitPrice,
                     IsOptional: false,
                     HasInvoice: hasInvoice, // ✅ THÊM HasInvoice
+                    IsVATApplicable: isVATApplicable, // ✅ SỬA: Set từ checkbox và VAT rate
+                    VATRate: vatRate, // ✅ SỬA: Lấy từ input
                     Notes: 'Giá có thể thay đổi tùy theo mức độ hư hại',
                     ServiceType: 'repair',
                     ItemCategory: itemCategory,  // ✅ THÊM ItemCategory
@@ -1556,12 +1716,16 @@ window.QuotationManagement = {
         $('#createPaintItems .service-item-row').each(function() {
             var row = $(this);
             var serviceId = row.find('.service-id-input').val();
-            var serviceName = row.find('.service-typeahead').val();
+            var serviceName = getServiceNameFromRow(row);
             var quantity = parseInt(row.find('.quantity-input').val()) || 1;
             var unitPriceText = row.find('.unit-price-input').val() || '';
             var unitPrice = parseFloat(unitPriceText.replace(/[^\d]/g, '')) || 0;
             var hasInvoice = row.find('.invoice-checkbox').is(':checked');
             var itemCategory = row.find('.item-category-input').val() || 'Material';
+            // ✅ SỬA: Lấy VAT rate từ input, không mặc định 10
+            var vatRate = parseFloat(row.find('.vat-rate-input').val()) || 0;
+            // ✅ SỬA: VAT chỉ áp dụng nếu checkbox checked VÀ vatRate > 0
+            var isVATApplicable = hasInvoice && vatRate > 0;
             
             if (serviceName && serviceName.trim() !== '') { // ✅ SỬA: Chỉ cần có tên dịch vụ
                 items.push({
@@ -1571,6 +1735,8 @@ window.QuotationManagement = {
                     UnitPrice: unitPrice,
                     IsOptional: false,
                     HasInvoice: hasInvoice, // ✅ THÊM HasInvoice
+                    IsVATApplicable: isVATApplicable, // ✅ SỬA: Set từ checkbox và VAT rate
+                    VATRate: vatRate, // ✅ SỬA: Lấy từ input
                     Notes: 'Giá có thể thay đổi tùy theo kích thước vùng bị trầy xước',
                     ServiceType: 'paint',
                     ItemCategory: itemCategory,  // ✅ THÊM ItemCategory
@@ -1628,17 +1794,43 @@ window.QuotationManagement = {
         // Collect all service items from all tabs
         var items = [];
         
+        // ✅ Helper function để lấy service name từ row (hỗ trợ labor dropdown)
+        function getServiceNameFromRow(row) {
+            // ✅ SỬA: Kiểm tra labor dropdown trước
+            var laborSelect = row.find('.labor-name-select');
+            if (laborSelect.length > 0) {
+                var selectedValue = laborSelect.val();
+                // Nếu không có giá trị selected, lấy option đầu tiên (mặc định)
+                if (!selectedValue) {
+                    var firstOption = laborSelect.find('option:first').val();
+                    selectedValue = firstOption || '';
+                }
+                if (selectedValue === 'Khác') {
+                    var customInput = row.find('.labor-name-custom');
+                    var customValue = customInput.val() ? customInput.val().trim() : '';
+                    // Nếu "Khác" được chọn nhưng chưa nhập giá trị, vẫn trả về "Khác" để lưu
+                    return customValue || selectedValue;
+                }
+                return selectedValue || '';
+            }
+            // Nếu không phải labor item, lấy từ typeahead
+            return row.find('.service-typeahead').val() || '';
+        }
+        
         // Collect from Parts tab
         $('#editPartsItems .service-item-row').each(function() {
             var row = $(this);
             var serviceId = row.find('.service-id-input').val();
-            var serviceName = row.find('.service-typeahead').val();
+            var serviceName = getServiceNameFromRow(row);
             var quantity = parseInt(row.find('.quantity-input').val()) || 1;
             var unitPriceText = row.find('.unit-price-input').val() || '';
             var unitPrice = parseFloat(unitPriceText.replace(/[^\d]/g, '')) || 0;
             var hasInvoice = row.find('.invoice-checkbox').is(':checked');
             var itemCategory = row.find('.item-category-input').val() || 'Material';
-            var vatRate = parseFloat(row.find('.vat-rate-input').val()) || 10; // ✅ THÊM: Lấy VAT rate từ input
+            // ✅ SỬA: Lấy VAT rate từ input (đã được set từ Part data khi chọn part), không mặc định 10
+            var vatRate = parseFloat(row.find('.vat-rate-input').val()) || 0;
+            // ✅ SỬA: VAT chỉ áp dụng nếu checkbox checked VÀ vatRate > 0
+            var isVATApplicable = hasInvoice && vatRate > 0;
             
             if (serviceName && serviceName.trim() !== '') {
                 items.push({
@@ -1648,8 +1840,8 @@ window.QuotationManagement = {
                     UnitPrice: unitPrice,
                     IsOptional: false,
                     HasInvoice: hasInvoice,
-                    IsVATApplicable: hasInvoice, // ✅ THÊM: VAT áp dụng nếu có hóa đơn
-                    VATRate: vatRate, // ✅ THÊM: VAT rate
+                    IsVATApplicable: isVATApplicable, // ✅ SỬA: Set từ checkbox và VAT rate
+                    VATRate: vatRate, // ✅ SỬA: Lấy từ input, không mặc định 10
                     Notes: hasInvoice ? 'Có hóa đơn' : 'Không có hóa đơn',
                     ServiceType: 'parts',
                     ItemCategory: itemCategory,
@@ -1661,13 +1853,16 @@ window.QuotationManagement = {
         $('#editRepairItems .service-item-row').each(function() {
             var row = $(this);
             var serviceId = row.find('.service-id-input').val();
-            var serviceName = row.find('.service-typeahead').val();
+            var serviceName = getServiceNameFromRow(row);
             var quantity = parseInt(row.find('.quantity-input').val()) || 1;
             var unitPriceText = row.find('.unit-price-input').val() || '';
             var unitPrice = parseFloat(unitPriceText.replace(/[^\d]/g, '')) || 0;
             var hasInvoice = row.find('.invoice-checkbox').is(':checked');
             var itemCategory = row.find('.item-category-input').val() || 'Material';
-            var vatRate = parseFloat(row.find('.vat-rate-input').val()) || 10; // ✅ THÊM: Lấy VAT rate từ input
+            // ✅ SỬA: Lấy VAT rate từ input, không mặc định 10
+            var vatRate = parseFloat(row.find('.vat-rate-input').val()) || 0;
+            // ✅ SỬA: VAT chỉ áp dụng nếu checkbox checked VÀ vatRate > 0
+            var isVATApplicable = hasInvoice && vatRate > 0;
             
             if (serviceName && serviceName.trim() !== '') {
                 items.push({
@@ -1677,8 +1872,8 @@ window.QuotationManagement = {
                     UnitPrice: unitPrice,
                     IsOptional: false,
                     HasInvoice: hasInvoice,
-                    IsVATApplicable: hasInvoice, // ✅ THÊM: VAT áp dụng nếu có hóa đơn
-                    VATRate: vatRate, // ✅ THÊM: VAT rate
+                    IsVATApplicable: isVATApplicable, // ✅ SỬA: Set từ checkbox và VAT rate
+                    VATRate: vatRate, // ✅ SỬA: Lấy từ input, không mặc định 10
                     Notes: 'Giá có thể thay đổi tùy theo mức độ hư hại',
                     ServiceType: 'repair',
                     ItemCategory: itemCategory,
@@ -1690,13 +1885,16 @@ window.QuotationManagement = {
         $('#editPaintItems .service-item-row').each(function() {
             var row = $(this);
             var serviceId = row.find('.service-id-input').val();
-            var serviceName = row.find('.service-typeahead').val();
+            var serviceName = getServiceNameFromRow(row);
             var quantity = parseInt(row.find('.quantity-input').val()) || 1;
             var unitPriceText = row.find('.unit-price-input').val() || '';
             var unitPrice = parseFloat(unitPriceText.replace(/[^\d]/g, '')) || 0;
             var hasInvoice = row.find('.invoice-checkbox').is(':checked');
             var itemCategory = row.find('.item-category-input').val() || 'Material';
-            var vatRate = parseFloat(row.find('.vat-rate-input').val()) || 10; // ✅ THÊM: Lấy VAT rate từ input
+            // ✅ SỬA: Lấy VAT rate từ input, không mặc định 10
+            var vatRate = parseFloat(row.find('.vat-rate-input').val()) || 0;
+            // ✅ SỬA: VAT chỉ áp dụng nếu checkbox checked VÀ vatRate > 0
+            var isVATApplicable = hasInvoice && vatRate > 0;
             
             if (serviceName && serviceName.trim() !== '') {
                 items.push({
@@ -1706,8 +1904,8 @@ window.QuotationManagement = {
                     UnitPrice: unitPrice,
                     IsOptional: false,
                     HasInvoice: hasInvoice,
-                    IsVATApplicable: hasInvoice, // ✅ THÊM: VAT áp dụng nếu có hóa đơn
-                    VATRate: vatRate, // ✅ THÊM: VAT rate
+                    IsVATApplicable: isVATApplicable, // ✅ SỬA: Set từ checkbox và VAT rate
+                    VATRate: vatRate, // ✅ SỬA: Lấy từ input, không mặc định 10
                     Notes: 'Giá có thể thay đổi tùy theo kích thước vùng bị trầy xước',
                     ServiceType: 'paint',
                     ItemCategory: itemCategory,
@@ -2500,6 +2698,74 @@ window.QuotationManagement = {
         if (fileInput.files.length > 0) {
             formData.append('contractFile', fileInput.files[0]);
         }
+
+// Modal-specific behaviors moved from partial views
+(function () {
+    if (typeof window !== 'undefined') {
+        // Approve Quotation modal behaviors
+        window.$(document).on('change', '#approveCreateServiceOrder', function () {
+            if (window.$(this).is(':checked')) {
+                window.$('#approveScheduledDateGroup').slideDown();
+            } else {
+                window.$('#approveScheduledDateGroup').slideUp();
+            }
+        });
+
+        // Set default approve date on load
+        var todayStr = new Date().toISOString().split('T')[0];
+        window.$('#approveScheduledDate').val(todayStr);
+
+        // Reset approve form on modal hidden
+        window.$(document).on('hidden.bs.modal', '#approveQuotationModal', function () {
+            var form = document.getElementById('approveQuotationForm');
+            if (form) form.reset();
+            window.$('#approveCreateServiceOrder').prop('checked', true);
+            window.$('#approveScheduledDate').val(todayStr);
+            window.$('#approveScheduledDateGroup').show();
+        });
+
+        // Create Quotation modal defaults
+        window.$(document).on('show.bs.modal', '#createQuotationModal', function () {
+            var today = new Date();
+            var validUntil = new Date(today);
+            validUntil.setDate(today.getDate() + 30);
+            var validUntilString = validUntil.getFullYear() + '-' + String(validUntil.getMonth() + 1).padStart(2, '0') + '-' + String(validUntil.getDate()).padStart(2, '0');
+            window.$('#createValidUntil').val(validUntilString);
+            // Initialize AdminLTE card widgets
+            if (window.$.fn.CardWidget) {
+                window.$('[data-card-widget="collapse"]').CardWidget();
+            }
+        });
+
+        // Initialize AdminLTE CardWidget inside insurance and corporate pricing modals when shown
+        var initCardWidgets = function() {
+            if (window.$.fn.CardWidget) {
+                window.$('[data-card-widget="collapse"]').CardWidget();
+            }
+        };
+        window.$(document).on('show.bs.modal', '#insurancePricingModal', initCardWidgets);
+        window.$(document).on('show.bs.modal', '#corporatePricingModal', initCardWidgets);
+
+        // Edit modal: format money fields with .total-input
+        window.$(document).on('blur', '.total-input', function () {
+            var val = parseFloat(window.$(this).val()) || 0;
+            if (val > 0) {
+                window.$(this).val(val.toLocaleString('vi-VN'));
+            }
+        });
+        window.$(document).on('focus', '.total-input', function () {
+            var raw = (window.$(this).val() || '').toString().replace(/[^\d]/g, '');
+            window.$(this).val(raw);
+        });
+
+        // Reject modal: reset on close
+        window.$(document).on('hidden.bs.modal', '#rejectQuotationModal', function () {
+            var form = document.getElementById('rejectQuotationForm');
+            if (form) form.reset();
+            window.$('#rejectChargeInspectionFee').prop('checked', false);
+        });
+    }
+})();
         
         // Collect items data
         var approvedItems = [];
@@ -2690,8 +2956,8 @@ window.QuotationManagement = {
                     }
                 } else {
                     // Clear form if no data
-                    $('#insurancePricingForm')[0].reset();
-                    $('#insuranceItemsTable tbody').empty();
+                    window.$('#insurancePricingForm')[0].reset();
+                    window.$('#insuranceItemsTable tbody').empty();
                     
                     // Tự động load items từ báo giá nếu chưa có dữ liệu insurance pricing
                     if (quotationData && quotationData.items && quotationData.items.length > 0) {
@@ -2701,8 +2967,8 @@ window.QuotationManagement = {
             },
             error: function(xhr, status, error) {
                 // Clear form on error
-                $('#insurancePricingForm')[0].reset();
-                $('#insuranceItemsTable tbody').empty();
+                window.$('#insurancePricingForm')[0].reset();
+                window.$('#insuranceItemsTable tbody').empty();
                 
                 // Load items từ quotation nếu có lỗi API
                 if (quotationData && quotationData.items && quotationData.items.length > 0) {
@@ -2714,7 +2980,7 @@ window.QuotationManagement = {
 
     // Populate insurance items table
     populateInsuranceItemsTable: function(items) {
-        var tbody = $('#insuranceItemsTable tbody');
+        var tbody = window.$('#insuranceItemsTable tbody');
         tbody.empty();
         
         if (items && items.length > 0) {

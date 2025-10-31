@@ -74,6 +74,17 @@
                         </p>
                     </a>
                 </li>
+
+                <!-- Bước 5: MR - Yêu Cầu Vật Tư -->
+                <li class="nav-item">
+                    <a href="@Url.Action("Index", "MaterialRequestManagement")" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "MaterialRequestManagement" ? "active" : "")">
+                        <i class="far fa-circle nav-icon text-purple"></i>
+                        <p>
+                            <span class="badge" style="background-color:#6f42c1; font-size: 11px; margin-right: 5px;">5</span>
+                            Yêu Cầu Vật Tư (MR)
+                        </p>
+                    </a>
+                </li>
                 
                 <!-- Lịch Hẹn (Có thể ở GĐ1 hoặc riêng) -->
                 <li class="nav-item">
