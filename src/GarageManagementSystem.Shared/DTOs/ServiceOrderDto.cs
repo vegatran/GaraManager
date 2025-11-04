@@ -19,6 +19,17 @@ namespace GarageManagementSystem.Shared.DTOs
         public decimal FinalAmount { get; set; }
         public string? PaymentStatus { get; set; }
         public int? ServiceQuotationId { get; set; } // ✅ THÊM: ID của báo giá gốc
+        
+        /// <summary>
+        /// ✅ 2.3.3: Liên kết đến ServiceOrder gốc (nếu là LSC Bổ sung từ phát sinh)
+        /// </summary>
+        public int? ParentServiceOrderId { get; set; }
+
+        /// <summary>
+        /// ✅ 2.3.3: Phân biệt JO gốc vs LSC Bổ sung
+        /// </summary>
+        public bool IsAdditionalOrder { get; set; } = false;
+        
         public List<ServiceOrderItemDto> ServiceOrderItems { get; set; } = new();
     }
 
@@ -32,6 +43,16 @@ namespace GarageManagementSystem.Shared.DTOs
 
         public int? ServiceQuotationId { get; set; }
         public int? CustomerReceptionId { get; set; }
+        
+        /// <summary>
+        /// ✅ 2.3.3: Liên kết đến ServiceOrder gốc (nếu là LSC Bổ sung từ phát sinh)
+        /// </summary>
+        public int? ParentServiceOrderId { get; set; }
+
+        /// <summary>
+        /// ✅ 2.3.3: Phân biệt JO gốc vs LSC Bổ sung
+        /// </summary>
+        public bool IsAdditionalOrder { get; set; } = false;
 
         public DateTime? ScheduledDate { get; set; }
 

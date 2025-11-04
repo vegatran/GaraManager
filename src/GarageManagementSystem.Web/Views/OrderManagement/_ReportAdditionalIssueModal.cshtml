@@ -1,0 +1,122 @@
+<!-- Report Additional Issue Modal -->
+<div class="modal fade" id="reportAdditionalIssueModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h4 class="modal-title">
+                    <i class="fas fa-exclamation-triangle"></i> Báo Cáo Phát Sinh
+                </h4>
+                <button type="button" class="close text-white" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <form id="reportAdditionalIssueForm" enctype="multipart/form-data">
+                <input type="hidden" id="reportIssueServiceOrderId" name="ServiceOrderId">
+                <input type="hidden" id="reportIssueId" name="Id">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="reportIssueServiceOrderItemId">
+                            Hạng Mục Bị Ảnh Hưởng <small class="text-muted">(Tùy chọn)</small>
+                        </label>
+                        <select class="form-control form-control-sm" id="reportIssueServiceOrderItemId" name="ServiceOrderItemId">
+                            <option value="">-- Không chọn (ảnh hưởng toàn bộ JO) --</option>
+                        </select>
+                        <small class="form-text text-muted">
+                            Nếu chọn, hạng mục đó sẽ tự động chuyển sang trạng thái "OnHold"
+                        </small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="reportIssueCategory">
+                            Danh Mục <span class="text-danger">*</span>
+                        </label>
+                        <select class="form-control form-control-sm" id="reportIssueCategory" name="Category" required>
+                            <option value="">-- Chọn danh mục --</option>
+                            <option value="Engine">Động Cơ</option>
+                            <option value="Brake">Phanh</option>
+                            <option value="Suspension">Hệ Thống Treo</option>
+                            <option value="Electrical">Hệ Thống Điện</option>
+                            <option value="Body">Thân Xe</option>
+                            <option value="Tire">Lốp Xe</option>
+                            <option value="Other">Khác</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="reportIssueName">
+                            Tên Phát Sinh <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" class="form-control form-control-sm" id="reportIssueName" name="IssueName" 
+                               placeholder="VD: Phát hiện rò rỉ dầu ở gioăng nắp máy" required maxlength="200">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="reportIssueDescription">
+                            Mô Tả Chi Tiết <span class="text-danger">*</span>
+                        </label>
+                        <textarea class="form-control form-control-sm" id="reportIssueDescription" name="Description" 
+                                  rows="4" placeholder="Mô tả chi tiết vấn đề phát hiện..." required maxlength="2000"></textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="reportIssueSeverity">
+                                    Mức Độ Nghiêm Trọng <span class="text-danger">*</span>
+                                </label>
+                                <select class="form-control form-control-sm" id="reportIssueSeverity" name="Severity" required>
+                                    <option value="Medium">Bình thường</option>
+                                    <option value="Low">Thấp</option>
+                                    <option value="High">Cao</option>
+                                    <option value="Critical">Khẩn cấp</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>&nbsp;</label>
+                                <div class="form-check mt-2">
+                                    <input class="form-check-input" type="checkbox" id="reportIssueRequiresImmediateAction" 
+                                           name="RequiresImmediateAction" value="true">
+                                    <label class="form-check-label" for="reportIssueRequiresImmediateAction">
+                                        Cần xử lý ngay
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="reportIssueTechnicianNotes">
+                            Ghi Chú KTV <small class="text-muted">(Tùy chọn)</small>
+                        </label>
+                        <textarea class="form-control form-control-sm" id="reportIssueTechnicianNotes" name="TechnicianNotes" 
+                                  rows="3" placeholder="Ghi chú kỹ thuật..." maxlength="1000"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="reportIssuePhotos">
+                            Hình Ảnh Minh Họa <small class="text-muted">(Tùy chọn, tối đa 5MB/ảnh)</small>
+                        </label>
+                        <input type="file" class="form-control-file form-control-sm" id="reportIssuePhotos" 
+                               name="photos" multiple accept="image/*">
+                        <small class="form-text text-muted">
+                            Hỗ trợ: JPG, JPEG, PNG, GIF, WEBP
+                        </small>
+                        <div id="reportIssuePhotosPreview" class="mt-2"></div>
+                        <div id="reportIssueExistingPhotos" class="mt-2"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">
+                        <i class="fas fa-times"></i> Hủy
+                    </button>
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <i class="fas fa-save"></i> Lưu
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+

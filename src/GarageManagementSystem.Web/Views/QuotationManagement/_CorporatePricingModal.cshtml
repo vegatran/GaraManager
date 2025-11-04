@@ -1,0 +1,159 @@
+<!-- Corporate Pricing Modal -->
+<div class="modal fade" id="corporatePricingModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">
+                    <i class="fas fa-building text-primary"></i> Cập Nhật Bảng Giá Duyệt Của Công Ty
+                </h4>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="corporatePricingForm">
+                    <input type="hidden" id="corporatePricingQuotationId">
+
+                    <!-- Quotation Info -->
+                    <div class="card card-outline card-info mb-3">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-info-circle"></i> Thông Tin Báo Giá
+                            </h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <label>Số Báo Giá:</label>
+                                    <p class="form-control-static" id="corporatePricingQuotationNumber"></p>
+                                </div>
+                                <div class="col-md-3">
+                                    <label>Khách Hàng:</label>
+                                    <p class="form-control-static" id="corporatePricingCustomerName"></p>
+                                </div>
+                                <div class="col-md-3">
+                                    <label>Thông Tin Xe:</label>
+                                    <p class="form-control-static" id="corporatePricingVehicleInfo"></p>
+                                </div>
+                                <div class="col-md-3">
+                                    <label>Tổng Tiền:</label>
+                                    <p class="form-control-static font-weight-bold text-primary" id="corporatePricingTotalAmount"></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Corporate Information -->
+                    <div class="card card-outline card-warning mb-3">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-building"></i> Thông Tin Công Ty
+                            </h3>
+                            <div class="card-tools">
+                                <button type="button" class="btn btn-tool" data-card-widget="collapse" data-toggle="tooltip" title="Collapse">
+                                    <i class="fas fa-minus"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        <label for="corporateCompanyName">Tên Công Ty <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control form-control-sm" id="corporateCompanyName" name="corporateCompanyName" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        <label for="corporateTaxCode">Mã Số Thuế</label>
+                                        <input type="text" class="form-control form-control-sm" id="corporateTaxCode" name="corporateTaxCode">
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        <label for="corporateContractNumber">Số Hợp Đồng</label>
+                                        <input type="text" class="form-control form-control-sm" id="corporateContractNumber" name="corporateContractNumber">
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        <label for="corporateApprovalDate">Ngày Duyệt</label>
+                                        <input type="date" class="form-control form-control-sm" id="corporateApprovalDate" name="corporateApprovalDate">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="corporateApprovedAmount">Số Tiền Được Duyệt (VNĐ)</label>
+                                        <input type="number" class="form-control form-control-sm" id="corporateApprovedAmount" name="corporateApprovedAmount" min="0" step="0.01">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="corporateCustomerCoPayment">Khách Hàng Tự Trả (VNĐ)</label>
+                                        <input type="number" class="form-control form-control-sm" id="corporateCustomerCoPayment" name="corporateCustomerCoPayment" min="0" step="0.01">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="form-group">
+                                        <label for="corporateApprovalNotes">Ghi Chú Duyệt</label>
+                                        <textarea class="form-control form-control-sm" id="corporateApprovalNotes" name="corporateApprovalNotes" rows="3"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Items Approval -->
+                    <div class="card card-outline card-primary mb-3">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-list"></i> Chi Tiết Duyệt Từng Dịch Vụ
+                            </h3>
+                            <div class="card-tools">
+                                <button type="button" class="btn btn-tool" data-card-widget="collapse" data-toggle="tooltip" title="Collapse">
+                                    <i class="fas fa-minus"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-striped" id="corporateItemsTable">
+                                    <thead class="thead-light">
+                                        <tr>
+                                            <th width="25%">Tên Dịch Vụ</th>
+                                            <th width="8%">Số Lượng</th>
+                                            <th width="15%">Giá Gốc (VNĐ)</th>
+                                            <th width="15%">Giá Được Duyệt (VNĐ)</th>
+                                            <th width="15%">Khách Tự Trả (VNĐ)</th>
+                                            <th width="8%">Được Duyệt</th>
+                                            <th width="14%">Ghi Chú</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- Items will be populated by JavaScript -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">
+                    <i class="fas fa-times"></i> Đóng
+                </button>
+                <button type="submit" form="corporatePricingForm" class="btn btn-success btn-sm">
+                    <i class="fas fa-save"></i> Lưu Bảng Giá Duyệt
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JS moved to quotation-management.js -->
+
+

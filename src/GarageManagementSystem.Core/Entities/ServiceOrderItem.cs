@@ -30,11 +30,17 @@ namespace GarageManagementSystem.Core.Entities
         public string? Notes { get; set; }
 
         [StringLength(20)]
-        public string? Status { get; set; } = "Pending"; // "Pending", "InProgress", "Completed", "Cancelled"
+        public string? Status { get; set; } = "Pending"; // "Pending", "InProgress", "Completed", "Cancelled", "OnHold", "WaitingForCustomerApproval"
 
         // ✅ THÊM: Phân công KTV và giờ công dự kiến cho item
         public int? AssignedTechnicianId { get; set; } // KTV được phân công cho item này
         public decimal? EstimatedHours { get; set; }   // Giờ công dự kiến cho item này
+        
+        // ✅ 2.3.1: Giờ công thực tế và thời gian bắt đầu/kết thúc
+        public DateTime? StartTime { get; set; } // Thời gian bắt đầu làm việc thực tế
+        public DateTime? EndTime { get; set; }   // Thời gian kết thúc làm việc thực tế
+        public decimal? ActualHours { get; set; } // Giờ công thực tế (tính từ StartTime và EndTime hoặc nhập thủ công)
+        public DateTime? CompletedTime { get; set; } // Thời gian hoàn thành item
 
         // Navigation properties
         public virtual ServiceOrder ServiceOrder { get; set; } = null!;

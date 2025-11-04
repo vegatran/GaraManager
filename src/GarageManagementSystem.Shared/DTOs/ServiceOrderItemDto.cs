@@ -18,6 +18,12 @@ namespace GarageManagementSystem.Shared.DTOs
         public int? AssignedTechnicianId { get; set; }
         public string? AssignedTechnicianName { get; set; }
         public decimal? EstimatedHours { get; set; }
+        
+        // ✅ 2.3.1: Giờ công thực tế và thời gian làm việc
+        public DateTime? StartTime { get; set; }
+        public DateTime? EndTime { get; set; }
+        public decimal? ActualHours { get; set; }
+        public DateTime? CompletedTime { get; set; }
     }
 
     public class CreateServiceOrderItemDto

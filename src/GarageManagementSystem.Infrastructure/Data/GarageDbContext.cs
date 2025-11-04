@@ -37,6 +37,10 @@ namespace GarageManagementSystem.Infrastructure.Data
         public DbSet<VehicleInspection> VehicleInspections { get; set; }
         public DbSet<InspectionIssue> InspectionIssues { get; set; }
         public DbSet<InspectionPhoto> InspectionPhotos { get; set; }
+        
+        // ✅ 2.3.2: Additional Issues (Phát sinh trong quá trình sửa chữa)
+        public DbSet<AdditionalIssue> AdditionalIssues { get; set; }
+        public DbSet<AdditionalIssuePhoto> AdditionalIssuePhotos { get; set; }
         public DbSet<ServiceQuotation> ServiceQuotations { get; set; }
         public DbSet<QuotationItem> QuotationItems { get; set; }
         public DbSet<QuotationAttachment> QuotationAttachments { get; set; }
@@ -343,6 +347,57 @@ namespace GarageManagementSystem.Infrastructure.Data
                     .WithMany()
                     .HasForeignKey(e => e.InspectionIssueId)
                     .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            // ✅ 2.3.2: AdditionalIssue configuration
+            modelBuilder.Entity<AdditionalIssue>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Category).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.IssueName).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.Description).IsRequired().HasMaxLength(2000);
+                entity.Property(e => e.Severity).HasMaxLength(20);
+                entity.Property(e => e.Status).HasMaxLength(20);
+                entity.Property(e => e.TechnicianNotes).HasMaxLength(1000);
+
+                entity.HasOne(e => e.ServiceOrder)
+                    .WithMany()
+                    .HasForeignKey(e => e.ServiceOrderId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.ServiceOrderItem)
+                    .WithMany()
+                    .HasForeignKey(e => e.ServiceOrderItemId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(e => e.ReportedByEmployee)
+                    .WithMany()
+                    .HasForeignKey(e => e.ReportedByEmployeeId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.AdditionalQuotation)
+                    .WithMany()
+                    .HasForeignKey(e => e.AdditionalQuotationId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(e => e.AdditionalServiceOrder)
+                    .WithMany()
+                    .HasForeignKey(e => e.AdditionalServiceOrderId)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            // ✅ 2.3.2: AdditionalIssuePhoto configuration
+            modelBuilder.Entity<AdditionalIssuePhoto>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.FilePath).IsRequired().HasMaxLength(500);
+                entity.Property(e => e.FileName).HasMaxLength(200);
+                entity.Property(e => e.Description).HasMaxLength(500);
+
+                entity.HasOne(e => e.AdditionalIssue)
+                    .WithMany()
+                    .HasForeignKey(e => e.AdditionalIssueId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
 
             // ServiceQuotation configuration
@@ -885,6 +940,12 @@ namespace GarageManagementSystem.Infrastructure.Data
                 entity.Property(e => e.CustomerNotes).HasColumnType("TEXT");
                 entity.Property(e => e.RejectionReason).HasColumnType("TEXT");
                 entity.Property(e => e.Notes).HasColumnType("TEXT");
+                
+                // ✅ 2.3.3: Configure relationship to parent ServiceOrder (for additional quotations)
+                entity.HasOne(e => e.RelatedToServiceOrder)
+                    .WithMany()
+                    .HasForeignKey(e => e.RelatedToServiceOrderId)
+                    .OnDelete(DeleteBehavior.SetNull);
             });
 
             // ServiceOrder Configuration - Use TEXT for long fields
@@ -892,6 +953,12 @@ namespace GarageManagementSystem.Infrastructure.Data
             {
                 entity.Property(e => e.Notes).HasColumnType("TEXT");
                 entity.Property(e => e.Description).HasColumnType("TEXT");
+                
+                // ✅ 2.3.3: Configure self-referencing relationship (Parent -> Additional Orders)
+                entity.HasOne(e => e.ParentServiceOrder)
+                    .WithMany(so => so.AdditionalServiceOrders)
+                    .HasForeignKey(e => e.ParentServiceOrderId)
+                    .OnDelete(DeleteBehavior.Restrict); // Prevent cascade delete
             });
 
             // InvoiceItem Configuration - Use TEXT for long fields

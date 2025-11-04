@@ -1,0 +1,170 @@
+<!-- Edit Purchase Order Modal -->
+<div class="modal fade" id="editPurchaseOrderModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h4 class="modal-title">
+                    <i class="fas fa-edit"></i> Chỉnh Sửa Phiếu Nhập Hàng
+                </h4>
+                <button type="button" class="close text-white" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <form id="editPurchaseOrderForm">
+                <input type="hidden" id="editPurchaseOrderId" name="id">
+                <div class="modal-body">
+                    <!-- Supplier Information Card -->
+                    <div class="card card-outline card-primary">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-building"></i> Thông Tin Nhà Cung Cấp
+                            </h3>
+                            <div class="card-tools">
+                                <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                                    <i class="fas fa-minus"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="editSupplierId">
+                                            Nhà Cung Cấp <span class="text-danger" style="color: #dc3545 !important; font-weight: bold !important;">*</span>
+                                        </label>
+                                        <select class="form-control form-control-sm" id="editSupplierId" name="supplierId" required>
+                                            <option value="">-- Chọn Nhà Cung Cấp --</option>
+                                        </select>
+                                        <span class="text-danger" id="editSupplierId-error"></span>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="editOrderDate">
+                                            Ngày Đặt Hàng <span class="text-danger" style="color: #dc3545 !important; font-weight: bold !important;">*</span>
+                                        </label>
+                                        <input type="date" class="form-control form-control-sm" id="editOrderDate" name="orderDate" required>
+                                        <span class="text-danger" id="editOrderDate-error"></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="editExpectedDeliveryDate">Ngày Giao Dự Kiến</label>
+                                        <input type="date" class="form-control form-control-sm" id="editExpectedDeliveryDate" name="expectedDeliveryDate">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="editPaymentTerms">Điều Khoản Thanh Toán</label>
+                                        <input type="text" class="form-control form-control-sm" id="editPaymentTerms" name="paymentTerms" placeholder="VD: Thanh toán trong 30 ngày">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="form-group">
+                                        <label for="editDeliveryAddress">Địa Chỉ Giao Hàng</label>
+                                        <textarea class="form-control form-control-sm" id="editDeliveryAddress" name="deliveryAddress" rows="2" placeholder="Nhập địa chỉ giao hàng..."></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Purchase Order Items Card -->
+                    <div class="card card-outline card-success">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-list"></i> Danh Sách Phụ Tùng
+                            </h3>
+                            <div class="card-tools">
+                                <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                                    <i class="fas fa-minus"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="row mb-2">
+                                <div class="col-md-12">
+                                    <button type="button" class="btn btn-success btn-sm" id="addEditPurchaseOrderItemBtn">
+                                        <i class="fas fa-plus"></i> Thêm Phụ Tùng
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-sm" id="editPurchaseOrderItemsTable">
+                                    <thead class="bg-light">
+                                        <tr>
+                                            <th style="width: 5%">#</th>
+                                            <th style="width: 25%">Phụ Tùng <span class="text-danger">*</span></th>
+                                            <th style="width: 12%">Số Lượng <span class="text-danger">*</span></th>
+                                            <th style="width: 12%">Đơn Giá (VNĐ) <span class="text-danger">*</span></th>
+                                            <th style="width: 10%">VAT (%)</th>
+                                            <th style="width: 15%">Thành Tiền (VNĐ)</th>
+                                            <th style="width: 8%">Ghi Chú</th>
+                                            <th style="width: 5%">Xóa</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="editPurchaseOrderItemsBody">
+                                        <tr>
+                                            <td colspan="8" class="text-center text-muted">
+                                                <i class="fas fa-info-circle"></i> Chưa có phụ tùng nào. Nhấn "Thêm Phụ Tùng" để bắt đầu.
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                    <tfoot>
+                                        <tr class="bg-light">
+                                            <td colspan="5" class="text-right">Tạm Tính:</td>
+                                            <td id="editSubTotalAmount">0 VNĐ</td>
+                                            <td colspan="2"></td>
+                                        </tr>
+                                        <tr class="bg-light">
+                                            <td colspan="5" class="text-right">Tổng Thuế VAT:</td>
+                                            <td id="editVatAmount">0 VNĐ</td>
+                                            <td colspan="2"></td>
+                                        </tr>
+                                        <tr class="bg-light font-weight-bold">
+                                            <td colspan="5" class="text-right">TỔNG CỘNG:</td>
+                                            <td id="editTotalAmount">0 VNĐ</td>
+                                            <td colspan="2"></td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Notes Card -->
+                    <div class="card card-outline card-secondary">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-sticky-note"></i> Ghi Chú & Điều Khoản
+                            </h3>
+                            <div class="card-tools">
+                                <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                                    <i class="fas fa-minus"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label for="editNotes">Ghi Chú</label>
+                                <textarea class="form-control form-control-sm" id="editNotes" name="notes" rows="3" placeholder="Nhập ghi chú cho phiếu nhập hàng..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">
+                        <i class="fas fa-times"></i> Hủy
+                    </button>
+                    <button type="submit" class="btn btn-warning btn-sm">
+                        <i class="fas fa-save"></i> Cập Nhật Phiếu Nhập
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

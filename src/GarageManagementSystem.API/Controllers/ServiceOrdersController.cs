@@ -618,6 +618,12 @@ namespace GarageManagementSystem.API.Controllers
                         {
                             itemDto.AssignedTechnicianId = item.AssignedTechnicianId;
                         }
+                        
+                        // ✅ 2.3.1: Map StartTime, EndTime, ActualHours, CompletedTime
+                        itemDto.StartTime = item.StartTime;
+                        itemDto.EndTime = item.EndTime;
+                        itemDto.ActualHours = item.ActualHours;
+                        itemDto.CompletedTime = item.CompletedTime;
                     }
                 }
             }
@@ -1293,6 +1299,319 @@ namespace GarageManagementSystem.API.Controllers
             catch (Exception ex)
             {
                 return StatusCode(500, ApiResponse<ServiceOrderDto>.ErrorResult("Lỗi khi cập nhật giờ công", ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// ✅ 2.3.1: KTV bắt đầu làm việc cho một item
+        /// </summary>
+        [HttpPost("{id}/items/{itemId}/start-work")]
+        public async Task<ActionResult<ApiResponse<ServiceOrderDto>>> StartItemWork(int id, int itemId)
+        {
+            try
+            {
+                var order = await _unitOfWork.ServiceOrders.GetByIdWithDetailsAsync(id);
+                if (order == null)
+                {
+                    return NotFound(ApiResponse<ServiceOrderDto>.ErrorResult("Không tìm thấy phiếu sửa chữa"));
+                }
+
+                var item = order.ServiceOrderItems.FirstOrDefault(i => i.Id == itemId);
+                if (item == null)
+                {
+                    return NotFound(ApiResponse<ServiceOrderDto>.ErrorResult("Không tìm thấy hạng mục"));
+                }
+
+                // Validate: Item phải có KTV được phân công và ở trạng thái Pending hoặc ReadyToWork
+                if (!item.AssignedTechnicianId.HasValue)
+                {
+                    return BadRequest(ApiResponse<ServiceOrderDto>.ErrorResult("Hạng mục chưa được phân công KTV"));
+                }
+
+                // ✅ SỬA: Cho phép bắt đầu lại nếu đã dừng (status = Pending nhưng có StartTime và ActualHours)
+                if (item.Status != "Pending" && item.Status != "ReadyToWork" && item.Status != "Ready To Work")
+                {
+                    return BadRequest(ApiResponse<ServiceOrderDto>.ErrorResult($"Không thể bắt đầu. Trạng thái hiện tại: {item.Status}"));
+                }
+                
+                // ✅ Nếu đã có StartTime (đã làm trước đó), reset StartTime để bắt đầu lại từ đầu
+                // Nhưng giữ ActualHours đã tính (cộng dồn)
+
+                // Validate: KTV hiện tại có phải là KTV được phân công không (nếu có thông tin user)
+                var currentUserId = User.FindFirst("sub")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                if (!string.IsNullOrEmpty(currentUserId) && int.TryParse(currentUserId, out var userId))
+                {
+                    if (item.AssignedTechnicianId.Value != userId)
+                    {
+                        // Cho phép nếu user là Quản đốc/Tổ trưởng hoặc Admin
+                        var currentEmployee = await _unitOfWork.Employees.GetByIdAsync(userId);
+                        if (currentEmployee != null)
+                        {
+                            var position = (currentEmployee.Position ?? "").ToLower();
+                            var isAuthorized = position.Contains("quản đốc") || position.Contains("tổ trưởng") || 
+                                              position.Contains("quản lý") || position.Contains("manager") ||
+                                              position.Contains("supervisor") || position.Contains("admin");
+                            
+                            if (!isAuthorized)
+                            {
+                                return Forbid("Chỉ KTV được phân công mới có thể bắt đầu làm việc");
+                            }
+                        }
+                    }
+                }
+
+                await _unitOfWork.BeginTransactionAsync();
+                try
+                {
+                    // ✅ SỬA: Set StartTime mới (có thể đã có StartTime cũ từ lần làm trước)
+                    // Reset EndTime về null khi bắt đầu lại
+                    item.StartTime = DateTime.Now;
+                    item.EndTime = null; // Reset EndTime khi bắt đầu lại
+                    item.Status = "InProgress";
+                    item.UpdatedAt = DateTime.Now;
+
+                    await _unitOfWork.Repository<Core.Entities.ServiceOrderItem>().UpdateAsync(item);
+                    await _unitOfWork.SaveChangesAsync();
+
+                    // ✅ Nếu đây là item đầu tiên bắt đầu, cập nhật ServiceOrder.StartDate
+                    if (!order.StartDate.HasValue)
+                    {
+                        order.StartDate = DateTime.Now;
+                        if (order.Status == "ReadyToWork")
+                        {
+                            order.Status = "InProgress";
+                        }
+                        await _unitOfWork.ServiceOrders.UpdateAsync(order);
+                        await _unitOfWork.SaveChangesAsync();
+                    }
+
+                    await _unitOfWork.CommitTransactionAsync();
+
+                    // Reload with details
+                    order = await _unitOfWork.ServiceOrders.GetByIdWithDetailsAsync(id);
+                    var orderDto = MapToDto(order!);
+
+                    return Ok(ApiResponse<ServiceOrderDto>.SuccessResult(orderDto, "Đã bắt đầu làm việc"));
+                }
+                catch (Exception innerEx)
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    throw;
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<ServiceOrderDto>.ErrorResult("Lỗi khi bắt đầu làm việc", ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// ✅ 2.3.1: KTV dừng/tạm dừng làm việc cho một item (chưa hoàn thành)
+        /// </summary>
+        [HttpPost("{id}/items/{itemId}/stop-work")]
+        public async Task<ActionResult<ApiResponse<ServiceOrderDto>>> StopItemWork(int id, int itemId, [FromBody] decimal? actualHours = null)
+        {
+            try
+            {
+                var order = await _unitOfWork.ServiceOrders.GetByIdWithDetailsAsync(id);
+                if (order == null)
+                {
+                    return NotFound(ApiResponse<ServiceOrderDto>.ErrorResult("Không tìm thấy phiếu sửa chữa"));
+                }
+
+                var item = order.ServiceOrderItems.FirstOrDefault(i => i.Id == itemId);
+                if (item == null)
+                {
+                    return NotFound(ApiResponse<ServiceOrderDto>.ErrorResult("Không tìm thấy hạng mục"));
+                }
+
+                if (item.Status != "InProgress")
+                {
+                    return BadRequest(ApiResponse<ServiceOrderDto>.ErrorResult($"Chỉ có thể dừng khi đang làm việc. Trạng thái hiện tại: {item.Status}"));
+                }
+
+                if (!item.StartTime.HasValue)
+                {
+                    return BadRequest(ApiResponse<ServiceOrderDto>.ErrorResult("Hạng mục chưa bắt đầu làm việc"));
+                }
+
+                await _unitOfWork.BeginTransactionAsync();
+                try
+                {
+                    item.EndTime = DateTime.Now;
+                    
+                    // Tính ActualHours từ StartTime và EndTime nếu không được cung cấp
+                    if (actualHours.HasValue)
+                    {
+                        item.ActualHours = actualHours.Value;
+                    }
+                    else if (item.StartTime.HasValue && item.EndTime.HasValue)
+                    {
+                        var timeSpan = item.EndTime.Value - item.StartTime.Value;
+                        // ✅ SỬA: Cộng dồn ActualHours nếu đã có giờ công trước đó
+                        var newActualHours = (decimal)timeSpan.TotalHours;
+                        item.ActualHours = (item.ActualHours ?? 0) + newActualHours;
+                    }
+
+                    // ✅ SỬA: Khi dừng làm việc, chuyển status về "Pending" để có thể bắt đầu lại sau
+                    // Giữ StartTime (không reset) và ActualHours đã tính để KTV có thể tiếp tục công việc
+                    // StartTime sẽ được reset khi "Tiếp tục" (StartItemWork)
+                    item.Status = "Pending";
+                    // KHÔNG reset StartTime khi dừng - giữ nguyên để có thể tính ActualHours từ StartTime đến EndTime
+                    
+                    item.UpdatedAt = DateTime.Now;
+
+                    await _unitOfWork.Repository<Core.Entities.ServiceOrderItem>().UpdateAsync(item);
+                    await _unitOfWork.SaveChangesAsync();
+                    await _unitOfWork.CommitTransactionAsync();
+
+                    // Reload with details
+                    order = await _unitOfWork.ServiceOrders.GetByIdWithDetailsAsync(id);
+                    var orderDto = MapToDto(order!);
+
+                    return Ok(ApiResponse<ServiceOrderDto>.SuccessResult(orderDto, "Đã dừng làm việc"));
+                }
+                catch (Exception innerEx)
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    throw;
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<ServiceOrderDto>.ErrorResult("Lỗi khi dừng làm việc", ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// ✅ 2.3.1 và 2.3.4: KTV hoàn thành một item
+        /// </summary>
+        [HttpPost("{id}/items/{itemId}/complete")]
+        public async Task<ActionResult<ApiResponse<ServiceOrderDto>>> CompleteItem(
+            int id, int itemId, [FromBody] decimal? actualHours = null)
+        {
+            try
+            {
+                var order = await _unitOfWork.ServiceOrders.GetByIdWithDetailsAsync(id);
+                if (order == null)
+                {
+                    return NotFound(ApiResponse<ServiceOrderDto>.ErrorResult("Không tìm thấy phiếu sửa chữa"));
+                }
+
+                var item = order.ServiceOrderItems.FirstOrDefault(i => i.Id == itemId);
+                if (item == null)
+                {
+                    return NotFound(ApiResponse<ServiceOrderDto>.ErrorResult("Không tìm thấy hạng mục"));
+                }
+
+                if (item.Status == "Completed")
+                {
+                    return BadRequest(ApiResponse<ServiceOrderDto>.ErrorResult("Hạng mục đã hoàn thành"));
+                }
+
+                if (item.Status != "InProgress" && item.Status != "Pending")
+                {
+                    return BadRequest(ApiResponse<ServiceOrderDto>.ErrorResult($"Không thể hoàn thành. Trạng thái hiện tại: {item.Status}"));
+                }
+
+                await _unitOfWork.BeginTransactionAsync();
+                try
+                {
+                    var now = DateTime.Now;
+                    
+                    // ✅ Logic tính ActualHours khi hoàn thành (đảm bảo cộng dồn đúng)
+                    var currentActualHours = item.ActualHours ?? 0; // Giữ lại ActualHours đã có (từ lần dừng trước)
+                    
+                    if (actualHours.HasValue)
+                    {
+                        // Case 1: Có actualHours từ input → dùng giá trị đó (tổng cuối cùng, không cộng dồn)
+                        item.ActualHours = actualHours.Value;
+                    }
+                    else if (item.Status == "InProgress" && item.StartTime.HasValue)
+                    {
+                        // Case 2: Đang làm việc (InProgress) → Tính từ StartTime hiện tại đến now và cộng dồn
+                        var timeSpan = now - item.StartTime.Value;
+                        var newActualHours = (decimal)timeSpan.TotalHours;
+                        item.ActualHours = currentActualHours + newActualHours; // Cộng dồn
+                    }
+                    else if (item.Status == "Pending" && item.EndTime.HasValue)
+                    {
+                        // Case 3: Đã dừng (Pending) và có EndTime
+                        // ActualHours đã được tính ở lần dừng trước (EndTime - StartTime) và cộng dồn
+                        // Theo nghiệp vụ: Nếu hoàn thành từ trạng thái "Pending" (đã dừng), 
+                        // thì không có thời gian làm việc thêm từ EndTime đến now
+                        // → Giữ nguyên ActualHours đã có (không cần tính thêm)
+                        // item.ActualHours = currentActualHours; // Không cần gán lại
+                    }
+                    else if (item.Status == "Pending" && !item.EndTime.HasValue && item.StartTime.HasValue)
+                    {
+                        // Case 4: Status = Pending nhưng không có EndTime
+                        // Có thể xảy ra nếu:
+                        // - Item chưa bao giờ dừng (trường hợp này không nên xảy ra vì status = Pending)
+                        // - Item đã dừng và tiếp tục (StartTime đã reset, EndTime = null)
+                        // → Tính từ StartTime hiện tại đến now và cộng dồn
+                        var timeSpan = now - item.StartTime.Value;
+                        var newActualHours = (decimal)timeSpan.TotalHours;
+                        item.ActualHours = currentActualHours + newActualHours;
+                    }
+                    else if (!item.StartTime.HasValue && !item.ActualHours.HasValue && item.EstimatedHours.HasValue)
+                    {
+                        // Case 5: Chưa bao giờ bắt đầu → Fallback: dùng EstimatedHours
+                        item.ActualHours = item.EstimatedHours.Value;
+                    }
+                    else if (item.ActualHours.HasValue)
+                    {
+                        // Case 6: Đã có ActualHours (từ lần dừng trước), giữ nguyên
+                        // item.ActualHours = item.ActualHours; // Không cần gán lại
+                    }
+                    else
+                    {
+                        // Case 7: Không có gì cả → set = 0
+                        item.ActualHours = 0;
+                    }
+                    
+                    // ✅ Set StartTime nếu chưa có (để có thông tin đầy đủ)
+                    if (!item.StartTime.HasValue)
+                    {
+                        item.StartTime = now;
+                    }
+
+                    item.EndTime = now;
+                    item.CompletedTime = now;
+                    item.Status = "Completed";
+
+                    item.UpdatedAt = now;
+
+                    await _unitOfWork.Repository<Core.Entities.ServiceOrderItem>().UpdateAsync(item);
+                    await _unitOfWork.SaveChangesAsync();
+
+                    // ✅ Kiểm tra: Nếu tất cả items đã hoàn thành, tự động cập nhật ServiceOrder status
+                    var allItemsCompleted = order.ServiceOrderItems.All(i => i.Status == "Completed" || i.Status == "Cancelled");
+                    if (allItemsCompleted && order.Status != "Completed")
+                    {
+                        order.Status = "Completed";
+                        order.CompletedDate = now;
+                        await _unitOfWork.ServiceOrders.UpdateAsync(order);
+                        await _unitOfWork.SaveChangesAsync();
+                    }
+
+                    await _unitOfWork.CommitTransactionAsync();
+
+                    // Reload with details
+                    order = await _unitOfWork.ServiceOrders.GetByIdWithDetailsAsync(id);
+                    var orderDto = MapToDto(order!);
+
+                    return Ok(ApiResponse<ServiceOrderDto>.SuccessResult(orderDto, "Đã hoàn thành hạng mục"));
+                }
+                catch (Exception innerEx)
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    throw;
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<ServiceOrderDto>.ErrorResult("Lỗi khi hoàn thành hạng mục", ex.Message));
             }
         }
     }

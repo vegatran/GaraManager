@@ -10,6 +10,8 @@ namespace GarageManagementSystem.Shared.DTOs
         public int Duration { get; set; }
         public string? Category { get; set; }
         public bool IsActive { get; set; }
+        public int VATRate { get; set; } = 0; // ✅ THÊM: VAT rate từ Service entity
+        public bool IsVATApplicable { get; set; } = false; // ✅ THÊM: VAT applicability từ Service entity
     }
 
     public class CreateServiceDto

@@ -19,6 +19,13 @@
       - [2.1: Lập Kế Hoạch & Phân Công](#21-lập-kế-hoạch--phân-công)
         - [2.1.1: Chuyển JO sang "Chờ Phân công"](#211-chuyển-jo-sang-chờ-phân-công)
         - [2.1.2: Phân công KTV & Thời gian](#212-phân-công-ktv--thời-gian)
+      - [2.2: Yêu Cầu Vật Tư (MR)](#22-yêu-cầu-vật-tư-material-request---mr)
+      - [2.3: Quản Lý Tiến Độ & Phát Sinh](#23-quản-lý-tiến-độ--phát-sinh)
+        - [2.3.1: Bắt đầu Công việc](#231-bắt-đầu-công-việc)
+        - [2.3.2: Phát hiện Phát sinh](#232-phát-hiện-phát-sinh)
+        - [2.3.3: Báo giá Phát sinh](#233-báo-giá-phát-sinh)
+          - [2.3.3.1: Duyệt Báo Giá Phát Sinh & Tạo LSC Bổ Sung](#2331-duyệt-báo-giá-phát-sinh--tạo-lsc-bổ-sung)
+        - [2.3.4: Cập nhật Tiến độ](#234-cập-nhật-tiến-độ)
 14. [Troubleshooting](#troubleshooting)
 
 ---
@@ -3338,6 +3345,318 @@ Khi chọn KTV, dropdown hiển thị:
 **Workload không hiển thị:**
 - ✅ Kiểm tra API endpoint `/api/employees/{id}/workload` có hoạt động không?
 - ✅ Workload chỉ hiển thị khi có dữ liệu phân công
+
+---
+
+## 2.3. QUẢN LÝ TIẾN ĐỘ & PHÁT SINH
+
+### **📍 Vị trí trong hệ thống:**
+
+**Menu Navigation:**
+```
+Sidebar Menu
+└── Quy Trình Nghiệp Vụ
+    └── GIAI ĐOẠN 2: Sửa Chữa & Thanh Toán
+        ├── 4. Phiếu Sửa Chữa (JO)
+        └── Tab "Phát Sinh" trong Chi Tiết Phiếu Sửa Chữa ⬅️ **GIAI ĐOẠN 2.3 NẰM ĐÂY**
+```
+
+**URL/Route:**
+- Controller: `OrderManagement`
+- Action: `Index` → Click "Xem" → Tab "Phát Sinh"
+- URL: `/OrderManagement` → Modal "Chi Tiết Phiếu Sửa Chữa" → Tab "Phát Sinh"
+
+---
+
+### **🎯 Tổng quan quy trình:**
+
+**Giai đoạn 2.3** bao gồm 4 phần chính:
+1. **2.3.1: Bắt đầu Công việc** - KTV bắt đầu làm việc theo từng item
+2. **2.3.2: Phát hiện Phát sinh** - KTV báo cáo vấn đề phát hiện ngoài JO ban đầu
+3. **2.3.3: Báo giá Phát sinh** - CVDV lập báo giá bổ sung cho phát sinh
+4. **2.3.4: Cập nhật Tiến độ** - KTV cập nhật tiến độ công việc theo từng mốc
+
+**Workflow tổng thể:**
+```
+KTV bắt đầu làm việc (2.3.1)
+    ↓
+Phát hiện phát sinh (2.3.2)
+    ↓
+CVDV tạo báo giá bổ sung (2.3.3)
+    ↓
+Khách hàng duyệt → Tạo LSC Bổ sung
+    ↓
+Xuất kho vật tư cho phát sinh (quay lại 2.2)
+    ↓
+KTV tiếp tục sửa chữa
+    ↓
+Cập nhật tiến độ và hoàn thành (2.3.4)
+```
+
+---
+
+## 2.3.1. BẮT ĐẦU CÔNG VIỆC
+
+### **Mục đích:**
+KTV bắt đầu làm việc trên từng hạng mục (ServiceOrderItem) và hệ thống tự động ghi nhận thời gian thực tế.
+
+### **Yêu cầu:**
+- ✅ KTV phải được phân công cho hạng mục đó (`AssignedTechnicianId`)
+- ✅ ServiceOrder phải ở trạng thái `PendingAssignment`, `ReadyToWork`, hoặc `InProgress`
+- ✅ Hạng mục phải ở trạng thái `Pending` hoặc `InProgress`
+
+### **Các bước thực hiện:**
+
+#### **Bước 1: Mở Chi Tiết Phiếu Sửa Chữa**
+1. Vào trang **"Quản Lý Phiếu Sửa Chữa"**
+2. Click nút **"Xem"** (icon mắt) của ServiceOrder cần làm việc
+3. Modal **"Chi Tiết Phiếu Sửa Chữa"** hiện ra
+4. Click tab **"Chi Tiết Dịch Vụ"**
+
+#### **Bước 2: Bắt đầu làm việc**
+Trong bảng "Chi Tiết Dịch Vụ", mỗi hạng mục có:
+- **Trạng Thái**: Hiển thị badge màu (Pending, InProgress, Completed)
+- **Giờ Công Thực Tế**: Hiển thị số giờ đã làm (nếu có)
+- **Thao Tác**: Các nút điều khiển
+
+**Để bắt đầu làm việc:**
+1. Tìm hạng mục có trạng thái **"Chờ" (Pending)**
+2. Click nút **"Bắt đầu"** (màu xanh lá) trong cột "Thao Tác"
+3. Hệ thống sẽ:
+   - Ghi nhận `StartTime` = thời gian hiện tại
+   - Chuyển trạng thái sang **"Đang làm" (InProgress)**
+   - Nếu là item đầu tiên bắt đầu → Tự động chuyển ServiceOrder sang `InProgress`
+
+#### **Bước 3: Dừng làm việc (tùy chọn)**
+Nếu cần tạm dừng:
+1. Click nút **"Dừng"** (màu vàng) trên hạng mục đang làm
+2. Hệ thống sẽ:
+   - Ghi nhận `EndTime` = thời gian hiện tại
+   - Tính `ActualHours` từ `StartTime` đến `EndTime`
+   - **Cộng dồn** vào `ActualHours` hiện có (nếu đã dừng trước đó)
+   - Chuyển trạng thái sang **"Chờ" (Pending)**
+
+#### **Bước 4: Hoàn thành hạng mục**
+Khi hoàn thành công việc:
+1. Click nút **"Hoàn thành"** (màu xanh dương) trên hạng mục đang làm
+2. Hệ thống sẽ:
+   - Ghi nhận `EndTime` và `CompletedTime` = thời gian hiện tại
+   - Tính `ActualHours` (cộng dồn nếu đã dừng trước đó)
+   - Chuyển trạng thái sang **"Hoàn thành" (Completed)**
+   - Nếu tất cả items đã hoàn thành → Tự động chuyển ServiceOrder sang `Completed`
+
+---
+
+## 2.3.2. PHÁT HIỆN PHÁT SINH
+
+### **Mục đích:**
+KTV báo cáo các vấn đề phát hiện trong quá trình sửa chữa ngoài JO ban đầu. Khi có phát sinh, hệ thống tự động chuyển hạng mục liên quan sang trạng thái **"OnHold"**.
+
+### **Yêu cầu:**
+- ✅ KTV phải được phân công cho ServiceOrder hoặc hạng mục đó
+- ✅ ServiceOrder phải ở trạng thái `ReadyToWork` hoặc `InProgress`
+
+### **Các bước thực hiện:**
+
+#### **Bước 1: Mở tab Phát Sinh**
+1. Vào trang **"Quản Lý Phiếu Sửa Chữa"**
+2. Click nút **"Xem"** của ServiceOrder
+3. Trong modal **"Chi Tiết Phiếu Sửa Chữa"**, click tab **"Phát Sinh"**
+
+#### **Bước 2: Báo cáo phát sinh mới**
+1. Click nút **"Báo Cáo Phát Sinh"** (màu vàng)
+2. Modal **"Báo Cáo Phát Sinh"** hiện ra
+3. Điền thông tin:
+   - **Hạng mục bị ảnh hưởng** (optional):
+     - Chọn từ dropdown (nếu có)
+     - Nếu không chọn: Phát sinh ảnh hưởng toàn bộ ServiceOrder
+     - Nếu chọn: Hạng mục đó sẽ tự động chuyển sang **"OnHold"**
+   - **Danh mục** (required): Engine, Brake, Suspension, Electrical, Body, Tire, Other
+   - **Tên phát sinh** (required): VD: "Phát hiện rò rỉ dầu ở gioăng nắp máy"
+   - **Mô tả chi tiết** (required): Mô tả đầy đủ vấn đề
+   - **Mức độ nghiêm trọng**: Critical, High, Medium, Low
+   - **Cần xử lý ngay**: Checkbox nếu khẩn cấp
+   - **Ghi chú KTV**: Ghi chú kỹ thuật (optional)
+   - **Hình ảnh**: Upload nhiều ảnh minh họa (optional, max 5MB/ảnh)
+4. Click **"Lưu"** để báo cáo
+
+#### **Bước 3: Xem danh sách phát sinh**
+Sau khi lưu, danh sách phát sinh sẽ hiển thị trong tab "Phát Sinh" với:
+- **Tên phát sinh**
+- **Danh mục**
+- **Mức độ** (badge màu)
+- **Trạng thái**: 
+  - 🟦 **Mới phát hiện** (Identified)
+  - 🟨 **Đã báo giá** (Quoted)
+  - 🟩 **Đã duyệt** (Approved)
+  - 🟥 **Từ chối** (Rejected)
+  - ✅ **Đã sửa** (Repaired)
+- **Ngày báo cáo**
+- **KTV báo cáo**
+- **Hình ảnh** (nếu có)
+- **Thao tác**: Xem chi tiết, Tạo Báo Giá (nếu chưa có), Sửa, Xóa
+
+#### **Tác động khi báo cáo phát sinh:**
+- ✅ Nếu chọn **hạng mục bị ảnh hưởng**: Hạng mục đó tự động chuyển sang **"OnHold"**
+- ✅ Ghi chú của hạng mục được cập nhật: `"Phát sinh: [Tên phát sinh]. Dừng công việc chờ khách hàng duyệt."`
+- ✅ KTV không thể tiếp tục làm việc trên hạng mục đó cho đến khi phát sinh được giải quyết
+
+---
+
+## 2.3.3. BÁO GIÁ PHÁT SINH
+
+### **Mục đích:**
+CVDV (Cố vấn Dịch vụ) lập báo giá bổ sung cho phát sinh và liên hệ khách hàng để xin duyệt.
+
+### **Yêu cầu:**
+- ✅ Phát sinh phải ở trạng thái `Identified` hoặc `Reported`
+- ✅ Chưa có báo giá bổ sung cho phát sinh đó (`AdditionalQuotationId` = null)
+
+### **Các bước thực hiện:**
+
+#### **Bước 1: Mở tab Phát Sinh**
+1. Vào trang **"Quản Lý Phiếu Sửa Chữa"**
+2. Click **"Xem"** của ServiceOrder có phát sinh
+3. Click tab **"Phát Sinh"**
+
+#### **Bước 2: Tạo báo giá bổ sung**
+1. Tìm phát sinh có trạng thái **"Mới phát hiện"** hoặc **"Đã báo cáo"**
+2. Click nút **"Tạo Báo Giá"** (màu xanh lá, icon file-invoice-dollar)
+3. Modal **"Tạo Báo Giá Bổ Sung Từ Phát Sinh"** hiện ra
+
+#### **Bước 3: Điền thông tin báo giá**
+Modal hiển thị:
+- **Thông tin phát sinh**: Tên, danh mục, mô tả (read-only)
+- **Ngày hết hạn**: Chọn ngày hết hạn báo giá (mặc định: 7 ngày)
+- **Giảm giá**: Nhập số tiền giảm giá (nếu có)
+- **Mô tả**: Mô tả về báo giá bổ sung
+- **Điều khoản**: Điều khoản và điều kiện
+- **Ghi chú khách hàng**: Ghi chú cho khách hàng
+
+#### **Bước 4: Thêm chi tiết báo giá**
+1. Click **"Thêm Item"** để thêm dịch vụ/phụ tùng vào báo giá
+2. Điền thông tin cho mỗi item:
+   - **Tên dịch vụ/phụ tùng**: Nhập tên
+   - **Mô tả**: Mô tả chi tiết (optional)
+   - **Số lượng**: Nhập số lượng (mặc định: 1)
+   - **Đơn giá**: Nhập đơn giá
+   - **Có HĐ**: Checkbox nếu có hóa đơn
+   - **VAT %**: Nhập % VAT (mặc định: 10%)
+   - **Tạm tính**: Tự động tính = Số lượng × Đơn giá
+   - **VAT**: Tự động tính = Tạm tính × VAT% (nếu có HĐ)
+   - **Thành tiền**: Tự động tính = Tạm tính + VAT
+3. Click **"Xóa"** để xóa item không cần thiết
+
+#### **Bước 5: Xem tổng kết**
+Hệ thống tự động tính:
+- **Tạm tính**: Tổng của tất cả "Tạm tính"
+- **VAT**: Tổng của tất cả "VAT"
+- **Giảm giá**: Số tiền giảm giá đã nhập
+- **Tổng cộng**: Tạm tính + VAT - Giảm giá
+
+#### **Bước 6: Lưu báo giá**
+1. Kiểm tra lại thông tin
+2. Click **"Tạo Báo Giá"**
+3. Hệ thống sẽ:
+   - Tạo `ServiceQuotation` mới với:
+     - `IsAdditionalQuotation = true`
+     - `RelatedToServiceOrderId` = ServiceOrder gốc
+   - Cập nhật `AdditionalIssue`:
+     - `AdditionalQuotationId` = ID báo giá vừa tạo
+     - `Status = "Quoted"`
+   - Chuyển hướng đến trang **"Quản Lý Báo Giá"** để xem và gửi cho khách hàng
+
+#### **Bước 7: Gửi báo giá cho khách hàng**
+Sau khi tạo báo giá:
+1. Vào trang **"Quản Lý Báo Giá"**
+2. Tìm báo giá vừa tạo (có thể có badge **"Báo giá bổ sung"**)
+3. Click **"Gửi"** để gửi cho khách hàng
+4. Hoặc click **"In"** để in báo giá
+
+---
+
+### **2.3.3.1. Duyệt Báo Giá Phát Sinh & Tạo LSC Bổ Sung**
+
+#### **Mục đích:**
+Khi khách hàng duyệt báo giá phát sinh, hệ thống tự động tạo LSC Bổ sung và cập nhật trạng thái phát sinh.
+
+#### **Yêu cầu:**
+- ✅ Báo giá phát sinh phải ở trạng thái `Pending` hoặc `Draft`
+- ✅ Khách hàng phải duyệt báo giá (Approve)
+
+#### **Các bước thực hiện:**
+
+##### **Bước 1: Khách hàng duyệt báo giá**
+1. Vào trang **"Quản Lý Báo Giá"**
+2. Tìm báo giá phát sinh (có `IsAdditionalQuotation = true`)
+3. Click **"Duyệt"** và điền thông tin:
+   - **Ghi chú khách hàng**: Ghi chú của khách hàng
+   - **Tạo Service Order**: Checkbox để tự động tạo LSC Bổ sung
+   - **Ngày dự kiến**: Chọn ngày dự kiến bắt đầu sửa chữa
+4. Click **"Xác nhận"**
+
+##### **Bước 2: Hệ thống tự động xử lý**
+Khi approve báo giá phát sinh với `CreateServiceOrder = true`:
+1. **Tạo ServiceOrder mới** (LSC Bổ sung) với:
+   - `ParentServiceOrderId` = ServiceOrder gốc
+   - `IsAdditionalOrder = true`
+   - `ServiceQuotationId` = ID báo giá phát sinh
+   - Copy tất cả items từ báo giá
+   - Trạng thái: `Pending`
+2. **Cập nhật AdditionalIssue**:
+   - `AdditionalServiceOrderId` = ID LSC Bổ sung vừa tạo
+   - `Status = "Approved"`
+3. **Cập nhật ServiceQuotation**:
+   - `ServiceOrderId` = ID LSC Bổ sung vừa tạo
+   - `Status = "Approved"`
+
+##### **Bước 3: Quay lại quy trình xuất kho**
+Sau khi tạo LSC Bổ sung:
+1. **Nếu có vật tư**: Tạo MR cho LSC Bổ sung (xem phần 2.2)
+   - Chọn ServiceOrder = LSC Bổ sung vừa tạo
+   - Thêm vật tư cần thiết
+   - Submit → Approve → Picked → Issued → Delivered
+2. **Nếu chỉ có dịch vụ**: Có thể bỏ qua bước MR và tiếp tục với 2.3.1
+
+##### **Bước 4: KTV tiếp tục sửa chữa**
+Sau khi vật tư được delivered:
+1. KTV có thể tiếp tục làm việc trên LSC Bổ sung
+2. Hoặc tiếp tục trên ServiceOrder gốc (nếu hạng mục đã được giải phóng khỏi "OnHold")
+
+---
+
+## 2.3.4. CẬP NHẬT TIẾN ĐỘ
+
+### **Mục đích:**
+KTV cập nhật tiến độ công việc theo từng mốc (ví dụ: Đồng sơn hoàn thành, Thay dầu hoàn thành).
+
+### **Yêu cầu:**
+- ✅ KTV phải được phân công cho hạng mục đó
+- ✅ Hạng mục phải ở trạng thái `InProgress` hoặc `Pending`
+
+### **Các bước thực hiện:**
+
+#### **Bước 1: Xem tiến độ hiện tại**
+1. Vào trang **"Quản Lý Phiếu Sửa Chữa"**
+2. Click **"Xem"** của ServiceOrder
+3. Click tab **"Chi Tiết Dịch Vụ"**
+4. Xem bảng tiến độ:
+   - **Trạng Thái**: Badge màu hiển thị trạng thái từng item
+   - **Giờ Công Thực Tế**: Số giờ đã làm (tự động tính từ StartTime/EndTime)
+   - **Thao Tác**: Các nút điều khiển (Bắt đầu/Dừng/Hoàn thành)
+
+#### **Bước 2: Cập nhật tiến độ**
+Tiến độ được cập nhật tự động khi:
+- **Bắt đầu làm việc**: `StartTime` được ghi nhận
+- **Dừng làm việc**: `ActualHours` được cập nhật (cộng dồn)
+- **Hoàn thành**: `CompletedTime` được ghi nhận và `Status = "Completed"`
+
+#### **Bước 3: Xem tổng tiến độ ServiceOrder**
+Hệ thống tự động tính:
+- **Số hạng mục đã hoàn thành** / **Tổng số hạng mục**
+- **Tổng giờ công thực tế** = Tổng của tất cả `ActualHours`
+- **Tổng giờ công dự kiến** = Tổng của tất cả `EstimatedHours`
+- **Trạng thái tổng thể**: Tự động cập nhật dựa trên trạng thái items
 
 ---
 

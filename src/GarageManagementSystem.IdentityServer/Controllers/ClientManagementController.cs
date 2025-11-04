@@ -431,7 +431,8 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                     .ToList();
                 // Split string từ textarea thành array
                 var redirectUris = model.RedirectUris?
-                    .SelectMany(ru => ru.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
+                    .Where(ru => !string.IsNullOrWhiteSpace(ru)) // ✅ FIX: Filter null elements first
+                    .SelectMany(ru => ru!.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
                     .Where(ru => !string.IsNullOrWhiteSpace(ru.Trim()))
                     .Select(ru => ru.Trim())
                     .ToList() ?? new List<string>();
@@ -441,7 +442,8 @@ namespace GarageManagementSystem.IdentityServer.Controllers
                     .ToList();
                 // Split string từ textarea thành array
                 var postLogoutUris = model.PostLogoutRedirectUris?
-                    .SelectMany(pru => pru.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
+                    .Where(pru => !string.IsNullOrWhiteSpace(pru)) // ✅ FIX: Filter null elements first
+                    .SelectMany(pru => pru!.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
                     .Where(pru => !string.IsNullOrWhiteSpace(pru.Trim()))
                     .Select(pru => pru.Trim())
                     .ToList() ?? new List<string>();

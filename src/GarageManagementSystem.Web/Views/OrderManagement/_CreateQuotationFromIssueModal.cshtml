@@ -1,0 +1,205 @@
+<!-- Create Quotation From Issue Modal -->
+<div class="modal fade" id="createQuotationFromIssueModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-success">
+                <h4 class="modal-title text-white">
+                    <i class="fas fa-file-invoice-dollar"></i> Tạo Báo Giá Bổ Sung Từ Phát Sinh
+                </h4>
+                <button type="button" class="close text-white" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <form id="createQuotationFromIssueForm">
+                <div class="modal-body">
+                    <!-- Issue Info -->
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-info-circle"></i> Thông Tin Phát Sinh:</h6>
+                        <div id="createQuotationIssueInfo"></div>
+                    </div>
+
+                    <!-- General Info -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createQuotationValidUntil">Ngày Hết Hạn</label>
+                                <input type="date" class="form-control form-control-sm" id="createQuotationValidUntil" 
+                                       name="ValidUntil">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createQuotationDiscountAmount">Giảm Giá (VNĐ)</label>
+                                <input type="number" class="form-control form-control-sm" id="createQuotationDiscountAmount" 
+                                       name="DiscountAmount" step="0.01" min="0" value="0" 
+                                       onchange="OrderManagement.calculateQuotationTotalFromIssue()">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="createQuotationDescription">Mô Tả</label>
+                        <textarea class="form-control form-control-sm" id="createQuotationDescription" 
+                                  name="Description" rows="2" placeholder="Mô tả về báo giá bổ sung..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="createQuotationTerms">Điều Khoản</label>
+                        <textarea class="form-control form-control-sm" id="createQuotationTerms" 
+                                  name="Terms" rows="2" placeholder="Điều khoản và điều kiện..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="createQuotationCustomerNotes">Ghi Chú Khách Hàng</label>
+                        <textarea class="form-control form-control-sm" id="createQuotationCustomerNotes" 
+                                  name="CustomerNotes" rows="2" placeholder="Ghi chú cho khách hàng..."></textarea>
+                    </div>
+
+                    <!-- Items Section - Card Layout -->
+                    <div class="form-group">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label class="mb-0"><strong>Chi Tiết Báo Giá</strong></label>
+                            <button type="button" class="btn btn-sm btn-primary" onclick="OrderManagement.addQuotationItemFromIssue()">
+                                <i class="fas fa-plus"></i> Thêm Item
+                            </button>
+                        </div>
+                        <div id="createQuotationItemsContainer">
+                            <!-- Items will be added here as cards -->
+                        </div>
+                    </div>
+
+                    <!-- Summary -->
+                    <div class="row">
+                        <div class="col-md-6 offset-md-6">
+                            <table class="table table-sm">
+                                <tr>
+                                    <th>Tạm Tính:</th>
+                                    <td class="text-right" id="createQuotationSubtotal">0 VNĐ</td>
+                                </tr>
+                                <tr>
+                                    <th>VAT:</th>
+                                    <td class="text-right" id="createQuotationVATAmount">0 VNĐ</td>
+                                </tr>
+                                <tr>
+                                    <th>Giảm Giá:</th>
+                                    <td class="text-right" id="createQuotationDiscountDisplay">0 VNĐ</td>
+                                </tr>
+                                <tr class="font-weight-bold">
+                                    <th>Tổng Cộng:</th>
+                                    <td class="text-right text-primary" id="createQuotationTotalAmount">0 VNĐ</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">
+                        <i class="fas fa-times"></i> Hủy
+                    </button>
+                    <button type="button" class="btn btn-success btn-sm" onclick="OrderManagement.submitCreateQuotationFromIssue()">
+                        <i class="fas fa-save"></i> Tạo Báo Giá
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Card Layout Styles for Quotation Items */
+    .quotation-item-card {
+        border: 1px solid #dee2e6;
+        transition: box-shadow 0.2s ease;
+    }
+    
+    .quotation-item-card:hover {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .quotation-item-card .card-header {
+        background-color: #f8f9fa !important;
+        border-bottom: 2px solid #dee2e6;
+    }
+    
+    .quotation-item-card .card-body {
+        padding: 1rem;
+    }
+    
+    .quotation-item-card .item-subtotal-display,
+    .quotation-item-card .item-vat-amount-display,
+    .quotation-item-card .item-total-display {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        font-weight: 600;
+    }
+    
+    .quotation-item-card .alert-light {
+        background-color: #f8f9fa;
+        border: 1px solid #e9ecef;
+    }
+    
+    #createQuotationItemsContainer {
+        max-height: 500px;
+        overflow-y: auto;
+        padding-right: 5px;
+    }
+    
+    #createQuotationItemsContainer::-webkit-scrollbar {
+        width: 6px;
+    }
+    
+    #createQuotationItemsContainer::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 3px;
+    }
+    
+    #createQuotationItemsContainer::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 3px;
+    }
+    
+    #createQuotationItemsContainer::-webkit-scrollbar-thumb:hover {
+        background: #555;
+    }
+    
+    /* Nút xóa ở vị trí mới */
+    .quotation-item-card .btn-outline-danger {
+        border-color: #dc3545;
+        color: #dc3545;
+        transition: all 0.2s ease;
+    }
+    
+    .quotation-item-card .btn-outline-danger:hover {
+        background-color: #dc3545;
+        color: white;
+        transform: scale(1.05);
+    }
+    
+    /* Typeahead styling */
+    .quotation-item-card .service-typeahead.tt-input {
+        border-radius: 0.25rem;
+    }
+    
+    .quotation-item-card .tt-menu {
+        background-color: white;
+        border: 1px solid #ddd;
+        border-radius: 0.25rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        max-height: 300px;
+        overflow-y: auto;
+    }
+    
+    .quotation-item-card .tt-suggestion {
+        padding: 8px 12px;
+        cursor: pointer;
+    }
+    
+    .quotation-item-card .tt-suggestion:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .quotation-item-card .tt-suggestion.tt-cursor {
+        background-color: #007bff;
+        color: white;
+    }
+</style>
+

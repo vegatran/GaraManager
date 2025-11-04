@@ -625,7 +625,11 @@ namespace GarageManagementSystem.API.Controllers
                         TotalAmount = quotation.TotalAmount,
                         DiscountAmount = quotation.DiscountAmount,
                         FinalAmount = quotation.TotalAmount,
-                        PaymentStatus = paymentStatus
+                        PaymentStatus = paymentStatus,
+                        
+                        // ✅ 2.3.3: Set fields for additional order if quotation is additional
+                        ParentServiceOrderId = quotation.IsAdditionalQuotation ? quotation.RelatedToServiceOrderId : null,
+                        IsAdditionalOrder = quotation.IsAdditionalQuotation
                     };
 
                     // Copy items from quotation to order
@@ -654,6 +658,22 @@ namespace GarageManagementSystem.API.Controllers
 
                         await _unitOfWork.ServiceQuotations.UpdateAsync(quotation);
                         await _unitOfWork.SaveChangesAsync();
+                        
+                        // ✅ 2.3.3: Update AdditionalIssue if this is an additional quotation
+                        if (quotation.IsAdditionalQuotation && quotation.Id > 0)
+                        {
+                            var additionalIssues = await _unitOfWork.Repository<Core.Entities.AdditionalIssue>()
+                                .FindAsync(ai => ai.AdditionalQuotationId == quotation.Id);
+                            
+                            foreach (var issue in additionalIssues)
+                            {
+                                issue.AdditionalServiceOrderId = serviceOrder.Id;
+                                issue.Status = "Approved";
+                                await _unitOfWork.Repository<Core.Entities.AdditionalIssue>().UpdateAsync(issue);
+                            }
+                            
+                            await _unitOfWork.SaveChangesAsync();
+                        }
 
                         // Commit transaction nếu thành công
                         await _unitOfWork.CommitTransactionAsync();

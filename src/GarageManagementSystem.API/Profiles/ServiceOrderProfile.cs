@@ -57,7 +57,12 @@ namespace GarageManagementSystem.API.Profiles
                 .ForMember(dest => dest.Service, opt => opt.MapFrom(src => src.Service))
                 .ForMember(dest => dest.ServiceName, opt => opt.MapFrom(src => !string.IsNullOrEmpty(src.ServiceName) ? src.ServiceName : (src.Service != null ? src.Service.Name : ""))) // ✅ THÊM: Map ServiceName
                 .ForMember(dest => dest.ServiceId, opt => opt.MapFrom(src => src.ServiceId)) // ✅ THÊM: Map ServiceId (nullable)
-                .ForMember(dest => dest.AssignedTechnicianName, opt => opt.MapFrom(src => src.AssignedTechnician != null ? src.AssignedTechnician.Name : null));
+                .ForMember(dest => dest.AssignedTechnicianName, opt => opt.MapFrom(src => src.AssignedTechnician != null ? src.AssignedTechnician.Name : null))
+                // ✅ 2.3.1: Map StartTime, EndTime, ActualHours, CompletedTime
+                .ForMember(dest => dest.StartTime, opt => opt.MapFrom(src => src.StartTime))
+                .ForMember(dest => dest.EndTime, opt => opt.MapFrom(src => src.EndTime))
+                .ForMember(dest => dest.ActualHours, opt => opt.MapFrom(src => src.ActualHours))
+                .ForMember(dest => dest.CompletedTime, opt => opt.MapFrom(src => src.CompletedTime));
 
             CreateMap<CreateServiceOrderItemDto, ServiceOrderItem>()
                 .ForMember(dest => dest.Id, opt => opt.Ignore())

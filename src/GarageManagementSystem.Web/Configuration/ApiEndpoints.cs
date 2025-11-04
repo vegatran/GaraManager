@@ -81,6 +81,13 @@ namespace GarageManagementSystem.Web.Configuration
             public const string GetByCustomerId = "serviceorders/customer/{0}"; // serviceorders/customer/{customerId}
             public const string GetByVehicleId = "serviceorders/vehicle/{0}"; // serviceorders/vehicle/{vehicleId}
             public const string ChangeStatus = "serviceorders/{0}/change-status"; // ✅ 2.1.1: Chuyển trạng thái
+            public const string AssignTechnician = "serviceorders/{0}/items/{1}/assign-technician"; // ✅ 2.1.2: Phân công KTV
+            public const string BulkAssignTechnician = "serviceorders/{0}/bulk-assign-technician"; // ✅ 2.1.2: Phân công hàng loạt
+            public const string SetEstimatedHours = "serviceorders/{0}/items/{1}/set-estimated-hours"; // ✅ 2.1.2: Set giờ công dự kiến
+            // ✅ 2.3.1: Bắt đầu/Dừng/Hoàn thành công việc cho item
+            public const string StartItemWork = "serviceorders/{0}/items/{1}/start-work";
+            public const string StopItemWork = "serviceorders/{0}/items/{1}/stop-work";
+            public const string CompleteItem = "serviceorders/{0}/items/{1}/complete";
         }
 
         /// <summary>
@@ -270,6 +277,24 @@ namespace GarageManagementSystem.Web.Configuration
             public const string Submit = "materialrequests/{0}/submit";
             public const string Approve = "materialrequests/{0}/approve";
             public const string Reject = "materialrequests/{0}/reject";
+        }
+
+        /// <summary>
+        /// Additional Issues (Phát sinh) endpoints
+        /// </summary>
+        public static class AdditionalIssues
+        {
+            public const string GetByServiceOrder = "additionalissues/by-service-order/{0}";
+            public const string GetById = "additionalissues/{0}";
+            public const string Create = "additionalissues";
+            public const string Update = "additionalissues/{0}";
+            public const string Delete = "additionalissues/{0}";
+            public const string UploadPhotos = "additionalissues/{0}/photos";
+            public const string DeletePhoto = "additionalissues/{0}/photos/{1}";
+            /// <summary>
+            /// ✅ 2.3.3: Tạo báo giá từ phát sinh
+            /// </summary>
+            public const string CreateQuotation = "additionalissues/{0}/create-quotation";
         }
 
         /// <summary>

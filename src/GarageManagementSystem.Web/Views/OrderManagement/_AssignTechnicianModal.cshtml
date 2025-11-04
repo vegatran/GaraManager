@@ -1,0 +1,122 @@
+<!-- Modal Phân Công KTV -->
+<div class="modal fade" id="assignTechnicianModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-primary">
+                <h4 class="modal-title">
+                    <i class="fas fa-user-tie"></i> Phân Công KTV & Giờ Công Dự Kiến
+                </h4>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="assignTechnicianForm">
+                    <input type="hidden" id="assignTechnicianOrderId" />
+                    
+                    <!-- Thông tin JO -->
+                    <div class="form-group">
+                        <label>Phiếu Sửa Chữa:</label>
+                        <input type="text" id="assignTechnicianOrderNumber" class="form-control form-control-sm" readonly />
+                    </div>
+
+                    <!-- Phân công cho tất cả -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">
+                                <i class="fas fa-users"></i> Phân Công Hàng Loạt (Tùy chọn)
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="bulkTechnicianSelect">KTV:</label>
+                                        <select id="bulkTechnicianSelect" class="form-control form-control-sm select2" style="width: 100%;">
+                                            <option value="">-- Chọn KTV --</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="bulkEstimatedHours">Giờ Công Dự Kiến:</label>
+                                        <input type="number" id="bulkEstimatedHours" class="form-control form-control-sm" 
+                                               step="0.1" min="0.1" max="24" placeholder="Ví dụ: 2.5" />
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <div class="form-group">
+                                        <label>&nbsp;</label>
+                                        <button type="button" class="btn btn-success btn-sm btn-block" id="btnBulkAssign">
+                                            <i class="fas fa-check-double"></i> Áp Dụng
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle"></i> Phân công cùng KTV và giờ công cho tất cả hạng mục chưa được phân công
+                            </small>
+                        </div>
+                    </div>
+
+                    <!-- Danh sách Items -->
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover" id="assignTechnicianItemsTable">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th width="5%">#</th>
+                                    <th width="35%">Hạng Mục</th>
+                                    <th width="20%">KTV Được Phân Công</th>
+                                    <th width="15%">Giờ Công Dự Kiến</th>
+                                    <th width="15%">Trạng Thái</th>
+                                    <th width="10%">Thao Tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="assignTechnicianItemsBody">
+                                <!-- Sẽ được populate bằng JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">
+                    <i class="fas fa-times"></i> Đóng
+                </button>
+                <button type="button" class="btn btn-primary btn-sm" id="btnSaveAssignments">
+                    <i class="fas fa-save"></i> Lưu Tất Cả Phân Công
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Template cho mỗi item row (hidden) -->
+<template id="assignTechnicianItemRowTemplate">
+    <tr data-item-id="">
+        <td class="text-center item-index"></td>
+        <td>
+            <strong class="item-service-name"></strong>
+            <br />
+            <small class="text-muted">Số lượng: <span class="item-quantity"></span></small>
+        </td>
+        <td>
+            <select class="form-control form-control-sm item-technician-select">
+                <option value="">-- Chọn KTV --</option>
+            </select>
+        </td>
+        <td>
+            <input type="number" class="form-control form-control-sm item-estimated-hours" 
+                   step="0.1" min="0.1" max="24" placeholder="0.0" />
+        </td>
+        <td>
+            <span class="badge badge-secondary item-status">Chưa phân công</span>
+        </td>
+        <td class="text-center">
+            <button type="button" class="btn btn-sm btn-primary btn-assign-item" title="Phân công">
+                <i class="fas fa-check"></i>
+            </button>
+        </td>
+    </tr>
+</template>
+

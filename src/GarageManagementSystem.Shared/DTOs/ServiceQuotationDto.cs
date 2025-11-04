@@ -54,6 +54,16 @@ namespace GarageManagementSystem.Shared.DTOs
         public string? CustomerNotes { get; set; }
         public string? RejectionReason { get; set; }
         public int? ServiceOrderId { get; set; }
+        
+        /// <summary>
+        /// ✅ 2.3.3: Liên kết đến ServiceOrder gốc (nếu là báo giá bổ sung từ phát sinh)
+        /// </summary>
+        public int? RelatedToServiceOrderId { get; set; }
+
+        /// <summary>
+        /// ✅ 2.3.3: Phân biệt báo giá gốc vs báo giá bổ sung từ phát sinh
+        /// </summary>
+        public bool IsAdditionalQuotation { get; set; } = false;
 
         // Navigation properties
         public VehicleInspectionDto? VehicleInspection { get; set; }
@@ -90,6 +100,16 @@ namespace GarageManagementSystem.Shared.DTOs
 
         [Range(0, double.MaxValue)]
         public decimal DiscountAmount { get; set; } = 0;
+        
+        /// <summary>
+        /// ✅ 2.3.3: Liên kết đến ServiceOrder gốc (nếu là báo giá bổ sung từ phát sinh)
+        /// </summary>
+        public int? RelatedToServiceOrderId { get; set; }
+
+        /// <summary>
+        /// ✅ 2.3.3: Phân biệt báo giá gốc vs báo giá bổ sung từ phát sinh
+        /// </summary>
+        public bool IsAdditionalQuotation { get; set; } = false;
 
         [Required(ErrorMessage = "At least one item is required")]
         [MinLength(1, ErrorMessage = "At least one item is required")]

@@ -165,7 +165,9 @@ namespace GarageManagementSystem.Web.Controllers
                     {
                         value = s.Id.ToString(),
                         text = s.Name,
-                        price = s.Price
+                        price = s.Price,
+                        vatRate = s.VATRate, // ✅ THÊM: VAT rate từ Service
+                        isVATApplicable = s.IsVATApplicable // ✅ THÊM: VAT applicability từ Service
                     }).Cast<object>().ToList();
                     
                     return Json(services);

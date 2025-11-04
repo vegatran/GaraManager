@@ -41,6 +41,16 @@ namespace GarageManagementSystem.Core.Entities
         // Reference to Customer Reception (for workflow tracking)
         public int? CustomerReceptionId { get; set; }
         
+        /// <summary>
+        /// ✅ 2.3.3: Liên kết đến ServiceOrder gốc (nếu là LSC Bổ sung từ phát sinh)
+        /// </summary>
+        public int? ParentServiceOrderId { get; set; }
+
+        /// <summary>
+        /// ✅ 2.3.3: Phân biệt JO gốc vs LSC Bổ sung
+        /// </summary>
+        public bool IsAdditionalOrder { get; set; } = false;
+        
         [StringLength(1000)]
         public string? Description { get; set; } // Description of work
         
@@ -65,6 +75,17 @@ namespace GarageManagementSystem.Core.Entities
         public virtual ServiceQuotation? ServiceQuotation { get; set; }
         public virtual CustomerReception? CustomerReception { get; set; }
         public virtual Employee? PrimaryTechnician { get; set; }
+        
+        /// <summary>
+        /// ✅ 2.3.3: Navigation property đến ServiceOrder gốc (nếu là LSC Bổ sung)
+        /// </summary>
+        public virtual ServiceOrder? ParentServiceOrder { get; set; }
+        
+        /// <summary>
+        /// ✅ 2.3.3: Navigation property đến các LSC Bổ sung (nếu có)
+        /// </summary>
+        public virtual ICollection<ServiceOrder> AdditionalServiceOrders { get; set; } = new List<ServiceOrder>();
+        
         public virtual ICollection<ServiceOrderItem> ServiceOrderItems { get; set; } = new List<ServiceOrderItem>();
         public virtual ICollection<ServiceOrderPart> ServiceOrderParts { get; set; } = new List<ServiceOrderPart>();
         public virtual ICollection<PaymentTransaction> PaymentTransactions { get; set; } = new List<PaymentTransaction>();

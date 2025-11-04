@@ -419,6 +419,39 @@ namespace GarageManagementSystem.Web.Controllers
             return Json(response);
         }
 
+        /// <summary>
+        /// ✅ 2.3.1: KTV bắt đầu làm việc cho một item
+        /// </summary>
+        [HttpPost("StartItemWork/{orderId}/items/{itemId}")]
+        public async Task<IActionResult> StartItemWork(int orderId, int itemId)
+        {
+            var endpoint = $"/api/ServiceOrders/{orderId}/items/{itemId}/start-work";
+            var response = await _apiService.PostAsync<ServiceOrderDto>(endpoint, null);
+            return Json(response);
+        }
+
+        /// <summary>
+        /// ✅ 2.3.1: KTV dừng làm việc cho một item
+        /// </summary>
+        [HttpPost("StopItemWork/{orderId}/items/{itemId}")]
+        public async Task<IActionResult> StopItemWork(int orderId, int itemId, [FromBody] decimal? actualHours = null)
+        {
+            var endpoint = $"/api/ServiceOrders/{orderId}/items/{itemId}/stop-work";
+            var response = await _apiService.PostAsync<ServiceOrderDto>(endpoint, actualHours);
+            return Json(response);
+        }
+
+        /// <summary>
+        /// ✅ 2.3.1 & 2.3.4: KTV hoàn thành một item
+        /// </summary>
+        [HttpPost("CompleteItem/{orderId}/items/{itemId}")]
+        public async Task<IActionResult> CompleteItem(int orderId, int itemId, [FromBody] decimal? actualHours = null)
+        {
+            var endpoint = $"/api/ServiceOrders/{orderId}/items/{itemId}/complete";
+            var response = await _apiService.PostAsync<ServiceOrderDto>(endpoint, actualHours);
+            return Json(response);
+        }
+
         private static string TranslateOrderStatus(string status)
         {
             return status switch

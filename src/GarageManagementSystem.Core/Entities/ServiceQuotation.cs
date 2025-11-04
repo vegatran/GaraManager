@@ -118,6 +118,16 @@ namespace GarageManagementSystem.Core.Entities
         // Reference to Customer Reception (for workflow tracking)
         public int? CustomerReceptionId { get; set; }
 
+        /// <summary>
+        /// ✅ 2.3.3: Liên kết đến ServiceOrder gốc (nếu là báo giá bổ sung từ phát sinh)
+        /// </summary>
+        public int? RelatedToServiceOrderId { get; set; }
+
+        /// <summary>
+        /// ✅ 2.3.3: Phân biệt báo giá gốc vs báo giá bổ sung từ phát sinh
+        /// </summary>
+        public bool IsAdditionalQuotation { get; set; } = false;
+
         // Navigation properties
         public virtual VehicleInspection? VehicleInspection { get; set; }
         public virtual Customer Customer { get; set; } = null!;
@@ -125,6 +135,12 @@ namespace GarageManagementSystem.Core.Entities
         public virtual Employee? PreparedBy { get; set; }
         public virtual CustomerReception? CustomerReception { get; set; }
         public virtual ServiceOrder? ServiceOrder { get; set; }
+        
+        /// <summary>
+        /// ✅ 2.3.3: Navigation property đến ServiceOrder gốc (nếu là báo giá bổ sung)
+        /// </summary>
+        public virtual ServiceOrder? RelatedToServiceOrder { get; set; }
+        
         public virtual ICollection<QuotationItem> Items { get; set; } = new List<QuotationItem>();
         public virtual ICollection<QuotationAttachment> Attachments { get; set; } = new List<QuotationAttachment>();
     }

@@ -1,0 +1,618 @@
+@model GarageManagementSystem.Web.Models.PrintInspectionViewModel
+
+@{
+    ViewData["Title"] = "In Phiếu Chẩn Đoán Kỹ Thuật";
+    Layout = null; // Không sử dụng layout chính
+}
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - @Model.Inspection.InspectionNumber</title>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Times New Roman', serif;
+            font-size: 12px;
+            line-height: 1.4;
+            color: #000;
+            background: #fff;
+        }
+        
+        .print-container {
+            width: 210mm;
+            min-height: 297mm;
+            margin: 0;
+            padding: 3mm 3mm;
+            background: white;
+            page-break-inside: avoid;
+        }
+        
+        /* Header Section */
+        .header {
+            display: flex;
+            align-items: flex-start;
+        }
+        
+        .logo-section {
+            flex: 0 0 100px;
+            margin-right: 15px;
+        }
+        
+        .logo {
+            width: 80px;
+            height: 80px;
+            border: 2px solid #333;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #ff6b35;
+            color: white;
+            font-weight: bold;
+            font-size: 9px;
+            text-align: center;
+            line-height: 1.2;
+        }
+        
+        .company-info {
+            flex: 1;
+        }
+        
+        .company-name {
+            font-size: 26px;
+            font-weight: bold;
+            color: #333;
+            text-transform: uppercase;
+        }
+        
+        .company-details {
+            font-size: 12px;
+            line-height: 1.6;
+        }
+        
+        .company-details .detail-row {
+            margin-bottom: 3px;
+        }
+        
+        .company-details strong {
+            font-weight: bold;
+        }
+        
+        /* Document Title */
+        .document-title {
+            text-align: center;
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+            margin: 10px 0;
+            text-transform: uppercase;
+            border: 2px solid #333;
+            padding: 8px;
+            background: #f8f9fa;
+        }
+        
+        /* Inspection Details */
+        .detail-table {
+            width: 100%;
+            border: 1px solid #333;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+        }
+        
+        .detail-table th,
+        .detail-table td {
+            border: 1px solid #333;
+            padding: 4px 8px;
+            text-align: left;
+            vertical-align: middle;
+        }
+        
+        .detail-table th {
+            background: #f8f9fa;
+            font-weight: bold;
+            width: 25%;
+        }
+        
+        /* Section */
+        .section-title {
+            font-size: 12px;
+            font-weight: bold;
+            color: #333;
+            margin: 15px 0 8px 0;
+            text-transform: uppercase;
+            border-bottom: 2px solid #333;
+            padding-bottom: 3px;
+        }
+        
+        .info-box {
+            border: 1px solid #333;
+            padding: 10px;
+            margin: 10px 0;
+            background: #f8f9fa;
+            min-height: 50px;
+        }
+        
+        .info-box-label {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .info-box-content {
+            text-align: justify;
+            line-height: 1.6;
+        }
+        
+        /* Issues Table */
+        .issues-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        
+        .issues-table th,
+        .issues-table td {
+            border: 1px solid #333;
+            padding: 5px;
+            text-align: left;
+        }
+        
+        .issues-table th {
+            background: #f8f9fa;
+            font-weight: bold;
+            text-align: center;
+        }
+        
+        .issues-table .number {
+            width: 5%;
+            text-align: center;
+        }
+        
+        .issues-table .category {
+            width: 15%;
+        }
+        
+        .issues-table .issue-name {
+            width: 20%;
+        }
+        
+        .issues-table .description {
+            width: 40%;
+        }
+        
+        .issues-table .severity {
+            width: 10%;
+            text-align: center;
+        }
+        
+        .issues-table .cost {
+            width: 10%;
+            text-align: right;
+        }
+        
+        .severity-badge {
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 10px;
+            font-weight: bold;
+        }
+        
+        .severity-low {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .severity-medium {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .severity-high {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        /* Condition Table */
+        .condition-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+        }
+        
+        .condition-table th,
+        .condition-table td {
+            border: 1px solid #333;
+            padding: 4px 8px;
+            text-align: left;
+        }
+        
+        .condition-table th {
+            background: #f8f9fa;
+            font-weight: bold;
+            width: 25%;
+        }
+        
+        /* Signature Section */
+        .signature-section {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 30px;
+        }
+        
+        .signature-box {
+            text-align: center;
+            width: 200px;
+        }
+        
+        .signature-title {
+            font-weight: bold;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+            font-size: 12px;
+        }
+        
+        .signature-line {
+            border-bottom: 1px solid #333;
+            height: 30px;
+        }
+        
+        /* Print Styles */
+        @@media print {
+            * {
+                -webkit-print-color-adjust: exact !important;
+                color-adjust: exact !important;
+            }
+            
+            body {
+                font-size: 12px;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            
+            .print-container {
+                margin: 0 !important;
+                padding: 3mm 3mm !important;
+                max-width: none !important;
+                width: 210mm !important;
+                min-height: 297mm !important;
+                max-height: 297mm !important;
+                page-break-inside: avoid !important;
+                overflow: hidden !important;
+            }
+            
+            .no-print {
+                display: none !important;
+            }
+            
+            @@page {
+                size: A4;
+                margin: 0;
+            }
+        }
+        
+        .no-print {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: white;
+            border: 2px solid #333;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+        
+        .no-print button {
+            background: #ff6b35;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            margin: 2px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        .no-print button:hover {
+            background: #e55a2b;
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print">
+        <button onclick="window.print()">In Phiếu Chẩn Đoán</button>
+        <button onclick="window.close()">Đóng</button>
+    </div>
+
+    <div class="print-container">
+        <!-- Header Section -->
+        <div class="header">
+            <div class="logo-section">
+                <img src="~/css/img/logo.png" alt="Logo" />
+            </div>
+            <div class="company-info">
+                <div class="company-name">@(Model.CompanyInfo?.CompanyName ?? "GARAGE Ô TÔ THUẬN PHÁT")</div>
+                <div class="company-details">
+                    <div class="detail-row"><strong>Địa chỉ:</strong> @(Model.CompanyInfo?.CompanyAddress ?? "313 Võ Văn Vân, Vĩnh Lộc B, H. Bình Chánh, TP.HCM")</div>
+                    <div class="detail-row"><strong>Điện thoại:</strong> @(Model.CompanyInfo?.CompanyPhone ?? "032.7007.985 (Mr. Bằng)")</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Document Title -->
+        <div class="document-title">
+            PHIẾU CHẨN ĐOÁN KỸ THUẬT XE Ô TÔ
+        </div>
+
+        <!-- Inspection Basic Information -->
+        <table class="detail-table">
+            <tbody>
+                <tr>
+                    <th>Số phiếu:</th>
+                    <td>@Model.Inspection.InspectionNumber</td>
+                    <th>Ngày kiểm tra:</th>
+                    <td>@Model.Inspection.InspectionDate.ToString("dd/MM/yyyy HH:mm")</td>
+                </tr>
+                <tr>
+                    <th>Khách hàng:</th>
+                    <td>@(Model.Inspection.Customer?.Name ?? "")</td>
+                    <th>Biển số xe:</th>
+                    <td>@(Model.Inspection.Vehicle?.LicensePlate ?? "")</td>
+                </tr>
+                <tr>
+                    <th>Điện thoại:</th>
+                    <td>@(Model.Inspection.Customer?.Phone ?? "")</td>
+                    <th>Hiệu xe:</th>
+                    <td>@(Model.Inspection.Vehicle?.Brand ?? "") @(Model.Inspection.Vehicle?.Model ?? "")</td>
+                </tr>
+                <tr>
+                    <th>Địa chỉ:</th>
+                    <td colspan="3">@(Model.Inspection.Customer?.Address ?? "")</td>
+                </tr>
+                <tr>
+                    <th>Số KM hiện tại:</th>
+                    <td>@(Model.Inspection.CurrentMileage?.ToString("N0") ?? "-") km</td>
+                    <th>Mức nhiên liệu:</th>
+                    <td>@TranslateFuelLevel(Model.Inspection.FuelLevel)</td>
+                </tr>
+                <tr>
+                    <th>Kỹ thuật viên:</th>
+                    <td>@(Model.Inspection.Inspector?.Name ?? "-")</td>
+                    <th>Loại kiểm tra:</th>
+                    <td>@TranslateInspectionType(Model.Inspection.InspectionType)</td>
+                </tr>
+                <tr>
+                    <th>Trạng thái:</th>
+                    <td>@TranslateStatus(Model.Inspection.Status)</td>
+                    <th>Ngày hoàn thành:</th>
+                    <td>@(Model.Inspection.CompletedDate?.ToString("dd/MM/yyyy") ?? "-")</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- General Condition -->
+        @if (!string.IsNullOrWhiteSpace(Model.Inspection.GeneralCondition))
+        {
+            <div class="section-title">TÌNH TRẠNG TỔNG QUAN</div>
+            <div class="info-box">
+                <div class="info-box-content">@Model.Inspection.GeneralCondition</div>
+            </div>
+        }
+
+        <!-- Customer Complaints -->
+        @if (!string.IsNullOrWhiteSpace(Model.Inspection.CustomerComplaints))
+        {
+            <div class="section-title">KHIẾU NẠI / YÊU CẦU CỦA KHÁCH HÀNG</div>
+            <div class="info-box">
+                <div class="info-box-content">@Model.Inspection.CustomerComplaints</div>
+            </div>
+        }
+
+        <!-- Detailed Condition Checks -->
+        <div class="section-title">CHI TIẾT KIỂM TRA CÁC BỘ PHẬN</div>
+        <table class="condition-table">
+            <tbody>
+                @if (!string.IsNullOrWhiteSpace(Model.Inspection.ExteriorCondition))
+                {
+                    <tr>
+                        <th>Ngoại thất:</th>
+                        <td>@Model.Inspection.ExteriorCondition</td>
+                    </tr>
+                }
+                @if (!string.IsNullOrWhiteSpace(Model.Inspection.InteriorCondition))
+                {
+                    <tr>
+                        <th>Nội thất:</th>
+                        <td>@Model.Inspection.InteriorCondition</td>
+                    </tr>
+                }
+                @if (!string.IsNullOrWhiteSpace(Model.Inspection.EngineCondition))
+                {
+                    <tr>
+                        <th>Động cơ:</th>
+                        <td>@Model.Inspection.EngineCondition</td>
+                    </tr>
+                }
+                @if (!string.IsNullOrWhiteSpace(Model.Inspection.BrakeCondition))
+                {
+                    <tr>
+                        <th>Hệ thống phanh:</th>
+                        <td>@Model.Inspection.BrakeCondition</td>
+                    </tr>
+                }
+                @if (!string.IsNullOrWhiteSpace(Model.Inspection.SuspensionCondition))
+                {
+                    <tr>
+                        <th>Hệ thống treo:</th>
+                        <td>@Model.Inspection.SuspensionCondition</td>
+                    </tr>
+                }
+                @if (!string.IsNullOrWhiteSpace(Model.Inspection.TireCondition))
+                {
+                    <tr>
+                        <th>Lốp xe:</th>
+                        <td>@Model.Inspection.TireCondition</td>
+                    </tr>
+                }
+                @if (!string.IsNullOrWhiteSpace(Model.Inspection.ElectricalCondition))
+                {
+                    <tr>
+                        <th>Hệ thống điện:</th>
+                        <td>@Model.Inspection.ElectricalCondition</td>
+                    </tr>
+                }
+                @if (!string.IsNullOrWhiteSpace(Model.Inspection.LightsCondition))
+                {
+                    <tr>
+                        <th>Hệ thống đèn:</th>
+                        <td>@Model.Inspection.LightsCondition</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <!-- Issues List -->
+        @if (Model.Inspection.Issues != null && Model.Inspection.Issues.Any())
+        {
+            <div class="section-title">DANH SÁCH HƯ HỎNG PHÁT HIỆN</div>
+            <table class="issues-table">
+                <thead>
+                    <tr>
+                        <th class="number">STT</th>
+                        <th class="category">Danh Mục</th>
+                        <th class="issue-name">Hư Hỏng</th>
+                        <th class="description">Mô Tả</th>
+                        <th class="severity">Mức Độ</th>
+                        <th class="cost">Chi Phí Dự Kiến</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (int i = 0; i < Model.Inspection.Issues.Count; i++)
+                    {
+                        var issue = Model.Inspection.Issues[i];
+                        <tr>
+                            <td class="number">@(i + 1)</td>
+                            <td class="category">@issue.Category</td>
+                            <td class="issue-name">@issue.IssueName</td>
+                            <td class="description">@issue.Description</td>
+                            <td class="severity">
+                                <span class="severity-badge severity-@(issue.Severity.ToLower())">@TranslateSeverity(issue.Severity)</span>
+                            </td>
+                            <td class="cost">@(issue.EstimatedCost?.ToString("N0") ?? "-") @(issue.EstimatedCost.HasValue ? "VNĐ" : "")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+
+        <!-- Recommendations -->
+        @if (!string.IsNullOrWhiteSpace(Model.Inspection.Recommendations))
+        {
+            <div class="section-title">KHUYẾN NGHỊ SỬA CHỮA</div>
+            <div class="info-box">
+                <div class="info-box-content">@Model.Inspection.Recommendations</div>
+            </div>
+        }
+
+        <!-- Technician Notes -->
+        @if (!string.IsNullOrWhiteSpace(Model.Inspection.TechnicianNotes))
+        {
+            <div class="section-title">GHI CHÚ KỸ THUẬT</div>
+            <div class="info-box">
+                <div class="info-box-content">@Model.Inspection.TechnicianNotes</div>
+            </div>
+        }
+
+        <!-- Signature Section -->
+        <div class="signature-section">
+            <div class="signature-box">
+                <div class="signature-title">XÁC NHẬN CỦA KHÁCH HÀNG</div>
+                <div class="signature-line"></div>
+                <div style="margin-top: 5px; font-size: 12px;">Ký tên</div>
+            </div>
+            <div class="signature-box">
+                <div style="margin-top: 10px; font-size: 11px; color: #666;">
+                    <strong>Ngày in:</strong> <span id="printDate">@DateTime.Now.ToString("dd/MM/yyyy HH:mm")</span>
+                </div>
+                <div class="signature-title">KỸ THUẬT VIÊN</div>
+                <div class="signature-line"></div>
+                <div style="margin-top: 5px; font-size: 12px;">Ký tên</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function updatePrintDate() {
+            const now = new Date();
+            const printDateElement = document.getElementById('printDate');
+            if (printDateElement) {
+                const formattedDate = now.toLocaleDateString('vi-VN') + ' ' + now.toLocaleTimeString('vi-VN', {hour: '2-digit', minute: '2-digit'});
+                printDateElement.textContent = formattedDate;
+            }
+        }
+
+        window.addEventListener('beforeprint', updatePrintDate);
+        document.addEventListener('DOMContentLoaded', updatePrintDate);
+    </script>
+</body>
+</html>
+
+@functions {
+    private string TranslateStatus(string status)
+    {
+        return status switch
+        {
+            "Pending" => "Chờ Xử Lý",
+            "InProgress" => "Đang Kiểm Tra",
+            "Completed" => "Hoàn Thành",
+            "Cancelled" => "Đã Hủy",
+            _ => status
+        };
+    }
+
+    private string TranslateInspectionType(string type)
+    {
+        return type switch
+        {
+            "General" => "Kiểm Tra Tổng Quát",
+            "Diagnostic" => "Chẩn Đoán",
+            "Pre-service" => "Trước Sửa Chữa",
+            "Post-repair" => "Sau Sửa Chữa",
+            _ => type
+        };
+    }
+
+    private string TranslateFuelLevel(string? fuelLevel)
+    {
+        return fuelLevel switch
+        {
+            "Empty" => "Hết",
+            "1/4" => "1/4",
+            "1/2" => "1/2",
+            "3/4" => "3/4",
+            "Full" => "Đầy",
+            _ => fuelLevel ?? "-"
+        };
+    }
+
+    private string TranslateSeverity(string severity)
+    {
+        return severity switch
+        {
+            "Low" => "Thấp",
+            "Medium" => "Trung Bình",
+            "High" => "Cao",
+            "Critical" => "Nghiêm Trọng",
+            _ => severity
+        };
+    }
+}
+

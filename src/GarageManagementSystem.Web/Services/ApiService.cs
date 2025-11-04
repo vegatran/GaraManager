@@ -532,5 +532,207 @@ namespace GarageManagementSystem.Web.Services
                 };
             }
         }
+
+        /// <summary>
+        /// Post form data with multiple file uploads
+        /// </summary>
+        public async Task<ApiResponse<T>> PostWithFilesAsync<T>(string endpoint, object? data, List<IFormFile>? files = null)
+        {
+            try
+            {
+                await SetAuthorizationHeaderAsync();
+                using var httpClient = _httpClient;
+                using var formData = new MultipartFormDataContent();
+
+                // Add files
+                if (files != null && files.Count > 0)
+                {
+                    foreach (var file in files)
+                    {
+                        if (file != null && file.Length > 0)
+                        {
+                            var fileContent = new StreamContent(file.OpenReadStream());
+                            fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType);
+                            formData.Add(fileContent, "photos", file.FileName);
+                        }
+                    }
+                }
+
+                // Add other form data
+                if (data != null)
+                {
+                    foreach (var prop in data.GetType().GetProperties())
+                    {
+                        var value = prop.GetValue(data);
+                        if (value != null)
+                        {
+                            if (value is List<int> listInt)
+                            {
+                                foreach (var item in listInt)
+                                {
+                                    formData.Add(new StringContent(item.ToString()), prop.Name);
+                                }
+                            }
+                            else if (value is List<string> listStr)
+                            {
+                                foreach (var item in listStr)
+                                {
+                                    formData.Add(new StringContent(item), prop.Name);
+                                }
+                            }
+                            else
+                            {
+                                formData.Add(new StringContent(value.ToString() ?? ""), prop.Name);
+                            }
+                        }
+                    }
+                }
+
+                var response = await httpClient.PostAsync($"{ApiConfiguration.BaseUrl}{endpoint}", formData);
+                var responseContent = await response.Content.ReadAsStringAsync();
+
+                return await ParseResponse<T>(response, responseContent);
+            }
+            catch (Exception ex)
+            {
+                return new ApiResponse<T>
+                {
+                    Success = false,
+                    ErrorMessage = ex.Message,
+                    StatusCode = System.Net.HttpStatusCode.InternalServerError
+                };
+            }
+        }
+
+        /// <summary>
+        /// Put form data with multiple file uploads
+        /// </summary>
+        public async Task<ApiResponse<T>> PutWithFilesAsync<T>(string endpoint, object? data, List<IFormFile>? files = null)
+        {
+            try
+            {
+                await SetAuthorizationHeaderAsync();
+                using var httpClient = _httpClient;
+                using var formData = new MultipartFormDataContent();
+
+                // Add files
+                if (files != null && files.Count > 0)
+                {
+                    foreach (var file in files)
+                    {
+                        if (file != null && file.Length > 0)
+                        {
+                            var fileContent = new StreamContent(file.OpenReadStream());
+                            fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType);
+                            formData.Add(fileContent, "newPhotos", file.FileName);
+                        }
+                    }
+                }
+
+                // Add other form data
+                if (data != null)
+                {
+                    foreach (var prop in data.GetType().GetProperties())
+                    {
+                        var value = prop.GetValue(data);
+                        if (value != null)
+                        {
+                            if (value is List<int> listInt)
+                            {
+                                foreach (var item in listInt)
+                                {
+                                    formData.Add(new StringContent(item.ToString()), prop.Name);
+                                }
+                            }
+                            else if (value is List<string> listStr)
+                            {
+                                foreach (var item in listStr)
+                                {
+                                    formData.Add(new StringContent(item), prop.Name);
+                                }
+                            }
+                            else
+                            {
+                                formData.Add(new StringContent(value.ToString() ?? ""), prop.Name);
+                            }
+                        }
+                    }
+                }
+
+                var response = await httpClient.PutAsync($"{ApiConfiguration.BaseUrl}{endpoint}", formData);
+                var responseContent = await response.Content.ReadAsStringAsync();
+
+                return await ParseResponse<T>(response, responseContent);
+            }
+            catch (Exception ex)
+            {
+                return new ApiResponse<T>
+                {
+                    Success = false,
+                    ErrorMessage = ex.Message,
+                    StatusCode = System.Net.HttpStatusCode.InternalServerError
+                };
+            }
+        }
+
+        /// <summary>
+        /// Parse API response to ApiResponse<T>
+        /// </summary>
+        private async Task<ApiResponse<T>> ParseResponse<T>(System.Net.Http.HttpResponseMessage response, string responseContent)
+        {
+            if (response.IsSuccessStatusCode)
+            {
+                try
+                {
+                    var result = JsonSerializer.Deserialize<T>(responseContent, new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true,
+                        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+                    });
+                    return new ApiResponse<T>
+                    {
+                        Success = true,
+                        Data = result,
+                        StatusCode = response.StatusCode
+                    };
+                }
+                catch (JsonException)
+                {
+                    // Try to deserialize as ApiResponse<T>
+                    try
+                    {
+                        var apiResponse = JsonSerializer.Deserialize<ApiResponse<T>>(responseContent, new JsonSerializerOptions
+                        {
+                            PropertyNameCaseInsensitive = true,
+                            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+                        });
+                        return apiResponse ?? new ApiResponse<T>
+                        {
+                            Success = false,
+                            ErrorMessage = "Invalid response format",
+                            StatusCode = response.StatusCode
+                        };
+                    }
+                    catch (JsonException)
+                    {
+                        return new ApiResponse<T>
+                        {
+                            Success = false,
+                            ErrorMessage = "Invalid response format",
+                            StatusCode = response.StatusCode
+                        };
+                    }
+                }
+            }
+            else
+            {
+                return new ApiResponse<T>
+                {
+                    Success = false,
+                    ErrorMessage = $"API Error: {response.StatusCode} - {responseContent}",
+                    StatusCode = response.StatusCode
+                };
+            }
+        }
     }
 }

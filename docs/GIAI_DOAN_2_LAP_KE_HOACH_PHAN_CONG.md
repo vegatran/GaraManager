@@ -549,5 +549,479 @@ Sau khi migration được áp dụng, các tính năng sau đã sẵn sàng s�
 
 ---
 
-**Tài liệu này tổng hợp tất cả thông tin về Giai đoạn 2.1 trong một file duy nhất.**
+---
+
+## 📋 GIAI ĐOẠN 2.2: YÊU CẦU VẬT TƯ (MATERIAL REQUEST)
+
+### **Tổng quan:**
+Giai đoạn 2.2: Yêu Cầu Vật Tư (MR) là bước quản lý xuất kho cho các phụ tùng cần thiết để thực hiện công việc sửa chữa.
+
+### **Trạng thái triển khai:**
+- ✅ **Backend:** 100% Hoàn thành (Entity, DTO, API, Repository)
+- ✅ **Frontend:** 100% Hoàn thành (UI, JavaScript, Validation)
+- ✅ **Database Migration:** ✅ Applied
+- ✅ **Build:** ✅ Success
+
+**Tổng tiến độ Giai đoạn 2.2:** ✅ **100%**
+
+### **Các tính năng đã triển khai:**
+1. ✅ Tạo MR từ Service Order (JO)
+2. ✅ Load danh sách phụ tùng từ Quotation gợi ý
+3. ✅ Thêm/xóa vật tư trong MR
+4. ✅ Submit MR để phê duyệt
+5. ✅ Approve/Reject MR
+6. ✅ Workflow: Draft → PendingApproval → Approved → Picked → Issued → Delivered
+7. ✅ Thông báo khi JO không có phụ tùng (chỉ có dịch vụ/tiền công)
+
+### **Mối liên kết với Giai đoạn 2.3:**
+- ✅ Khi ServiceOrder status = `WaitingForParts` → Cần MR
+- ✅ Sau khi MR được Approve → ServiceOrder có thể chuyển sang `ReadyToWork`
+- ✅ Nếu JO không có phụ tùng → Bỏ qua MR, chuyển thẳng sang 2.3
+
+---
+
+## 📋 GIAI ĐOẠN 2.3: QUẢN LÝ TIẾN ĐỘ SỬA CHỮA VÀ PHÁT SINH
+
+### **Tổng quan:**
+Giai đoạn 2.3: Quản Lý Tiến Độ Sửa Chữa và Phát Sinh bao gồm việc KTV bắt đầu công việc, ghi nhận giờ công thực tế, phát hiện và xử lý phát sinh, cập nhật tiến độ theo từng mốc.
+
+### **Các hoạt động chính:**
+
+#### **2.3.1: Bắt đầu Công việc**
+- **Hoạt động:** KTV bắt đầu làm việc, ghi nhận thời gian bắt đầu thực tế
+- **Bộ phận:** Kỹ thuật viên
+- **Quy tắc:** Hệ thống bắt đầu tính **Giờ công thực tế (Actual Labor Hours)** của KTV cho JO đó
+
+#### **2.3.2: Phát hiện Phát sinh**
+- **Hoạt động:** KTV phát hiện hư hỏng ngoài JO ban đầu
+- **Bộ phận:** Kỹ thuật viên
+- **Quy tắc:** Dừng công việc liên quan. KTV ghi nhận lỗi phát sinh vào hệ thống
+
+#### **2.3.3: Báo giá Phát sinh**
+- **Hoạt động:** CVDV lập Báo giá bổ sung và liên hệ khách hàng để xin duyệt
+- **Bộ phận:** Cố vấn Dịch vụ
+- **Quy tắc:** Nếu khách hàng đồng ý, tạo **LSC Bổ sung** (Lệnh Sửa chữa Bổ sung) và quay lại bước **2.2.1 (Yêu cầu Xuất kho)** cho vật tư phát sinh
+
+#### **2.3.4: Cập nhật Tiến độ**
+- **Hoạt động:** KTV cập nhật tiến độ công việc theo từng mốc (ví dụ: Đồng sơn hoàn thành, Thay dầu hoàn thành)
+- **Bộ phận:** Kỹ thuật viên
+- **Quy tắc:** Hệ thống hiển thị **Tiến độ JO** theo thời gian thực (rất quan trọng cho CVDV theo dõi)
+
+---
+
+## 🔍 ĐÁNH GIÁ GIAI ĐOẠN 2.3
+
+### **✅ Những gì đã có (~20%):**
+
+#### **1. Database Entities:**
+- ✅ `ServiceOrderLabor` có:
+  - `StartTime` (DateTime?) - Thời gian bắt đầu
+  - `EndTime` (DateTime?) - Thời gian kết thúc
+  - `ActualHours` (decimal) - Giờ công thực tế
+  - `Status` (string) - Trạng thái: "Pending", "InProgress", "Completed"
+- ✅ `ServiceOrderItem` có:
+  - `Status` (string) - Trạng thái item: "Pending", "InProgress", "Completed", "Cancelled"
+  - `AssignedTechnicianId` (int?) - KTV được phân công
+  - `EstimatedHours` (decimal?) - Giờ công dự kiến
+- ✅ `ServiceOrder` có:
+  - `StartDate` (DateTime?) - Khi công việc bắt đầu
+  - `Status` (string) - Trạng thái tổng thể
+
+#### **2. API Endpoints cơ bản:**
+- ✅ `POST /api/ServiceOrders/{id}/start` - Bắt đầu làm việc (Pending → In Progress)
+- ✅ `POST /api/ServiceOrders/{id}/complete` - Hoàn thành đơn hàng
+
+---
+
+### **❌ Còn thiếu (~80%):**
+
+#### **1. 2.3.1 - Bắt đầu Công việc:**
+- ❌ **Chức năng "Start Work" cụ thể cho KTV:**
+  - ❌ KTV không thể click nút "Bắt đầu làm việc" cho từng item
+  - ❌ Không có UI để KTV ghi nhận `StartTime` cho `ServiceOrderItem` hoặc `ServiceOrderLabor`
+  - ❌ Không có chức năng ghi nhận thời gian bắt đầu thực tế cho từng item
+  
+- ❌ **Tính toán "Giờ công thực tế":**
+  - ❌ Hệ thống chưa có cơ chế để KTV ghi nhận thời gian kết thúc công việc
+  - ❌ Không tự động tính `ActualHours = (EndTime - StartTime)`
+  - ❌ Không có API endpoint để KTV cập nhật `ActualHours` cho item
+
+#### **2. 2.3.2 - Phát hiện Phát sinh:**
+- ❌ **Cơ chế ghi nhận phát sinh:**
+  - ❌ Không có Entity để lưu "Phát sinh" (Additional Issue/Change Order)
+  - ❌ Không có UI cho KTV báo cáo các hư hỏng phát sinh ngoài JO ban đầu
+  - ❌ Không có tính năng upload hình ảnh/mô tả cho phát sinh
+  
+- ❌ **Chức năng "Dừng công việc liên quan":**
+  - ❌ Không có cơ chế để tạm dừng một `ServiceOrderItem` khi có phát sinh
+  - ❌ Không có trạng thái "OnHold" hoặc "WaitingForCustomerApproval" cho ServiceOrderItem
+  - ❌ Không có liên kết giữa "Phát sinh" và "ServiceOrderItem" bị ảnh hưởng
+
+#### **3. 2.3.3 - Báo giá Phát sinh:**
+- ❌ **Tạo "Báo giá bổ sung":**
+  - ❌ Không có quy trình hoặc UI để CVDV tạo một `ServiceQuotation` mới liên quan đến một phát sinh của `ServiceOrder` hiện có
+  - ❌ Không có field `ParentServiceOrderId` hoặc `RelatedToServiceOrderId` trong `ServiceQuotation` để liên kết
+  - ❌ Không có field `IsAdditionalQuotation` hoặc `ChangeOrderQuotation` để phân biệt
+  
+- ❌ **Liên kết với "LSC Bổ sung":**
+  - ❌ Không có khái niệm "LSC Bổ sung" (Additional Service Order)
+  - ❌ Không có field `ParentServiceOrderId` hoặc `IsAdditionalOrder` trong `ServiceOrder`
+  - ❌ Không có cách để tạo một `ServiceOrder` mới (hoặc cập nhật `ServiceOrder` hiện có) dựa trên báo giá phát sinh đã được duyệt
+  
+- ❌ **Quay lại 2.2.1 (Yêu cầu Xuất kho):**
+  - ❌ Mặc dù có chức năng "Yêu cầu Vật tư (MR)" (Giai đoạn 2.2), nhưng không có luồng tự động quay lại bước này sau khi báo giá phát sinh được duyệt
+  - ❌ Không có workflow: `Phát sinh → Báo giá phát sinh → Duyệt → Tạo LSC Bổ sung → Tạo MR cho phát sinh`
+
+#### **4. 2.3.4 - Cập nhật Tiến độ:**
+- ❌ **Cập nhật tiến độ theo từng mốc:**
+  - ❌ Không có tính năng cho KTV đánh dấu các `ServiceOrderItem` hoặc các "mốc" công việc cụ thể là đã hoàn thành (ví dụ: "Đồng sơn hoàn thành", "Thay dầu hoàn thành")
+  - ❌ Không có field `Milestone` hoặc `ProgressMilestones` trong `ServiceOrderItem`
+  - ❌ Không có API endpoint để KTV cập nhật trạng thái `ServiceOrderItem.Status` từ "InProgress" → "Completed"
+  
+- ❌ **Hiển thị "Tiến độ JO theo thời gian thực":**
+  - ❌ Hệ thống chưa có dashboard hoặc giao diện chi tiết để CVDV theo dõi tiến độ từng `ServiceOrderItem` một cách trực quan và theo thời gian thực
+  - ❌ Không có bảng/UI hiển thị: Item nào đang làm, Item nào đã hoàn thành, Item nào đang chờ
+  - ❌ Không có progress bar hoặc percentage cho từng item hoặc toàn bộ JO
+  - ❌ Không có timeline view để xem tiến độ theo thời gian
+
+---
+
+## 🔗 MỐI LIÊN KẾT GIỮA GIAI ĐOẠN 2.2 VÀ 2.3
+
+### **Liên kết chính:**
+
+**Theo quy trình nghiệp vụ (2.3.3):**
+> "Nếu khách hàng đồng ý, tạo LSC Bổ sung và **quay lại bước 2.2.1 (Yêu cầu Xuất kho) cho vật tư phát sinh.**"
+
+**Vòng lặp workflow:**
+```
+2.3: KTV đang sửa chữa
+    ↓
+2.3.2: Phát hiện phát sinh (hư hỏng mới)
+    ↓
+2.3.3: CVDV tạo báo giá phát sinh → KH duyệt
+    ↓
+Tạo LSC Bổ sung (hoặc cập nhật JO hiện tại)
+    ↓
+QUAY LẠI 2.2.1: Tạo MR cho vật tư phát sinh
+    ↓
+2.2: Submit → Approve → Xuất kho → Delivered
+    ↓
+QUAY LẠI 2.3: Tiếp tục sửa chữa với vật tư mới
+```
+
+### **Liên kết kỹ thuật cần triển khai:**
+
+1. **Entity liên kết:**
+   - `ServiceQuotation` cần field `ParentServiceOrderId` hoặc `RelatedToServiceOrderId` (nullable) để liên kết với JO gốc
+   - `ServiceQuotation` cần field `IsAdditionalQuotation` (bool) để phân biệt báo giá gốc vs báo giá bổ sung
+   - `ServiceOrder` cần field `ParentServiceOrderId` (nullable) để liên kết LSC Bổ sung với JO gốc
+   - `ServiceOrder` cần field `IsAdditionalOrder` (bool) để phân biệt
+
+2. **Workflow liên kết:**
+   - Khi tạo `ServiceQuotation` từ phát sinh: Set `RelatedToServiceOrderId = serviceOrderId`, `IsAdditionalQuotation = true`
+   - Khi duyệt báo giá phát sinh: Tự động tạo MR hoặc thông báo để quay lại 2.2.1
+   - Khi MR phát sinh được delivered: Tự động thông báo KTV tiếp tục công việc (2.3)
+
+3. **UI liên kết:**
+   - Trong trang Service Order detail: Hiển thị danh sách "Báo giá phát sinh" và "LSC Bổ sung"
+   - Trong trang Quotation: Hiển thị link đến JO gốc (nếu là báo giá bổ sung)
+   - Trong trang MR: Hiển thị link đến JO gốc và JO bổ sung (nếu có)
+
+---
+
+## 📊 TỔNG KẾT GIAI ĐOẠN 2.3
+
+**Ngày đánh giá:** 2025-10-31  
+**Ngày bắt đầu triển khai:** 2025-11-03  
+**Ngày hoàn thành 2.3.2 & 2.3.3:** 2025-11-03  
+**Trạng thái:** ✅ **Đã hoàn thành 75% (3/4 tính năng)**
+
+### **Tiến độ triển khai:**
+
+#### **✅ 2.3.1: Bắt đầu Công việc - HOÀN THÀNH 100%**
+**Ngày hoàn thành:** 2025-11-03
+
+**Đã triển khai:**
+- ✅ Database: Thêm `StartTime`, `EndTime`, `ActualHours`, `CompletedTime` vào `ServiceOrderItem`
+- ✅ Migration: `20251103035546_AddActualHoursToServiceOrderItems` (Đã apply)
+- ✅ API Endpoints:
+  - `POST /api/ServiceOrders/{id}/items/{itemId}/start-work` - KTV bắt đầu làm việc
+  - `POST /api/ServiceOrders/{id}/items/{itemId}/stop-work` - KTV dừng làm việc
+  - `POST /api/ServiceOrders/{id}/items/{itemId}/complete` - KTV hoàn thành item
+- ✅ Web Controllers: `OrderManagementController` với các actions tương ứng
+- ✅ JavaScript: `startItemWork()`, `stopItemWork()`, `completeItem()` với validation và confirm dialogs
+- ✅ UI: View Modal hiển thị cột "Trạng Thái", "Giờ Công Thực Tế", "Thao Tác" với nút Start/Stop/Complete
+- ✅ AutoMapper: Map đầy đủ các fields mới
+- ✅ Business Logic:
+  - Tự động tính `ActualHours` từ `StartTime` và `EndTime`
+  - Tự động cập nhật `ServiceOrder.StartDate` khi item đầu tiên bắt đầu
+  - Tự động chuyển `ServiceOrder.Status` sang "InProgress" khi item đầu tiên bắt đầu
+  - Tự động chuyển `ServiceOrder.Status` sang "Completed" khi tất cả items hoàn thành
+  - Authorization: Chỉ KTV được phân công hoặc Quản đốc/Tổ trưởng mới có thể bắt đầu
+
+**Chức năng:**
+- KTV có thể bắt đầu làm việc cho từng item trong View Modal
+- Hệ thống tự động ghi nhận `StartTime` và chuyển status sang "InProgress"
+- KTV có thể dừng làm việc (tính ActualHours tạm thời)
+- KTV có thể hoàn thành item (tự động tính ActualHours cuối cùng và set CompletedTime)
+- Hiển thị trạng thái và giờ công thực tế trong View Modal
+
+---
+
+#### **🟡 2.3.4: Cập nhật Tiến độ - CHƯA TRIỂN KHAI (0%)**
+
+**Còn thiếu:**
+- ❌ Dashboard tiến độ theo thời gian thực cho CVDV
+- ❌ Progress bar/percentage cho từng item và toàn bộ JO
+- ❌ Timeline view để xem tiến độ theo thời gian
+- ❌ API endpoint để lấy progress statistics
+- ❌ UI hiển thị: Item nào đang làm, Item nào đã hoàn thành, Item nào đang chờ
+
+**Lưu ý:** Một phần logic đã được triển khai trong 2.3.1 (completeItem đã có thể cập nhật status từ "InProgress" → "Completed"), nhưng UI dashboard và statistics chưa có.
+
+---
+
+#### **✅ 2.3.2: Phát hiện Phát sinh - HOÀN THÀNH 100%**
+**Ngày hoàn thành:** 2025-11-03
+
+**Đã triển khai:**
+
+**1. Database Entities:**
+- ✅ `AdditionalIssue` - Entity lưu thông tin phát sinh với các fields:
+  - `ServiceOrderId` (int, required) - Liên kết với ServiceOrder gốc
+  - `ServiceOrderItemId` (int?, nullable) - Hạng mục bị ảnh hưởng (optional)
+  - `IssueName` (string, required) - Tên phát sinh
+  - `Category` (string) - Danh mục: Engine, Brake, Suspension, Electrical, Body, Tire, Other
+  - `Description` (string, required) - Mô tả chi tiết
+  - `Severity` (string) - Mức độ: Critical, High, Medium, Low
+  - `IsUrgent` (bool) - Cần xử lý ngay
+  - `Status` (string) - Trạng thái: Identified, Reported, Quoted, Approved, Rejected, Repaired
+  - `ReportedByEmployeeId` (int?) - KTV báo cáo
+  - `ReportedDate` (DateTime) - Ngày báo cáo
+  - `AdditionalQuotationId` (int?) - Báo giá bổ sung (nếu có)
+  - `AdditionalServiceOrderId` (int?) - LSC Bổ sung (nếu có)
+  - `Notes` (string?) - Ghi chú KTV
+- ✅ `AdditionalIssuePhoto` - Entity lưu hình ảnh phát sinh
+  - `AdditionalIssueId` (int, required)
+  - `PhotoPath` (string, required)
+  - `UploadDate` (DateTime)
+- ✅ Migration: `20251103062345_CreateAdditionalIssues` (Đã apply)
+
+**2. API Endpoints:**
+- ✅ `GET /api/AdditionalIssues/GetByServiceOrder/{serviceOrderId}` - Lấy danh sách phát sinh theo ServiceOrder
+- ✅ `GET /api/AdditionalIssues/{id}` - Lấy chi tiết phát sinh
+- ✅ `POST /api/AdditionalIssues/Create` - Tạo phát sinh mới (multipart/form-data, hỗ trợ upload nhiều ảnh)
+- ✅ `PUT /api/AdditionalIssues/Update/{id}` - Cập nhật phát sinh (multipart/form-data)
+- ✅ `DELETE /api/AdditionalIssues/Delete/{id}` - Xóa phát sinh
+- ✅ `POST /api/AdditionalIssues/{id}/upload-photos` - Upload thêm ảnh
+- ✅ `DELETE /api/AdditionalIssues/{id}/photos/{photoId}` - Xóa ảnh
+
+**3. Business Logic:**
+- ✅ Tự động chuyển `ServiceOrderItem.Status` sang "OnHold" khi có phát sinh liên quan
+- ✅ Cập nhật `ServiceOrderItem.Notes` với thông tin phát sinh
+- ✅ Validate: Chỉ KTV được phân công hoặc Quản đốc/Tổ trưởng mới có thể báo cáo
+- ✅ Auto-set `ReportedByEmployeeId` dựa trên authenticated user hoặc assigned technician
+- ✅ File upload validation: Chỉ chấp nhận JPG, JPEG, PNG, GIF, WEBP, max 5MB/ảnh
+
+**4. Web Controllers:**
+- ✅ `AdditionalIssuesController` với các actions: Index, GetByServiceOrder, Create, Update, Delete, UploadPhotos, DeletePhoto
+
+**5. JavaScript:**
+- ✅ `order-management.js` với các functions:
+  - `renderAdditionalIssuesList()` - Hiển thị danh sách phát sinh trong tab
+  - `openReportAdditionalIssueModal()` - Mở modal báo cáo phát sinh
+  - `loadServiceOrderItemsForIssue()` - Load danh sách items để chọn hạng mục bị ảnh hưởng
+  - `submitReportAdditionalIssue()` - Submit form báo cáo (multipart/form-data)
+  - `openEditAdditionalIssueModal()` - Mở modal sửa phát sinh
+  - `deleteAdditionalIssue()` - Xóa phát sinh với confirm dialog
+
+**6. UI:**
+- ✅ Tab "Phát Sinh" trong View Order Modal với:
+  - Danh sách phát sinh hiển thị: Tên, danh mục, mức độ (badge màu), trạng thái, ngày báo cáo, KTV báo cáo
+  - Nút "Báo Cáo Phát Sinh" để tạo mới
+  - Nút "Tạo Báo Giá" cho phát sinh chưa có báo giá
+  - Nút "Sửa", "Xóa" cho từng phát sinh
+  - Hiển thị hình ảnh (nếu có)
+- ✅ Modal `_ReportAdditionalIssueModal.cshtml` với form:
+  - Dropdown chọn hạng mục bị ảnh hưởng (optional)
+  - Input: Danh mục, Tên phát sinh, Mô tả, Mức độ, Ghi chú KTV
+  - Checkbox: Cần xử lý ngay
+  - File upload: Upload nhiều ảnh (preview và xóa trước khi submit)
+
+**Chức năng:**
+- ✅ KTV có thể báo cáo phát sinh từ View Order Modal
+- ✅ Upload nhiều ảnh minh họa
+- ✅ Chọn hạng mục bị ảnh hưởng (hoặc để trống = ảnh hưởng toàn bộ JO)
+- ✅ Hệ thống tự động dừng hạng mục liên quan (chuyển sang "OnHold")
+- ✅ Hiển thị trạng thái phát sinh với badge màu
+
+---
+
+#### **✅ 2.3.3: Báo giá Phát sinh - HOÀN THÀNH 100%**
+**Ngày hoàn thành:** 2025-11-03
+
+**Đã triển khai:**
+
+**1. Database Entities:**
+- ✅ `ServiceQuotation` đã thêm:
+  - `RelatedToServiceOrderId` (int?, nullable) - Liên kết với ServiceOrder gốc
+  - `IsAdditionalQuotation` (bool, default: false) - Phân biệt báo giá gốc vs bổ sung
+  - Navigation property: `RelatedToServiceOrder`
+- ✅ `ServiceOrder` đã thêm:
+  - `ParentServiceOrderId` (int?, nullable) - Liên kết với ServiceOrder gốc (self-referencing)
+  - `IsAdditionalOrder` (bool, default: false) - Phân biệt JO gốc vs LSC Bổ sung
+  - Navigation properties: `ParentServiceOrder`, `AdditionalServiceOrders`
+- ✅ `AdditionalIssue` đã thêm:
+  - `AdditionalQuotationId` (int?) - Liên kết với báo giá bổ sung
+  - `AdditionalServiceOrderId` (int?) - Liên kết với LSC Bổ sung
+- ✅ Migration: `20251103062345_CreateAdditionalIssues` (Đã apply)
+- ✅ Migration: `20251103062346_AddAdditionalQuotationFields` (Đã apply)
+
+**2. API Endpoints:**
+- ✅ `POST /api/AdditionalIssues/{id}/create-quotation` - Tạo báo giá bổ sung từ phát sinh
+  - Lấy `CustomerId` và `VehicleId` từ ServiceOrder gốc
+  - Tạo `ServiceQuotation` mới với `IsAdditionalQuotation = true`
+  - Set `RelatedToServiceOrderId` và `Status = "Draft"`
+  - Cập nhật `AdditionalIssue.AdditionalQuotationId` và `Status = "Quoted"`
+- ✅ `POST /api/ServiceQuotations/{id}/approve` - Duyệt báo giá phát sinh (đã cập nhật):
+  - Nếu `IsAdditionalQuotation = true`:
+    - Tạo `ServiceOrder` mới (LSC Bổ sung) với `ParentServiceOrderId` và `IsAdditionalOrder = true`
+    - Cập nhật `AdditionalIssue.AdditionalServiceOrderId` và `Status = "Approved"`
+    - Copy tất cả items từ báo giá
+
+**3. Business Logic:**
+- ✅ Tự động lấy thông tin khách hàng và xe từ ServiceOrder gốc khi tạo báo giá
+- ✅ Tự động tạo LSC Bổ sung khi approve báo giá phát sinh
+- ✅ Validate: Chỉ cho phép tạo báo giá cho phát sinh chưa có báo giá (`AdditionalQuotationId = null`)
+- ✅ Validate: Phát sinh phải ở trạng thái `Identified` hoặc `Reported`
+
+**4. DTOs:**
+- ✅ `CreateQuotationFromIssueDto` - DTO để tạo báo giá từ phát sinh
+  - `Items` (List<CreateQuotationItemDto>) - Danh sách items
+  - `ValidUntil` (DateTime?) - Ngày hết hạn
+  - `Description`, `Terms`, `CustomerNotes` (string?)
+  - `TaxRate`, `DiscountAmount` (decimal)
+
+**5. Web Controllers:**
+- ✅ `AdditionalIssuesController.CreateQuotation` - Proxy API call
+
+**6. JavaScript:**
+- ✅ `order-management.js` với các functions:
+  - `openCreateQuotationModal(issueId)` - Mở modal tạo báo giá từ phát sinh
+  - `addQuotationItemFromIssue()` - Thêm item vào bảng báo giá
+  - `removeQuotationItemFromIssue(button)` - Xóa item
+  - `calculateQuotationItemFromIssue(row)` - Tính toán tự động cho từng item
+  - `calculateQuotationTotalFromIssue()` - Tính tổng báo giá
+  - `submitCreateQuotationFromIssue()` - Submit form tạo báo giá
+- ✅ Hiển thị nút "Tạo Báo Giá" cho phát sinh chưa có báo giá
+- ✅ Hiển thị link đến báo giá nếu đã có `AdditionalQuotationId`
+
+**7. UI:**
+- ✅ Modal `_CreateQuotationFromIssueModal.cshtml` với:
+  - Hiển thị thông tin phát sinh (read-only)
+  - Form: Ngày hết hạn, Giảm giá, Mô tả, Điều khoản, Ghi chú khách hàng
+  - Bảng items động: Tên, Mô tả, Số lượng, Đơn giá, Có HĐ, VAT%, Tạm tính, VAT, Thành tiền
+  - Nút "Thêm Item", "Xóa" cho từng item
+  - Tổng kết tự động: Tạm tính, VAT, Giảm giá, Tổng cộng
+  - Nút "Tạo Báo Giá" để submit
+
+**Chức năng:**
+- ✅ CVDV có thể tạo báo giá bổ sung từ phát sinh
+- ✅ Hệ thống tự động lấy thông tin khách hàng và xe từ JO gốc
+- ✅ Tự động tính toán VAT và tổng tiền
+- ✅ Khi khách hàng duyệt báo giá phát sinh → Tự động tạo LSC Bổ sung
+- ✅ Cập nhật trạng thái phát sinh thành "Approved"
+- ✅ Workflow hoàn chỉnh: Phát sinh → Báo giá phát sinh → Duyệt → LSC Bổ sung → MR (nếu có vật tư) → Tiếp tục sửa chữa
+
+---
+
+### **Độ ưu tiên triển khai tiếp theo:**
+
+1. **⭐⭐⭐ HIGH (Cần thiết ngay):**
+   - ✅ ~~2.3.1: Bắt đầu Công việc~~ - **HOÀN THÀNH**
+   - ✅ ~~2.3.2: Phát hiện Phát sinh~~ - **HOÀN THÀNH**
+   - ✅ ~~2.3.3: Báo giá Phát sinh~~ - **HOÀN THÀNH**
+   - 🟡 2.3.4: Cập nhật Tiến độ theo từng mốc (Dashboard & Statistics)
+
+2. **⭐ LOW (Nice-to-have):**
+   - Export/Print báo cáo tiến độ
+   - Email notifications khi có phát sinh
+   - Timeline view để xem tiến độ theo thời gian
+
+---
+
+### **Files đã thay đổi:**
+
+**Entities (2.3.1):**
+- `src/GarageManagementSystem.Core/Entities/ServiceOrderItem.cs`
+
+**Entities (2.3.2 & 2.3.3):**
+- `src/GarageManagementSystem.Core/Entities/AdditionalIssue.cs` (mới)
+- `src/GarageManagementSystem.Core/Entities/AdditionalIssuePhoto.cs` (mới)
+- `src/GarageManagementSystem.Core/Entities/ServiceQuotation.cs` (đã cập nhật)
+- `src/GarageManagementSystem.Core/Entities/ServiceOrder.cs` (đã cập nhật)
+
+**DTOs:**
+- `src/GarageManagementSystem.Shared/DTOs/ServiceOrderItemDto.cs`
+- `src/GarageManagementSystem.Shared/DTOs/AdditionalIssueDtos.cs` (mới)
+- `src/GarageManagementSystem.Shared/DTOs/ServiceQuotationDto.cs` (đã cập nhật)
+- `src/GarageManagementSystem.Shared/DTOs/ServiceOrderDto.cs` (đã cập nhật)
+
+**API:**
+- `src/GarageManagementSystem.API/Controllers/ServiceOrdersController.cs` (2.3.1)
+- `src/GarageManagementSystem.API/Controllers/AdditionalIssuesController.cs` (mới - 2.3.2 & 2.3.3)
+- `src/GarageManagementSystem.API/Controllers/ServiceQuotationsController.cs` (đã cập nhật - 2.3.3)
+- `src/GarageManagementSystem.API/Profiles/ServiceOrderProfile.cs`
+- `src/GarageManagementSystem.API/Profiles/AdditionalIssueProfile.cs` (mới)
+
+**Web:**
+- `src/GarageManagementSystem.Web/Controllers/OrderManagementController.cs` (2.3.1)
+- `src/GarageManagementSystem.Web/Controllers/AdditionalIssuesController.cs` (mới - 2.3.2 & 2.3.3)
+- `src/GarageManagementSystem.Web/Configuration/ApiEndpoints.cs`
+- `src/GarageManagementSystem.Web/Views/OrderManagement/_ViewOrderModal.cshtml` (đã cập nhật)
+- `src/GarageManagementSystem.Web/Views/OrderManagement/_ReportAdditionalIssueModal.cshtml` (mới)
+- `src/GarageManagementSystem.Web/Views/OrderManagement/_CreateQuotationFromIssueModal.cshtml` (mới)
+- `src/GarageManagementSystem.Web/wwwroot/js/order-management.js` (đã cập nhật)
+
+**Database:**
+- `src/GarageManagementSystem.Infrastructure/Data/GarageDbContext.cs` (đã cập nhật)
+- `src/GarageManagementSystem.Infrastructure/Migrations/20251103035546_AddActualHoursToServiceOrderItems.cs` ✅ Applied
+- `src/GarageManagementSystem.Infrastructure/Migrations/20251103062345_CreateAdditionalIssues.cs` ✅ Applied
+- `src/GarageManagementSystem.Infrastructure/Migrations/20251103062346_AddAdditionalQuotationFields.cs` ✅ Applied
+
+---
+
+### **Tổng kết:**
+- **2.3.1: 100% Hoàn thành** ✅
+- **2.3.2: 100% Hoàn thành** ✅
+- **2.3.3: 100% Hoàn thành** ✅
+- **2.3.4: 0% (chưa bắt đầu)** ❌
+
+### **Hướng dẫn sử dụng:**
+
+#### **2.3.2: Phát hiện Phát sinh**
+1. Vào trang **"Quản Lý Phiếu Sửa Chữa"**
+2. Click nút **"Xem"** của ServiceOrder
+3. Click tab **"Phát Sinh"**
+4. Click **"Báo Cáo Phát Sinh"** → Điền thông tin → Upload ảnh (nếu có) → Click **"Lưu"**
+5. Hệ thống tự động chuyển hạng mục liên quan sang trạng thái "OnHold"
+
+#### **2.3.3: Báo giá Phát sinh**
+1. Trong tab **"Phát Sinh"**, tìm phát sinh có trạng thái "Mới phát hiện" hoặc "Đã báo cáo"
+2. Click nút **"Tạo Báo Giá"** (màu xanh lá)
+3. Modal hiện ra → Điền thông tin báo giá → Thêm items → Tính toán tự động → Click **"Tạo Báo Giá"**
+4. Hệ thống tự động tạo báo giá bổ sung và cập nhật trạng thái phát sinh thành "Quoted"
+5. Khi khách hàng duyệt báo giá phát sinh → Hệ thống tự động tạo LSC Bổ sung
+6. Quay lại quy trình xuất kho (2.2) nếu có vật tư, hoặc tiếp tục sửa chữa (2.3.1)
+
+**Tiến độ tổng thể Giai đoạn 2.3:** ✅ **75% (3/4 hoàn thành)**
+- ✅ 2.3.1: Bắt đầu Công việc - **100%**
+- ✅ 2.3.2: Phát hiện Phát sinh - **100%**
+- ✅ 2.3.3: Báo giá Phát sinh - **100%**
+- ❌ 2.3.4: Cập nhật Tiến độ - **0%** (Dashboard & Statistics chưa có)
+
+---
+
+**Tài liệu này tổng hợp tất cả thông tin về Giai đoạn 2 (2.1, 2.2, 2.3) trong một file duy nhất.**
 
