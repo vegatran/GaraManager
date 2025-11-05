@@ -30,6 +30,16 @@ namespace GarageManagementSystem.Shared.DTOs
         /// </summary>
         public bool IsAdditionalOrder { get; set; } = false;
         
+        /// <summary>
+        /// ✅ 2.3.3: Tổng tiền của các LSC Bổ sung (chỉ có giá trị khi là JO gốc)
+        /// </summary>
+        public decimal AdditionalOrdersTotalAmount { get; set; } = 0;
+        
+        /// <summary>
+        /// ✅ 2.3.3: Tổng tiền cuối cùng bao gồm JO gốc + LSC Bổ sung (chỉ có giá trị khi là JO gốc)
+        /// </summary>
+        public decimal GrandTotalAmount { get; set; } = 0;
+        
         public List<ServiceOrderItemDto> ServiceOrderItems { get; set; } = new();
     }
 

@@ -69,7 +69,11 @@ namespace GarageManagementSystem.API.Controllers
                 
                 // Apply pagination
                 var orders = query.ApplyPagination(pageNumber, pageSize).ToList();
-                var orderDtos = orders.Select(MapToDto).ToList();
+                var orderDtos = new List<ServiceOrderDto>();
+                foreach (var order in orders)
+                {
+                    orderDtos.Add(await MapToDtoAsync(order));
+                }
                 
                 return Ok(PagedResponse<ServiceOrderDto>.CreateSuccessResult(
                     orderDtos, pageNumber, pageSize, totalCount, "Service orders retrieved successfully"));
@@ -91,7 +95,7 @@ namespace GarageManagementSystem.API.Controllers
                     return NotFound(ApiResponse<ServiceOrderDto>.ErrorResult("Không tìm thấy phiếu sửa chữa"));
                 }
 
-                var orderDto = MapToDto(order);
+                var orderDto = await MapToDtoAsync(order);
                 return Ok(ApiResponse<ServiceOrderDto>.SuccessResult(orderDto));
             }
             catch (Exception ex)
@@ -106,7 +110,11 @@ namespace GarageManagementSystem.API.Controllers
             try
             {
                 var orders = await _unitOfWork.ServiceOrders.GetByCustomerIdAsync(customerId);
-                var orderDtos = orders.Select(MapToDto).ToList();
+                var orderDtos = new List<ServiceOrderDto>();
+                foreach (var order in orders)
+                {
+                    orderDtos.Add(await MapToDtoAsync(order));
+                }
 
                 return Ok(ApiResponse<List<ServiceOrderDto>>.SuccessResult(orderDtos));
             }
@@ -122,7 +130,11 @@ namespace GarageManagementSystem.API.Controllers
             try
             {
                 var orders = await _unitOfWork.ServiceOrders.GetByVehicleIdAsync(vehicleId);
-                var orderDtos = orders.Select(MapToDto).ToList();
+                var orderDtos = new List<ServiceOrderDto>();
+                foreach (var order in orders)
+                {
+                    orderDtos.Add(await MapToDtoAsync(order));
+                }
 
                 return Ok(ApiResponse<List<ServiceOrderDto>>.SuccessResult(orderDtos));
             }
@@ -390,7 +402,7 @@ namespace GarageManagementSystem.API.Controllers
 
                 // Reload with details
                 order = await _unitOfWork.ServiceOrders.GetByIdWithDetailsAsync(order.Id);
-                var orderDto = MapToDto(order!);
+                var orderDto = await MapToDtoAsync(order!);
 
                 return CreatedAtAction(nameof(GetServiceOrder), new { id = order.Id }, 
                     ApiResponse<ServiceOrderDto>.SuccessResult(orderDto, "Tạo phiếu sửa chữa thành công"));
@@ -472,7 +484,7 @@ namespace GarageManagementSystem.API.Controllers
 
                 // Reload with details
                 order = await _unitOfWork.ServiceOrders.GetByIdWithDetailsAsync(id);
-                var orderDto = MapToDto(order!);
+                var orderDto = await MapToDtoAsync(order!);
 
                 return Ok(ApiResponse<ServiceOrderDto>.SuccessResult(orderDto, "Service order updated successfully"));
             }
@@ -510,7 +522,11 @@ namespace GarageManagementSystem.API.Controllers
             try
             {
                 var orders = await _unitOfWork.ServiceOrders.GetByStatusAsync(status);
-                var orderDtos = orders.Select(MapToDto).ToList();
+                var orderDtos = new List<ServiceOrderDto>();
+                foreach (var order in orders)
+                {
+                    orderDtos.Add(await MapToDtoAsync(order));
+                }
 
                 return Ok(ApiResponse<List<ServiceOrderDto>>.SuccessResult(orderDtos));
             }
@@ -559,7 +575,7 @@ namespace GarageManagementSystem.API.Controllers
 
                 // Reload with details
                 order = await _unitOfWork.ServiceOrders.GetByIdWithDetailsAsync(id);
-                var orderDto = MapToDto(order!);
+                var orderDto = await MapToDtoAsync(order!);
 
                 return Ok(ApiResponse<ServiceOrderDto>.SuccessResult(orderDto, "Order status updated successfully"));
             }
@@ -575,12 +591,30 @@ namespace GarageManagementSystem.API.Controllers
             return $"SO-{DateTime.Now:yyyyMMdd}-{Guid.NewGuid().ToString("N")[..8].ToUpper()}";
         }
 
-        private ServiceOrderDto MapToDto(Core.Entities.ServiceOrder order)
+        private async Task<ServiceOrderDto> MapToDtoAsync(Core.Entities.ServiceOrder order)
         {
             var dto = _mapper.Map<ServiceOrderDto>(order);
             
             // ✅ THÊM: Map ServiceQuotationId
             dto.ServiceQuotationId = order.ServiceQuotationId;
+            
+            // ✅ 2.3.3: Tính tổng tiền LSC Bổ sung nếu là JO gốc
+            if (!order.IsAdditionalOrder && order.Id > 0)
+            {
+                // ✅ OPTIMIZED: Query tất cả LSC Bổ sung liên kết với JO gốc này ở database level
+                var additionalOrders = (await _unitOfWork.Repository<Core.Entities.ServiceOrder>()
+                    .FindAsync(o => o.ParentServiceOrderId == order.Id && !o.IsDeleted))
+                    .ToList();
+                
+                dto.AdditionalOrdersTotalAmount = additionalOrders.Sum(o => o.TotalAmount);
+                dto.GrandTotalAmount = order.TotalAmount + dto.AdditionalOrdersTotalAmount;
+            }
+            else
+            {
+                // Nếu là LSC Bổ sung, không tính tổng
+                dto.AdditionalOrdersTotalAmount = 0;
+                dto.GrandTotalAmount = order.TotalAmount;
+            }
             
             // ✅ THÊM: Map ServiceName, AssignedTechnicianName, EstimatedHours, AssignedTechnicianId cho từng item
             if (dto.ServiceOrderItems != null)
@@ -641,7 +675,11 @@ namespace GarageManagementSystem.API.Controllers
             {
                 var orders = await _unitOfWork.ServiceOrders.GetAllWithDetailsAsync();
                 var filteredOrders = orders.Where(o => o.PaymentStatus == paymentStatus).ToList();
-                var orderDtos = filteredOrders.Select(MapToDto).ToList();
+                var orderDtos = new List<ServiceOrderDto>();
+                foreach (var order in filteredOrders)
+                {
+                    orderDtos.Add(await MapToDtoAsync(order));
+                }
 
                 return Ok(ApiResponse<List<ServiceOrderDto>>.SuccessResult(orderDtos));
             }
@@ -666,7 +704,11 @@ namespace GarageManagementSystem.API.Controllers
 
                 var orders = await _unitOfWork.ServiceOrders.GetAllWithDetailsAsync();
                 var filteredOrders = orders.Where(o => o.Vehicle.VehicleType == vehicleType).ToList();
-                var orderDtos = filteredOrders.Select(MapToDto).ToList();
+                var orderDtos = new List<ServiceOrderDto>();
+                foreach (var order in filteredOrders)
+                {
+                    orderDtos.Add(await MapToDtoAsync(order));
+                }
 
                 return Ok(ApiResponse<List<ServiceOrderDto>>.SuccessResult(orderDtos));
             }
@@ -721,7 +763,7 @@ namespace GarageManagementSystem.API.Controllers
                 }
 
                 var updatedOrder = await _unitOfWork.ServiceOrders.GetByIdWithDetailsAsync(id);
-                var orderDto = MapToDto(updatedOrder!);
+                var orderDto = await MapToDtoAsync(updatedOrder!);
 
                 return Ok(ApiResponse<ServiceOrderDto>.SuccessResult(orderDto, "Payment status updated successfully"));
             }
@@ -948,7 +990,7 @@ namespace GarageManagementSystem.API.Controllers
 
                     // Reload with details
                     order = await _unitOfWork.ServiceOrders.GetByIdWithDetailsAsync(id);
-                    var orderDto = MapToDto(order!);
+                    var orderDto = await MapToDtoAsync(order!);
 
                     return Ok(ApiResponse<ServiceOrderDto>.SuccessResult(orderDto, $"Đã chuyển trạng thái thành '{newStatus}'"));
                 }
@@ -1132,7 +1174,7 @@ namespace GarageManagementSystem.API.Controllers
 
                     // Reload with details
                     order = await _unitOfWork.ServiceOrders.GetByIdWithDetailsAsync(id);
-                    var orderDto = MapToDto(order!);
+                    var orderDto = await MapToDtoAsync(order!);
 
                     return Ok(ApiResponse<ServiceOrderDto>.SuccessResult(orderDto, "Đã phân công KTV thành công"));
                 }
@@ -1234,7 +1276,7 @@ namespace GarageManagementSystem.API.Controllers
 
                     // Reload with details
                     order = await _unitOfWork.ServiceOrders.GetByIdWithDetailsAsync(id);
-                    var orderDto = MapToDto(order!);
+                    var orderDto = await MapToDtoAsync(order!);
 
                     return Ok(ApiResponse<ServiceOrderDto>.SuccessResult(orderDto, $"Đã phân công KTV cho {itemsToUpdate.Count} hạng mục"));
                 }
@@ -1286,7 +1328,7 @@ namespace GarageManagementSystem.API.Controllers
 
                     // Reload with details
                     order = await _unitOfWork.ServiceOrders.GetByIdWithDetailsAsync(id);
-                    var orderDto = MapToDto(order!);
+                    var orderDto = await MapToDtoAsync(order!);
 
                     return Ok(ApiResponse<ServiceOrderDto>.SuccessResult(orderDto, "Đã cập nhật giờ công dự kiến"));
                 }
@@ -1389,7 +1431,7 @@ namespace GarageManagementSystem.API.Controllers
 
                     // Reload with details
                     order = await _unitOfWork.ServiceOrders.GetByIdWithDetailsAsync(id);
-                    var orderDto = MapToDto(order!);
+                    var orderDto = await MapToDtoAsync(order!);
 
                     return Ok(ApiResponse<ServiceOrderDto>.SuccessResult(orderDto, "Đã bắt đầu làm việc"));
                 }
@@ -1467,7 +1509,7 @@ namespace GarageManagementSystem.API.Controllers
 
                     // Reload with details
                     order = await _unitOfWork.ServiceOrders.GetByIdWithDetailsAsync(id);
-                    var orderDto = MapToDto(order!);
+                    var orderDto = await MapToDtoAsync(order!);
 
                     return Ok(ApiResponse<ServiceOrderDto>.SuccessResult(orderDto, "Đã dừng làm việc"));
                 }
@@ -1599,7 +1641,7 @@ namespace GarageManagementSystem.API.Controllers
 
                     // Reload with details
                     order = await _unitOfWork.ServiceOrders.GetByIdWithDetailsAsync(id);
-                    var orderDto = MapToDto(order!);
+                    var orderDto = await MapToDtoAsync(order!);
 
                     return Ok(ApiResponse<ServiceOrderDto>.SuccessResult(orderDto, "Đã hoàn thành hạng mục"));
                 }
