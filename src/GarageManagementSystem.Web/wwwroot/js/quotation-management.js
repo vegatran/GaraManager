@@ -2002,7 +2002,40 @@ window.QuotationManagement = {
                 if (AuthHandler.validateApiResponse(response)) {
                     if (response.success) {
                         $('#approveQuotationModal').modal('hide');
-                        GarageApp.showSuccess('Duyệt báo giá thành công! ' + (approveData.CreateServiceOrder ? 'Đã tạo phiếu sửa chữa.' : ''));
+                        
+                        // ✅ 2.3.3: Hiển thị thông báo với button "Tạo MR" nếu là additional quotation
+                        var message = 'Duyệt báo giá thành công!';
+                        if (approveData.CreateServiceOrder && response.data && response.data.serviceOrderId) {
+                            message += ' Đã tạo phiếu sửa chữa.';
+                            
+                            // Nếu là LSC Bổ sung, hiển thị thông báo về việc tạo MR
+                            if (response.data.isAdditionalOrder) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Đã tạo LSC Bổ sung thành công!',
+                                    html: `
+                                        <p>Phiếu sửa chữa bổ sung đã được tạo thành công.</p>
+                                        <p class="text-muted">Nếu có vật tư cần xuất kho, vui lòng tạo Material Request.</p>
+                                    `,
+                                    showCancelButton: true,
+                                    confirmButtonText: 'Tạo MR',
+                                    cancelButtonText: 'Đóng',
+                                    confirmButtonColor: '#28a745'
+                                }).then((result) => {
+                                    if (result.isConfirmed) {
+                                        // Chuyển đến trang Material Request với Service Order đã được chọn
+                                        window.location.href = '/MaterialRequestManagement?serviceOrderId=' + response.data.serviceOrderId;
+                                    } else {
+                                        GarageApp.showSuccess(message);
+                                    }
+                                });
+                            } else {
+                                GarageApp.showSuccess(message);
+                            }
+                        } else {
+                            GarageApp.showSuccess(message);
+                        }
+                        
                         self.quotationTable.ajax.reload();
                     } else {
                         GarageApp.showError(GarageApp.parseErrorMessage(response) || 'Lỗi khi duyệt báo giá');

@@ -707,6 +707,23 @@ window.OrderManagement = {
         }
         // ✅ SỬA: Format currency đúng cách
         $('#viewTotalAmount').text(order.totalAmount ? order.totalAmount.toLocaleString('vi-VN') + ' VNĐ' : '0 VNĐ');
+        
+        // ✅ 2.3.3: Hiển thị GrandTotalAmount và AdditionalOrdersTotalAmount nếu là JO gốc
+        if (!order.isAdditionalOrder && order.additionalOrdersTotalAmount !== undefined) {
+            var grandTotalHtml = '<div class="mt-2">';
+            grandTotalHtml += '<label class="font-weight-bold text-primary">Tổng Tiền JO Gốc:</label> ';
+            grandTotalHtml += '<span class="text-primary font-weight-bold">' + (order.totalAmount ? order.totalAmount.toLocaleString('vi-VN') + ' VNĐ' : '0 VNĐ') + '</span>';
+            
+            if (order.additionalOrdersTotalAmount > 0) {
+                grandTotalHtml += '<br><label class="font-weight-bold text-info">Tổng Tiền LSC Bổ Sung:</label> ';
+                grandTotalHtml += '<span class="text-info">' + order.additionalOrdersTotalAmount.toLocaleString('vi-VN') + ' VNĐ</span>';
+                grandTotalHtml += '<br><label class="font-weight-bold text-success">Tổng Tiền Cuối Cùng:</label> ';
+                grandTotalHtml += '<span class="text-success font-weight-bold">' + (order.grandTotalAmount ? order.grandTotalAmount.toLocaleString('vi-VN') + ' VNĐ' : '0 VNĐ') + '</span>';
+            }
+            grandTotalHtml += '</div>';
+            $('#viewTotalAmount').html(grandTotalHtml);
+        }
+        
         // ✅ THÊM: Format status sang tiếng Việt
         var statusText = OrderManagement.formatServiceOrderStatus(order.status || '');
         $('#viewStatus').html(statusText);
@@ -716,14 +733,34 @@ window.OrderManagement = {
         if (order.serviceOrderItems && order.serviceOrderItems.length > 0) {
             var itemsHtml = '';
             var self = this;
+            var hasPartsItems = false; // ✅ 2.3.3: Check if order has parts items
+            
             order.serviceOrderItems.forEach(function(item) {
                 var statusBadge = self.formatItemStatus(item.status);
                 var actualHoursDisplay = item.actualHours ? 
                     item.actualHours.toFixed(2) + ' giờ' : 
                     '<span class="text-muted">-</span>';
                 
+                // ✅ 2.4.3: Hiển thị giờ công làm lại
+                var reworkHoursDisplay = item.reworkHours ? 
+                    item.reworkHours.toFixed(2) + ' giờ' : 
+                    '<span class="text-muted">-</span>';
+                
+                // ✅ 2.3.3: Check if item is a part (has PartId or ServiceType is 'parts')
+                if (item.partId || item.serviceType === 'parts' || item.itemCategory === 'Material') {
+                    hasPartsItems = true;
+                }
+                
                 // ✅ 2.3.1: Thêm nút Start/Stop/Complete dựa trên status
-                var actionButtons = self.getItemActionButtons(order.id, item.id, item.status, item.startTime, item.completedTime);
+                var actionButtons = self.getItemActionButtons(order.id, item.id, item.status, item.startTime, item.completedTime, order.status);
+                
+                // ✅ 2.4.3: Thêm button "Ghi Nhận Giờ Công Làm Lại" nếu QC Fail và item đã Completed/InProgress
+                var showReworkButton = false;
+                if (order.status === 'InProgress' && (item.status === 'Completed' || item.status === 'InProgress')) {
+                    // Check if latest QC is Fail
+                    // This will be checked when loading QC info
+                    showReworkButton = true; // Will be updated after QC info is loaded
+                }
                 
                 itemsHtml += `
                     <tr data-item-id="${item.id}">
@@ -735,17 +772,394 @@ window.OrderManagement = {
                         <td>${item.estimatedHours ? item.estimatedHours.toFixed(2) + ' giờ' : '<span class="text-muted">-</span>'}</td>
                         <td>${statusBadge}</td>
                         <td>${actualHoursDisplay}</td>
+                        <td>${reworkHoursDisplay}</td>
                         <td>${actionButtons}</td>
                     </tr>
                 `;
             });
             $('#viewOrderItems').html(itemsHtml);
             
+            // ✅ 2.3.3: Hiển thị button "Tạo MR" nếu có parts items và chưa có MR
+            if (hasPartsItems && !order.isAdditionalOrder) {
+                $('#btnCreateMRFromOrder').show().off('click').on('click', function() {
+                    window.location.href = '/MaterialRequestManagement?serviceOrderId=' + order.id;
+                });
+            } else {
+                $('#btnCreateMRFromOrder').hide();
+            }
+            
+            // ✅ 2.4: Show/Hide QC buttons based on status
+            self.updateQCButtons(order);
+            
             // ✅ 2.3.1: Bind event handlers cho các nút action
             self.bindItemActionEvents(order.id);
+            
+            // ✅ 2.4.3: Check QC Fail và hiển thị button "Ghi Nhận Giờ Công Làm Lại"
+            if (order.status === 'InProgress') {
+                self.checkAndShowReworkButtons(order.id, order.serviceOrderItems || []);
+            }
         } else {
-            $('#viewOrderItems').html('<tr><td colspan="9" class="text-center text-muted">Không có dịch vụ nào</td></tr>');
+            $('#viewOrderItems').html('<tr><td colspan="10" class="text-center text-muted">Không có dịch vụ nào</td></tr>');
+            $('#btnCreateMRFromOrder').hide();
+            // ✅ 2.4: Hide all QC buttons if no items
+            $('#btnCompleteTechnical, #btnStartQC, #btnCompleteQC, #btnHandover').hide();
         }
+    },
+
+    // ✅ 2.4: Update QC buttons visibility based on order status
+    updateQCButtons: function(order) {
+        var status = order.status || '';
+        var allItemsCompleted = false;
+        
+        // Check if all items are completed
+        if (order.serviceOrderItems && order.serviceOrderItems.length > 0) {
+            allItemsCompleted = order.serviceOrderItems.every(function(item) {
+                return item.status === 'Completed' || item.status === 'Cancelled';
+            });
+        }
+        
+        // Hide all QC buttons first
+        $('#btnCompleteTechnical, #btnStartQC, #btnCompleteQC, #btnHandover').hide();
+        
+        // ✅ 2.4.1: Show "Hoàn thành Kỹ thuật" when status = Completed or InProgress and all items completed
+        if ((status === 'Completed' || status === 'InProgress') && allItemsCompleted) {
+            $('#btnCompleteTechnical').show().off('click').on('click', function() {
+                OrderManagement.completeTechnical(order.id);
+            });
+        }
+        
+        // ✅ 2.4.2: Show "Bắt đầu QC" when status = WaitingForQC
+        if (status === 'WaitingForQC') {
+            $('#btnStartQC').show().off('click').on('click', function() {
+                if (window.GarageApp && window.GarageApp.QC) {
+                    window.GarageApp.QC.showStartQCModal(order.id);
+                } else {
+                    GarageApp.showError('QC module chưa được tải. Vui lòng reload trang.');
+                }
+            });
+        }
+        
+        // ✅ 2.4.2: Show "Hoàn thành QC" when status = QCInProgress
+        if (status === 'QCInProgress') {
+            $('#btnCompleteQC').show().off('click').on('click', function() {
+                if (window.GarageApp && window.GarageApp.QC) {
+                    window.GarageApp.QC.showCompleteQCModal(order.id);
+                } else {
+                    GarageApp.showError('QC module chưa được tải. Vui lòng reload trang.');
+                }
+            });
+        }
+        
+        // ✅ 2.4.4: Show "Bàn giao xe" when status = ReadyToBill (need to check QC passed)
+        if (status === 'ReadyToBill') {
+            // Load QC info to verify
+            var self = this;
+            $.ajax({
+                url: '/QCManagement/GetQC/' + order.id,
+                type: 'GET',
+                success: function(res) {
+                    if (res && res.success && res.data && res.data.qcResult === 'Pass') {
+                        $('#btnHandover').show().off('click').on('click', function() {
+                            if (window.GarageApp && window.GarageApp.QC) {
+                                window.GarageApp.QC.showHandoverModal(order.id);
+                            } else {
+                                GarageApp.showError('QC module chưa được tải. Vui lòng reload trang.');
+                            }
+                        });
+                    }
+                }
+            });
+        }
+    },
+
+    // ✅ 2.4.1: Complete Technical function
+    completeTechnical: function(orderId) {
+        var self = this;
+        
+        Swal.fire({
+            title: 'Xác nhận',
+            text: 'Bạn có chắc chắn muốn hoàn thành kỹ thuật và chuyển JO sang chờ QC?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#28a745',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Xác nhận',
+            cancelButtonText: 'Hủy'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: '/QCManagement/CompleteTechnical/' + orderId,
+                    type: 'POST',
+                    success: function(res) {
+                        if (AuthHandler && !AuthHandler.validateApiResponse(res)) {
+                            return;
+                        }
+                        
+                        if (res && res.success) {
+                            GarageApp.showSuccess(res.message || 'Đã hoàn thành kỹ thuật');
+                            $('#viewOrderModal').modal('hide');
+                            self.orderTable.ajax.reload();
+                        } else {
+                            GarageApp.showError(GarageApp.parseErrorMessage(res) || 'Lỗi khi hoàn thành kỹ thuật');
+                        }
+                    },
+                    error: function(xhr) {
+                        if (AuthHandler && AuthHandler.isUnauthorized(xhr)) {
+                            AuthHandler.handleUnauthorized(xhr, true);
+                        } else {
+                            GarageApp.showError('Lỗi khi hoàn thành kỹ thuật');
+                        }
+                    }
+                });
+            }
+        });
+    },
+
+    // ✅ 2.3.4: Load và hiển thị tiến độ Service Order
+    loadOrderProgress: function(serviceOrderId) {
+        var self = this;
+        
+        $('#progressContent').html(`
+            <div class="text-center py-3">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="sr-only">Đang tải...</span>
+                </div>
+                <p class="text-muted mt-2">Đang tải tiến độ...</p>
+            </div>
+        `);
+
+        $.ajax({
+            url: '/OrderManagement/GetOrderProgress/' + serviceOrderId,
+            type: 'GET',
+            success: function(response) {
+                if (AuthHandler.validateApiResponse(response)) {
+                    if (response.success && response.data) {
+                        self.renderProgress(response.data);
+                    } else {
+                        $('#progressContent').html('<p class="text-danger">Không thể tải tiến độ: ' + (response.error || 'Lỗi không xác định') + '</p>');
+                    }
+                }
+            },
+            error: function(xhr, status, error) {
+                if (AuthHandler.isUnauthorized(xhr)) {
+                    AuthHandler.handleUnauthorized(xhr, true);
+                } else {
+                    $('#progressContent').html('<p class="text-danger">Lỗi khi tải tiến độ: ' + error + '</p>');
+                }
+            }
+        });
+    },
+
+    // ✅ 2.3.4: Render progress dashboard
+    renderProgress: function(progress) {
+        var self = this; // ✅ FIX: Define self để có thể dùng trong forEach
+        var html = '<div class="progress-dashboard">';
+        
+        // Overall Progress Bar
+        html += '<div class="card mb-3">';
+        html += '<div class="card-header bg-primary text-white">';
+        html += '<h5 class="mb-0"><i class="fas fa-tasks mr-2"></i>Tiến Độ Tổng Thể</h5>';
+        html += '</div>';
+        html += '<div class="card-body">';
+        html += '<div class="progress mb-3" style="height: 30px;">';
+        html += '<div class="progress-bar progress-bar-striped progress-bar-animated bg-success" role="progressbar"';
+        html += ' style="width: ' + progress.progressPercentage + '%" aria-valuenow="' + progress.progressPercentage + '"';
+        html += ' aria-valuemin="0" aria-valuemax="100">';
+        html += '<strong>' + progress.progressPercentage.toFixed(1) + '%</strong>';
+        html += '</div>';
+        html += '</div>';
+        
+        // Statistics
+        html += '<div class="row">';
+        html += '<div class="col-md-3"><div class="info-box bg-info"><span class="info-box-icon"><i class="fas fa-list"></i></span>';
+        html += '<div class="info-box-content"><span class="info-box-text">Tổng Hạng Mục</span><span class="info-box-number">' + progress.totalItems + '</span></div></div></div>';
+        html += '<div class="col-md-3"><div class="info-box bg-warning"><span class="info-box-icon"><i class="fas fa-clock"></i></span>';
+        html += '<div class="info-box-content"><span class="info-box-text">Chờ Xử Lý</span><span class="info-box-number">' + progress.pendingItems + '</span></div></div></div>';
+        html += '<div class="col-md-3"><div class="info-box bg-primary"><span class="info-box-icon"><i class="fas fa-spinner"></i></span>';
+        html += '<div class="info-box-content"><span class="info-box-text">Đang Làm</span><span class="info-box-number">' + progress.inProgressItems + '</span></div></div></div>';
+        html += '<div class="col-md-3"><div class="info-box bg-success"><span class="info-box-icon"><i class="fas fa-check"></i></span>';
+        html += '<div class="info-box-content"><span class="info-box-text">Đã Hoàn Thành</span><span class="info-box-number">' + progress.completedItems + '</span></div></div></div>';
+        html += '</div>';
+        
+        // Time Statistics
+        html += '<div class="row mt-3">';
+        html += '<div class="col-md-4"><div class="small-box bg-info"><div class="inner">';
+        html += '<h3>' + (progress.totalEstimatedHours || 0).toFixed(2) + '</h3><p>Giờ Công Dự Kiến</p></div></div></div>';
+        html += '<div class="col-md-4"><div class="small-box bg-success"><div class="inner">';
+        html += '<h3>' + (progress.totalActualHours || 0).toFixed(2) + '</h3><p>Giờ Công Thực Tế</p></div></div></div>';
+        html += '<div class="col-md-4"><div class="small-box bg-warning"><div class="inner">';
+        html += '<h3>' + (progress.remainingEstimatedHours || 0).toFixed(2) + '</h3><p>Giờ Công Còn Lại</p></div></div></div>';
+        html += '</div>';
+        
+        html += '</div></div>';
+        
+        // Items Progress
+        if (progress.items && progress.items.length > 0) {
+            html += '<div class="card">';
+            html += '<div class="card-header bg-secondary text-white">';
+            html += '<h5 class="mb-0"><i class="fas fa-list-ul mr-2"></i>Tiến Độ Từng Hạng Mục</h5>';
+            html += '</div>';
+            html += '<div class="card-body">';
+            html += '<div class="table-responsive">';
+            html += '<table class="table table-sm table-bordered">';
+            html += '<thead class="bg-light"><tr>';
+            html += '<th>Hạng Mục</th><th>KTV</th><th>Tiến Độ</th><th>Giờ Công Dự Kiến</th><th>Giờ Công Thực Tế</th><th>Trạng Thái</th>';
+            html += '</tr></thead><tbody>';
+            
+            progress.items.forEach(function(item) {
+                var statusBadge = self.formatItemStatus(item.status);
+                html += '<tr>';
+                html += '<td>' + item.itemName + '</td>';
+                html += '<td>' + (item.assignedTechnicianName || '<span class="text-muted">Chưa phân công</span>') + '</td>';
+                html += '<td>';
+                html += '<div class="progress" style="height: 20px;">';
+                html += '<div class="progress-bar ' + (item.progressPercentage >= 100 ? 'bg-success' : item.progressPercentage > 0 ? 'bg-primary' : 'bg-secondary') + '"';
+                html += ' style="width: ' + item.progressPercentage + '%">' + item.progressPercentage.toFixed(0) + '%</div>';
+                html += '</div>';
+                html += '</td>';
+                html += '<td>' + (item.estimatedHours ? item.estimatedHours.toFixed(2) + ' giờ' : '-') + '</td>';
+                html += '<td>' + (item.actualHours ? item.actualHours.toFixed(2) + ' giờ' : '-') + '</td>';
+                html += '<td>' + statusBadge + '</td>';
+                html += '</tr>';
+            });
+            
+            html += '</tbody></table></div></div></div>';
+        }
+        
+        html += '</div>';
+        $('#progressContent').html(html);
+    },
+
+    // ✅ 2.4: Load QC information
+    loadQCInfo: function(serviceOrderId) {
+        var self = this;
+        
+        $('#qcContent').html(`
+            <div class="text-center py-3">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="sr-only">Đang tải...</span>
+                </div>
+                <p class="text-muted mt-2">Đang tải thông tin QC...</p>
+            </div>
+        `);
+
+        $.ajax({
+            url: '/QCManagement/GetQC/' + serviceOrderId,
+            type: 'GET',
+            success: function(response) {
+                if (AuthHandler.validateApiResponse(response)) {
+                    if (response.success && response.data) {
+                        self.renderQCInfo(response.data);
+                    } else {
+                        $('#qcContent').html(`
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle"></i> Chưa có thông tin QC. 
+                                Vui lòng hoàn thành kỹ thuật và bắt đầu kiểm tra QC.
+                            </div>
+                        `);
+                    }
+                }
+            },
+            error: function(xhr, status, error) {
+                if (AuthHandler.isUnauthorized(xhr)) {
+                    AuthHandler.handleUnauthorized(xhr, true);
+                } else {
+                    $('#qcContent').html(`
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> Chưa có thông tin QC. 
+                            Vui lòng hoàn thành kỹ thuật và bắt đầu kiểm tra QC.
+                        </div>
+                    `);
+                }
+            }
+        });
+    },
+
+    // ✅ 2.4: Render QC information
+    renderQCInfo: function(qc) {
+        var html = '<div class="qc-info">';
+        
+        // Basic Info Card
+        html += '<div class="card mb-3">';
+        html += '<div class="card-header bg-info text-white">';
+        html += '<h5 class="mb-0"><i class="fas fa-clipboard-check mr-2"></i>Thông Tin QC</h5>';
+        html += '</div>';
+        html += '<div class="card-body">';
+        html += '<div class="row">';
+        html += '<div class="col-md-6">';
+        html += '<strong>Người Kiểm Tra:</strong> ' + (qc.qcInspectorName || 'Chưa xác định') + '<br>';
+        html += '<strong>Ngày Kiểm Tra:</strong> ' + (qc.qcDate ? new Date(qc.qcDate).toLocaleString('vi-VN') : '') + '<br>';
+        html += '</div>';
+        html += '<div class="col-md-6">';
+        html += '<strong>Ngày Hoàn Thành:</strong> ' + (qc.qcCompletedDate ? new Date(qc.qcCompletedDate).toLocaleString('vi-VN') : 'Chưa hoàn thành') + '<br>';
+        html += '<strong>Kết Quả:</strong> ';
+        if (qc.qcResult === 'Pass') {
+            html += '<span class="badge badge-success">Đạt</span>';
+        } else if (qc.qcResult === 'Fail') {
+            html += '<span class="badge badge-danger">Không Đạt</span>';
+        } else {
+            html += '<span class="badge badge-warning">Chờ Xử Lý</span>';
+        }
+        html += '</div>';
+        html += '</div>';
+        
+        if (qc.qcNotes) {
+            html += '<div class="mt-2">';
+            html += '<strong>Ghi Chú QC:</strong><br>';
+            html += '<p class="mb-0">' + qc.qcNotes + '</p>';
+            html += '</div>';
+        }
+        
+        if (qc.reworkRequired && qc.reworkNotes) {
+            html += '<div class="mt-2 alert alert-warning">';
+            html += '<strong>Cần Làm Lại:</strong><br>';
+            html += '<p class="mb-0">' + qc.reworkNotes + '</p>';
+            html += '</div>';
+        }
+        
+        html += '</div></div>';
+        
+        // Checklist Card
+        if (qc.qcChecklistItems && qc.qcChecklistItems.length > 0) {
+            html += '<div class="card">';
+            html += '<div class="card-header bg-secondary text-white">';
+            html += '<h5 class="mb-0"><i class="fas fa-list-check mr-2"></i>QC Checklist</h5>';
+            html += '</div>';
+            html += '<div class="card-body">';
+            html += '<div class="table-responsive">';
+            html += '<table class="table table-sm table-bordered">';
+            html += '<thead class="bg-light"><tr>';
+            html += '<th style="width: 50px">#</th>';
+            html += '<th>Hạng Mục Kiểm Tra</th>';
+            html += '<th style="width: 100px">Kết Quả</th>';
+            html += '<th>Ghi Chú</th>';
+            html += '</tr></thead><tbody>';
+            
+            qc.qcChecklistItems.forEach(function(item, index) {
+                var resultBadge = '';
+                if (item.result === 'Pass') {
+                    resultBadge = '<span class="badge badge-success badge-sm">Đạt</span>';
+                } else if (item.result === 'Fail') {
+                    resultBadge = '<span class="badge badge-danger badge-sm">Không Đạt</span>';
+                } else {
+                    resultBadge = '<span class="badge badge-secondary badge-sm">-</span>';
+                }
+                
+                html += '<tr>';
+                html += '<td>' + (index + 1) + '</td>';
+                html += '<td>' + (item.isChecked ? '<i class="fas fa-check text-success"></i> ' : '') + item.checklistItemName + '</td>';
+                html += '<td>' + resultBadge + '</td>';
+                html += '<td>' + (item.notes || '-') + '</td>';
+                html += '</tr>';
+            });
+            
+            html += '</tbody></table>';
+            html += '</div></div></div>';
+        }
+        
+        html += '</div>';
+        
+        $('#qcContent').html(html);
     },
 
     // ✅ THÊM: Format Service Order status sang tiếng Việt
@@ -764,7 +1178,14 @@ window.OrderManagement = {
             'InProgress': '<span class="badge badge-info">Đang Sửa Chữa</span>',
             'In Progress': '<span class="badge badge-info">Đang Sửa Chữa</span>',
             'Completed': '<span class="badge badge-success">Đã Hoàn Thành</span>',
-            'Cancelled': '<span class="badge badge-danger">Đã Hủy</span>'
+            'Cancelled': '<span class="badge badge-danger">Đã Hủy</span>',
+            'WaitingForQC': '<span class="badge badge-primary">Chờ QC</span>',
+            'Waiting For QC': '<span class="badge badge-primary">Chờ QC</span>',
+            'QCInProgress': '<span class="badge badge-info">Đang QC</span>',
+            'QC In Progress': '<span class="badge badge-info">Đang QC</span>',
+            'ReadyToBill': '<span class="badge badge-success">Sẵn Sàng Thanh Toán</span>',
+            'Ready To Bill': '<span class="badge badge-success">Sẵn Sàng Thanh Toán</span>',
+            'OnHold': '<span class="badge badge-warning">Tạm Dừng</span>'
         };
         
         return statusMap[status] || '<span class="badge badge-secondary">' + status + '</span>';
@@ -1151,7 +1572,7 @@ window.OrderManagement = {
     },
 
     // ✅ 2.3.1: Tạo HTML cho các nút action (Start/Stop/Complete) dựa trên status
-    getItemActionButtons: function(orderId, itemId, status, startTime, completedTime) {
+    getItemActionButtons: function(orderId, itemId, status, startTime, completedTime, orderStatus) {
         var buttons = '';
         
         if (status === 'Pending' || status === 'ReadyToWork' || status === 'Ready To Work') {
@@ -1179,6 +1600,10 @@ window.OrderManagement = {
             buttons = '<span class="text-muted">-</span>';
         }
         
+        // ✅ 2.4.3: Thêm button "Ghi Nhận Giờ Công Làm Lại" nếu order status = InProgress (QC Fail)
+        // Button này sẽ được hiển thị sau khi check QC Fail
+        // Được thêm vào bằng checkAndShowReworkButtons()
+        
         return buttons;
     },
 
@@ -1202,6 +1627,13 @@ window.OrderManagement = {
         $(document).off('click', '.btn-complete-item').on('click', '.btn-complete-item', function() {
             var itemId = $(this).data('item-id');
             self.completeItem(orderId, itemId, $(this));
+        });
+        
+        // ✅ 2.4.3: Ghi nhận giờ công làm lại
+        $(document).off('click', '.btn-record-rework').on('click', '.btn-record-rework', function() {
+            var itemId = $(this).data('item-id');
+            var itemName = $(this).data('item-name');
+            self.showRecordReworkHoursModal(orderId, itemId, itemName);
         });
     },
 
@@ -1424,10 +1856,30 @@ window.OrderManagement = {
                     html += '<i class="fas fa-file-alt"></i></a>';
                 }
                 
-                html += '<button class="btn btn-sm btn-warning mr-1" onclick="OrderManagement.editAdditionalIssue(' + issue.id + ')" title="Sửa">';
-                html += '<i class="fas fa-edit"></i></button>';
-                html += '<button class="btn btn-sm btn-danger" onclick="OrderManagement.deleteAdditionalIssue(' + issue.id + ')" title="Xóa">';
-                html += '<i class="fas fa-trash"></i></button>';
+                // ✅ 2.3.3: Logic hiển thị nút Edit và Delete dựa trên status
+                // - Status = "Rejected" hoặc "Identified" → Cho phép Edit và Delete
+                // - Status = "Approved" hoặc "Repaired" → Không cho phép Edit và Delete
+                var canEdit = issue.status === 'Rejected' || issue.status === 'Identified' || 
+                             issue.status === 'Reported' || issue.status === 'Quoted';
+                var canDelete = issue.status === 'Rejected' || issue.status === 'Identified';
+                
+                // Edit button - chỉ hiển thị khi có quyền
+                if (canEdit) {
+                    var editTitle = issue.status === 'Rejected' 
+                        ? 'Chỉnh sửa để tạo lại báo giá mới' 
+                        : 'Sửa';
+                    html += '<button class="btn btn-sm btn-warning mr-1" onclick="OrderManagement.editAdditionalIssue(' + issue.id + ')" title="' + editTitle + '">';
+                    html += '<i class="fas fa-edit"></i></button>';
+                }
+                
+                // Delete button - chỉ hiển thị khi có quyền
+                if (canDelete) {
+                    var deleteTitle = issue.status === 'Rejected' 
+                        ? 'Xóa phát sinh đã từ chối' 
+                        : 'Xóa';
+                    html += '<button class="btn btn-sm btn-danger" onclick="OrderManagement.deleteAdditionalIssue(' + issue.id + ', \'' + issue.status + '\')" title="' + deleteTitle + '">';
+                    html += '<i class="fas fa-trash"></i></button>';
+                }
                 html += '</td>';
                 html += '</tr>';
             });
@@ -1481,6 +1933,7 @@ window.OrderManagement = {
         $('#reportIssueServiceOrderItemId').val(serviceOrderItemId || '');
         $('#reportIssuePhotosPreview').empty();
         $('#reportIssueExistingPhotos').empty();
+        $('#resetStatusSection').hide(); // ✅ Ẩn reset section khi tạo mới
 
         // Load service order items for dropdown
         self.loadServiceOrderItemsForReport(serviceOrderId);
@@ -1618,6 +2071,14 @@ window.OrderManagement = {
                     $('#reportIssueRequiresImmediateAction').prop('checked', issue.requiresImmediateAction || false);
                     $('#reportIssueTechnicianNotes').val(issue.technicianNotes || '');
 
+                    // ✅ Hiển thị option reset Status nếu Status = "Rejected"
+                    if (issue.status === 'Rejected') {
+                        $('#resetStatusSection').show();
+                        $('#resetToIdentified').prop('checked', false);
+                    } else {
+                        $('#resetStatusSection').hide();
+                    }
+
                     // Load existing photos
                     self.renderExistingPhotos(issue.photos || []);
 
@@ -1670,12 +2131,23 @@ window.OrderManagement = {
     },
 
     // Delete additional issue
-    deleteAdditionalIssue: function(issueId) {
+    deleteAdditionalIssue: function(issueId, issueStatus) {
         var self = this;
         
+        // ✅ Custom message dựa trên status
+        var title = 'Xác nhận xóa?';
+        var text = 'Bạn có chắc chắn muốn xóa phát sinh này?';
+        var warningMessage = '';
+        
+        if (issueStatus === 'Rejected') {
+            title = 'Xác nhận xóa phát sinh đã từ chối?';
+            text = 'Phát sinh này đã bị khách hàng từ chối.';
+            warningMessage = 'Xóa sẽ mất lịch sử từ chối. Bạn có chắc chắn muốn xóa?';
+        }
+        
         Swal.fire({
-            title: 'Xác nhận xóa?',
-            text: 'Bạn có chắc chắn muốn xóa phát sinh này?',
+            title: title,
+            html: '<p>' + text + '</p>' + (warningMessage ? '<p class="text-danger"><strong>' + warningMessage + '</strong></p>' : ''),
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#d33',
@@ -2207,6 +2679,52 @@ window.OrderManagement = {
                 }
             }
         });
+    },
+    
+    // ✅ 2.4.3: Check QC Fail và hiển thị button "Ghi Nhận Giờ Công Làm Lại"
+    checkAndShowReworkButtons: function(orderId, items) {
+        var self = this;
+        
+        // Check if latest QC is Fail
+        $.ajax({
+            url: '/QCManagement/GetQC/' + orderId,
+            type: 'GET',
+            success: function(res) {
+                if (res && res.success && res.data && res.data.qcResult === 'Fail') {
+                    // QC Fail -> Show rework button for completed/in-progress items
+                    items.forEach(function(item) {
+                        if (item.status === 'Completed' || item.status === 'InProgress') {
+                            var row = $(`tr[data-item-id="${item.id}"]`);
+                            var actionCell = row.find('td:last-child');
+                            
+                            // Check if button already exists
+                            if (actionCell.find('.btn-record-rework').length === 0) {
+                                var reworkButton = `<button class="btn btn-sm btn-warning btn-record-rework ml-1" 
+                                    data-order-id="${orderId}" data-item-id="${item.id}" 
+                                    data-item-name="${item.service?.name || item.serviceName || ''}" 
+                                    title="Ghi nhận giờ công làm lại">
+                                    <i class="fas fa-redo"></i> Ghi Nhận Làm Lại
+                                </button>`;
+                                actionCell.append(reworkButton);
+                            }
+                        }
+                    });
+                }
+            },
+            error: function() {
+                // Silently fail - button won't be shown
+            }
+        });
+    },
+    
+    // ✅ 2.4.3: Show modal để ghi nhận giờ công làm lại
+    showRecordReworkHoursModal: function(orderId, itemId, itemName) {
+        $('#reworkOrderId').val(orderId);
+        $('#reworkItemId').val(itemId);
+        $('#reworkItemName').text(itemName || '');
+        $('#reworkHours').val('');
+        $('#reworkNotes').val('');
+        $('#recordReworkHoursModal').modal('show');
     }
 };
 
@@ -2232,6 +2750,78 @@ $(document).ready(function() {
         }
     });
 
+    // ✅ 2.3.4: Load progress when progress tab is shown
+    $('#progress-tab').on('shown.bs.tab', function(e) {
+        var serviceOrderId = OrderManagement.currentServiceOrderId || $('#viewOrderModal').data('order-id');
+        if (serviceOrderId) {
+            OrderManagement.loadOrderProgress(serviceOrderId);
+        } else {
+            $('#progressContent').html('<p class="text-muted">Vui lòng xem chi tiết phiếu sửa chữa trước.</p>');
+        }
+    });
+
+    // ✅ 2.4: Load QC when QC tab is shown
+    $('#qc-tab').on('shown.bs.tab', function(e) {
+        var serviceOrderId = OrderManagement.currentServiceOrderId || $('#viewOrderModal').data('order-id');
+        if (serviceOrderId) {
+            OrderManagement.loadQCInfo(serviceOrderId);
+        } else {
+            $('#qcContent').html('<p class="text-muted">Vui lòng xem chi tiết phiếu sửa chữa trước.</p>');
+        }
+    });
+    
+    // ✅ 2.4.3: Bind event cho Record Rework Hours Modal
+    $('#btnSubmitReworkHours').on('click', function() {
+        var orderId = $('#reworkOrderId').val();
+        var itemId = $('#reworkItemId').val();
+        var reworkHours = $('#reworkHours').val();
+        var notes = $('#reworkNotes').val();
+        
+        if (!reworkHours || parseFloat(reworkHours) <= 0) {
+            GarageApp.showError('Vui lòng nhập số giờ công làm lại lớn hơn 0');
+            return;
+        }
+        
+        var data = {
+            reworkHours: parseFloat(reworkHours),
+            notes: notes || null
+        };
+        
+        $.ajax({
+            url: '/QCManagement/RecordReworkHours/' + orderId + '/' + itemId,
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(data),
+            success: function(response) {
+                if (AuthHandler.validateApiResponse(response)) {
+                    if (response.success) {
+                        GarageApp.showSuccess(response.message || 'Đã ghi nhận giờ công làm lại thành công');
+                        $('#recordReworkHoursModal').modal('hide');
+                        // Reload order details
+                        OrderManagement.viewOrder(orderId);
+                    } else {
+                        GarageApp.showError(GarageApp.parseErrorMessage(response) || 'Lỗi khi ghi nhận giờ công làm lại');
+                    }
+                }
+            },
+            error: function(xhr) {
+                if (AuthHandler.isUnauthorized(xhr)) {
+                    AuthHandler.handleUnauthorized(xhr, true);
+                } else {
+                    GarageApp.showError('Lỗi khi ghi nhận giờ công làm lại');
+                }
+            }
+        });
+    });
+    
+    // Reset form khi modal đóng
+    $('#recordReworkHoursModal').on('hidden.bs.modal', function() {
+        $('#recordReworkHoursForm')[0].reset();
+        $('#reworkOrderId').val('');
+        $('#reworkItemId').val('');
+        $('#reworkItemName').text('');
+    });
+
     // ✅ 2.3.2: Handle form submit for additional issue
     $('#reportAdditionalIssueForm').on('submit', function(e) {
         e.preventDefault();
@@ -2249,6 +2839,11 @@ $(document).ready(function() {
             deletedPhotoIds.forEach(function(id) {
                 formData.append('DeletedPhotoIds', id);
             });
+        }
+
+        // ✅ Nếu đang edit và checkbox reset được chọn → Set Status = "Identified"
+        if (isEdit && $('#resetToIdentified').is(':checked')) {
+            formData.append('Status', 'Identified');
         }
 
         var url = isEdit ? '/AdditionalIssues/Update/' + issueId : '/AdditionalIssues/Create';

@@ -327,10 +327,29 @@ namespace GarageManagementSystem.Web.Controllers
         [HttpPost("ApproveQuotation/{id}")]
         public async Task<IActionResult> ApproveQuotation(int id, [FromBody] ApproveQuotationDto approveDto)
         {
-            var response = await _apiService.PostAsync<ServiceQuotationDto>(
+            // ✅ 2.3.3: API trả về ApiResponse<ServiceOrderDto> khi có CreateServiceOrder
+            var response = await _apiService.PostAsync<ApiResponse<ServiceOrderDto>>(
                 ApiEndpoints.Builder.WithId(ApiEndpoints.ServiceQuotations.Approve, id),
                 approveDto
             );
+
+            // ✅ 2.3.3: Trả về thông tin đầy đủ bao gồm ServiceOrderId và IsAdditionalOrder
+            if (response.Success && response.Data != null)
+            {
+                var serviceOrder = response.Data.Data;
+                return Json(new 
+                { 
+                    success = true,
+                    message = response.Message,
+                    data = new
+                    {
+                        serviceOrderId = serviceOrder?.Id,
+                        isAdditionalOrder = serviceOrder?.IsAdditionalOrder ?? false,
+                        parentServiceOrderId = serviceOrder?.ParentServiceOrderId,
+                        serviceOrder = serviceOrder
+                    }
+                });
+            }
 
             return Json(response);
         }

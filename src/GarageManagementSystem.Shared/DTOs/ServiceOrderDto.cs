@@ -39,7 +39,15 @@ namespace GarageManagementSystem.Shared.DTOs
         /// ✅ 2.3.3: Tổng tiền cuối cùng bao gồm JO gốc + LSC Bổ sung (chỉ có giá trị khi là JO gốc)
         /// </summary>
         public decimal GrandTotalAmount { get; set; } = 0;
-        
+
+        /// <summary>
+        /// ✅ 2.4: QC và Bàn giao
+        /// </summary>
+        public decimal? TotalActualHours { get; set; }
+        public int QCFailedCount { get; set; } = 0;
+        public DateTime? HandoverDate { get; set; }
+        public string? HandoverLocation { get; set; }
+
         public List<ServiceOrderItemDto> ServiceOrderItems { get; set; } = new();
     }
 

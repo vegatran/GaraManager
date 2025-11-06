@@ -183,6 +183,32 @@ namespace GarageManagementSystem.Web.Controllers
         }
 
         /// <summary>
+        /// ✅ 2.3.4: Lấy tiến độ Service Order
+        /// </summary>
+        [HttpGet("GetOrderProgress/{id}")]
+        public async Task<IActionResult> GetOrderProgress(int id)
+        {
+            try
+            {
+                var endpoint = ApiEndpoints.Builder.WithId(ApiEndpoints.ServiceOrders.GetProgress, id);
+                var response = await _apiService.GetAsync<ApiResponse<ServiceOrderProgressDto>>(endpoint);
+                
+                if (response.Success && response.Data != null)
+                {
+                    return Json(new { success = true, data = response.Data.Data });
+                }
+                else
+                {
+                    return Json(new { success = false, error = response.ErrorMessage ?? "Không thể lấy tiến độ" });
+                }
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, error = $"Lỗi: {ex.Message}" });
+            }
+        }
+
+        /// <summary>
         /// Lấy danh sách ServiceQuotation đã được phê duyệt để tạo phiếu sửa chữa
         /// </summary>
         [HttpGet("GetAvailableQuotations")]

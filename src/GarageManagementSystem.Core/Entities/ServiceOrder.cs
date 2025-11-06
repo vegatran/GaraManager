@@ -59,6 +59,28 @@ namespace GarageManagementSystem.Core.Entities
         
         public DateTime? StartDate { get; set; } // When work started
 
+        // ✅ 2.4: QC và Bàn giao
+        /// <summary>
+        /// ✅ 2.4.1: Tổng giờ công thực tế (tính từ tất cả items) - để tính lương
+        /// </summary>
+        public decimal? TotalActualHours { get; set; }
+
+        /// <summary>
+        /// ✅ 2.4.3: Số lần QC không đạt
+        /// </summary>
+        public int QCFailedCount { get; set; } = 0;
+
+        /// <summary>
+        /// ✅ 2.4.4: Ngày bàn giao xe
+        /// </summary>
+        public DateTime? HandoverDate { get; set; }
+
+        /// <summary>
+        /// ✅ 2.4.4: Khu vực bàn giao (ví dụ: "Khu vực tiếp đón", "Khu vực giao xe")
+        /// </summary>
+        [StringLength(200)]
+        public string? HandoverLocation { get; set; }
+
         // Assigned employees
         public int? PrimaryTechnicianId { get; set; }
 
@@ -89,5 +111,10 @@ namespace GarageManagementSystem.Core.Entities
         public virtual ICollection<ServiceOrderItem> ServiceOrderItems { get; set; } = new List<ServiceOrderItem>();
         public virtual ICollection<ServiceOrderPart> ServiceOrderParts { get; set; } = new List<ServiceOrderPart>();
         public virtual ICollection<PaymentTransaction> PaymentTransactions { get; set; } = new List<PaymentTransaction>();
+        
+        /// <summary>
+        /// ✅ 2.4.2: Navigation property đến QualityControl
+        /// </summary>
+        public virtual ICollection<QualityControl> QualityControls { get; set; } = new List<QualityControl>();
     }
 }

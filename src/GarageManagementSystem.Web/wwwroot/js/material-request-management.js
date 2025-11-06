@@ -400,6 +400,20 @@ GarageApp.MR = {
 
 $(document).ready(function(){
     GarageApp.MR.init();
+    
+    // ✅ 2.3.3: Tự động mở modal tạo MR nếu có serviceOrderId trong query string
+    var urlParams = new URLSearchParams(window.location.search);
+    var serviceOrderId = urlParams.get('serviceOrderId');
+    if (serviceOrderId) {
+        // Đợi một chút để đảm bảo init đã hoàn thành
+        setTimeout(function() {
+            GarageApp.MR.showCreateModal();
+            // Set Service Order sau khi modal đã mở và dropdown đã load
+            setTimeout(function() {
+                $('#mrServiceOrderId').val(serviceOrderId).trigger('change');
+            }, 500);
+        }, 500);
+    }
 });
 
 

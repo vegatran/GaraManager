@@ -26,6 +26,11 @@
         - [2.3.3: Báo giá Phát sinh](#233-báo-giá-phát-sinh)
           - [2.3.3.1: Duyệt Báo Giá Phát Sinh & Tạo LSC Bổ Sung](#2331-duyệt-báo-giá-phát-sinh--tạo-lsc-bổ-sung)
         - [2.3.4: Cập nhật Tiến độ](#234-cập-nhật-tiến-độ)
+      - [2.4: Kiểm tra Chất lượng (QC) và Bàn giao](#24-kiểm-tra-chất-lượng-qc-và-bàn-giao)
+        - [2.4.1: Hoàn thành Kỹ thuật](#241-hoàn-thành-kỹ-thuật)
+        - [2.4.2: Kiểm tra QC](#242-kiểm-tra-qc)
+        - [2.4.3: Xử lý QC Không đạt](#243-xử-lý-qc-không-đạt)
+        - [2.4.4: Bàn giao xe](#244-bàn-giao-xe)
 14. [Troubleshooting](#troubleshooting)
 
 ---
@@ -3657,6 +3662,303 @@ Hệ thống tự động tính:
 - **Tổng giờ công thực tế** = Tổng của tất cả `ActualHours`
 - **Tổng giờ công dự kiến** = Tổng của tất cả `EstimatedHours`
 - **Trạng thái tổng thể**: Tự động cập nhật dựa trên trạng thái items
+
+---
+
+## 2.4. KIỂM TRA CHẤT LƯỢNG (QC) VÀ BÀN GIAO
+
+### **📍 Vị trí trong hệ thống:**
+
+**Menu Navigation:**
+```
+Sidebar Menu
+└── Quy Trình Nghiệp Vụ
+    └── GIAI ĐOẠN 2: Sửa Chữa & Thanh Toán
+        ├── 4. Phiếu Sửa Chữa (JO)
+        ├── 5. Yêu Cầu Vật Tư (MR)
+        └── 6. Kiểm Tra QC ⬅️ **GIAI ĐOẠN 2.4 NẰM ĐÂY**
+```
+
+**URL/Route:**
+- Controller: `QCManagement`
+- Action: `Index`
+- URL: `/QCManagement` hoặc `/QCManagement/Index`
+
+**Màn hình chính:**
+Trang **"Quản Lý Kiểm Tra Chất Lượng (QC)"** với DataTable hiển thị danh sách JO chờ QC
+
+---
+
+### **🎯 Mục đích:**
+
+Giai đoạn 2.4: Kiểm tra Chất lượng (QC) và Bàn giao là bước cuối cùng trong Giai đoạn 2. Giai đoạn này bắt đầu khi KTV hoàn thành công việc và kết thúc khi JO được chuyển sang Giai đoạn 3 (Quyết toán & Giao xe).
+
+**Workflow:**
+```
+Tất cả items Completed → Hoàn thành Kỹ thuật → WaitingForQC → 
+Bắt đầu QC → QCInProgress → Complete QC (Pass/Fail) → 
+Nếu Pass: ReadyToBill → Bàn giao xe
+Nếu Fail: InProgress → Làm lại → QC lại
+```
+
+---
+
+## 2.4.1. HOÀN THÀNH KỸ THUẬT
+
+### **Mục đích:**
+KTV hoàn thành tất cả công việc kỹ thuật và chuyển JO sang trạng thái "Chờ QC" để kiểm tra chất lượng.
+
+### **Yêu cầu:**
+- ✅ Tất cả ServiceOrderItems phải ở trạng thái "Completed" hoặc "Cancelled"
+- ✅ ServiceOrder status phải là "Completed" hoặc "InProgress"
+- ✅ Không có items nào còn đang làm việc (InProgress)
+
+### **Các bước thực hiện:**
+
+#### **Bước 1: Kiểm tra Service Order**
+1. Vào trang **"Quản Lý Phiếu Sửa Chữa"**
+2. Click **"Xem"** của Service Order
+3. Click tab **"Chi Tiết Dịch Vụ"**
+4. Kiểm tra tất cả items đã **"Hoàn Thành"** hoặc **"Đã Hủy"** chưa
+
+#### **Bước 2: Click "Hoàn Thành Kỹ Thuật"**
+- Khi tất cả items đã Completed/Cancelled, button **"✅ Hoàn Thành Kỹ Thuật"** sẽ xuất hiện ở footer của View Order Modal
+- Click button này
+
+#### **Bước 3: Xác nhận**
+- Modal xác nhận sẽ hiện ra: **"Bạn có chắc chắn muốn hoàn thành kỹ thuật và chuyển JO sang chờ QC?"**
+- Click **"Xác nhận"**
+
+#### **Bước 4: Kết quả**
+- ✅ Hệ thống tự động:
+  - Tính tổng giờ công thực tế (`TotalActualHours`) từ tất cả items
+  - Chuyển ServiceOrder status sang **"WaitingForQC"**
+  - Ghi nhận `CompletedDate`
+- ✅ Thông báo: **"Đã hoàn thành kỹ thuật. Tổng giờ công thực tế: X.XX giờ"**
+- ✅ Modal đóng, DataTable tự động reload
+- ✅ JO sẽ xuất hiện trong trang **"Kiểm Tra QC"**
+
+---
+
+## 2.4.2. KIỂM TRA QC
+
+### **Mục đích:**
+Tổ trưởng/QC/Quản đốc kiểm tra chất lượng công việc và đánh giá Đạt/Không đạt.
+
+### **Yêu cầu:**
+- ✅ ServiceOrder status phải là "WaitingForQC"
+- ✅ Chỉ Tổ trưởng/QC/Quản đốc/Manager/Supervisor/Admin/SuperAdmin mới có quyền bắt đầu QC
+- ✅ Chỉ có thể có 1 QC record "Pending" tại một thời điểm
+
+### **Các bước thực hiện:**
+
+#### **Bước 1: Vào trang Quản Lý QC**
+1. Click menu **"6. Kiểm Tra QC"** trong sidebar (GIAI ĐOẠN 2)
+2. Màn hình hiển thị danh sách JO chờ QC với các cột:
+   - Số Đơn Hàng
+   - Khách Hàng
+   - Xe
+   - Ngày Hoàn Thành
+   - Giờ Công Thực Tế
+   - Số Lần QC Không Đạt
+   - Thao Tác
+
+#### **Bước 2: Bắt đầu kiểm tra QC**
+1. Tìm JO cần kiểm tra trong danh sách
+2. Click nút **"▶️ Bắt đầu QC"** (màu xanh)
+3. Modal **"Bắt Đầu Kiểm Tra QC"** sẽ hiện ra
+
+#### **Bước 3: Điền thông tin QC Checklist**
+Modal hiển thị:
+- **Thông tin JO**: Số đơn hàng, Khách hàng, Xe, Giờ công thực tế (read-only)
+- **QC Checklist**: Danh sách các hạng mục kiểm tra
+
+**Mặc định có các checklist items:**
+- Kiểm tra chất lượng sơn
+- Kiểm tra lắp ráp phụ tùng
+- Kiểm tra hoạt động động cơ
+- Kiểm tra hệ thống điện
+- Kiểm tra an toàn
+
+**Thao tác với checklist:**
+1. **Thêm hạng mục kiểm tra:**
+   - Click **"➕ Thêm Hạng Mục Kiểm Tra"**
+   - Điền tên hạng mục (ví dụ: "Kiểm tra hệ thống phanh")
+   - Chọn kết quả (Đạt/Không đạt) - Tùy chọn
+   - Ghi chú - Tùy chọn
+2. **Xóa hạng mục:**
+   - Click nút **"🗑️"** ở cuối mỗi dòng
+
+#### **Bước 4: Click "Bắt Đầu QC"**
+- Click nút **"▶️ Bắt Đầu QC"** ở footer modal
+- Hệ thống sẽ:
+  - ✅ Tạo QC record với status "Pending"
+  - ✅ Chuyển ServiceOrder status sang **"QCInProgress"**
+  - ✅ Ghi nhận người kiểm tra (tự động từ user đăng nhập)
+  - ✅ Thông báo: **"Đã bắt đầu kiểm tra QC"**
+  - ✅ Modal đóng, DataTable tự động reload
+
+#### **Bước 5: Hoàn thành QC**
+1. Sau khi kiểm tra xong, quay lại trang **"Kiểm Tra QC"**
+2. Click nút **"✅ Hoàn Thành QC"** (màu xanh dương) hoặc click **"Xem"** → Button trong View Order Modal
+3. Modal **"Hoàn Thành Kiểm Tra QC"** sẽ hiện ra với:
+   - **Kết quả QC**: Chọn **"✅ Đạt"** hoặc **"❌ Không Đạt"**
+   - **Ghi Chú QC**: Nhập ghi chú về kết quả kiểm tra
+   - **Cần làm lại**: Checkbox (tự động check nếu chọn "Không Đạt")
+   - **Ghi Chú Làm Lại**: Nhập ghi chú về những gì cần làm lại (nếu có)
+   - **QC Checklist**: Cập nhật kết quả cho từng hạng mục
+
+#### **Bước 6: Xác nhận kết quả QC**
+- Click **"✅ Hoàn Thành QC"**
+- Hệ thống sẽ:
+  - ✅ Nếu **"Đạt"**:
+    - Cập nhật QC record: `QCResult = "Pass"`, `QCCompletedDate = now`
+    - Chuyển ServiceOrder status sang **"ReadyToBill"**
+    - Thông báo: **"QC đạt. JO sẵn sàng để bàn giao và thanh toán."**
+  - ✅ Nếu **"Không Đạt"**:
+    - Cập nhật QC record: `QCResult = "Fail"`, `QCCompletedDate = now`
+    - Chuyển ServiceOrder status về **"InProgress"**
+    - Tăng `QCFailedCount` lên 1
+    - Thông báo: **"QC không đạt. KTV cần làm lại theo ghi chú."**
+
+---
+
+## 2.4.3. XỬ LÝ QC KHÔNG ĐẠT
+
+### **Mục đích:**
+Khi QC không đạt, KTV cần làm lại và ghi nhận giờ công làm lại.
+
+### **Yêu cầu:**
+- ✅ QC result phải là "Fail"
+- ✅ ServiceOrder status phải là "InProgress"
+
+### **Các bước thực hiện:**
+
+#### **Bước 1: KTV làm lại**
+1. KTV xem ghi chú QC trong View Order Modal → Tab "QC"
+2. Làm lại các hạng mục không đạt theo yêu cầu
+3. Cập nhật tiến độ khi làm lại (Start Work → Complete Item)
+
+#### **Bước 2: Ghi nhận giờ công làm lại**
+- Khi hoàn thành làm lại, hệ thống tự động tính `ReworkHours` từ `ActualHours` mới
+- Hoặc có thể ghi nhận thủ công qua API: `POST /api/QualityControl/service-orders/{id}/items/{itemId}/rework`
+
+#### **Bước 3: QC lại**
+- Sau khi làm lại xong, chuyển lại sang **"WaitingForQC"** (Complete Technical)
+- Thực hiện lại quy trình QC (2.4.2)
+
+---
+
+## 2.4.4. BÀN GIAO XE
+
+### **Mục đích:**
+Sau khi QC đạt, Cố vấn Dịch vụ bàn giao xe cho khách hàng và chuyển JO sang "ReadyToBill" để thanh toán.
+
+### **Yêu cầu:**
+- ✅ QC result phải là "Pass"
+- ✅ ServiceOrder status phải là "ReadyToBill"
+- ✅ Chỉ Cố vấn Dịch vụ/Quản đốc/Manager/Advisor/Admin/SuperAdmin mới có quyền bàn giao
+
+### **Các bước thực hiện:**
+
+#### **Bước 1: Xem chi tiết JO**
+1. Vào trang **"Quản Lý Phiếu Sửa Chữa"**
+2. Click **"Xem"** của Service Order có QC đạt
+3. Kiểm tra tab **"QC"** để xác nhận QC đã đạt
+
+#### **Bước 2: Click "Bàn Giao Xe"**
+- Button **"🤝 Bàn Giao Xe"** sẽ xuất hiện ở footer của View Order Modal (chỉ khi QC Pass và status = ReadyToBill)
+- Click button này
+
+#### **Bước 3: Điền thông tin bàn giao**
+Modal **"Bàn Giao Xe"** hiển thị:
+- **Thông tin JO**: Số đơn hàng, Khách hàng, Xe, Kết quả QC (read-only)
+- **Ngày Bàn Giao**: Mặc định là ngày hiện tại (có thể chỉnh sửa)
+- **Khu Vực Bàn Giao**: Nhập khu vực (ví dụ: "Khu vực tiếp đón", "Xưởng số 1")
+- **Ghi Chú**: Ghi chú về bàn giao (tùy chọn)
+
+#### **Bước 4: Xác nhận bàn giao**
+- Click **"🤝 Xác Nhận Bàn Giao"**
+- Hệ thống sẽ:
+  - ✅ Cập nhật `HandoverDate` và `HandoverLocation`
+  - ✅ ServiceOrder status vẫn là **"ReadyToBill"** (sẵn sàng thanh toán)
+  - ✅ Thông báo: **"Đã bàn giao xe thành công"**
+  - ✅ Modal đóng, DataTable tự động reload
+
+#### **Bước 5: Thanh toán**
+- Sau khi bàn giao, JO sẵn sàng để thanh toán (Giai đoạn 3)
+- Có thể vào **"Quản Lý Thanh Toán"** để xử lý thanh toán
+
+---
+
+### **⚠️ Lưu ý quan trọng:**
+
+1. **Workflow đúng thứ tự:**
+   - ✅ Phải hoàn thành tất cả items trước khi Complete Technical
+   - ✅ Phải Complete Technical trước khi Start QC
+   - ✅ Phải Complete QC trước khi Handover
+   - ✅ Phải QC Pass trước khi Handover
+
+2. **Authorization:**
+   - ✅ Complete Technical: KTV tự hoàn thành (không có restriction)
+   - ✅ Start/Complete QC: Chỉ Tổ trưởng/QC/Quản đốc/Manager/Supervisor/Admin/SuperAdmin
+   - ✅ Handover: Chỉ Cố vấn Dịch vụ/Quản đốc/Manager/Advisor/Admin/SuperAdmin
+
+3. **QC Checklist:**
+   - ✅ Có thể thêm/xóa/sửa checklist items
+   - ✅ Mỗi item có thể có kết quả Pass/Fail
+   - ✅ Checklist được lưu lại để audit
+
+4. **QC Fail:**
+   - ✅ Khi QC Fail, JO chuyển về "InProgress"
+   - ✅ KTV cần làm lại và Complete Technical lại
+   - ✅ Có thể QC lại nhiều lần (QCFailedCount tăng dần)
+
+---
+
+### **💡 Ví dụ thực tế:**
+
+**Scenario: Hoàn thành QC và bàn giao xe**
+
+**Tình huống:**
+- JO-2024-001: Khách hàng Nguyễn Văn A, xe 30A-12345
+- Tất cả items đã Completed:
+  - Thay dầu máy ✅
+  - Thay bộ lọc dầu ✅
+  - Công sửa chữa ✅
+
+**Các bước:**
+
+1. **Complete Technical:**
+   - Xem JO → Click "✅ Hoàn Thành Kỹ Thuật"
+   - Xác nhận → Status chuyển sang "WaitingForQC"
+   - Tổng giờ công thực tế: 2.5 giờ
+
+2. **Start QC:**
+   - Vào "Kiểm Tra QC" → Click "▶️ Bắt Đầu QC" cho JO-2024-001
+   - Điền checklist:
+     - Kiểm tra chất lượng sơn ✅
+     - Kiểm tra lắp ráp phụ tùng ✅
+     - Kiểm tra hoạt động động cơ ✅
+   - Click "▶️ Bắt Đầu QC" → Status chuyển sang "QCInProgress"
+
+3. **Complete QC:**
+   - Sau khi kiểm tra xong → Click "✅ Hoàn Thành QC"
+   - Chọn "✅ Đạt"
+   - Ghi chú: "Chất lượng tốt, khách hàng hài lòng"
+   - Click "✅ Hoàn Thành QC" → Status chuyển sang "ReadyToBill"
+
+4. **Handover:**
+   - Xem JO → Click "🤝 Bàn Giao Xe"
+   - Ngày bàn giao: 18/11/2024 14:00
+   - Khu vực: "Khu vực tiếp đón"
+   - Ghi chú: "Khách hàng đã nhận xe và hài lòng"
+   - Click "🤝 Xác Nhận Bàn Giao" → Hoàn thành!
+
+**Kết quả:**
+- ✅ JO đã sẵn sàng thanh toán (ReadyToBill)
+- ✅ QC record đã được lưu với kết quả "Pass"
+- ✅ Thông tin bàn giao đã được ghi nhận
 
 ---
 

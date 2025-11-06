@@ -41,6 +41,11 @@ namespace GarageManagementSystem.Infrastructure.Data
         // ✅ 2.3.2: Additional Issues (Phát sinh trong quá trình sửa chữa)
         public DbSet<AdditionalIssue> AdditionalIssues { get; set; }
         public DbSet<AdditionalIssuePhoto> AdditionalIssuePhotos { get; set; }
+        
+        // ✅ 2.4.2: Quality Control (Kiểm tra chất lượng)
+        public DbSet<QualityControl> QualityControls { get; set; }
+        public DbSet<QCChecklistItem> QCChecklistItems { get; set; }
+        
         public DbSet<ServiceQuotation> ServiceQuotations { get; set; }
         public DbSet<QuotationItem> QuotationItems { get; set; }
         public DbSet<QuotationAttachment> QuotationAttachments { get; set; }
@@ -397,6 +402,39 @@ namespace GarageManagementSystem.Infrastructure.Data
                 entity.HasOne(e => e.AdditionalIssue)
                     .WithMany()
                     .HasForeignKey(e => e.AdditionalIssueId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // ✅ 2.4.2: QualityControl configuration
+            modelBuilder.Entity<QualityControl>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.QCResult).IsRequired().HasMaxLength(20);
+                entity.Property(e => e.QCNotes).HasMaxLength(2000);
+                entity.Property(e => e.ReworkNotes).HasMaxLength(2000);
+
+                entity.HasOne(e => e.ServiceOrder)
+                    .WithMany(so => so.QualityControls)
+                    .HasForeignKey(e => e.ServiceOrderId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.QCInspector)
+                    .WithMany()
+                    .HasForeignKey(e => e.QCInspectorId)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            // ✅ 2.4.2: QCChecklistItem configuration
+            modelBuilder.Entity<QCChecklistItem>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.ChecklistItemName).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.Result).HasMaxLength(20);
+                entity.Property(e => e.Notes).HasMaxLength(1000);
+
+                entity.HasOne(e => e.QualityControl)
+                    .WithMany(qc => qc.QCChecklistItems)
+                    .HasForeignKey(e => e.QualityControlId)
                     .OnDelete(DeleteBehavior.Cascade);
             });
 

@@ -669,6 +669,49 @@ namespace GarageManagementSystem.API.Controllers
                             {
                                 issue.AdditionalServiceOrderId = serviceOrder.Id;
                                 issue.Status = "Approved";
+                                
+                                // ✅ 2.3.3: Restore Service Order Item status nếu có liên kết
+                                if (issue.ServiceOrderItemId.HasValue)
+                                {
+                                    var serviceOrderItem = await _unitOfWork.Repository<Core.Entities.ServiceOrderItem>()
+                                        .GetByIdAsync(issue.ServiceOrderItemId.Value);
+                                    
+                                    if (serviceOrderItem != null && !serviceOrderItem.IsDeleted)
+                                    {
+                                        // Nếu Service Order Item đang ở trạng thái OnHold → Restore về trạng thái hợp lý
+                                        if (serviceOrderItem.Status == "OnHold")
+                                        {
+                                            // ✅ FIX: Reset StartTime để bắt đầu lại từ đầu (không tính thời gian chờ)
+                                            // Giữ nguyên ActualHours đã tính (chỉ tính thời gian làm việc thực tế)
+                                            // Clear EndTime để có thể tính lại khi tiếp tục làm việc
+                                            serviceOrderItem.EndTime = null;
+                                            
+                                            // Nếu đã có StartTime (từ lần làm việc trước), reset StartTime = null
+                                            // Sẽ được set lại khi KTV bắt đầu làm việc tiếp
+                                            // Nếu chưa có StartTime, giữ nguyên
+                                            
+                                            // Restore về trạng thái hợp lý
+                                            if (serviceOrderItem.StartTime.HasValue)
+                                            {
+                                                // Đã làm việc trước đó → restore về "InProgress" nhưng reset StartTime
+                                                serviceOrderItem.Status = "Pending"; // Set về Pending để KTV bắt đầu lại
+                                                serviceOrderItem.StartTime = null; // Reset để không tính lại thời gian chờ
+                                            }
+                                            else
+                                            {
+                                                // Chưa làm việc → restore về "Pending"
+                                                serviceOrderItem.Status = "Pending";
+                                            }
+                                            
+                                            serviceOrderItem.Notes = string.IsNullOrEmpty(serviceOrderItem.Notes)
+                                                ? $"Khách hàng đã duyệt báo giá bổ sung. Phát sinh được xử lý riêng. Tiếp tục công việc."
+                                                : $"{serviceOrderItem.Notes}\nKhách hàng đã duyệt báo giá bổ sung. Phát sinh được xử lý riêng. Tiếp tục công việc.";
+                                            
+                                            await _unitOfWork.Repository<Core.Entities.ServiceOrderItem>().UpdateAsync(serviceOrderItem);
+                                        }
+                                    }
+                                }
+                                
                                 await _unitOfWork.Repository<Core.Entities.AdditionalIssue>().UpdateAsync(issue);
                             }
                             
@@ -798,6 +841,59 @@ namespace GarageManagementSystem.API.Controllers
 
                     await _unitOfWork.ServiceQuotations.UpdateAsync(quotation);
                     await _unitOfWork.SaveChangesAsync();
+
+                    // ✅ 2.3.3: Cập nhật Additional Issue status nếu đây là Additional Quotation
+                    if (quotation.IsAdditionalQuotation && quotation.Id > 0)
+                    {
+                        var additionalIssues = (await _unitOfWork.Repository<Core.Entities.AdditionalIssue>()
+                            .FindAsync(ai => ai.AdditionalQuotationId == quotation.Id && !ai.IsDeleted))
+                            .ToList();
+
+                        foreach (var issue in additionalIssues)
+                        {
+                            issue.Status = "Rejected";
+                            issue.TechnicianNotes = string.IsNullOrEmpty(issue.TechnicianNotes)
+                                ? $"Báo giá bổ sung đã bị từ chối. Lý do: {rejectDto.Reason}"
+                                : $"{issue.TechnicianNotes}\nBáo giá bổ sung đã bị từ chối. Lý do: {rejectDto.Reason}";
+                            
+                            await _unitOfWork.Repository<Core.Entities.AdditionalIssue>().UpdateAsync(issue);
+
+                            // ✅ 2.3.3: Restore Service Order Item status nếu có liên kết
+                            if (issue.ServiceOrderItemId.HasValue)
+                            {
+                                var serviceOrderItem = await _unitOfWork.Repository<Core.Entities.ServiceOrderItem>()
+                                    .GetByIdAsync(issue.ServiceOrderItemId.Value);
+                                
+                                if (serviceOrderItem != null && !serviceOrderItem.IsDeleted)
+                                {
+                                    // Nếu Service Order Item đang ở trạng thái OnHold → Restore về trạng thái hợp lý
+                                    if (serviceOrderItem.Status == "OnHold")
+                                    {
+                                        // ✅ FIX: Reset StartTime để bắt đầu lại từ đầu (không tính thời gian chờ)
+                                        // Giữ nguyên ActualHours đã tính (chỉ tính thời gian làm việc thực tế)
+                                        // Clear EndTime để có thể tính lại khi tiếp tục làm việc
+                                        serviceOrderItem.EndTime = null;
+                                        
+                                        // Nếu đã có StartTime (từ lần làm việc trước), reset StartTime = null
+                                        // Sẽ được set lại khi KTV bắt đầu làm việc tiếp
+                                        serviceOrderItem.StartTime = null;
+                                        
+                                        // Restore về trạng thái "Pending" để KTV bắt đầu lại
+                                        serviceOrderItem.Status = "Pending";
+                                        
+                                        serviceOrderItem.Notes = string.IsNullOrEmpty(serviceOrderItem.Notes)
+                                            ? $"Đã từ chối phát sinh. Tiếp tục công việc."
+                                            : $"{serviceOrderItem.Notes}\nĐã từ chối phát sinh. Tiếp tục công việc.";
+                                        
+                                        await _unitOfWork.Repository<Core.Entities.ServiceOrderItem>().UpdateAsync(serviceOrderItem);
+                                    }
+                                }
+                            }
+                        }
+
+                        await _unitOfWork.SaveChangesAsync();
+                    }
+
                     await _unitOfWork.CommitTransactionAsync();
 
                     // Reload with details

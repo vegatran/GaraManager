@@ -62,7 +62,9 @@ namespace GarageManagementSystem.API.Profiles
                 .ForMember(dest => dest.StartTime, opt => opt.MapFrom(src => src.StartTime))
                 .ForMember(dest => dest.EndTime, opt => opt.MapFrom(src => src.EndTime))
                 .ForMember(dest => dest.ActualHours, opt => opt.MapFrom(src => src.ActualHours))
-                .ForMember(dest => dest.CompletedTime, opt => opt.MapFrom(src => src.CompletedTime));
+                .ForMember(dest => dest.CompletedTime, opt => opt.MapFrom(src => src.CompletedTime))
+                // ✅ 2.4.3: Map ReworkHours
+                .ForMember(dest => dest.ReworkHours, opt => opt.MapFrom(src => src.ReworkHours));
 
             CreateMap<CreateServiceOrderItemDto, ServiceOrderItem>()
                 .ForMember(dest => dest.Id, opt => opt.Ignore())

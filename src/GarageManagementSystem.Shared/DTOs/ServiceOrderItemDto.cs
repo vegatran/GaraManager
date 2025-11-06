@@ -24,6 +24,11 @@ namespace GarageManagementSystem.Shared.DTOs
         public DateTime? EndTime { get; set; }
         public decimal? ActualHours { get; set; }
         public DateTime? CompletedTime { get; set; }
+        
+        /// <summary>
+        /// ✅ 2.4.3: Giờ công làm lại (nếu QC không đạt)
+        /// </summary>
+        public decimal? ReworkHours { get; set; }
     }
 
     public class CreateServiceOrderItemDto

@@ -42,6 +42,11 @@ namespace GarageManagementSystem.Core.Entities
         public decimal? ActualHours { get; set; } // Giờ công thực tế (tính từ StartTime và EndTime hoặc nhập thủ công)
         public DateTime? CompletedTime { get; set; } // Thời gian hoàn thành item
 
+        /// <summary>
+        /// ✅ 2.4.3: Giờ công làm lại (nếu QC không đạt)
+        /// </summary>
+        public decimal? ReworkHours { get; set; }
+
         // Navigation properties
         public virtual ServiceOrder ServiceOrder { get; set; } = null!;
         public virtual Service? Service { get; set; } // ✅ SỬA: Cho phép null cho labor items (tiền công)

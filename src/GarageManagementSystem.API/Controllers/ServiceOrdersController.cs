@@ -159,9 +159,9 @@ namespace GarageManagementSystem.API.Controllers
                     var allowByQuotation = createDto.ServiceQuotationId.HasValue && totalErrors == itemsError && itemsError > 0;
 
                     if (!allowByQuotation)
-                    {
-                        var errors = ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage)).ToList();
-                        return BadRequest(ApiResponse<ServiceOrderDto>.ErrorResult("Dữ liệu không hợp lệ", errors));
+                {
+                    var errors = ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage)).ToList();
+                    return BadRequest(ApiResponse<ServiceOrderDto>.ErrorResult("Dữ liệu không hợp lệ", errors));
                     }
                 }
 
@@ -331,8 +331,8 @@ namespace GarageManagementSystem.API.Controllers
                 }
                 else
                 {
-                    foreach (var itemDto in createDto.ServiceOrderItems)
-                    {
+                foreach (var itemDto in createDto.ServiceOrderItems)
+                {
                         // ✅ SỬA: Kiểm tra ServiceId có giá trị không (có thể null cho labor items)
                         if (!itemDto.ServiceId.HasValue)
                         {
@@ -357,8 +357,8 @@ namespace GarageManagementSystem.API.Controllers
                         }
                         
                         var service = await _unitOfWork.Services.GetByIdAsync(itemDto.ServiceId.Value);
-                        if (service == null)
-                        {
+                    if (service == null)
+                    {
                             return BadRequest(ApiResponse<ServiceOrderDto>.ErrorResult($"Service with ID {itemDto.ServiceId.Value} not found"));
                         }
 
@@ -658,9 +658,18 @@ namespace GarageManagementSystem.API.Controllers
                         itemDto.EndTime = item.EndTime;
                         itemDto.ActualHours = item.ActualHours;
                         itemDto.CompletedTime = item.CompletedTime;
+                        
+                        // ✅ 2.4.3: Map ReworkHours
+                        itemDto.ReworkHours = item.ReworkHours;
                     }
                 }
             }
+            
+            // ✅ 2.4: Map QC và Bàn giao fields
+            dto.TotalActualHours = order.TotalActualHours;
+            dto.QCFailedCount = order.QCFailedCount;
+            dto.HandoverDate = order.HandoverDate;
+            dto.HandoverLocation = order.HandoverLocation;
             
             return dto;
         }
@@ -1654,6 +1663,96 @@ namespace GarageManagementSystem.API.Controllers
             catch (Exception ex)
             {
                 return StatusCode(500, ApiResponse<ServiceOrderDto>.ErrorResult("Lỗi khi hoàn thành hạng mục", ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// ✅ 2.3.4: Lấy tiến độ chi tiết của Service Order
+        /// </summary>
+        [HttpGet("{id}/progress")]
+        public async Task<ActionResult<ApiResponse<ServiceOrderProgressDto>>> GetServiceOrderProgress(int id)
+        {
+            try
+            {
+                var order = await _unitOfWork.ServiceOrders.GetByIdWithDetailsAsync(id);
+                if (order == null)
+                {
+                    return NotFound(ApiResponse<ServiceOrderProgressDto>.ErrorResult("Không tìm thấy phiếu sửa chữa"));
+                }
+
+                // ✅ OPTIMIZED: Query items ở database level
+                var items = (await _unitOfWork.Repository<Core.Entities.ServiceOrderItem>()
+                    .FindAsync(i => i.ServiceOrderId == id && !i.IsDeleted))
+                    .ToList();
+
+                var totalItems = items.Count;
+                var pendingItems = items.Count(i => i.Status == "Pending");
+                var inProgressItems = items.Count(i => i.Status == "InProgress");
+                var completedItems = items.Count(i => i.Status == "Completed");
+                var onHoldItems = items.Count(i => i.Status == "OnHold");
+                var cancelledItems = items.Count(i => i.Status == "Cancelled");
+
+                // Tính progress percentage
+                var progressPercentage = totalItems > 0 
+                    ? (decimal)(completedItems * 100.0 / totalItems) 
+                    : 0;
+
+                // Tính tổng giờ công
+                var totalEstimatedHours = items.Sum(i => i.EstimatedHours ?? 0);
+                var totalActualHours = items.Sum(i => i.ActualHours ?? 0);
+                
+                // ✅ FIX: Giờ Công Còn Lại = Tổng Dự Kiến - Tổng Thực Tế (hoặc chỉ tính cho items chưa hoàn thành)
+                // Logic 1: Tổng Dự Kiến - Tổng Thực Tế (tổng quát hơn)
+                // var remainingEstimatedHours = totalEstimatedHours - totalActualHours;
+                
+                // Logic 2: Chỉ tính cho items chưa hoàn thành và trừ đi giờ công thực tế đã làm
+                var incompleteItems = items.Where(i => i.Status != "Completed" && i.Status != "Cancelled").ToList();
+                var remainingEstimatedHoursForIncomplete = incompleteItems.Sum(i => i.EstimatedHours ?? 0);
+                var actualHoursForIncomplete = incompleteItems.Sum(i => i.ActualHours ?? 0);
+                var remainingEstimatedHours = Math.Max(0, remainingEstimatedHoursForIncomplete - actualHoursForIncomplete);
+
+                // Map items với progress
+                var itemProgressDtos = items.Select(item => new ServiceOrderItemProgressDto
+                {
+                    ItemId = item.Id,
+                    ItemName = item.ServiceName ?? item.Service?.Name ?? "N/A",
+                    Status = item.Status ?? "Pending",
+                    StartTime = item.StartTime,
+                    EndTime = item.EndTime,
+                    CompletedTime = item.CompletedTime,
+                    EstimatedHours = item.EstimatedHours,
+                    ActualHours = item.ActualHours,
+                    ProgressPercentage = item.Status == "Completed" ? 100 : (item.Status == "InProgress" ? 50 : 0),
+                    AssignedTechnicianId = item.AssignedTechnicianId,
+                    AssignedTechnicianName = item.AssignedTechnician?.Name
+                }).ToList();
+
+                var progressDto = new ServiceOrderProgressDto
+                {
+                    ServiceOrderId = order.Id,
+                    OrderNumber = order.OrderNumber,
+                    TotalItems = totalItems,
+                    PendingItems = pendingItems,
+                    InProgressItems = inProgressItems,
+                    CompletedItems = completedItems,
+                    OnHoldItems = onHoldItems,
+                    CancelledItems = cancelledItems,
+                    ProgressPercentage = progressPercentage,
+                    TotalEstimatedHours = totalEstimatedHours,
+                    TotalActualHours = totalActualHours,
+                    RemainingEstimatedHours = remainingEstimatedHours,
+                    OrderDate = order.OrderDate,
+                    StartDate = order.StartDate,
+                    ExpectedCompletionDate = order.ScheduledDate,
+                    ActualCompletionDate = order.CompletedDate,
+                    Items = itemProgressDtos
+                };
+
+                return Ok(ApiResponse<ServiceOrderProgressDto>.SuccessResult(progressDto));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<ServiceOrderProgressDto>.ErrorResult("Lỗi khi lấy tiến độ", ex.Message));
             }
         }
     }

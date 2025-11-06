@@ -27,6 +27,17 @@
                             <span class="badge badge-warning ml-1" id="additionalIssuesBadge" style="display: none;">0</span>
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="progress-tab" data-toggle="tab" href="#progress" role="tab">
+                            <i class="fas fa-tasks mr-1"></i>Tiến Độ
+                        </a>
+                    </li>
+                    <!-- ✅ 2.4: QC Tab -->
+                    <li class="nav-item">
+                        <a class="nav-link" id="qc-tab" data-toggle="tab" href="#qc" role="tab">
+                            <i class="fas fa-clipboard-check mr-1"></i>QC
+                        </a>
+                    </li>
                 </ul>
 
                 <!-- Tab Content -->
@@ -96,6 +107,7 @@
                                         <th>Giờ Công Dự Kiến</th>
                                         <th>Trạng Thái</th>
                                         <th>Giờ Công Thực Tế</th>
+                                        <th>Giờ Công Làm Lại</th>
                                         <th>Thao Tác</th>
                                     </tr>
                                 </thead>
@@ -116,11 +128,101 @@
                             <p class="text-muted">Đang tải danh sách phát sinh...</p>
                         </div>
                     </div>
+                    
+                    <!-- ✅ 2.3.4: Progress Tab -->
+                    <div class="tab-pane fade" id="progress" role="tabpanel">
+                        <div id="progressContent">
+                            <div class="text-center py-3">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="sr-only">Đang tải...</span>
+                                </div>
+                                <p class="text-muted mt-2">Đang tải tiến độ...</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- ✅ 2.4: QC Tab -->
+                    <div class="tab-pane fade" id="qc" role="tabpanel">
+                        <div id="qcContent">
+                            <div class="text-center py-3">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="sr-only">Đang tải...</span>
+                                </div>
+                                <p class="text-muted mt-2">Đang tải thông tin QC...</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
+                <!-- ✅ 2.4.1: Button Hoàn thành Kỹ thuật (chỉ hiện khi status = Completed và tất cả items đã Completed) -->
+                <button type="button" class="btn btn-success btn-sm" id="btnCompleteTechnical" style="display: none;">
+                    <i class="fas fa-check-circle"></i> Hoàn Thành Kỹ Thuật
+                </button>
+                <!-- ✅ 2.4.2: Button Bắt đầu QC (chỉ hiện khi status = WaitingForQC) -->
+                <button type="button" class="btn btn-primary btn-sm" id="btnStartQC" style="display: none;">
+                    <i class="fas fa-play"></i> Bắt Đầu QC
+                </button>
+                <!-- ✅ 2.4.2: Button Hoàn thành QC (chỉ hiện khi status = QCInProgress) -->
+                <button type="button" class="btn btn-info btn-sm" id="btnCompleteQC" style="display: none;">
+                    <i class="fas fa-check"></i> Hoàn Thành QC
+                </button>
+                <!-- ✅ 2.4.4: Button Bàn giao xe (chỉ hiện khi QC đạt và status = ReadyToBill) -->
+                <button type="button" class="btn btn-success btn-sm" id="btnHandover" style="display: none;">
+                    <i class="fas fa-handshake"></i> Bàn Giao Xe
+                </button>
+                <!-- ✅ 2.3.3: Button Tạo MR (chỉ hiển thị khi có vật tư và chưa có MR) -->
+                <button type="button" class="btn btn-success btn-sm" id="btnCreateMRFromOrder" style="display: none;">
+                    <i class="fas fa-box"></i> Tạo MR
+                </button>
                 <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">
                     <i class="fas fa-times"></i> Đóng
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ✅ 2.4.3: Modal Ghi Nhận Giờ Công Làm Lại -->
+<div class="modal fade" id="recordReworkHoursModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title"><i class="fas fa-redo mr-2"></i>Ghi Nhận Giờ Công Làm Lại</h5>
+                <button type="button" class="close text-white" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="recordReworkHoursForm">
+                    <input type="hidden" id="reworkOrderId" />
+                    <input type="hidden" id="reworkItemId" />
+                    
+                    <div class="form-group">
+                        <label>Tên Hạng Mục:</label>
+                        <p id="reworkItemName" class="form-control-static font-weight-bold"></p>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="reworkHours">Giờ Công Làm Lại <span class="text-danger">*</span></label>
+                        <input type="number" class="form-control form-control-sm" id="reworkHours" 
+                               step="0.01" min="0.01" required placeholder="Nhập số giờ công làm lại">
+                        <small class="form-text text-muted">Nhập số giờ công đã làm lại cho hạng mục này</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="reworkNotes">Ghi Chú (Tùy chọn)</label>
+                        <textarea class="form-control form-control-sm" id="reworkNotes" rows="3" 
+                                  placeholder="Ghi chú về công việc làm lại"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">
+                    <i class="fas fa-times"></i> Hủy
+                </button>
+                <button type="button" class="btn btn-warning btn-sm" id="btnSubmitReworkHours">
+                    <i class="fas fa-save"></i> Ghi Nhận
                 </button>
             </div>
         </div>

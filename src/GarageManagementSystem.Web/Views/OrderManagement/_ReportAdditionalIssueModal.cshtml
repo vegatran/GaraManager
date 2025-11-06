@@ -94,6 +94,21 @@
                                   rows="3" placeholder="Ghi chú kỹ thuật..." maxlength="1000"></textarea>
                     </div>
 
+                    <!-- ✅ Option reset Status khi Status = "Rejected" -->
+                    <div id="resetStatusSection" class="form-group" style="display: none;">
+                        <div class="alert alert-warning">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="resetToIdentified" name="ResetToIdentified" value="true">
+                                <label class="form-check-label" for="resetToIdentified">
+                                    <strong>Reset về trạng thái "Mới phát hiện" để tạo lại báo giá mới</strong>
+                                </label>
+                            </div>
+                            <small class="form-text text-muted mt-2">
+                                Nếu chọn, phát sinh sẽ được reset về trạng thái "Mới phát hiện" và bạn có thể tạo báo giá mới.
+                            </small>
+                        </div>
+                    </div>
+
                     <div class="form-group">
                         <label for="reportIssuePhotos">
                             Hình Ảnh Minh Họa <small class="text-muted">(Tùy chọn, tối đa 5MB/ảnh)</small>

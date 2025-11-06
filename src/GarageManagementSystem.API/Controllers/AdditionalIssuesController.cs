@@ -280,20 +280,62 @@ namespace GarageManagementSystem.API.Controllers
                     await _unitOfWork.SaveChangesAsync();
                 }
 
-                // ✅ Update ServiceOrderItem status to "OnHold" if provided
-                // Reuse orderItem variable that was already loaded above
+                // ✅ 2.3.2: Update ServiceOrderItem status to "OnHold" if provided
+                // Chỉ set OnHold nếu Service Order Item chưa hoàn thành hoặc hủy
                 if (createDto.ServiceOrderItemId.HasValue && orderItem != null)
                 {
-                    if (orderItem.Status != "OnHold")
+                    // Chỉ set OnHold nếu Service Order Item chưa hoàn thành hoặc hủy
+                    if (orderItem.Status != "OnHold" && 
+                        orderItem.Status != "Completed" && 
+                        orderItem.Status != "Cancelled" &&
+                        orderItem.Status != "Đã hoàn thành" &&
+                        orderItem.Status != "Đã hủy")
                     {
+                        // Lưu trạng thái hiện tại vào Notes để có thể restore sau
+                        var previousStatus = orderItem.Status;
+                        var now = DateTime.Now;
+                        
+                        // ✅ FIX: Nếu đang làm việc (InProgress) và có StartTime → Tính ActualHours trước khi set OnHold
+                        // Điều này đảm bảo không tính thời gian chờ vào giờ công thực tế
+                        if (previousStatus == "InProgress" && orderItem.StartTime.HasValue)
+                        {
+                            // Tính ActualHours từ StartTime đến hiện tại và cộng dồn
+                            var timeSpan = now - orderItem.StartTime.Value;
+                            var newActualHours = (decimal)timeSpan.TotalHours;
+                            orderItem.ActualHours = (orderItem.ActualHours ?? 0) + newActualHours;
+                            
+                            // Set EndTime để đánh dấu thời điểm tạm dừng
+                            orderItem.EndTime = now;
+                            
+                            _logger.LogInformation(
+                                "Calculated ActualHours: {ActualHours} (added {NewHours} hours from {StartTime} to {EndTime}) before setting OnHold",
+                                orderItem.ActualHours, newActualHours, orderItem.StartTime.Value, now);
+                        }
+                        
                         orderItem.Status = "OnHold";
                         orderItem.Notes = string.IsNullOrEmpty(orderItem.Notes)
-                            ? $"Phát sinh: {issue.IssueName}. Dừng công việc chờ khách hàng duyệt."
-                            : $"{orderItem.Notes}\nPhát sinh: {issue.IssueName}. Dừng công việc chờ khách hàng duyệt.";
+                            ? $"Phát sinh: {issue.IssueName}. Dừng công việc chờ khách hàng duyệt. (Trạng thái trước: {previousStatus})"
+                            : $"{orderItem.Notes}\nPhát sinh: {issue.IssueName}. Dừng công việc chờ khách hàng duyệt. (Trạng thái trước: {previousStatus})";
                         
                         await _unitOfWork.Repository<ServiceOrderItem>().UpdateAsync(orderItem);
                         await _unitOfWork.SaveChangesAsync();
-                    } 
+                        
+                        _logger.LogInformation(
+                            "Set Service Order Item {ItemId} status to OnHold due to Additional Issue {IssueId}. Previous status: {PreviousStatus}, ActualHours: {ActualHours}",
+                            orderItem.Id, issue.Id, previousStatus, orderItem.ActualHours);
+                    }
+                    else if (orderItem.Status == "Completed" || orderItem.Status == "Đã hoàn thành")
+                    {
+                        _logger.LogWarning(
+                            "Cannot set Service Order Item {ItemId} to OnHold. Item is already Completed.",
+                            orderItem.Id);
+                    }
+                    else if (orderItem.Status == "Cancelled" || orderItem.Status == "Đã hủy")
+                    {
+                        _logger.LogWarning(
+                            "Cannot set Service Order Item {ItemId} to OnHold. Item is already Cancelled.",
+                            orderItem.Id);
+                    }
                 }
 
                 await _unitOfWork.CommitTransactionAsync();
@@ -335,7 +377,34 @@ namespace GarageManagementSystem.API.Controllers
                 var issue = await _unitOfWork.Repository<AdditionalIssue>().GetByIdAsync(id);
                 if (issue == null)
                 {
+                    await _unitOfWork.RollbackTransactionAsync();
                     return NotFound(ApiResponse<AdditionalIssueDto>.ErrorResult("Không tìm thấy phát sinh"));
+                }
+
+                // ✅ VALIDATION: Cho phép chỉnh sửa phát sinh đã từ chối để tạo lại báo giá mới
+                // Nếu Status = "Rejected" và updateDto.Status = "Identified" → Reset để tạo lại báo giá
+                var isResettingFromRejected = issue.Status == "Rejected" && 
+                    (!string.IsNullOrEmpty(updateDto.Status) && updateDto.Status == "Identified");
+                
+                if (isResettingFromRejected)
+                {
+                    // Reset Status về "Identified" và clear AdditionalQuotationId để tạo lại báo giá mới
+                    issue.Status = "Identified";
+                    issue.AdditionalQuotationId = null; // Clear để có thể tạo báo giá mới
+                    issue.TechnicianNotes = string.IsNullOrEmpty(issue.TechnicianNotes)
+                        ? $"Đã reset từ trạng thái 'Từ chối' để tạo lại báo giá mới."
+                        : $"{issue.TechnicianNotes}\nĐã reset từ trạng thái 'Từ chối' để tạo lại báo giá mới.";
+                    
+                    _logger.LogInformation(
+                        "Resetting Additional Issue {IssueId} from Rejected to Identified to allow creating new quotation",
+                        issue.Id);
+                }
+                else if (issue.Status == "Approved" || issue.Status == "Repaired")
+                {
+                    // Không cho phép chỉnh sửa phát sinh đã được duyệt hoặc đã sửa
+                    await _unitOfWork.RollbackTransactionAsync();
+                    return BadRequest(ApiResponse<AdditionalIssueDto>.ErrorResult(
+                        $"Không thể chỉnh sửa phát sinh ở trạng thái '{issue.Status}'. Phát sinh đã được xử lý hoàn tất."));
                 }
 
                 // Update properties
@@ -349,10 +418,13 @@ namespace GarageManagementSystem.API.Controllers
                     issue.Severity = updateDto.Severity;
                 if (updateDto.RequiresImmediateAction.HasValue)
                     issue.RequiresImmediateAction = updateDto.RequiresImmediateAction.Value;
-                if (!string.IsNullOrEmpty(updateDto.TechnicianNotes))
+                if (!string.IsNullOrEmpty(updateDto.TechnicianNotes) && !isResettingFromRejected)
                     issue.TechnicianNotes = updateDto.TechnicianNotes;
-                if (!string.IsNullOrEmpty(updateDto.Status))
+                // ✅ Update Status (nếu có và không phải reset từ Rejected)
+                if (!string.IsNullOrEmpty(updateDto.Status) && !isResettingFromRejected)
+                {
                     issue.Status = updateDto.Status;
+                }
 
                 // Delete photos if requested
                 // Handle both List<int> from DTO and comma-separated string from form
@@ -467,20 +539,139 @@ namespace GarageManagementSystem.API.Controllers
 
         /// <summary>
         /// Xóa phát sinh
+        /// Logic: 
+        /// - Nếu Quotation đã Approved → Không cho phép xóa (đã có Service Order)
+        /// - Nếu Quotation chưa Approved → Tự động xóa Quotation cùng với Additional Issue
+        /// - Nếu Service Order đã Completed → Không cho phép xóa
+        /// - Nếu Service Order chưa Completed → Tự động hủy Service Order cùng với Additional Issue
         /// </summary>
         [HttpDelete("{id}")]
         public async Task<ActionResult<ApiResponse<bool>>> DeleteAdditionalIssue(int id)
         {
             try
             {
+                await _unitOfWork.BeginTransactionAsync();
+
                 var issue = await _unitOfWork.Repository<AdditionalIssue>().GetByIdAsync(id);
                 if (issue == null)
                 {
+                    await _unitOfWork.RollbackTransactionAsync();
                     return NotFound(ApiResponse<bool>.ErrorResult("Không tìm thấy phát sinh"));
                 }
 
-                // Load photos
+                // ✅ VALIDATION: Cho phép xóa khi Status = "Rejected" hoặc "Identified" (nếu không có Service Order)
+                // Nếu Status = "Approved" hoặc "Repaired" → Không cho phép xóa (đã hoàn thành)
+                if (issue.Status == "Approved" || issue.Status == "Repaired" || issue.Status == "Đã duyệt" || issue.Status == "Đã sửa")
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    return BadRequest(ApiResponse<bool>.ErrorResult(
+                        $"Không thể xóa phát sinh ở trạng thái '{issue.Status}'. Phát sinh đã được xử lý hoàn tất."));
+                }
+
+                // ✅ Nếu Status = "Rejected" hoặc "Identified" → Cho phép xóa nếu không có Service Order bổ sung
+                if (issue.AdditionalServiceOrderId.HasValue)
+                {
+                    var serviceOrder = await _unitOfWork.ServiceOrders.GetByIdAsync(issue.AdditionalServiceOrderId.Value);
+                    if (serviceOrder != null && !serviceOrder.IsDeleted)
+                    {
+                        await _unitOfWork.RollbackTransactionAsync();
+                        return BadRequest(ApiResponse<bool>.ErrorResult(
+                            $"Không thể xóa phát sinh vì đã có phiếu sửa chữa bổ sung (Phiếu #{serviceOrder.OrderNumber}). " +
+                            "Vui lòng hủy phiếu sửa chữa trước khi xóa phát sinh."));
+                    }
+                }
+                if (issue.AdditionalQuotationId.HasValue)
+                {
+                    var quotation = await _unitOfWork.ServiceQuotations.GetByIdAsync(issue.AdditionalQuotationId.Value);
+                    if (quotation != null && !quotation.IsDeleted)
+                    {
+                        // Nếu Quotation đã được duyệt → Không cho phép xóa Additional Issue
+                        if (quotation.Status == "Approved" || quotation.Status == "Đã duyệt")
+                        {
+                            await _unitOfWork.RollbackTransactionAsync();
+                            return BadRequest(ApiResponse<bool>.ErrorResult(
+                                $"Không thể xóa phát sinh vì đã có báo giá bổ sung đã được duyệt (Báo giá #{quotation.QuotationNumber}). " +
+                                "Báo giá đã được duyệt và có thể đã có phiếu sửa chữa liên quan. " +
+                                "Vui lòng từ chối hoặc hủy báo giá trước khi xóa phát sinh."));
+                        }
+
+                        // ✅ CASCADE DELETE: Nếu Quotation chưa được duyệt → Tự động xóa Quotation
+                        // Các trạng thái có thể xóa: Draft, Sent, Pending, Rejected, Cancelled, Expired
+                        _logger.LogInformation(
+                            "Cascade deleting Quotation {QuotationId} ({QuotationNumber}) when deleting Additional Issue {IssueId}",
+                            quotation.Id, quotation.QuotationNumber, issue.Id);
+
+                        await _unitOfWork.ServiceQuotations.DeleteAsync(quotation);
+                        await _unitOfWork.SaveChangesAsync();
+                    }
+                }
+
+                // ✅ VALIDATION & CASCADE DELETE: Kiểm tra và xử lý liên kết với Service Order
+                if (issue.AdditionalServiceOrderId.HasValue)
+                {
+                    var serviceOrder = await _unitOfWork.ServiceOrders.GetByIdAsync(issue.AdditionalServiceOrderId.Value);
+                    if (serviceOrder != null && !serviceOrder.IsDeleted)
+                    {
+                        // Nếu Service Order đã hoàn thành → Không cho phép xóa Additional Issue
+                        if (serviceOrder.Status == "Completed" || serviceOrder.Status == "Đã hoàn thành")
+                        {
+                            await _unitOfWork.RollbackTransactionAsync();
+                            return BadRequest(ApiResponse<bool>.ErrorResult(
+                                $"Không thể xóa phát sinh vì đã có phiếu sửa chữa bổ sung đã hoàn thành (Phiếu #{serviceOrder.OrderNumber}). " +
+                                "Phiếu sửa chữa đã hoàn thành không thể xóa. Vui lòng liên hệ quản trị viên để xử lý."));
+                        }
+
+                        // ✅ CASCADE DELETE: Nếu Service Order chưa hoàn thành → Tự động hủy Service Order
+                        // Các trạng thái có thể hủy: Pending, ReadyToWork, WaitingForParts, InProgress, OnHold
+                        _logger.LogInformation(
+                            "Cascade cancelling Service Order {ServiceOrderId} ({OrderNumber}) when deleting Additional Issue {IssueId}",
+                            serviceOrder.Id, serviceOrder.OrderNumber, issue.Id);
+
+                        serviceOrder.Status = "Cancelled";
+                        serviceOrder.Notes = string.IsNullOrEmpty(serviceOrder.Notes)
+                            ? $"Đã hủy do xóa phát sinh #{issue.Id}"
+                            : $"{serviceOrder.Notes}\nĐã hủy do xóa phát sinh #{issue.Id}";
+
+                        await _unitOfWork.ServiceOrders.UpdateAsync(serviceOrder);
+                        await _unitOfWork.SaveChangesAsync();
+                    }
+                }
+
+                // ✅ Xóa Additional Issue và Photos
                 await _context.Entry(issue).Collection(i => i.Photos).LoadAsync();
+
+                // ✅ 2.3.3: Restore Service Order Item status nếu có liên kết
+                if (issue.ServiceOrderItemId.HasValue)
+                {
+                    var serviceOrderItem = await _unitOfWork.Repository<Core.Entities.ServiceOrderItem>()
+                        .GetByIdAsync(issue.ServiceOrderItemId.Value);
+                    
+                    if (serviceOrderItem != null && !serviceOrderItem.IsDeleted)
+                    {
+                        // Nếu Service Order Item đang ở trạng thái OnHold → Restore về trạng thái hợp lý
+                        if (serviceOrderItem.Status == "OnHold")
+                        {
+                            // ✅ FIX: Reset StartTime để bắt đầu lại từ đầu (không tính thời gian chờ)
+                            // Giữ nguyên ActualHours đã tính (chỉ tính thời gian làm việc thực tế)
+                            // Clear EndTime để có thể tính lại khi tiếp tục làm việc
+                            serviceOrderItem.EndTime = null;
+                            
+                            // Nếu đã có StartTime (từ lần làm việc trước), reset StartTime = null
+                            // Sẽ được set lại khi KTV bắt đầu làm việc tiếp
+                            serviceOrderItem.StartTime = null;
+                            
+                            // Restore về trạng thái "Pending" để KTV bắt đầu lại
+                            serviceOrderItem.Status = "Pending";
+                            
+                            serviceOrderItem.Notes = string.IsNullOrEmpty(serviceOrderItem.Notes)
+                                ? $"Đã xóa phát sinh. Tiếp tục công việc."
+                                : $"{serviceOrderItem.Notes}\nĐã xóa phát sinh. Tiếp tục công việc.";
+                            
+                            await _unitOfWork.Repository<Core.Entities.ServiceOrderItem>().UpdateAsync(serviceOrderItem);
+                            await _unitOfWork.SaveChangesAsync();
+                        }
+                    }
+                }
 
                 // Delete physical files
                 var uploadsPath = Path.Combine(_environment.WebRootPath, "uploads", "additional-issues", issue.Id.ToString());
@@ -499,10 +690,23 @@ namespace GarageManagementSystem.API.Controllers
                 await _unitOfWork.Repository<AdditionalIssue>().DeleteAsync(issue);
                 await _unitOfWork.SaveChangesAsync();
 
-                return Ok(ApiResponse<bool>.SuccessResult(true, "Đã xóa phát sinh thành công"));
+                await _unitOfWork.CommitTransactionAsync();
+
+                var deletedItems = new List<string>();
+                if (issue.AdditionalQuotationId.HasValue) deletedItems.Add("báo giá bổ sung");
+                if (issue.AdditionalServiceOrderId.HasValue) deletedItems.Add("phiếu sửa chữa bổ sung");
+
+                var message = "Đã xóa phát sinh thành công";
+                if (deletedItems.Any())
+                {
+                    message += $". Đã tự động xóa/hủy: {string.Join(", ", deletedItems)}";
+                }
+
+                return Ok(ApiResponse<bool>.SuccessResult(true, message));
             }
             catch (Exception ex)
             {
+                await _unitOfWork.RollbackTransactionAsync();
                 _logger.LogError(ex, "Error deleting additional issue {IssueId}", id);
                 return StatusCode(500, ApiResponse<bool>.ErrorResult("Lỗi khi xóa phát sinh", ex.Message));
             }
@@ -635,11 +839,26 @@ namespace GarageManagementSystem.API.Controllers
                     return NotFound(ApiResponse<ServiceQuotationDto>.ErrorResult("Không tìm thấy phát sinh"));
                 }
 
-                // Check if already has quotation
+                // ✅ 2.3.3: Kiểm tra nếu đã có Quotation
+                // Cho phép tạo lại nếu Quotation đã bị từ chối (Rejected) hoặc hủy (Cancelled)
                 if (issue.AdditionalQuotationId.HasValue)
                 {
-                    return BadRequest(ApiResponse<ServiceQuotationDto>.ErrorResult(
-                        $"Phát sinh này đã có báo giá bổ sung (ID: {issue.AdditionalQuotationId.Value})"));
+                    var existingQuotation = await _unitOfWork.ServiceQuotations.GetByIdAsync(issue.AdditionalQuotationId.Value);
+                    if (existingQuotation != null && !existingQuotation.IsDeleted)
+                    {
+                        // Chỉ cho phép tạo lại nếu Quotation đã bị từ chối hoặc hủy
+                        if (existingQuotation.Status != "Rejected" && existingQuotation.Status != "Cancelled" && existingQuotation.Status != "Từ chối" && existingQuotation.Status != "Đã hủy")
+                        {
+                            return BadRequest(ApiResponse<ServiceQuotationDto>.ErrorResult(
+                                $"Phát sinh này đã có báo giá bổ sung (Báo giá #{existingQuotation.QuotationNumber}, Trạng thái: {existingQuotation.Status}). " +
+                                "Vui lòng từ chối hoặc hủy báo giá hiện tại trước khi tạo báo giá mới."));
+                        }
+                        
+                        // ✅ Nếu Quotation đã bị từ chối/hủy, cho phép tạo lại báo giá mới
+                        // Giữ nguyên AdditionalQuotationId cũ để giữ lịch sử
+                        // Hoặc có thể reset AdditionalQuotationId = null để tạo báo giá hoàn toàn mới
+                        // Hiện tại giữ nguyên để giữ lịch sử
+                    }
                 }
 
                 // Get ServiceOrder to get CustomerId and VehicleId
@@ -747,9 +966,18 @@ namespace GarageManagementSystem.API.Controllers
                 await _unitOfWork.ServiceQuotations.AddAsync(quotation);
                 await _unitOfWork.SaveChangesAsync();
 
-                // Update AdditionalIssue
-                issue.AdditionalQuotationId = quotation.Id;
+                // ✅ 2.3.3: Cập nhật AdditionalIssue
+                // Nếu đã có Quotation cũ (bị từ chối), vẫn giữ AdditionalQuotationId để giữ lịch sử
+                // Nếu chưa có Quotation, set AdditionalQuotationId = quotation.Id
+                if (!issue.AdditionalQuotationId.HasValue)
+                {
+                    issue.AdditionalQuotationId = quotation.Id;
+                }
                 issue.Status = "Quoted";
+                issue.TechnicianNotes = string.IsNullOrEmpty(issue.TechnicianNotes)
+                    ? $"Đã tạo báo giá bổ sung #{quotation.QuotationNumber}"
+                    : $"{issue.TechnicianNotes}\nĐã tạo báo giá bổ sung #{quotation.QuotationNumber}";
+                
                 await _unitOfWork.Repository<AdditionalIssue>().UpdateAsync(issue);
                 await _unitOfWork.SaveChangesAsync();
 

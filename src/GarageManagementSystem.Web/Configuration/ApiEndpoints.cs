@@ -88,6 +88,8 @@ namespace GarageManagementSystem.Web.Configuration
             public const string StartItemWork = "serviceorders/{0}/items/{1}/start-work";
             public const string StopItemWork = "serviceorders/{0}/items/{1}/stop-work";
             public const string CompleteItem = "serviceorders/{0}/items/{1}/complete";
+            // ✅ 2.3.4: Lấy tiến độ Service Order
+            public const string GetProgress = "serviceorders/{0}/progress";
         }
 
         /// <summary>
@@ -295,6 +297,29 @@ namespace GarageManagementSystem.Web.Configuration
             /// ✅ 2.3.3: Tạo báo giá từ phát sinh
             /// </summary>
             public const string CreateQuotation = "additionalissues/{0}/create-quotation";
+        }
+
+        /// <summary>
+        /// ✅ 2.4: Quality Control (QC) endpoints
+        /// </summary>
+        public static class QualityControl
+        {
+            // ✅ 2.4.1: Hoàn thành Kỹ thuật
+            public const string CompleteTechnical = "qualitycontrol/service-orders/{0}/complete-technical";
+            public const string GetTotalActualHours = "qualitycontrol/service-orders/{0}/total-actual-hours";
+            
+            // ✅ 2.4.2: Kiểm tra QC
+            public const string GetWaitingForQC = "qualitycontrol/service-orders/waiting-for-qc";
+            public const string StartQC = "qualitycontrol/service-orders/{0}/qc/start";
+            public const string CompleteQC = "qualitycontrol/service-orders/{0}/qc/complete";
+            public const string GetQC = "qualitycontrol/service-orders/{0}/qc";
+            
+            // ✅ 2.4.3: Xử lý QC Không đạt
+            public const string FailQC = "qualitycontrol/service-orders/{0}/qc/fail";
+            public const string RecordReworkHours = "qualitycontrol/service-orders/{0}/items/{1}/rework";
+            
+            // ✅ 2.4.4: Bàn giao xe
+            public const string Handover = "qualitycontrol/service-orders/{0}/handover";
         }
 
         /// <summary>
