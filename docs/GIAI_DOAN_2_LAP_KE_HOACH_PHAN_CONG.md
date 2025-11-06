@@ -1438,7 +1438,6 @@ Giai đoạn 2.4: Kiểm tra Chất lượng (QC) và Bàn giao là bước cu�
 - ✅ Status formatting với các status mới
 
 #### **Documentation:**
-- ✅ Báo cáo tiến độ chi tiết (`BAO_CAO_TIEN_DO_GIAI_DOAN_2_4.md`)
 - ✅ Hướng dẫn tạo dữ liệu demo (`HUONG_DAN_TAO_DU_LIEU_QC.md`)
 - ✅ Script SQL tạo demo data (`SQL_CREATE_DEMO_DATA_FOR_QC.sql`)
 - ✅ Cập nhật User Manual với hướng dẫn sử dụng Phase 2.4
