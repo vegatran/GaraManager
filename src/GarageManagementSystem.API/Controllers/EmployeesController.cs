@@ -4,8 +4,10 @@ using GarageManagementSystem.Core.Extensions;
 using GarageManagementSystem.Shared.DTOs;
 using GarageManagementSystem.Shared.Models;
 using GarageManagementSystem.API.Services;
+using GarageManagementSystem.Infrastructure.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace GarageManagementSystem.API.Controllers
 {
@@ -17,12 +19,14 @@ namespace GarageManagementSystem.API.Controllers
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly ICacheService _cacheService;
+        private readonly GarageDbContext _context;
 
-        public EmployeesController(IUnitOfWork unitOfWork, IMapper mapper, ICacheService cacheService)
+        public EmployeesController(IUnitOfWork unitOfWork, IMapper mapper, ICacheService cacheService, GarageDbContext context)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _cacheService = cacheService;
+            _context = context;
         }
 
         [HttpGet]
@@ -34,16 +38,18 @@ namespace GarageManagementSystem.API.Controllers
         {
             try
             {
-                var employees = await _unitOfWork.Employees.GetAllWithNavigationAsync();
-                var query = employees.AsQueryable();
+                // ✅ OPTIMIZED: Query ở database level thay vì load tất cả vào memory
+                var query = _context.Employees
+                    .Where(e => !e.IsDeleted)
+                    .AsQueryable();
                 
                 // Apply search filter if provided
                 if (!string.IsNullOrEmpty(searchTerm))
                 {
                     query = query.Where(e => 
-                        e.Name.Contains(searchTerm) || 
-                        e.Email.Contains(searchTerm) || 
-                        e.Phone.Contains(searchTerm));
+                        (e.Name != null && e.Name.Contains(searchTerm)) || 
+                        (e.Email != null && e.Email.Contains(searchTerm)) || 
+                        (e.Phone != null && e.Phone.Contains(searchTerm)));
                 }
                 
                 // Apply department filter if provided
@@ -52,11 +58,17 @@ namespace GarageManagementSystem.API.Controllers
                     query = query.Where(e => e.Department == department);
                 }
 
-                // Get total count
-                var totalCount = await query.GetTotalCountAsync();
+                // ✅ OPTIMIZED: Get total count ở database level (trước khi paginate)
+                var totalCount = await query.CountAsync();
                 
-                // Apply pagination
-                var pagedEmployees = query.ApplyPagination(pageNumber, pageSize).ToList();
+                // ✅ OPTIMIZED: Apply pagination ở database level với Skip/Take
+                var pagedEmployees = await query
+                    .Skip((pageNumber - 1) * pageSize)
+                    .Take(pageSize)
+                    .Include(e => e.PositionNavigation)
+                    .Include(e => e.DepartmentNavigation)
+                    .ToListAsync();
+                
                 var employeeDtos = pagedEmployees.Select(e => _mapper.Map<EmployeeDto>(e)).ToList();
                 
                 return Ok(PagedResponse<EmployeeDto>.CreateSuccessResult(
@@ -93,8 +105,9 @@ namespace GarageManagementSystem.API.Controllers
         {
             try
             {
-                var employees = await _unitOfWork.Employees.GetAllWithNavigationAsync();
-                var activeEmployees = employees.Where(e => e.Status == "Active").Select(e => _mapper.Map<EmployeeDto>(e)).ToList();
+                // ✅ FIX: Sử dụng FindAsync thay vì GetAllAsync().Where() để filter ở database level
+                var employees = await _unitOfWork.Employees.FindAsync(e => e.Status == "Active");
+                var activeEmployees = employees.Select(e => _mapper.Map<EmployeeDto>(e)).ToList();
                 
                 return Ok(ApiResponse<List<EmployeeDto>>.SuccessResult(activeEmployees));
             }
@@ -109,9 +122,10 @@ namespace GarageManagementSystem.API.Controllers
         {
             try
             {
-                var employees = await _unitOfWork.Employees.GetAllAsync();
+                // ✅ FIX: Sử dụng FindAsync thay vì GetAllAsync().Where() để filter ở database level
+                var employees = await _unitOfWork.Employees.FindAsync(e => 
+                    e.Department != null && e.Department.Equals(department, StringComparison.OrdinalIgnoreCase));
                 var deptEmployees = employees
-                    .Where(e => e.Department != null && e.Department.Equals(department, StringComparison.OrdinalIgnoreCase))
                     .Select(e => _mapper.Map<EmployeeDto>(e))
                     .ToList();
                 
@@ -437,13 +451,15 @@ namespace GarageManagementSystem.API.Controllers
 
         /// <summary>
         /// ✅ BỔ SUNG: Get employee workload (total assigned hours, active orders)
+        /// ✅ HP2: Cached với TTL 5 phút để giảm số lượng API calls
         /// </summary>
         [HttpGet("{id}/workload")]
         public async Task<ActionResult<ApiResponse<object>>> GetEmployeeWorkload(int id, [FromQuery] DateTime? date = null)
         {
             try
             {
-                var employee = await _unitOfWork.Employees.GetByIdAsync(id);
+                // ✅ FIX: Load employee với navigation properties để tránh null reference
+                var employee = await _unitOfWork.Employees.GetByIdWithNavigationAsync(id);
                 if (employee == null)
                 {
                     return NotFound(ApiResponse<object>.ErrorResult("Employee not found"));
@@ -452,18 +468,36 @@ namespace GarageManagementSystem.API.Controllers
                 // Default to today if not specified
                 date ??= DateTime.Today;
 
-                // ✅ OPTIMIZED: Filter assigned items ở database level
-                // Note: Filter theo AssignedTechnicianId first, then filter by ServiceOrder properties in memory
-                // (Vì navigation properties không thể filter trực tiếp trong FindAsync)
+                // ✅ HP2: Check cache first
+                var cacheKey = $"workload_{id}_{date.Value:yyyyMMdd}";
+                var cachedWorkload = await _cacheService.GetAsync<object>(cacheKey);
+                if (cachedWorkload != null)
+                {
+                    // ✅ FIX: Cast về đúng type (anonymous object được preserve trong IMemoryCache)
+                    // IMemoryCache lưu trữ object reference trực tiếp, không serialize/deserialize
+                    // Nên có thể cast về object mà không mất thông tin
+                    return Ok(ApiResponse<object>.SuccessResult(cachedWorkload));
+                }
+
+                // ✅ FIX: Load ServiceOrderItems và filter ở database level
                 var allAssignedItems = (await _unitOfWork.Repository<Core.Entities.ServiceOrderItem>()
                     .FindAsync(item => item.AssignedTechnicianId == id)).ToList();
                 
-                // Filter by ServiceOrder properties after loading (for navigation properties)
+                // ✅ FIX: Load ServiceOrders để filter và tránh null reference
+                var serviceOrderIds = allAssignedItems.Select(i => i.ServiceOrderId).Distinct().ToList();
+                var serviceOrdersDict = serviceOrderIds.Any()
+                    ? (await _unitOfWork.ServiceOrders
+                        .FindAsync(so => serviceOrderIds.Contains(so.Id)))
+                        .ToDictionary(so => so.Id)
+                    : new Dictionary<int, Core.Entities.ServiceOrder>();
+                
+                // Filter items by ServiceOrder properties (sử dụng dictionary để tránh null reference)
                 var assignedItems = allAssignedItems
-                    .Where(item => item.ServiceOrder != null &&
-                                   !item.ServiceOrder.IsDeleted &&
-                                   item.ServiceOrder.Status != "Cancelled" &&
-                                   item.ServiceOrder.Status != "Completed")
+                    .Where(item => serviceOrdersDict.TryGetValue(item.ServiceOrderId, out var so) &&
+                                   so != null &&
+                                   !so.IsDeleted &&
+                                   so.Status != "Cancelled" &&
+                                   so.Status != "Completed")
                     .ToList();
 
                 // Calculate total estimated hours
@@ -485,19 +519,22 @@ namespace GarageManagementSystem.API.Controllers
                     .Distinct()
                     .ToList();
 
-                // Get ServiceOrders for these IDs
-                var activeOrders = (await _unitOfWork.ServiceOrders.GetAllWithDetailsAsync())
-                    .Where(so => activeOrderIds.Contains(so.Id) && 
-                                 !so.IsDeleted && 
-                                 so.Status != "Cancelled" && 
-                                 so.Status != "Completed")
-                    .ToList();
+                // ✅ FIX: Filter ở database level thay vì load tất cả rồi filter trong memory
+                // Chỉ load ServiceOrders cần thiết để tránh tốn memory
+                var activeOrders = activeOrderIds.Any()
+                    ? (await _unitOfWork.ServiceOrders
+                        .FindAsync(so => activeOrderIds.Contains(so.Id) && 
+                                         !so.IsDeleted && 
+                                         so.Status != "Cancelled" && 
+                                         so.Status != "Completed")).ToList()
+                    : new List<Core.Entities.ServiceOrder>();
 
-                // Get completed items (for historical context)
+                // Get completed items (for historical context) - sử dụng dictionary để tránh null reference
                 var completedItems = allAssignedItems.Where(item =>
                     item.AssignedTechnicianId == id &&
-                    item.ServiceOrder != null &&
-                    item.ServiceOrder.Status == "Completed")
+                    serviceOrdersDict.TryGetValue(item.ServiceOrderId, out var so) &&
+                    so != null &&
+                    so.Status == "Completed")
                     .ToList();
                 var completedOrdersCount = completedItems
                     .Select(i => i.ServiceOrderId)
@@ -542,6 +579,9 @@ namespace GarageManagementSystem.API.Controllers
                         CapacityUsed = totalEstimatedHours > 0 ? Math.Min(100, (totalEstimatedHours / 8.0m) * 100) : 0 // Assuming 8 hours/day capacity
                     }
                 };
+
+                // ✅ HP2: Cache workload data với TTL 5 phút
+                await _cacheService.SetAsync(cacheKey, workload, TimeSpan.FromMinutes(5));
 
                 return Ok(ApiResponse<object>.SuccessResult(workload));
             }

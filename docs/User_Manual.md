@@ -3020,9 +3020,108 @@ Quy trình tiếp nhận khách hàng, kiểm tra xe và tạo báo giá.
 
 ---
 
-### **Giai đoạn 2: Sửa Chữa & Thanh Toán**
+### **Giai đoạn 2: Sửa Chữa & Quản Lý Xuất Kho**
 
-Quy trình thực hiện sửa chữa và quản lý thanh toán.
+Giai đoạn 2 bao gồm toàn bộ quy trình từ khi Phiếu Sửa Chữa (JO) được tạo cho đến khi xe được nghiệm thu chất lượng và sẵn sàng bàn giao cho khách hàng.
+
+---
+
+## 📋 TỔNG QUAN GIAI ĐOẠN 2
+
+### **🎯 Mục đích chính:**
+
+Giai đoạn 2 quản lý toàn bộ quy trình sửa chữa từ khi JO được khách hàng duyệt đến khi xe được nghiệm thu chất lượng và sẵn sàng bàn giao.
+
+### **📊 Workflow tổng thể:**
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ GIAI ĐOẠN 2: SỬA CHỮA & QUẢN LÝ XUẤT KHO                     │
+└─────────────────────────────────────────────────────────────┘
+
+2.1: LẬP KẾ HOẠCH & PHÂN CÔNG
+├── 2.1.1: Chuyển JO sang "Chờ Phân công"
+│   └── CVDV chuyển trạng thái JO từ "Pending" → "PendingAssignment"
+│
+└── 2.1.2: Phân công KTV & Thời gian
+    └── Quản đốc/Tổ trưởng phân công KTV và nhập giờ công dự kiến cho từng item
+    └── JO tự động chuyển sang "ReadyToWork" khi tất cả items đã được phân công
+
+         ↓
+
+2.2: YÊU CẦU VẬT TƯ (MATERIAL REQUEST - MR)
+└── Tạo MR để yêu cầu phụ tùng từ kho
+    └── Workflow: Draft → PendingApproval → Approved → Picked → Issued → Delivered
+    └── JO chuyển sang "WaitingForParts" (nếu cần vật tư) hoặc vẫn "ReadyToWork" (nếu không cần)
+
+         ↓
+
+2.3: QUẢN LÝ TIẾN ĐỘ & PHÁT SINH
+├── 2.3.1: Bắt đầu Công việc
+│   └── KTV bắt đầu làm việc trên từng item (Start → Stop → Complete)
+│   └── Hệ thống tự động tính giờ công thực tế
+│
+├── 2.3.2: Phát hiện Phát sinh
+│   └── KTV báo cáo vấn đề phát hiện trong quá trình sửa chữa
+│   └── Item liên quan tự động chuyển sang "OnHold"
+│
+├── 2.3.3: Báo giá Phát sinh
+│   └── CVDV lập báo giá bổ sung cho phát sinh
+│   └── Khách hàng duyệt → Tạo LSC Bổ sung → Quay lại 2.2 (nếu có vật tư)
+│
+└── 2.3.4: Cập nhật Tiến độ
+    └── Hệ thống tự động cập nhật tiến độ dựa trên trạng thái items
+    └── Hiển thị tổng giờ công thực tế, số items đã hoàn thành, tiến độ %
+
+         ↓
+
+2.4: KIỂM TRA CHẤT LƯỢNG (QC) VÀ BÀN GIAO
+├── 2.4.1: Hoàn thành Kỹ thuật
+│   └── KTV hoàn thành tất cả items → Click "Hoàn Thành Kỹ Thuật"
+│   └── JO chuyển sang "WaitingForQC"
+│
+├── 2.4.2: Kiểm tra QC
+│   └── Tổ trưởng/QC kiểm tra chất lượng → Đánh giá "Đạt" hoặc "Không Đạt"
+│   └── Nếu Đạt: JO chuyển sang "ReadyToBill"
+│   └── Nếu Không Đạt: JO chuyển về "InProgress" → KTV làm lại
+│
+├── 2.4.3: Xử lý QC Không đạt
+│   └── KTV làm lại theo ghi chú QC → Ghi nhận giờ công làm lại
+│   └── Complete Technical lại → QC lại
+│
+└── 2.4.4: Bàn giao xe
+    └── Sau khi QC Đạt, CVDV bàn giao xe cho khách hàng
+    └── JO sẵn sàng để thanh toán (Giai đoạn 3)
+
+         ↓
+
+GIAI ĐOẠN 3: QUYẾT TOÁN & GIAO XE
+```
+
+### **🔑 Key Points:**
+
+1. **Thứ tự thực hiện:**
+   - Phải tuân thủ đúng workflow: 2.1 → 2.2 → 2.3 → 2.4
+   - Không được bỏ qua bước hoặc thực hiện không đúng thứ tự
+
+2. **Status Transitions:**
+   ```
+   Pending → PendingAssignment → WaitingForParts/ReadyToWork → 
+   InProgress → Completed → WaitingForQC → QCInProgress → 
+   ReadyToBill (nếu QC Pass) hoặc InProgress (nếu QC Fail)
+   ```
+
+3. **Roles & Responsibilities:**
+   - **CVDV (Cố vấn Dịch vụ):** Chuyển trạng thái JO, tạo báo giá phát sinh, bàn giao xe
+   - **Quản đốc/Tổ trưởng:** Phân công KTV, phê duyệt MR, kiểm tra QC
+   - **KTV:** Bắt đầu/Dừng/Hoàn thành công việc, báo cáo phát sinh, cập nhật tiến độ
+   - **Thủ kho:** Xử lý MR (Pick → Issue → Deliver)
+
+4. **Integration giữa các giai đoạn:**
+   - 2.1 tự động khóa Quotation khi chuyển sang "PendingAssignment"
+   - 2.2 tạo MR từ JO, vật tư được xuất kho cho JO
+   - 2.3.3 có thể quay lại 2.2 nếu phát sinh cần vật tư
+   - 2.4 kết thúc Giai đoạn 2 và chuyển sang Giai đoạn 3
 
 ---
 
@@ -3630,7 +3729,7 @@ Sau khi vật tư được delivered:
 
 ---
 
-## 2.3.4. CẬP NHẬT TIẾN ĐỘ
+## 2.3.4. CẬP NHẬT TIẾN ĐỘ & THEO DÕI TIẾN ĐỘ
 
 ### **Mục đích:**
 KTV cập nhật tiến độ công việc theo từng mốc (ví dụ: Đồng sơn hoàn thành, Thay dầu hoàn thành).
@@ -3657,11 +3756,51 @@ Tiến độ được cập nhật tự động khi:
 - **Hoàn thành**: `CompletedTime` được ghi nhận và `Status = "Completed"`
 
 #### **Bước 3: Xem tổng tiến độ ServiceOrder**
-Hệ thống tự động tính:
+
+Trong View Order Modal → Tab "Chi Tiết Dịch Vụ", có phần **"Tổng Tiến Độ"** hiển thị:
+
+**📊 Progress Dashboard:**
+- **Tiến độ tổng thể**: Progress bar với %
+  - % = (Số items Completed / Tổng số items) × 100
 - **Số hạng mục đã hoàn thành** / **Tổng số hạng mục**
-- **Tổng giờ công thực tế** = Tổng của tất cả `ActualHours`
-- **Tổng giờ công dự kiến** = Tổng của tất cả `EstimatedHours`
-- **Trạng thái tổng thể**: Tự động cập nhật dựa trên trạng thái items
+  - Ví dụ: "3 / 5 hạng mục đã hoàn thành"
+- **Trạng thái tổng thể**: Badge màu theo trạng thái JO (Pending, InProgress, Completed, etc.)
+
+**⏱️ Estimated Hours Summary:**
+- **Tổng Giờ Công Dự Kiến**: Tổng của tất cả `EstimatedHours` (từ các items)
+- **Tổng Giờ Công Thực Tế**: Tổng của tất cả `ActualHours` (tự động tính từ StartTime/EndTime)
+- **Giờ Công Còn Lại**: `Tổng Dự Kiến - Tổng Thực Tế` (nếu > 0)
+- **Progress Bar**: Hiển thị tỷ lệ % giờ công thực tế / dự kiến
+- **⚠️ Cảnh báo**: Nếu `Thực Tế > Dự Kiến × 1.5` → Hiển thị cảnh báo màu đỏ
+
+**Ví dụ hiển thị:**
+```
+┌─────────────────────────────────────────┐
+│ 📊 TỔNG TIẾN ĐỘ                         │
+├─────────────────────────────────────────┤
+│ Tiến độ: ████████████░░░░░░░░ 60%      │
+│ 3 / 5 hạng mục đã hoàn thành            │
+│                                         │
+│ ⏱️ GIỜ CÔNG                              │
+│ Dự kiến: 8.0 giờ                        │
+│ Thực tế: 4.5 giờ                        │
+│ Còn lại: 3.5 giờ                        │
+│ ████████████░░░░░░░░ 56%                │
+└─────────────────────────────────────────┘
+```
+
+**📋 Chi tiết từng item:**
+Bảng "Chi Tiết Dịch Vụ" hiển thị:
+- **Trạng Thái**: Badge màu (Pending, InProgress, Completed, OnHold, Cancelled)
+- **KTV Được Phân Công**: Tên KTV
+- **Giờ Công Dự Kiến**: Số giờ dự kiến
+- **Giờ Công Thực Tế**: Số giờ đã làm (tự động tính)
+- **Giờ Công Làm Lại**: Số giờ làm lại (nếu QC không đạt)
+
+**Lưu ý:** Tiến độ được cập nhật tự động khi:
+- KTV bắt đầu/dừng/hoàn thành công việc
+- KTV ghi nhận giờ công làm lại
+- Item chuyển trạng thái
 
 ---
 
@@ -3840,8 +3979,46 @@ Khi QC không đạt, KTV cần làm lại và ghi nhận giờ công làm lại
 3. Cập nhật tiến độ khi làm lại (Start Work → Complete Item)
 
 #### **Bước 2: Ghi nhận giờ công làm lại**
-- Khi hoàn thành làm lại, hệ thống tự động tính `ReworkHours` từ `ActualHours` mới
-- Hoặc có thể ghi nhận thủ công qua API: `POST /api/QualityControl/service-orders/{id}/items/{itemId}/rework`
+
+**Cách 1: Hệ thống tự động tính (mặc định):**
+- Khi KTV làm lại và hoàn thành item, hệ thống tự động tính `ReworkHours` từ `ActualHours` mới
+- Giờ công làm lại = Giờ công thực tế mới - Giờ công thực tế cũ
+
+**Cách 2: Ghi nhận thủ công:**
+
+1. **Vào View Order Modal:**
+   - Click **"Xem"** của Service Order có QC không đạt
+   - Click tab **"Chi Tiết Dịch Vụ"**
+   - Tìm item cần ghi nhận giờ công làm lại
+
+2. **Click nút "Ghi Nhận Làm Lại":**
+   - Nút này chỉ hiển thị khi:
+     - QC đã Fail (`QCResult = "Fail"`)
+     - ServiceOrder status = `InProgress`
+     - Item đã Completed lại sau khi QC Fail
+   - Click nút **"🔄 Ghi Nhận Làm Lại"** (màu vàng) ở footer modal hoặc trong bảng items
+
+3. **Điền thông tin:**
+   - Modal **"Ghi Nhận Giờ Công Làm Lại"** hiện ra
+   - **Giờ Công Làm Lại**: Nhập số giờ đã làm lại (ví dụ: 0.5, 1.0, 2.5)
+   - **Ghi Chú**: Ghi chú về công việc làm lại (tùy chọn)
+
+4. **Xác nhận:**
+   - Click **"💾 Lưu"**
+   - Hệ thống sẽ:
+     - ✅ Cập nhật `ReworkHours` cho item đó
+     - ✅ Hiển thị trong bảng "Chi Tiết Dịch Vụ"
+     - ✅ Cập nhật tổng giờ công làm lại trong Estimated Hours Summary
+
+**Hiển thị trong View Order Modal:**
+- Trong bảng "Chi Tiết Dịch Vụ", có cột **"Giờ Công Làm Lại"**
+- Trong Estimated Hours Summary, có thông tin **"Tổng Giờ Công Làm Lại"**
+- Cảnh báo nếu tổng giờ công thực tế > dự kiến × 1.5
+
+**Lưu ý:**
+- Giờ công làm lại không được tính vào `ActualHours` chính
+- Chỉ để theo dõi và báo cáo
+- Có thể ghi nhận nhiều lần cho cùng một item (cộng dồn)
 
 #### **Bước 3: QC lại**
 - Sau khi làm lại xong, chuyển lại sang **"WaitingForQC"** (Complete Technical)
@@ -4110,6 +4287,200 @@ Tạo MR
 
 ---
 
+### **📊 QUẢN LÝ WORKFLOW MR**
+
+Sau khi tạo MR, các bước tiếp theo để hoàn thành workflow:
+
+#### **Bước 1: Submit MR (Gửi để phê duyệt)**
+
+**Mục đích:** Gửi MR đã tạo để Quản đốc/Thủ kho phê duyệt.
+
+**Yêu cầu:** MR phải ở trạng thái **"Bản nháp" (Draft)**
+
+**Các bước thực hiện:**
+
+1. **Vào trang Quản Lý Yêu Cầu Vật Tư**
+   - Click menu **"5. Yêu Cầu Vật Tư (MR)"** trong sidebar
+
+2. **Tìm MR cần submit**
+   - Trong danh sách MR, tìm MR có trạng thái **"Bản nháp"**
+   - Cột "Trạng thái" hiển thị badge màu xám **"Bản nháp"**
+
+3. **Click nút Submit**
+   - Trong cột "Thao Tác", click nút **"📤 Submit"** (màu xanh dương)
+   - Tooltip: **"Gửi để phê duyệt"**
+
+4. **Xác nhận**
+   - Popup SweetAlert hiện: **"Gửi MR để phê duyệt?"**
+   - Click **"Xác nhận"**
+
+5. **Kết quả**
+   - ✅ MR chuyển sang trạng thái **"Chờ Phê Duyệt" (PendingApproval)**
+   - ✅ Badge chuyển sang màu vàng **"Chờ Phê Duyệt"**
+   - ✅ Thông báo: **"Đã gửi MR để phê duyệt"**
+   - ✅ DataTable tự động reload
+
+**Lưu ý:** Sau khi submit, không thể chỉnh sửa MR nữa (chỉ có thể xem)
+
+---
+
+#### **Bước 2: Approve/Reject MR (Phê duyệt/Từ chối)**
+
+**Yêu cầu:** Chỉ **Quản đốc/Thủ kho/Manager/Supervisor/Admin/SuperAdmin** có quyền phê duyệt
+
+**2.1. Phê duyệt MR (Approve):**
+
+1. **Tìm MR cần approve**
+   - Trong danh sách MR, tìm MR có trạng thái **"Chờ Phê Duyệt"**
+   - Badge màu vàng: **"Chờ Phê Duyệt"**
+
+2. **Click nút Approve**
+   - Trong cột "Thao Tác", click nút **"✅ Approve"** (màu xanh lá)
+   - Tooltip: **"Phê duyệt MR"**
+
+3. **Điền thông tin (tùy chọn)**
+   - Modal **"Phê duyệt MR"** hiện ra:
+     - **Ghi chú phê duyệt**: Nhập ghi chú (tùy chọn)
+     - Ví dụ: "Đã kiểm tra tồn kho, đủ vật tư"
+
+4. **Xác nhận**
+   - Click **"✅ Phê duyệt"**
+   - Popup xác nhận: **"Phê duyệt MR này?"**
+   - Click **"Xác nhận"**
+
+5. **Kết quả**
+   - ✅ MR chuyển sang trạng thái **"Đã Phê Duyệt" (Approved)**
+   - ✅ Badge chuyển sang màu xanh lá **"Đã Phê Duyệt"**
+   - ✅ JO liên quan tự động chuyển sang **"WaitingForParts"** (nếu có vật tư)
+   - ✅ Thông báo: **"Đã phê duyệt MR thành công"**
+   - ✅ DataTable tự động reload
+
+**2.2. Từ chối MR (Reject):**
+
+1. **Click nút Reject**
+   - Trong cột "Thao Tác", click nút **"❌ Reject"** (màu đỏ)
+   - Tooltip: **"Từ chối MR"**
+
+2. **Điền lý do từ chối (bắt buộc)**
+   - Modal **"Từ chối MR"** hiện ra:
+     - **Lý do từ chối**: Nhập lý do (bắt buộc)
+     - Ví dụ: "Không đủ tồn kho", "Vật tư không phù hợp"
+
+3. **Xác nhận**
+   - Click **"❌ Từ chối"**
+   - Popup xác nhận: **"Từ chối MR này?"**
+   - Click **"Xác nhận"**
+
+4. **Kết quả**
+   - ✅ MR chuyển sang trạng thái **"Đã Từ Chối" (Rejected)**
+   - ✅ Badge chuyển sang màu đỏ **"Đã Từ Chối"**
+   - ✅ Người tạo MR sẽ nhận thông báo
+   - ✅ Thông báo: **"Đã từ chối MR"**
+   - ✅ DataTable tự động reload
+
+**Lưu ý:** Sau khi Reject, có thể tạo MR mới hoặc chỉnh sửa MR cũ (nếu cần)
+
+---
+
+#### **Bước 3: Pick (Lấy vật tư từ kho)**
+
+**Yêu cầu:** **Thủ kho** hoặc người có quyền xuất kho
+
+**Mục đích:** Lấy vật tư từ kho để chuẩn bị xuất cho JO
+
+**Các bước thực hiện:**
+
+1. **Tìm MR cần pick**
+   - Trong danh sách MR, tìm MR có trạng thái **"Đã Phê Duyệt"**
+   - Badge màu xanh lá: **"Đã Phê Duyệt"**
+
+2. **Click nút Pick**
+   - Trong cột "Thao Tác", click nút **"📦 Pick"** (màu vàng)
+   - Tooltip: **"Lấy vật tư từ kho"**
+
+3. **Xác nhận**
+   - Popup SweetAlert: **"Lấy vật tư từ kho?"**
+   - Click **"Xác nhận"**
+
+4. **Kết quả**
+   - ✅ MR chuyển sang trạng thái **"Đã Lấy" (Picked)**
+   - ✅ Badge chuyển sang màu vàng cam **"Đã Lấy"**
+   - ✅ Vật tư được đánh dấu là đã lấy từ kho (chưa giảm tồn kho)
+   - ✅ Thông báo: **"Đã lấy vật tư từ kho"**
+   - ✅ DataTable tự động reload
+
+**Lưu ý:** Sau khi Pick, vật tư được chuẩn bị nhưng chưa được xuất kho (tồn kho chưa giảm)
+
+---
+
+#### **Bước 4: Issue (Xuất vật tư cho JO)**
+
+**Yêu cầu:** **Thủ kho** hoặc người có quyền xuất kho
+
+**Mục đích:** Xuất vật tư cho JO và giảm tồn kho
+
+**Các bước thực hiện:**
+
+1. **Tìm MR cần issue**
+   - Trong danh sách MR, tìm MR có trạng thái **"Đã Lấy"**
+   - Badge màu vàng cam: **"Đã Lấy"**
+
+2. **Click nút Issue**
+   - Trong cột "Thao Tác", click nút **"📤 Issue"** (màu xanh lá)
+   - Tooltip: **"Xuất vật tư cho JO"**
+
+3. **Xác nhận**
+   - Popup SweetAlert: **"Xuất vật tư cho JO này?"**
+   - Click **"Xác nhận"**
+
+4. **Kết quả**
+   - ✅ MR chuyển sang trạng thái **"Đã Xuất" (Issued)**
+   - ✅ Badge chuyển sang màu xanh dương **"Đã Xuất"**
+   - ✅ **Số lượng tồn kho của vật tư được giảm đi** (theo số lượng trong MR)
+   - ✅ Vật tư được gán cho JO liên quan
+   - ✅ Thông báo: **"Đã xuất vật tư cho JO"**
+   - ✅ DataTable tự động reload
+
+**Lưu ý:** Sau khi Issue, tồn kho chính thức giảm và vật tư đã được gán cho JO
+
+---
+
+#### **Bước 5: Deliver (Giao vật tư đến nơi sửa chữa)**
+
+**Mục đích:** Xác nhận vật tư đã được giao đến nơi sửa chữa và hoàn thành workflow MR
+
+**Các bước thực hiện:**
+
+1. **Tìm MR cần deliver**
+   - Trong danh sách MR, tìm MR có trạng thái **"Đã Xuất"**
+   - Badge màu xanh dương: **"Đã Xuất"**
+
+2. **Click nút Deliver**
+   - Trong cột "Thao Tác", click nút **"🚚 Deliver"** (màu xanh dương)
+   - Tooltip: **"Giao vật tư đến nơi sửa chữa"**
+
+3. **Điền thông tin (tùy chọn)**
+   - Modal **"Giao vật tư"** hiện ra:
+     - **Ghi chú giao hàng**: Nhập ghi chú (tùy chọn)
+     - Ví dụ: "Đã giao đến xưởng số 1", "KTV đã nhận vật tư"
+
+4. **Xác nhận**
+   - Click **"🚚 Xác nhận giao hàng"**
+   - Popup xác nhận: **"Xác nhận đã giao vật tư?"**
+   - Click **"Xác nhận"**
+
+5. **Kết quả**
+   - ✅ MR chuyển sang trạng thái **"Đã Giao" (Delivered)**
+   - ✅ Badge chuyển sang màu xanh lá đậm **"Đã Giao"**
+   - ✅ **JO liên quan có thể chuyển sang "ReadyToWork" hoặc "InProgress"** (nếu tất cả MR đã Delivered)
+   - ✅ Workflow MR hoàn thành
+   - ✅ Thông báo: **"Đã giao vật tư thành công"**
+   - ✅ DataTable tự động reload
+
+**Lưu ý:** Sau khi Deliver, workflow MR hoàn thành và JO có thể tiếp tục quy trình sửa chữa
+
+---
+
 ### **⚠️ Lưu ý quan trọng:**
 
 1. **JO phải tồn tại và ở trạng thái phù hợp:**
@@ -4127,6 +4498,19 @@ Tạo MR
 
 4. **Số MR:**
    - ✅ Tự động tạo theo format: **MR-YYYY-MMDD-XXX** (ví dụ: MR-2024-0115-001)
+
+5. **Workflow MR:**
+   - ✅ Phải tuân thủ đúng thứ tự: Draft → Submit → Approve → Pick → Issue → Deliver
+   - ✅ Không thể bỏ qua hoặc đảo ngược các bước
+   - ✅ Chỉ có thể Approve/Reject khi MR ở trạng thái "PendingApproval"
+   - ✅ Chỉ có thể Pick khi MR ở trạng thái "Approved"
+   - ✅ Chỉ có thể Issue khi MR ở trạng thái "Picked"
+   - ✅ Chỉ có thể Deliver khi MR ở trạng thái "Issued"
+
+6. **Tồn kho:**
+   - ✅ Tồn kho chỉ giảm khi Issue (không giảm khi Pick)
+   - ✅ Kiểm tra tồn kho trước khi Approve MR
+   - ✅ Nếu không đủ tồn kho, có thể Reject MR và nhập kho thêm
 
 ---
 
@@ -4170,6 +4554,249 @@ Tạo MR
 - ✅ Kiểm tra đã thêm ít nhất 1 vật tư chưa?
 - ✅ Kiểm tra số lượng > 0 chưa?
 - ✅ Kiểm tra console để xem lỗi chi tiết từ API
+
+---
+
+## 📚 TỔNG KẾT GIAI ĐOẠN 2
+
+### **✅ Checklist Hoàn Thành Giai Đoạn 2:**
+
+#### **2.1: Lập Kế Hoạch & Phân Công**
+- [ ] JO đã được chuyển sang "Chờ Phân Công" (PendingAssignment)
+- [ ] Tất cả items đã được phân công KTV
+- [ ] Tất cả items đã có giờ công dự kiến
+- [ ] JO đã tự động chuyển sang "Sẵn Sàng Làm" (ReadyToWork)
+- [ ] Quotation đã bị khóa (không thể chỉnh sửa)
+
+#### **2.2: Yêu Cầu Vật Tư (MR)**
+- [ ] MR đã được tạo cho JO (nếu cần vật tư)
+- [ ] MR đã được Submit để phê duyệt
+- [ ] MR đã được Approved
+- [ ] Vật tư đã được Picked từ kho
+- [ ] Vật tư đã được Issued cho JO
+- [ ] Vật tư đã được Delivered đến nơi sửa chữa
+- [ ] JO đã chuyển sang "ReadyToWork" hoặc "InProgress"
+
+#### **2.3: Quản Lý Tiến Độ & Phát Sinh**
+- [ ] KTV đã bắt đầu làm việc trên các items
+- [ ] Giờ công thực tế đã được ghi nhận tự động
+- [ ] Tất cả items đã được hoàn thành (Completed)
+- [ ] Nếu có phát sinh: Đã báo cáo, tạo báo giá, khách hàng duyệt (nếu có)
+- [ ] Tiến độ đã được cập nhật đầy đủ
+
+#### **2.4: Kiểm Tra Chất Lượng (QC) và Bàn Giao**
+- [ ] KTV đã click "Hoàn Thành Kỹ Thuật"
+- [ ] JO đã chuyển sang "WaitingForQC"
+- [ ] QC đã được bắt đầu (Start QC)
+- [ ] QC đã được hoàn thành với kết quả "Đạt" hoặc "Không Đạt"
+- [ ] Nếu QC không đạt: KTV đã làm lại và QC lại
+- [ ] Sau khi QC đạt: Đã bàn giao xe cho khách hàng
+- [ ] JO đã chuyển sang "ReadyToBill" (sẵn sàng thanh toán)
+
+---
+
+### **💡 Best Practices:**
+
+#### **1. Phân Công KTV (2.1.2):**
+- ✅ **Kiểm tra workload trước khi phân công:**
+  - Xem workload của KTV trong dropdown để biết capacity
+  - Tránh phân công quá tải (không nên > 80% capacity)
+  - Phân công người có chuyên môn phù hợp với từng hạng mục
+- ✅ **Nhập giờ công dự kiến chính xác:**
+  - Dựa trên kinh nghiệm và độ phức tạp của công việc
+  - Nên có buffer 10-20% để dự phòng
+  - Ghi chú rõ ràng nếu có yêu cầu đặc biệt
+- ✅ **Phân công hàng loạt khi có thể:**
+  - Sử dụng tính năng "Phân Công Hàng Loạt" để tiết kiệm thời gian
+  - Đảm bảo tất cả items đã được phân công trước khi đóng modal
+
+#### **2. Yêu Cầu Vật Tư (2.2):**
+- ✅ **Tạo MR sớm:**
+  - Tạo MR ngay sau khi phân công KTV
+  - Đảm bảo vật tư sẵn sàng trước khi KTV bắt đầu làm việc
+- ✅ **Kiểm tra tồn kho:**
+  - Kiểm tra số lượng tồn kho trước khi tạo MR
+  - Nếu không đủ: Liên hệ bộ phận mua hàng để nhập kho
+- ✅ **Ghi chú rõ ràng:**
+  - Ghi chú về lý do yêu cầu vật tư
+  - Ghi chú về mức độ ưu tiên (nếu cần gấp)
+
+#### **3. Quản Lý Tiến Độ (2.3):**
+- ✅ **Ghi nhận thời gian chính xác:**
+  - Bắt đầu làm việc ngay khi bắt đầu công việc
+  - Dừng làm việc khi tạm dừng (không tính thời gian chờ)
+  - Hoàn thành ngay khi công việc xong
+- ✅ **Báo cáo phát sinh kịp thời:**
+  - Báo cáo ngay khi phát hiện vấn đề
+  - Upload hình ảnh rõ ràng để CVDV hiểu vấn đề
+  - Mô tả chi tiết để CVDV có thể tạo báo giá chính xác
+- ✅ **Theo dõi tiến độ thường xuyên:**
+  - Xem tổng tiến độ trong View Order Modal
+  - Kiểm tra giờ công thực tế vs dự kiến để điều chỉnh kịp thời
+
+#### **4. Kiểm Tra QC (2.4):**
+- ✅ **Hoàn thành kỹ thuật đầy đủ:**
+  - Đảm bảo tất cả items đã Completed hoặc Cancelled
+  - Kiểm tra lại công việc trước khi Complete Technical
+- ✅ **Kiểm tra QC kỹ lưỡng:**
+  - Kiểm tra từng hạng mục trong checklist
+  - Ghi chú rõ ràng nếu có vấn đề
+  - Không vội vàng khi đánh giá "Đạt"
+- ✅ **Xử lý QC không đạt:**
+  - Đọc kỹ ghi chú QC để hiểu vấn đề
+  - Làm lại đúng theo yêu cầu
+  - Ghi nhận giờ công làm lại để báo cáo
+
+---
+
+### **🔧 Troubleshooting & Common Issues:**
+
+#### **1. Vấn đề về Phân Công (2.1):**
+
+**Vấn đề: "Không thể chuyển JO sang Chờ Phân Công"**
+- ✅ **Nguyên nhân:** JO không ở trạng thái "Pending"
+- ✅ **Giải pháp:** Kiểm tra trạng thái JO trong View Order Modal
+- ✅ **Phòng ngừa:** Chỉ thực hiện khi JO ở trạng thái "Pending"
+
+**Vấn đề: "Nút Phân Công không hiển thị"**
+- ✅ **Nguyên nhân:** Không có quyền phân công (không phải Quản đốc/Tổ trưởng)
+- ✅ **Giải pháp:** Liên hệ Admin để cấp quyền hoặc nhờ Quản đốc phân công
+- ✅ **Phòng ngừa:** Kiểm tra role và position trong hệ thống
+
+**Vấn đề: "JO không tự động chuyển sang ReadyToWork sau khi phân công"**
+- ✅ **Nguyên nhân:** Còn items chưa được phân công
+- ✅ **Giải pháp:** Kiểm tra lại tất cả items trong modal phân công
+- ✅ **Phòng ngừa:** Sử dụng "Lưu Tất Cả Phân Công" để đảm bảo tất cả được lưu
+
+#### **2. Vấn đề về MR (2.2):**
+
+**Vấn đề: "Dropdown JO không có dữ liệu"**
+- ✅ **Nguyên nhân:** Không có JO nào ở trạng thái phù hợp
+- ✅ **Giải pháp:** Kiểm tra danh sách JO trong "Quản Lý Phiếu Sửa Chữa"
+- ✅ **Phòng ngừa:** Tạo JO trước khi tạo MR
+
+**Vấn đề: "MR không được Approve"**
+- ✅ **Nguyên nhân:** Người phê duyệt chưa xử lý hoặc từ chối
+- ✅ **Giải pháp:** Liên hệ Quản đốc/Thủ kho để phê duyệt
+- ✅ **Phòng ngừa:** Giải thích rõ lý do trong ghi chú MR
+
+**Vấn đề: "Vật tư không đủ tồn kho"**
+- ✅ **Nguyên nhân:** Số lượng yêu cầu > số lượng tồn kho
+- ✅ **Giải pháp:** Giảm số lượng yêu cầu hoặc nhập kho thêm
+- ✅ **Phòng ngừa:** Kiểm tra tồn kho trước khi tạo MR
+
+#### **3. Vấn đề về Tiến Độ (2.3):**
+
+**Vấn đề: "Không thể bắt đầu làm việc"**
+- ✅ **Nguyên nhân:** KTV chưa được phân công hoặc item không ở trạng thái "Pending"
+- ✅ **Giải pháp:** Kiểm tra xem KTV đã được phân công chưa
+- ✅ **Phòng ngừa:** Đảm bảo phân công KTV trước khi bắt đầu làm việc
+
+**Vấn đề: "Giờ công thực tế không chính xác"**
+- ✅ **Nguyên nhân:** Quên dừng làm việc khi tạm dừng hoặc quên bắt đầu lại khi tiếp tục
+- ✅ **Giải pháp:** Kiểm tra StartTime và EndTime trong View Order Modal
+- ✅ **Phòng ngừa:** Luôn nhớ dừng khi tạm dừng và bắt đầu lại khi tiếp tục
+
+**Vấn đề: "Item không thể hoàn thành"**
+- ✅ **Nguyên nhân:** Item đang ở trạng thái "OnHold" do phát sinh
+- ✅ **Giải pháp:** Giải quyết phát sinh trước (khách hàng duyệt hoặc từ chối)
+- ✅ **Phòng ngừa:** Kiểm tra trạng thái item trước khi hoàn thành
+
+#### **4. Vấn đề về QC (2.4):**
+
+**Vấn đề: "Không thể Complete Technical"**
+- ✅ **Nguyên nhân:** Còn items chưa Completed hoặc đang InProgress
+- ✅ **Giải pháp:** Hoàn thành tất cả items trước khi Complete Technical
+- ✅ **Phòng ngừa:** Kiểm tra kỹ trạng thái tất cả items
+
+**Vấn đề: "QC không đạt nhiều lần"**
+- ✅ **Nguyên nhân:** KTV không làm lại đúng theo yêu cầu
+- ✅ **Giải pháp:** Đọc kỹ ghi chú QC và làm lại đúng theo yêu cầu
+- ✅ **Phòng ngừa:** Liên hệ với QC để hiểu rõ yêu cầu trước khi làm lại
+
+**Vấn đề: "Không thể bàn giao xe"**
+- ✅ **Nguyên nhân:** QC chưa Pass hoặc chưa Complete QC
+- ✅ **Giải pháp:** Hoàn thành QC và đảm bảo kết quả là "Đạt"
+- ✅ **Phòng ngừa:** Kiểm tra tab "QC" trong View Order Modal trước khi bàn giao
+
+---
+
+### **❓ FAQs (Câu Hỏi Thường Gặp):**
+
+#### **Q1: Có thể bỏ qua bước 2.2 (MR) nếu JO không cần vật tư không?**
+**A:** Có, nếu JO chỉ có dịch vụ và tiền công thì không cần tạo MR. JO có thể chuyển thẳng từ "ReadyToWork" sang "InProgress" khi KTV bắt đầu làm việc.
+
+#### **Q2: Phát sinh có bắt buộc phải tạo báo giá không?**
+**A:** Có, nếu phát sinh cần vật tư hoặc dịch vụ thì phải tạo báo giá để khách hàng duyệt. Nếu chỉ là ghi chú hoặc vấn đề nhỏ không ảnh hưởng chi phí thì có thể không cần.
+
+#### **Q3: Có thể hủy JO sau khi đã phân công KTV không?**
+**A:** Có, nhưng phải đảm bảo:
+- Không có items nào đang ở trạng thái "InProgress" hoặc đã có StartTime
+- Nếu có items đã bắt đầu làm việc thì phải hoàn thành hoặc dừng lại trước
+
+#### **Q4: Giờ công thực tế được tính như thế nào?**
+**A:** Hệ thống tự động tính từ `StartTime` đến `EndTime` mỗi lần KTV bắt đầu/dừng làm việc. Tổng giờ công thực tế = tổng tất cả các khoảng thời gian đã làm việc (cộng dồn).
+
+#### **Q5: QC có thể làm lại nhiều lần không?**
+**A:** Có, có thể QC lại nhiều lần. Mỗi lần QC không đạt, `QCFailedCount` sẽ tăng lên 1. KTV cần làm lại và Complete Technical lại trước khi QC lại.
+
+#### **Q6: KTV có thể tự Complete Technical không?**
+**A:** Có, KTV có thể tự Complete Technical khi tất cả items đã Completed hoặc Cancelled. Không có restriction về quyền cho hành động này.
+
+#### **Q7: Khi nào JO chuyển sang "ReadyToBill"?**
+**A:** JO chuyển sang "ReadyToBill" khi:
+- Tất cả items đã Completed
+- Đã Complete Technical
+- Đã Complete QC với kết quả "Pass"
+- Sau đó có thể bàn giao xe và chuyển sang Giai đoạn 3 (Thanh toán)
+
+#### **Q8: Phát sinh có thể ảnh hưởng đến JO gốc không?**
+**A:** Có, nếu phát sinh liên quan đến một item cụ thể thì item đó sẽ chuyển sang "OnHold" và không thể tiếp tục làm việc cho đến khi phát sinh được giải quyết.
+
+#### **Q9: LSC Bổ sung có liên kết với JO gốc không?**
+**A:** Có, LSC Bổ sung có `ParentServiceOrderId` trỏ đến JO gốc và `IsAdditionalOrder = true`. Tất cả được hiển thị trong View Order Modal → Tab "Phát Sinh".
+
+#### **Q10: Có thể xem lịch sử thay đổi trạng thái JO không?**
+**A:** Hiện tại hệ thống chưa có tính năng này. Nhưng có thể xem trạng thái hiện tại trong View Order Modal và các QC records trong tab "QC".
+
+---
+
+### **📊 Metrics & KPIs:**
+
+#### **Các chỉ số quan trọng trong Giai đoạn 2:**
+
+1. **Thời gian phân công (2.1):**
+   - Thời gian từ khi JO được tạo đến khi phân công xong
+   - **Mục tiêu:** < 1 ngày làm việc
+
+2. **Thời gian xử lý MR (2.2):**
+   - Thời gian từ khi tạo MR đến khi Delivered
+   - **Mục tiêu:** < 2 ngày làm việc
+
+3. **Thời gian sửa chữa (2.3):**
+   - Thời gian từ khi KTV bắt đầu đến khi Complete Technical
+   - **Mục tiêu:** Theo giờ công dự kiến (± 10%)
+
+4. **Giờ công thực tế vs Dự kiến:**
+   - Tỷ lệ giờ công thực tế / giờ công dự kiến
+   - **Mục tiêu:** 90-110% (không vượt quá 20%)
+
+5. **Tỷ lệ QC Pass:**
+   - Số lần QC Pass / Tổng số lần QC
+   - **Mục tiêu:** > 95%
+
+6. **Tỷ lệ phát sinh:**
+   - Số JO có phát sinh / Tổng số JO
+   - **Mục tiêu:** < 20%
+
+---
+
+### **🔗 Liên Kết Đến Các Tài Liệu Khác:**
+
+- **[Quản Lý Báo Giá (Giai đoạn 1.3)](User_Manual.md#13-báo-giá)** - Tạo JO từ Báo giá
+- **[Quản Lý Thanh Toán (Giai đoạn 3)](User_Manual.md#giai-đoạn-3)** - Thanh toán sau khi bàn giao
+- **[Quản Lý Kho Hàng](User_Manual.md#quản-lý-kho-hàng)** - Thông tin về tồn kho và xuất nhập kho
+- **[Quản Lý Nhân Viên](User_Manual.md#quản-lý-nhân-viên)** - Thông tin về KTV và phân quyền
 
 ---
 

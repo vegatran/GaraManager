@@ -685,6 +685,8 @@ window.OrderManagement = {
     populateViewModal: function(order) {
         // ✅ 2.3.2: Store serviceOrderId in modal data
         $('#viewOrderModal').data('order-id', order.id);
+        // ✅ FIX: Store order status để loadQCInfo có thể check
+        $('#viewOrderModal').data('order-status', order.status);
         this.currentServiceOrderId = order.id;
 
         $('#viewOrderNumber').text(order.orderNumber || '');
@@ -735,7 +737,27 @@ window.OrderManagement = {
             var self = this;
             var hasPartsItems = false; // ✅ 2.3.3: Check if order has parts items
             
+            // ✅ HP3: Tính tổng EstimatedHours và ActualHours
+            var totalEstimatedHours = 0;
+            var totalActualHours = 0;
+            var totalReworkHours = 0;
+            
             order.serviceOrderItems.forEach(function(item) {
+                // Tính tổng EstimatedHours
+                if (item.estimatedHours) {
+                    totalEstimatedHours += parseFloat(item.estimatedHours);
+                }
+                
+                // Tính tổng ActualHours
+                if (item.actualHours) {
+                    totalActualHours += parseFloat(item.actualHours);
+                }
+                
+                // Tính tổng ReworkHours
+                if (item.reworkHours) {
+                    totalReworkHours += parseFloat(item.reworkHours);
+                }
+                
                 var statusBadge = self.formatItemStatus(item.status);
                 var actualHoursDisplay = item.actualHours ? 
                     item.actualHours.toFixed(2) + ' giờ' : 
@@ -779,6 +801,9 @@ window.OrderManagement = {
             });
             $('#viewOrderItems').html(itemsHtml);
             
+            // ✅ HP3: Hiển thị tổng giờ công và progress indicator
+            self.renderHoursSummary(totalEstimatedHours, totalActualHours, totalReworkHours);
+            
             // ✅ 2.3.3: Hiển thị button "Tạo MR" nếu có parts items và chưa có MR
             if (hasPartsItems && !order.isAdditionalOrder) {
                 $('#btnCreateMRFromOrder').show().off('click').on('click', function() {
@@ -803,13 +828,78 @@ window.OrderManagement = {
             $('#btnCreateMRFromOrder').hide();
             // ✅ 2.4: Hide all QC buttons if no items
             $('#btnCompleteTechnical, #btnStartQC, #btnCompleteQC, #btnHandover').hide();
+            // ✅ HP3: Hide hours summary nếu không có items
+            $('#hoursSummary').hide();
+        }
+    },
+
+    // ✅ HP3: Hiển thị tổng giờ công và progress indicator
+    renderHoursSummary: function(totalEstimatedHours, totalActualHours, totalReworkHours) {
+        // Hiển thị summary card
+        $('#hoursSummary').show();
+        
+        // Tính toán giờ công còn lại
+        var remainingHours = Math.max(0, totalEstimatedHours - totalActualHours);
+        
+        // Tính tỷ lệ hoàn thành (dựa trên ActualHours / EstimatedHours)
+        var progressPercentage = 0;
+        if (totalEstimatedHours > 0) {
+            progressPercentage = Math.min(100, (totalActualHours / totalEstimatedHours) * 100);
+        }
+        
+        // Hiển thị giá trị
+        $('#totalEstimatedHours').text(totalEstimatedHours.toFixed(2));
+        $('#totalActualHours').text(totalActualHours.toFixed(2));
+        $('#remainingHours').text(remainingHours.toFixed(2));
+        $('#progressPercentage').text(progressPercentage.toFixed(0) + '%');
+        
+        // Cập nhật progress bar
+        var progressBar = $('#hoursProgressBar');
+        progressBar.css('width', progressPercentage + '%');
+        
+        // Đổi màu progress bar dựa trên tỷ lệ
+        progressBar.removeClass('bg-success bg-warning bg-danger');
+        if (progressPercentage <= 100) {
+            progressBar.addClass('bg-success');
+        } else if (progressPercentage <= 150) {
+            progressBar.addClass('bg-warning');
+        } else {
+            progressBar.addClass('bg-danger');
+        }
+        
+        // Hiển thị warning nếu ActualHours > EstimatedHours * 1.5 (vượt quá 50%)
+        if (totalEstimatedHours > 0 && totalActualHours > totalEstimatedHours * 1.5) {
+            $('#hoursWarning').show();
+            
+            // Cập nhật text warning với chi tiết
+            var excessPercentage = ((totalActualHours / totalEstimatedHours - 1) * 100).toFixed(0);
+            var excessHours = (totalActualHours - totalEstimatedHours).toFixed(2);
+            $('#hoursWarning').html(
+                '<i class="fas fa-exclamation-triangle mr-2"></i>' +
+                '<strong>Cảnh báo:</strong> Giờ công thực tế vượt quá ' + excessPercentage + '% so với dự kiến ' +
+                '(vượt ' + excessHours + ' giờ). Giờ công thực tế: ' + totalActualHours.toFixed(2) + ' giờ, ' +
+                'Dự kiến: ' + totalEstimatedHours.toFixed(2) + ' giờ.'
+            );
+        } else {
+            $('#hoursWarning').hide();
         }
     },
 
     // ✅ 2.4: Update QC buttons visibility based on order status
     updateQCButtons: function(order) {
+        // ✅ FIX: Validate order exists
+        if (!order) {
+            return;
+        }
+        
         var status = order.status || '';
         var allItemsCompleted = false;
+        
+        // ✅ FIX: Validate order.id exists
+        if (!order.id || order.id <= 0) {
+            console.warn('updateQCButtons: order.id is invalid', order);
+            return;
+        }
         
         // Check if all items are completed
         if (order.serviceOrderItems && order.serviceOrderItems.length > 0) {
@@ -828,13 +918,46 @@ window.OrderManagement = {
             });
         }
         
-        // ✅ 2.4.2: Show "Bắt đầu QC" when status = WaitingForQC
+        // ✅ 2.4.2: Show "Tạo Phiếu QC" when status = WaitingForQC
+        // Kiểm tra xem đã có phiếu QC chưa trước khi hiển thị button
         if (status === 'WaitingForQC') {
-            $('#btnStartQC').show().off('click').on('click', function() {
-                if (window.GarageApp && window.GarageApp.QC) {
-                    window.GarageApp.QC.showStartQCModal(order.id);
-                } else {
-                    GarageApp.showError('QC module chưa được tải. Vui lòng reload trang.');
+            var self = this;
+            // ✅ FIX: Kiểm tra xem đã có phiếu QC chưa
+            $.ajax({
+                url: '/QCManagement/GetQC/' + order.id,
+                type: 'GET',
+                success: function(res) {
+                    if (res && res.success && res.data) {
+                        // Đã có phiếu QC → Hiển thị button "Xem QC" hoặc "Tiếp Tục QC"
+                        // Nhưng theo logic, nếu status = WaitingForQC thì không thể có QC record
+                        // Nên đây là trường hợp edge case, vẫn hiển thị "Tạo Phiếu QC"
+                        $('#btnStartQC').html('<i class="fas fa-plus"></i> Tạo Phiếu QC').show().off('click').on('click', function() {
+                            if (window.GarageApp && window.GarageApp.QC) {
+                                window.GarageApp.QC.showStartQCModal(order.id);
+                            } else {
+                                GarageApp.showError('QC module chưa được tải. Vui lòng reload trang.');
+                            }
+                        });
+                    } else {
+                        // Chưa có phiếu QC → Hiển thị button "Tạo Phiếu QC"
+                        $('#btnStartQC').html('<i class="fas fa-plus"></i> Tạo Phiếu QC').show().off('click').on('click', function() {
+                            if (window.GarageApp && window.GarageApp.QC) {
+                                window.GarageApp.QC.showStartQCModal(order.id);
+                            } else {
+                                GarageApp.showError('QC module chưa được tải. Vui lòng reload trang.');
+                            }
+                        });
+                    }
+                },
+                error: function() {
+                    // Lỗi khi kiểm tra → Vẫn hiển thị button "Tạo Phiếu QC" (mặc định)
+                    $('#btnStartQC').html('<i class="fas fa-plus"></i> Tạo Phiếu QC').show().off('click').on('click', function() {
+                        if (window.GarageApp && window.GarageApp.QC) {
+                            window.GarageApp.QC.showStartQCModal(order.id);
+                        } else {
+                            GarageApp.showError('QC module chưa được tải. Vui lòng reload trang.');
+                        }
+                    });
                 }
             });
         }
@@ -876,6 +999,25 @@ window.OrderManagement = {
     completeTechnical: function(orderId) {
         var self = this;
         
+        // ✅ FIX: Validate orderId
+        if (!orderId || orderId <= 0) {
+            GarageApp.showError('ID phiếu sửa chữa không hợp lệ');
+            return;
+        }
+        
+        // ✅ FIX: Prevent multiple simultaneous requests
+        var $btn = $('#btnCompleteTechnical');
+        // ✅ FIX: Check if button exists before accessing
+        if ($btn.length === 0) {
+            GarageApp.showError('Không tìm thấy nút xử lý. Vui lòng reload trang.');
+            return;
+        }
+        if ($btn.data('processing')) {
+            GarageApp.showWarning('Đang xử lý, vui lòng đợi...');
+            return;
+        }
+        $btn.data('processing', true).prop('disabled', true);
+        
         Swal.fire({
             title: 'Xác nhận',
             text: 'Bạn có chắc chắn muốn hoàn thành kỹ thuật và chuyển JO sang chờ QC?',
@@ -891,19 +1033,138 @@ window.OrderManagement = {
                     url: '/QCManagement/CompleteTechnical/' + orderId,
                     type: 'POST',
                     success: function(res) {
+                        // ✅ FIX: Reset processing flag
+                        $btn.data('processing', false).prop('disabled', false);
+                        
                         if (AuthHandler && !AuthHandler.validateApiResponse(res)) {
+                            // ✅ FIX: validateApiResponse đã handle unauthorized, nhưng cần show error nếu có
+                            if (res && res.errorMessage) {
+                                GarageApp.showError(res.errorMessage);
+                            }
                             return;
                         }
                         
                         if (res && res.success) {
                             GarageApp.showSuccess(res.message || 'Đã hoàn thành kỹ thuật');
-                            $('#viewOrderModal').modal('hide');
-                            self.orderTable.ajax.reload();
+                            
+                            // ✅ FIX: Reload order data trong modal thay vì đóng modal
+                            // Reload order data để cập nhật status mới (WaitingForQC)
+                            $.ajax({
+                                url: '/OrderManagement/GetOrder/' + orderId,
+                                type: 'GET',
+                                success: function(response) {
+                                    // ✅ FIX: Check if modal is still open before updating
+                                    var $modal = $('#viewOrderModal');
+                                    if (!$modal.is(':visible')) {
+                                        // Modal đã đóng, không cần reload table vì đã reload ở trên
+                                        return;
+                                    }
+                                    
+                                    // ✅ FIX: Validate response exists
+                                    if (!response) {
+                                        console.error('GetOrder returned null/undefined response');
+                                        GarageApp.showError('Không nhận được phản hồi từ server');
+                                        return;
+                                    }
+                                    
+                                    if (AuthHandler && AuthHandler.validateApiResponse(response)) {
+                                        // ✅ FIX: Validate response.data exists and is not null
+                                        if (response && response.success && response.data) {
+                                            try {
+                                                // ✅ FIX: Reset button processing flag trước khi populate modal
+                                                // Vì populateViewModal sẽ gọi updateQCButtons và bind lại event handler
+                                                var $btnCompleteTechnical = $('#btnCompleteTechnical');
+                                                if ($btnCompleteTechnical.length > 0) {
+                                                    $btnCompleteTechnical.data('processing', false).prop('disabled', false);
+                                                }
+                                                
+                                                // ✅ FIX: Preserve active tab trước khi populate modal
+                                                // Vì populateViewModal có thể trigger tab reset
+                                                var activeTabBeforePopulate = $('#viewOrderModal .nav-tabs .nav-link.active');
+                                                var activeTabHref = null;
+                                                if (activeTabBeforePopulate.length > 0) {
+                                                    activeTabHref = activeTabBeforePopulate.attr('href');
+                                                }
+                                                
+                                                // Update modal với order data mới
+                                                self.populateViewModal(response.data);
+                                                
+                                                // ✅ FIX: Restore active tab sau khi populate (nếu có)
+                                                if (activeTabHref) {
+                                                    var $targetTab = $('#viewOrderModal .nav-tabs .nav-link[href="' + activeTabHref + '"]');
+                                                    if ($targetTab.length > 0) {
+                                                        // ✅ FIX: Check if tab is already active to avoid unnecessary tab.show()
+                                                        // Nếu tab đã active, tab.show() sẽ không trigger shown.bs.tab event
+                                                        var isAlreadyActive = $targetTab.hasClass('active');
+                                                        
+                                                        if (!isAlreadyActive) {
+                                                            // Tab chưa active, gọi tab.show() để activate và trigger event
+                                                            $targetTab.tab('show');
+                                                        } else {
+                                                            // Tab đã active, chỉ cần reload data nếu là QC tab
+                                                            // ✅ FIX: Check both possible tab href formats
+                                                            if (activeTabHref === '#qc-tab' || activeTabHref === '#qc') {
+                                                                try {
+                                                                    self.loadQCInfo(orderId);
+                                                                } catch (qcEx) {
+                                                                    console.error('Error loading QC info:', qcEx);
+                                                                    // Non-blocking error, chỉ log
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            } catch (ex) {
+                                                console.error('Error populating modal:', ex);
+                                                GarageApp.showError('Lỗi khi cập nhật thông tin phiếu sửa chữa');
+                                                // Fallback: reload table and close modal
+                                                if (self.orderTable && typeof self.orderTable.ajax === 'function') {
+                                                    self.orderTable.ajax.reload();
+                                                }
+                                                $('#viewOrderModal').modal('hide');
+                                            }
+                                        } else {
+                                            // ✅ FIX: Handle case where response.success but no data
+                                            GarageApp.showWarning('Không thể tải thông tin phiếu sửa chữa mới. Vui lòng làm mới trang.');
+                                            // Không reload table ở đây vì đã reload ở trên
+                                        }
+                                    } else {
+                                        // ✅ FIX: validateApiResponse returned false, show error if available
+                                        if (response && response.errorMessage) {
+                                            GarageApp.showError(response.errorMessage);
+                                        }
+                                    }
+                                },
+                                error: function(xhr) {
+                                    if (AuthHandler && AuthHandler.isUnauthorized(xhr)) {
+                                        AuthHandler.handleUnauthorized(xhr, true);
+                                    } else {
+                                        // ✅ FIX: Show error message to user
+                                        GarageApp.showError('Không thể tải thông tin phiếu sửa chữa mới. Vui lòng làm mới trang.');
+                                        // Nếu reload fail, vẫn reload table và đóng modal
+                                        if (self.orderTable && typeof self.orderTable.ajax === 'function') {
+                                            self.orderTable.ajax.reload();
+                                        }
+                                        $('#viewOrderModal').modal('hide');
+                                    }
+                                }
+                            });
+                            
+                            // ✅ FIX: Reload table để cập nhật danh sách
+                            // Note: Reload này sẽ chạy ngay lập tức, không đợi GetOrder response
+                            // Điều này đảm bảo table được cập nhật ngay cả khi GetOrder fail
+                            // Không reload lại trong GetOrder success callback để tránh double reload
+                            if (self.orderTable && typeof self.orderTable.ajax === 'function') {
+                                self.orderTable.ajax.reload();
+                            }
                         } else {
                             GarageApp.showError(GarageApp.parseErrorMessage(res) || 'Lỗi khi hoàn thành kỹ thuật');
                         }
                     },
                     error: function(xhr) {
+                        // ✅ FIX: Reset processing flag on error
+                        $btn.data('processing', false).prop('disabled', false);
+                        
                         if (AuthHandler && AuthHandler.isUnauthorized(xhr)) {
                             AuthHandler.handleUnauthorized(xhr, true);
                         } else {
@@ -911,6 +1172,9 @@ window.OrderManagement = {
                         }
                     }
                 });
+            } else {
+                // ✅ FIX: Reset processing flag if user cancels
+                $btn.data('processing', false).prop('disabled', false);
             }
         });
     },
@@ -1051,12 +1315,35 @@ window.OrderManagement = {
                     if (response.success && response.data) {
                         self.renderQCInfo(response.data);
                     } else {
-                        $('#qcContent').html(`
-                            <div class="alert alert-info">
-                                <i class="fas fa-info-circle"></i> Chưa có thông tin QC. 
-                                Vui lòng hoàn thành kỹ thuật và bắt đầu kiểm tra QC.
-                            </div>
-                        `);
+                        // ✅ FIX: Kiểm tra status của ServiceOrder để hiển thị message phù hợp
+                        // Nếu status = WaitingForQC, hiển thị message với hướng dẫn bắt đầu QC
+                        // Nếu status khác, hiển thị message yêu cầu hoàn thành kỹ thuật
+                        var $modal = $('#viewOrderModal');
+                        var modalOrderStatus = $modal.data('order-status');
+                        var orderStatusText = $('#viewStatus').text() || '';
+                        
+                        // ✅ FIX: Check status từ modal data (ưu tiên) hoặc từ text hiển thị
+                        var isWaitingForQC = modalOrderStatus === 'WaitingForQC' || 
+                                            orderStatusText.includes('Chờ QC');
+                        
+                        var messageHtml = '';
+                        if (isWaitingForQC) {
+                            messageHtml = `
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle"></i> 
+                                    <strong>JO đã sẵn sàng cho QC.</strong><br>
+                                    Vui lòng bấm nút <strong>"Bắt Đầu QC"</strong> ở phía dưới để bắt đầu kiểm tra chất lượng.
+                                </div>
+                            `;
+                        } else {
+                            messageHtml = `
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle"></i> Chưa có thông tin QC. 
+                                    Vui lòng hoàn thành kỹ thuật và bắt đầu kiểm tra QC.
+                                </div>
+                            `;
+                        }
+                        $('#qcContent').html(messageHtml);
                     }
                 }
             },
@@ -1064,12 +1351,33 @@ window.OrderManagement = {
                 if (AuthHandler.isUnauthorized(xhr)) {
                     AuthHandler.handleUnauthorized(xhr, true);
                 } else {
-                    $('#qcContent').html(`
-                        <div class="alert alert-info">
-                            <i class="fas fa-info-circle"></i> Chưa có thông tin QC. 
-                            Vui lòng hoàn thành kỹ thuật và bắt đầu kiểm tra QC.
-                        </div>
-                    `);
+                    // ✅ FIX: Kiểm tra status để hiển thị message phù hợp khi error
+                    var $modal = $('#viewOrderModal');
+                    var modalOrderStatus = $modal.data('order-status');
+                    var orderStatusText = $('#viewStatus').text() || '';
+                    
+                    // ✅ FIX: Check status từ modal data (ưu tiên) hoặc từ text hiển thị
+                    var isWaitingForQC = modalOrderStatus === 'WaitingForQC' || 
+                                        orderStatusText.includes('Chờ QC');
+                    
+                    var messageHtml = '';
+                    if (isWaitingForQC) {
+                        messageHtml = `
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle"></i> 
+                                <strong>JO đã sẵn sàng cho QC.</strong><br>
+                                Vui lòng bấm nút <strong>"Bắt Đầu QC"</strong> ở phía dưới để bắt đầu kiểm tra chất lượng.
+                            </div>
+                        `;
+                    } else {
+                        messageHtml = `
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle"></i> Chưa có thông tin QC. 
+                                Vui lòng hoàn thành kỹ thuật và bắt đầu kiểm tra QC.
+                            </div>
+                        `;
+                    }
+                    $('#qcContent').html(messageHtml);
                 }
             }
         });

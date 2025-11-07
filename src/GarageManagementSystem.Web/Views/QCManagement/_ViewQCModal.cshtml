@@ -1,0 +1,96 @@
+<!-- Modal Xem Thông Tin QC -->
+<div class="modal fade" id="viewQCModal" tabindex="-1" role="dialog" data-backdrop="static" data-keyboard="false" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-info">
+                <h5 class="modal-title">
+                    <i class="fas fa-info-circle"></i> Thông Tin Kiểm Tra QC
+                </h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="card mb-3">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0">Thông Tin Cơ Bản</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <strong>Số Đơn Hàng:</strong> <span id="viewQCOrderNumber"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Người Kiểm Tra:</strong> <span id="viewQCInspectorName"></span>
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-md-6">
+                                <strong>Ngày Kiểm Tra:</strong> <span id="viewQCDate"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Ngày Hoàn Thành:</strong> <span id="viewQCCompletedDate"></span>
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-md-6">
+                                <strong>Kết Quả:</strong> 
+                                <span id="viewQCResult" class="badge"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Cần Làm Lại:</strong> <span id="viewQCReworkRequired"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-3">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0">Ghi Chú QC</h6>
+                    </div>
+                    <div class="card-body">
+                        <p id="viewQCNotes" class="mb-0"></p>
+                    </div>
+                </div>
+
+                <div class="card mb-3" id="reworkNotesCard" style="display: none;">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0">Ghi Chú Làm Lại</h6>
+                    </div>
+                    <div class="card-body">
+                        <p id="viewQCReworkNotes" class="mb-0"></p>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0">QC Checklist</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 50px">#</th>
+                                        <th>Hạng Mục Kiểm Tra</th>
+                                        <th style="width: 100px">Kết Quả</th>
+                                        <th>Ghi Chú</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="viewQCChecklistItems">
+                                    <!-- Checklist items sẽ được load từ QC -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">
+                    <i class="fas fa-times"></i> Đóng
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+

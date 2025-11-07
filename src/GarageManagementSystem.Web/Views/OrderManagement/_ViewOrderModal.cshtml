@@ -1,5 +1,5 @@
 <!-- View Order Modal -->
-<div class="modal fade" id="viewOrderModal" tabindex="-1" role="dialog">
+<div class="modal fade" id="viewOrderModal" tabindex="-1" role="dialog" data-backdrop="static" data-keyboard="false">
     <div class="modal-dialog modal-xl" role="document">
         <div class="modal-content">
             <div class="modal-header bg-info">
@@ -94,6 +94,66 @@
 
                     <!-- Order Items Tab -->
                     <div class="tab-pane fade" id="order-items" role="tabpanel">
+                        <!-- ✅ HP3: Tổng Giờ Công Summary -->
+                        <div id="hoursSummary" class="card mb-3" style="display: none;">
+                            <div class="card-header bg-info text-white">
+                                <h5 class="mb-0"><i class="fas fa-clock mr-2"></i>Tổng Giờ Công</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <div class="info-box">
+                                            <span class="info-box-icon bg-info"><i class="fas fa-hourglass-half"></i></span>
+                                            <div class="info-box-content">
+                                                <span class="info-box-text">Giờ Công Dự Kiến</span>
+                                                <span class="info-box-number" id="totalEstimatedHours">0.00</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="info-box">
+                                            <span class="info-box-icon bg-success"><i class="fas fa-check-circle"></i></span>
+                                            <div class="info-box-content">
+                                                <span class="info-box-text">Giờ Công Thực Tế</span>
+                                                <span class="info-box-number" id="totalActualHours">0.00</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="info-box">
+                                            <span class="info-box-icon bg-warning"><i class="fas fa-clock"></i></span>
+                                            <div class="info-box-content">
+                                                <span class="info-box-text">Giờ Công Còn Lại</span>
+                                                <span class="info-box-number" id="remainingHours">0.00</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="info-box">
+                                            <span class="info-box-icon bg-primary"><i class="fas fa-percentage"></i></span>
+                                            <div class="info-box-content">
+                                                <span class="info-box-text">Tỷ Lệ Hoàn Thành</span>
+                                                <span class="info-box-number" id="progressPercentage">0%</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Progress Bar -->
+                                <div class="progress mt-2" style="height: 25px;">
+                                    <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                         id="hoursProgressBar" 
+                                         role="progressbar" 
+                                         style="width: 0%">
+                                    </div>
+                                </div>
+                                <!-- Warning nếu vượt quá 50% -->
+                                <div id="hoursWarning" class="alert alert-warning mt-2" style="display: none;">
+                                    <i class="fas fa-exclamation-triangle mr-2"></i>
+                                    <strong>Cảnh báo:</strong> Giờ công thực tế vượt quá 150% so với dự kiến!
+                                </div>
+                            </div>
+                        </div>
+                        
                         <div class="form-group">
                             <label class="font-weight-bold">Chi Tiết Dịch Vụ:</label>
                             <table class="table table-bordered table-sm">
@@ -159,9 +219,9 @@
                 <button type="button" class="btn btn-success btn-sm" id="btnCompleteTechnical" style="display: none;">
                     <i class="fas fa-check-circle"></i> Hoàn Thành Kỹ Thuật
                 </button>
-                <!-- ✅ 2.4.2: Button Bắt đầu QC (chỉ hiện khi status = WaitingForQC) -->
+                <!-- ✅ 2.4.2: Button Tạo Phiếu QC (chỉ hiện khi status = WaitingForQC và chưa có phiếu QC) -->
                 <button type="button" class="btn btn-primary btn-sm" id="btnStartQC" style="display: none;">
-                    <i class="fas fa-play"></i> Bắt Đầu QC
+                    <i class="fas fa-plus"></i> Tạo Phiếu QC
                 </button>
                 <!-- ✅ 2.4.2: Button Hoàn thành QC (chỉ hiện khi status = QCInProgress) -->
                 <button type="button" class="btn btn-info btn-sm" id="btnCompleteQC" style="display: none;">
@@ -184,7 +244,7 @@
 </div>
 
 <!-- ✅ 2.4.3: Modal Ghi Nhận Giờ Công Làm Lại -->
-<div class="modal fade" id="recordReworkHoursModal" tabindex="-1" role="dialog">
+<div class="modal fade" id="recordReworkHoursModal" tabindex="-1" role="dialog" data-backdrop="static" data-keyboard="false">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header bg-warning">

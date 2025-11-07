@@ -4,8 +4,10 @@ using GarageManagementSystem.Core.Extensions;
 using GarageManagementSystem.Shared.DTOs;
 using GarageManagementSystem.Shared.Models;
 using GarageManagementSystem.API.Services;
+using GarageManagementSystem.Infrastructure.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace GarageManagementSystem.API.Controllers
 {
@@ -17,12 +19,14 @@ namespace GarageManagementSystem.API.Controllers
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly ICacheService _cacheService;
+        private readonly GarageDbContext _context;
 
-        public PaymentTransactionsController(IUnitOfWork unitOfWork, IMapper mapper, ICacheService cacheService)
+        public PaymentTransactionsController(IUnitOfWork unitOfWork, IMapper mapper, ICacheService cacheService, GarageDbContext context)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _cacheService = cacheService;
+            _context = context;
         }
 
         [HttpGet]
@@ -35,15 +39,17 @@ namespace GarageManagementSystem.API.Controllers
         {
             try
             {
-                var payments = await _unitOfWork.PaymentTransactions.GetAllAsync();
-                var query = payments.AsQueryable();
+                // ✅ OPTIMIZED: Query ở database level thay vì load tất cả vào memory
+                var query = _context.PaymentTransactions
+                    .Where(p => !p.IsDeleted)
+                    .AsQueryable();
                 
                 // Apply search filter if provided
                 if (!string.IsNullOrEmpty(searchTerm))
                 {
                     query = query.Where(p => 
-                        p.TransactionReference.Contains(searchTerm) || 
-                        p.Notes.Contains(searchTerm));
+                        (p.TransactionReference != null && p.TransactionReference.Contains(searchTerm)) || 
+                        (p.Notes != null && p.Notes.Contains(searchTerm)));
                 }
                 
                 // Apply payment method filter if provided
@@ -56,11 +62,15 @@ namespace GarageManagementSystem.API.Controllers
 
                 query = query.OrderByDescending(p => p.CreatedAt);
 
-                // Get total count
-                var totalCount = await query.GetTotalCountAsync();
+                // ✅ OPTIMIZED: Get total count ở database level (trước khi paginate)
+                var totalCount = await query.CountAsync();
                 
-                // Apply pagination
-                var pagedPayments = query.ApplyPagination(pageNumber, pageSize).ToList();
+                // ✅ OPTIMIZED: Apply pagination ở database level với Skip/Take
+                var pagedPayments = await query
+                    .Skip((pageNumber - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToListAsync();
+                
                 var paymentDtos = pagedPayments.Select(p => _mapper.Map<PaymentTransactionDto>(p)).ToList();
                 
                 return Ok(PagedResponse<PaymentTransactionDto>.CreateSuccessResult(

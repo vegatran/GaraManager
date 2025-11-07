@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using GarageManagementSystem.Core.Entities;
 using GarageManagementSystem.Core.Interfaces;
+using GarageManagementSystem.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace GarageManagementSystem.API.Controllers
 {
@@ -12,13 +14,16 @@ namespace GarageManagementSystem.API.Controllers
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<ServiceOrderController> _logger;
+        private readonly GarageDbContext _context;
 
         public ServiceOrderController(
             IUnitOfWork unitOfWork,
-            ILogger<ServiceOrderController> logger)
+            ILogger<ServiceOrderController> logger,
+            GarageDbContext context)
         {
             _unitOfWork = unitOfWork;
             _logger = logger;
+            _context = context;
         }
 
         /// <summary>
@@ -33,43 +38,49 @@ namespace GarageManagementSystem.API.Controllers
         {
             try
             {
-                var orders = await _unitOfWork.ServiceOrders.GetAllAsync();
+                // ✅ OPTIMIZED: Query ở database level thay vì load tất cả vào memory
+                var query = _context.ServiceOrders
+                    .Where(o => !o.IsDeleted)
+                    .AsQueryable();
 
                 // Filters
                 if (!string.IsNullOrEmpty(status))
-                    orders = orders.Where(o => o.Status == status);
+                    query = query.Where(o => o.Status == status);
 
                 if (customerId.HasValue)
-                    orders = orders.Where(o => o.CustomerId == customerId.Value);
+                    query = query.Where(o => o.CustomerId == customerId.Value);
 
                 if (fromDate.HasValue)
-                    orders = orders.Where(o => o.OrderDate >= fromDate.Value);
+                    query = query.Where(o => o.OrderDate >= fromDate.Value);
 
                 if (toDate.HasValue)
-                    orders = orders.Where(o => o.OrderDate <= toDate.Value);
+                    query = query.Where(o => o.OrderDate <= toDate.Value);
 
-                var result = orders.Select(o => new
-                {
-                    o.Id,
-                    o.OrderNumber,
-                    o.OrderDate,
-                    o.CustomerId,
-                    o.VehicleId,
-                    o.QuotationId,
-                    o.InsuranceClaimId,
-                    o.Description,
-                    EstimatedAmount = o.EstimatedAmount,
-                    ActualAmount = o.ActualAmount,
-                    o.Status,
-                    o.CreatedAt
-                }).OrderByDescending(o => o.CreatedAt).ToList();
+                var result = await query
+                    .OrderByDescending(o => o.CreatedAt)
+                    .Select(o => new
+                    {
+                        o.Id,
+                        o.OrderNumber,
+                        o.OrderDate,
+                        o.CustomerId,
+                        o.VehicleId,
+                        o.QuotationId,
+                        o.InsuranceClaimId,
+                        o.Description,
+                        EstimatedAmount = o.EstimatedAmount,
+                        ActualAmount = o.ActualAmount,
+                        o.Status,
+                        o.CreatedAt
+                    })
+                    .ToListAsync();
 
                 return Ok(new { success = true, data = result, count = result.Count });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting service orders");
-                return StatusCode(500, new { success = false, message = "Lỗi khi lấy danh sách đơn hàng" });
+                return StatusCode(500, new { success = false, message = "Lỗi khi lấy danh sách đơn hàng", error = ex.Message });
             }
         }
 

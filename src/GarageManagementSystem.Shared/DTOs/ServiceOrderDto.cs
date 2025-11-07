@@ -48,6 +48,14 @@ namespace GarageManagementSystem.Shared.DTOs
         public DateTime? HandoverDate { get; set; }
         public string? HandoverLocation { get; set; }
 
+        /// <summary>
+        /// ✅ 3.1: Quyết toán COGS (Cost of Goods Sold)
+        /// </summary>
+        public decimal TotalCOGS { get; set; } = 0;
+        public string COGSCalculationMethod { get; set; } = "FIFO"; // 'FIFO' hoặc 'WeightedAverage'
+        public DateTime? COGSCalculationDate { get; set; }
+        public string? COGSBreakdown { get; set; } // JSON breakdown
+
         public List<ServiceOrderItemDto> ServiceOrderItems { get; set; } = new();
     }
 

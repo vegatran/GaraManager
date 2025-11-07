@@ -1,0 +1,87 @@
+<!-- Modal Bàn Giao Xe -->
+<div class="modal fade" id="handoverModal" tabindex="-1" role="dialog" aria-hidden="true" data-backdrop="static" data-keyboard="false">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-success">
+                <h5 class="modal-title">
+                    <i class="fas fa-handshake"></i> Bàn Giao Xe
+                </h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="handoverForm">
+                    <input type="hidden" id="handoverServiceOrderId" />
+                    
+                    <!-- Thông tin JO -->
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label>Số Đơn Hàng:</label>
+                                        <input type="text" id="handoverOrderNumber" class="form-control form-control-sm" readonly />
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label>Khách Hàng:</label>
+                                        <input type="text" id="handoverCustomerName" class="form-control form-control-sm" readonly />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label>Xe:</label>
+                                        <input type="text" id="handoverVehiclePlate" class="form-control form-control-sm" readonly />
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label>Kết Quả QC:</label>
+                                        <input type="text" id="handoverQCResult" class="form-control form-control-sm" readonly />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Thông tin bàn giao -->
+                    <div class="card">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">Thông Tin Bàn Giao</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label>Ngày Bàn Giao:</label>
+                                <input type="datetime-local" class="form-control form-control-sm" id="handoverDate" />
+                                <small class="form-text text-muted">Để trống sẽ dùng ngày giờ hiện tại</small>
+                            </div>
+                            <div class="form-group">
+                                <label>Khu Vực Bàn Giao:</label>
+                                <input type="text" class="form-control form-control-sm" id="handoverLocation" 
+                                       placeholder="Ví dụ: Khu vực tiếp đón, Xưởng số 1, ..." />
+                            </div>
+                            <div class="form-group">
+                                <label>Ghi Chú:</label>
+                                <textarea class="form-control form-control-sm" id="handoverNotes" rows="2" 
+                                          placeholder="Ghi chú về bàn giao xe (tùy chọn)"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">
+                    <i class="fas fa-times"></i> Hủy
+                </button>
+                <button type="button" class="btn btn-success btn-sm" id="btnSubmitHandover">
+                    <i class="fas fa-handshake"></i> Xác Nhận Bàn Giao
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+

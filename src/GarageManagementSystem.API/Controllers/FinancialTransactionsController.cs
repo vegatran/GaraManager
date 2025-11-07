@@ -5,6 +5,8 @@ using GarageManagementSystem.Core.Entities;
 using GarageManagementSystem.Core.Interfaces;
 using GarageManagementSystem.Shared.DTOs;
 using GarageManagementSystem.Shared.Models;
+using GarageManagementSystem.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace GarageManagementSystem.API.Controllers
 {
@@ -16,12 +18,14 @@ namespace GarageManagementSystem.API.Controllers
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly ILogger<FinancialTransactionsController> _logger;
+        private readonly GarageDbContext _context;
 
-        public FinancialTransactionsController(IUnitOfWork unitOfWork, IMapper mapper, ILogger<FinancialTransactionsController> logger)
+        public FinancialTransactionsController(IUnitOfWork unitOfWork, IMapper mapper, ILogger<FinancialTransactionsController> logger, GarageDbContext context)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _logger = logger;
+            _context = context;
         }
 
         [HttpGet]
@@ -35,8 +39,10 @@ namespace GarageManagementSystem.API.Controllers
         {
             try
             {
-                var transactions = await _unitOfWork.Repository<FinancialTransaction>().GetAllAsync();
-                var query = transactions.AsQueryable();
+                // ✅ OPTIMIZED: Query ở database level thay vì load tất cả vào memory
+                var query = _context.FinancialTransactions
+                    .Where(t => !t.IsDeleted)
+                    .AsQueryable();
                 
                 // Apply filters
                 if (!string.IsNullOrEmpty(transactionType))
@@ -51,15 +57,15 @@ namespace GarageManagementSystem.API.Controllers
                 if (toDate.HasValue)
                     query = query.Where(t => t.TransactionDate <= toDate.Value);
 
-                // Get total count
-                var totalCount = query.Count();
+                // ✅ OPTIMIZED: Get total count ở database level (trước khi paginate)
+                var totalCount = await query.CountAsync();
                 
-                // Apply pagination
-                var pagedTransactions = query
+                // ✅ OPTIMIZED: Apply pagination ở database level với Skip/Take
+                var pagedTransactions = await query
                     .OrderByDescending(t => t.TransactionDate)
                     .Skip((pageNumber - 1) * pageSize)
                     .Take(pageSize)
-                    .ToList();
+                    .ToListAsync();
                 
                 // Get employee names for transactions
                 var employeeIds = pagedTransactions.Where(t => t.EmployeeId.HasValue).Select(t => t.EmployeeId.Value).Distinct().ToList();

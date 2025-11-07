@@ -4,8 +4,10 @@ using GarageManagementSystem.Core.Extensions;
 using GarageManagementSystem.Shared.DTOs;
 using GarageManagementSystem.Shared.Models;
 using GarageManagementSystem.API.Services;
+using GarageManagementSystem.Infrastructure.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace GarageManagementSystem.API.Controllers
 {
@@ -18,12 +20,14 @@ namespace GarageManagementSystem.API.Controllers
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly ICacheService _cacheService;
+        private readonly GarageDbContext _context;
 
-        public SuppliersController(IUnitOfWork unitOfWork, IMapper mapper, ICacheService cacheService)
+        public SuppliersController(IUnitOfWork unitOfWork, IMapper mapper, ICacheService cacheService, GarageDbContext context)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _cacheService = cacheService;
+            _context = context;
         }
 
         [HttpGet]
@@ -35,28 +39,34 @@ namespace GarageManagementSystem.API.Controllers
         {
             try
             {
-                var suppliers = await _unitOfWork.Suppliers.GetAllAsync();
-                var query = suppliers.AsQueryable();
+                // ✅ OPTIMIZED: Query ở database level thay vì load tất cả vào memory
+                var query = _context.Suppliers
+                    .Where(s => !s.IsDeleted)
+                    .AsQueryable();
                 
                 // Apply search filter if provided
                 if (!string.IsNullOrEmpty(searchTerm))
                 {
                     query = query.Where(s => 
-                        s.SupplierName.Contains(searchTerm) || 
-                        s.ContactPerson.Contains(searchTerm) || 
-                        s.Email.Contains(searchTerm) ||
-                        s.Phone.Contains(searchTerm));
+                        (s.SupplierName != null && s.SupplierName.Contains(searchTerm)) || 
+                        (s.ContactPerson != null && s.ContactPerson.Contains(searchTerm)) || 
+                        (s.Email != null && s.Email.Contains(searchTerm)) ||
+                        (s.Phone != null && s.Phone.Contains(searchTerm)));
                 }
                 
                 // Apply category filter if provided (removed - Supplier doesn't have Category property)
 
                 query = query.OrderBy(s => s.SupplierName);
 
-                // Get total count
-                var totalCount = await query.GetTotalCountAsync();
+                // ✅ OPTIMIZED: Get total count ở database level (trước khi paginate)
+                var totalCount = await query.CountAsync();
                 
-                // Apply pagination
-                var pagedSuppliers = query.ApplyPagination(pageNumber, pageSize).ToList();
+                // ✅ OPTIMIZED: Apply pagination ở database level với Skip/Take
+                var pagedSuppliers = await query
+                    .Skip((pageNumber - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToListAsync();
+                
                 var supplierDtos = pagedSuppliers.Select(MapToDto).ToList();
                 
                 return Ok(PagedResponse<SupplierDto>.CreateSuccessResult(

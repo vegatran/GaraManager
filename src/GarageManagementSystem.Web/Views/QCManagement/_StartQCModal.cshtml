@@ -1,0 +1,109 @@
+<!-- Modal Bắt đầu Kiểm tra QC -->
+<div class="modal fade" id="startQCModal" tabindex="-1" role="dialog" aria-hidden="true" data-backdrop="static" data-keyboard="false">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-primary">
+                <h5 class="modal-title">
+                    <i class="fas fa-clipboard-check"></i> Bắt Đầu Kiểm Tra QC
+                </h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="startQCForm">
+                    <input type="hidden" id="startQCServiceOrderId" />
+                    
+                    <!-- Thông tin JO -->
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label>Số Đơn Hàng:</label>
+                                        <input type="text" id="startQCOrderNumber" class="form-control form-control-sm" readonly />
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label>Khách Hàng:</label>
+                                        <input type="text" id="startQCCustomerName" class="form-control form-control-sm" readonly />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label>Xe:</label>
+                                        <input type="text" id="startQCVehiclePlate" class="form-control form-control-sm" readonly />
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label>Giờ Công Thực Tế:</label>
+                                        <input type="text" id="startQCTotalActualHours" class="form-control form-control-sm" readonly />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- QC Checklist -->
+                    <div class="card">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">
+                                <i class="fas fa-list-check"></i> QC Checklist
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div id="qcChecklistItems">
+                                <!-- Checklist items sẽ được thêm động bằng JavaScript -->
+                            </div>
+                            <button type="button" class="btn btn-outline-secondary btn-sm mt-2" id="btnAddChecklistItem">
+                                <i class="fas fa-plus"></i> Thêm Hạng Mục Kiểm Tra
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">
+                    <i class="fas fa-times"></i> Hủy
+                </button>
+                <button type="button" class="btn btn-primary btn-sm" id="btnSubmitStartQC">
+                    <i class="fas fa-play"></i> Bắt Đầu QC
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Template cho checklist item (hidden) -->
+<template id="checklistItemTemplate">
+    <div class="checklist-item-row mb-2 border-bottom pb-2" data-display-order="">
+        <div class="row">
+            <div class="col-md-1">
+                <input type="checkbox" class="checklist-item-checkbox form-control-sm" />
+            </div>
+            <div class="col-md-5">
+                <input type="text" class="form-control form-control-sm checklist-item-name" placeholder="Tên hạng mục kiểm tra" />
+            </div>
+            <div class="col-md-2">
+                <select class="form-control form-control-sm checklist-item-result">
+                    <option value="">-- Kết quả --</option>
+                    <option value="Pass">Đạt</option>
+                    <option value="Fail">Không đạt</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <input type="text" class="form-control form-control-sm checklist-item-notes" placeholder="Ghi chú (tùy chọn)" />
+            </div>
+            <div class="col-md-1">
+                <button type="button" class="btn btn-sm btn-danger btn-remove-checklist-item">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</template>
+

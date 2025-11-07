@@ -201,10 +201,39 @@ namespace GarageManagementSystem.API.Controllers
         {
             try
             {
+                // ✅ FIX: Set ServiceOrderId từ route parameter vào DTO (trước khi validation)
+                // Vì JavaScript không gửi ServiceOrderId trong body, chỉ gửi trong URL
+                if (createDto == null)
+                {
+                    createDto = new CreateQualityControlDto();
+                }
+                createDto.ServiceOrderId = id;
+                
+                // ✅ FIX: Clear ModelState và validate lại sau khi set ServiceOrderId
+                // Vì ModelState đã được validate trước khi set ServiceOrderId
+                ModelState.Clear();
+                TryValidateModel(createDto);
+                
                 // ✅ VALIDATION: Check ModelState
                 if (!ModelState.IsValid)
                 {
-                    return BadRequest(ApiResponse<QualityControlDto>.ErrorResult("Dữ liệu không hợp lệ"));
+                    var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
+                    return BadRequest(ApiResponse<QualityControlDto>.ErrorResult(
+                        $"Dữ liệu không hợp lệ: {string.Join(", ", errors)}"));
+                }
+                
+                // ✅ FIX: Validate checklist items có ChecklistItemName không rỗng
+                if (createDto.ChecklistItems != null && createDto.ChecklistItems.Any())
+                {
+                    var invalidItems = createDto.ChecklistItems
+                        .Where(item => string.IsNullOrWhiteSpace(item.ChecklistItemName))
+                        .ToList();
+                    
+                    if (invalidItems.Any())
+                    {
+                        return BadRequest(ApiResponse<QualityControlDto>.ErrorResult(
+                            "Một số checklist items không có tên. Vui lòng điền đầy đủ thông tin."));
+                    }
                 }
 
                 // ✅ AUTHORIZATION: Chỉ Tổ trưởng/QC mới có quyền bắt đầu QC

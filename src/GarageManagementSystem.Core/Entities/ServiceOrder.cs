@@ -81,6 +81,29 @@ namespace GarageManagementSystem.Core.Entities
         [StringLength(200)]
         public string? HandoverLocation { get; set; }
 
+        // ✅ 3.1: Quyết toán COGS (Cost of Goods Sold)
+        /// <summary>
+        /// ✅ 3.1: Tổng giá vốn hàng bán (COGS) - Tính từ vật tư đã xuất kho
+        /// </summary>
+        public decimal TotalCOGS { get; set; } = 0;
+
+        /// <summary>
+        /// ✅ 3.1: Phương pháp tính COGS ('FIFO' hoặc 'WeightedAverage')
+        /// </summary>
+        [StringLength(20)]
+        public string COGSCalculationMethod { get; set; } = "FIFO"; // 'FIFO', 'WeightedAverage'
+
+        /// <summary>
+        /// ✅ 3.1: Ngày tính toán COGS lần cuối
+        /// </summary>
+        public DateTime? COGSCalculationDate { get; set; }
+
+        /// <summary>
+        /// ✅ 3.1: Chi tiết tính toán COGS (JSON) - Lưu breakdown theo từng vật tư
+        /// </summary>
+        [StringLength(5000)]
+        public string? COGSBreakdown { get; set; }
+
         // Assigned employees
         public int? PrimaryTechnicianId { get; set; }
 

@@ -7,8 +7,10 @@ using GarageManagementSystem.Core.Services;
 using GarageManagementSystem.Shared.DTOs;
 using GarageManagementSystem.Shared.Models;
 using GarageManagementSystem.API.Services;
+using GarageManagementSystem.Infrastructure.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace GarageManagementSystem.API.Controllers
 {
@@ -20,12 +22,18 @@ namespace GarageManagementSystem.API.Controllers
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly GarageManagementSystem.API.Services.ICacheService _cacheService;
+        private readonly GarageDbContext _context;
 
-        public ServiceQuotationsController(IUnitOfWork unitOfWork, IMapper mapper, GarageManagementSystem.API.Services.ICacheService cacheService)
+        public ServiceQuotationsController(
+            IUnitOfWork unitOfWork, 
+            IMapper mapper, 
+            GarageManagementSystem.API.Services.ICacheService cacheService,
+            GarageDbContext context)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _cacheService = cacheService;
+            _context = context;
         }
 
         [HttpGet]
@@ -38,16 +46,18 @@ namespace GarageManagementSystem.API.Controllers
         {
             try
             {
-                var quotations = await _unitOfWork.ServiceQuotations.GetAllWithDetailsAsync();
-                var query = quotations.AsQueryable();
+                // ✅ OPTIMIZED: Query ở database level thay vì load tất cả vào memory
+                var query = _context.ServiceQuotations
+                    .Where(q => !q.IsDeleted)
+                    .AsQueryable();
                 
                 // Apply search filter if provided
                 if (!string.IsNullOrEmpty(searchTerm))
                 {
                     query = query.Where(q => 
-                        q.QuotationNumber.Contains(searchTerm) || 
-                        q.CustomerName.Contains(searchTerm) || 
-                        q.VehiclePlate.Contains(searchTerm));
+                        (q.QuotationNumber != null && q.QuotationNumber.Contains(searchTerm)) || 
+                        (q.CustomerName != null && q.CustomerName.Contains(searchTerm)) || 
+                        (q.VehiclePlate != null && q.VehiclePlate.Contains(searchTerm)));
                 }
                 
                 // Apply status filter if provided
@@ -64,11 +74,21 @@ namespace GarageManagementSystem.API.Controllers
 
                 query = query.OrderByDescending(q => q.QuotationDate);
 
-                // Get total count
-                var totalCount = await query.GetTotalCountAsync();
+                // ✅ OPTIMIZED: Get total count ở database level (trước khi paginate)
+                var totalCount = await query.CountAsync();
                 
-                // Apply pagination
-                var pagedQuotations = query.ApplyPagination(pageNumber, pageSize).ToList();
+                // ✅ OPTIMIZED: Apply pagination ở database level với Skip/Take
+                var pagedQuotations = await query
+                    .Skip((pageNumber - 1) * pageSize)
+                    .Take(pageSize)
+                    .Include(q => q.Customer)
+                    .Include(q => q.Vehicle)
+                    .Include(q => q.Items)
+                        .ThenInclude(item => item.Service)
+                    .Include(q => q.Items)
+                        .ThenInclude(item => item.Part)
+                    .ToListAsync();
+                
                 var quotationDtos = pagedQuotations.Select(MapToDto).ToList();
                 
                 return Ok(PagedResponse<ServiceQuotationDto>.CreateSuccessResult(

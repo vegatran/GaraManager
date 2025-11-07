@@ -5,8 +5,10 @@ using GarageManagementSystem.Core.Interfaces;
 using GarageManagementSystem.Shared.DTOs;
 using GarageManagementSystem.Shared.Models;
 using GarageManagementSystem.API.Services;
+using GarageManagementSystem.Infrastructure.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace GarageManagementSystem.API.Controllers
 {
@@ -18,12 +20,14 @@ namespace GarageManagementSystem.API.Controllers
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly ICacheService _cacheService;
+        private readonly GarageDbContext _context;
 
-        public VehicleInspectionsController(IUnitOfWork unitOfWork, IMapper mapper, ICacheService cacheService)
+        public VehicleInspectionsController(IUnitOfWork unitOfWork, IMapper mapper, ICacheService cacheService, GarageDbContext context)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _cacheService = cacheService;
+            _context = context;
         }
 
         [HttpGet]
@@ -36,16 +40,18 @@ namespace GarageManagementSystem.API.Controllers
         {
             try
             {
-                var inspections = await _unitOfWork.VehicleInspections.GetAllWithDetailsAsync();
-                var query = inspections.AsQueryable();
+                // ✅ OPTIMIZED: Query ở database level thay vì load tất cả vào memory
+                var query = _context.VehicleInspections
+                    .Where(i => !i.IsDeleted)
+                    .AsQueryable();
                 
                 // Apply search filter if provided
                 if (!string.IsNullOrEmpty(searchTerm))
                 {
                     query = query.Where(i => 
-                        i.VehiclePlate.Contains(searchTerm) || 
-                        i.CustomerName.Contains(searchTerm) || 
-                        i.InspectionNumber.Contains(searchTerm));
+                        (i.VehiclePlate != null && i.VehiclePlate.Contains(searchTerm)) || 
+                        (i.CustomerName != null && i.CustomerName.Contains(searchTerm)) || 
+                        (i.InspectionNumber != null && i.InspectionNumber.Contains(searchTerm)));
                 }
                 
                 // Apply status filter if provided
@@ -62,11 +68,19 @@ namespace GarageManagementSystem.API.Controllers
 
                 query = query.OrderByDescending(i => i.InspectionDate);
 
-                // Get total count
-                var totalCount = await query.GetTotalCountAsync();
+                // ✅ OPTIMIZED: Get total count ở database level (trước khi paginate)
+                var totalCount = await query.CountAsync();
                 
-                // Apply pagination
-                var pagedInspections = query.ApplyPagination(pageNumber, pageSize).ToList();
+                // ✅ OPTIMIZED: Apply pagination ở database level với Skip/Take
+                var pagedInspections = await query
+                    .Skip((pageNumber - 1) * pageSize)
+                    .Take(pageSize)
+                    .Include(i => i.Customer)
+                    .Include(i => i.Vehicle)
+                    .Include(i => i.Issues)
+                    .Include(i => i.Photos)
+                    .ToListAsync();
+                
                 var inspectionDtos = pagedInspections.Select(MapToDto).ToList();
                 
                 return Ok(PagedResponse<VehicleInspectionDto>.CreateSuccessResult(
@@ -540,9 +554,16 @@ namespace GarageManagementSystem.API.Controllers
                     return BadRequest(ApiResponse<List<VehicleInspectionDto>>.ErrorResult("Invalid vehicle type. Must be Personal, Insurance, or Company"));
                 }
 
-                var inspections = await _unitOfWork.VehicleInspections.GetAllWithDetailsAsync();
-                var filteredInspections = inspections.Where(i => i.Vehicle.VehicleType == vehicleType).ToList();
-                var inspectionDtos = filteredInspections.Select(MapToDto).ToList();
+                // ✅ OPTIMIZED: Query ở database level thay vì load tất cả vào memory
+                var inspections = await _context.VehicleInspections
+                    .Where(i => !i.IsDeleted && i.Vehicle != null && i.Vehicle.VehicleType == vehicleType)
+                    .Include(i => i.Customer)
+                    .Include(i => i.Vehicle)
+                    .Include(i => i.Issues)
+                    .Include(i => i.Photos)
+                    .ToListAsync();
+                
+                var inspectionDtos = inspections.Select(MapToDto).ToList();
 
                 return Ok(ApiResponse<List<VehicleInspectionDto>>.SuccessResult(inspectionDtos));
             }
@@ -560,9 +581,16 @@ namespace GarageManagementSystem.API.Controllers
         {
             try
             {
-                var inspections = await _unitOfWork.VehicleInspections.GetAllWithDetailsAsync();
-                var filteredInspections = inspections.Where(i => i.InspectionType == inspectionType).ToList();
-                var inspectionDtos = filteredInspections.Select(MapToDto).ToList();
+                // ✅ OPTIMIZED: Query ở database level thay vì load tất cả vào memory
+                var inspections = await _context.VehicleInspections
+                    .Where(i => !i.IsDeleted && i.InspectionType == inspectionType)
+                    .Include(i => i.Customer)
+                    .Include(i => i.Vehicle)
+                    .Include(i => i.Issues)
+                    .Include(i => i.Photos)
+                    .ToListAsync();
+                
+                var inspectionDtos = inspections.Select(MapToDto).ToList();
 
                 return Ok(ApiResponse<List<VehicleInspectionDto>>.SuccessResult(inspectionDtos));
             }

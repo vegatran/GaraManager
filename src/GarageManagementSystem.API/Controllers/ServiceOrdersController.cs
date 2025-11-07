@@ -21,13 +21,23 @@ namespace GarageManagementSystem.API.Controllers
         private readonly IMapper _mapper;
         private readonly ICacheService _cacheService;
         private readonly GarageDbContext _context;
+        private readonly ICOGSCalculationService _cogsCalculationService;
+        private readonly ILogger<ServiceOrdersController> _logger;
 
-        public ServiceOrdersController(IUnitOfWork unitOfWork, IMapper mapper, ICacheService cacheService, GarageDbContext context)
+        public ServiceOrdersController(
+            IUnitOfWork unitOfWork, 
+            IMapper mapper, 
+            ICacheService cacheService, 
+            GarageDbContext context,
+            ICOGSCalculationService cogsCalculationService,
+            ILogger<ServiceOrdersController> logger)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _cacheService = cacheService;
             _context = context;
+            _cogsCalculationService = cogsCalculationService;
+            _logger = logger;
         }
 
         [HttpGet]
@@ -40,14 +50,17 @@ namespace GarageManagementSystem.API.Controllers
         {
             try
             {
-                var serviceOrders = await _unitOfWork.ServiceOrders.GetAllWithDetailsAsync();
-                var query = serviceOrders.AsQueryable();
+                // ✅ OPTIMIZED: Query ở database level thay vì load tất cả vào memory
+                // Build IQueryable từ DbContext để filter và paginate ở database level
+                var query = _context.ServiceOrders
+                    .Where(so => !so.IsDeleted)
+                    .AsQueryable();
                 
                 // Apply search filter if provided
                 if (!string.IsNullOrEmpty(searchTerm))
                 {
                     query = query.Where(so => 
-                        so.OrderNumber.Contains(searchTerm));
+                        so.OrderNumber != null && so.OrderNumber.Contains(searchTerm));
                 }
                 
                 // Apply status filter if provided
@@ -62,13 +75,24 @@ namespace GarageManagementSystem.API.Controllers
                     query = query.Where(so => so.CustomerId == customerId.Value);
                 }
 
+                // Order by OrderDate descending
                 query = query.OrderByDescending(so => so.OrderDate);
 
-                // Get total count
-                var totalCount = await query.GetTotalCountAsync();
+                // ✅ OPTIMIZED: Get total count ở database level (trước khi paginate)
+                var totalCount = await query.CountAsync();
                 
-                // Apply pagination
-                var orders = query.ApplyPagination(pageNumber, pageSize).ToList();
+                // ✅ OPTIMIZED: Apply pagination ở database level với Skip/Take
+                var orders = await query
+                    .Skip((pageNumber - 1) * pageSize)
+                    .Take(pageSize)
+                    .Include(so => so.Customer)
+                    .Include(so => so.Vehicle)
+                    .Include(so => so.ServiceOrderItems)
+                        .ThenInclude(item => item.Service)
+                    .Include(so => so.ServiceOrderItems)
+                        .ThenInclude(item => item.AssignedTechnician)
+                    .ToListAsync();
+                
                 var orderDtos = new List<ServiceOrderDto>();
                 foreach (var order in orders)
                 {
@@ -80,6 +104,7 @@ namespace GarageManagementSystem.API.Controllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error getting service orders");
                 return StatusCode(500, PagedResponse<ServiceOrderDto>.CreateErrorResult("Lỗi khi lấy danh sách phiếu sửa chữa"));
             }
         }
@@ -499,10 +524,51 @@ namespace GarageManagementSystem.API.Controllers
         {
             try
             {
-                var order = await _unitOfWork.ServiceOrders.GetByIdAsync(id);
+                var order = await _unitOfWork.ServiceOrders.GetByIdWithDetailsAsync(id);
                 if (order == null)
                 {
                     return NotFound(ApiResponse.ErrorResult("Service order not found"));
+                }
+
+                // ✅ HP1: Validate khi hủy Service Order có items đang "InProgress"
+                if (order.ServiceOrderItems != null && order.ServiceOrderItems.Any())
+                {
+                    var inProgressItems = order.ServiceOrderItems
+                        .Where(item => item.Status == "InProgress" || item.Status == "In Progress")
+                        .ToList();
+                    
+                    if (inProgressItems.Count > 0)
+                    {
+                        var itemNames = inProgressItems
+                            .Select(item => item.Service?.Name ?? item.ServiceName ?? $"Hạng mục #{item.Id}")
+                            .ToList();
+                        
+                        var errorMessage = $"Không thể hủy phiếu sửa chữa vì có {inProgressItems.Count} hạng mục đang làm việc: " +
+                            string.Join(", ", itemNames.Take(5)) + 
+                            (itemNames.Count > 5 ? $" và {itemNames.Count - 5} hạng mục khác" : "") +
+                            ". Vui lòng hoàn thành hoặc dừng các hạng mục này trước khi hủy.";
+                        
+                        return BadRequest(ApiResponse.ErrorResult(errorMessage));
+                    }
+                    
+                    // ✅ HP1: Check items có giờ công thực tế (đã bắt đầu làm việc)
+                    var startedItems = order.ServiceOrderItems
+                        .Where(item => item.StartTime.HasValue && item.Status != "Completed" && item.Status != "Cancelled")
+                        .ToList();
+                    
+                    if (startedItems.Count > 0)
+                    {
+                        var itemNames = startedItems
+                            .Select(item => item.Service?.Name ?? item.ServiceName ?? $"Hạng mục #{item.Id}")
+                            .ToList();
+                        
+                        var errorMessage = $"Không thể hủy phiếu sửa chữa vì có {startedItems.Count} hạng mục đã bắt đầu làm việc: " +
+                            string.Join(", ", itemNames.Take(5)) + 
+                            (itemNames.Count > 5 ? $" và {itemNames.Count - 5} hạng mục khác" : "") +
+                            ". Vui lòng hoàn thành hoặc dừng các hạng mục này trước khi hủy.";
+                        
+                        return BadRequest(ApiResponse.ErrorResult(errorMessage));
+                    }
                 }
 
                 await _unitOfWork.ServiceOrders.DeleteAsync(order);
@@ -682,10 +748,19 @@ namespace GarageManagementSystem.API.Controllers
         {
             try
             {
-                var orders = await _unitOfWork.ServiceOrders.GetAllWithDetailsAsync();
-                var filteredOrders = orders.Where(o => o.PaymentStatus == paymentStatus).ToList();
+                // ✅ OPTIMIZED: Query ở database level thay vì load tất cả vào memory
+                var orders = await _context.ServiceOrders
+                    .Where(so => !so.IsDeleted && so.PaymentStatus == paymentStatus)
+                    .Include(so => so.Customer)
+                    .Include(so => so.Vehicle)
+                    .Include(so => so.ServiceOrderItems)
+                        .ThenInclude(item => item.Service)
+                    .Include(so => so.ServiceOrderItems)
+                        .ThenInclude(item => item.AssignedTechnician)
+                    .ToListAsync();
+                
                 var orderDtos = new List<ServiceOrderDto>();
-                foreach (var order in filteredOrders)
+                foreach (var order in orders)
                 {
                     orderDtos.Add(await MapToDtoAsync(order));
                 }
@@ -694,6 +769,7 @@ namespace GarageManagementSystem.API.Controllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error retrieving orders by payment status");
                 return StatusCode(500, ApiResponse<List<ServiceOrderDto>>.ErrorResult("Error retrieving orders by payment status", ex.Message));
             }
         }
@@ -711,10 +787,19 @@ namespace GarageManagementSystem.API.Controllers
                     return BadRequest(ApiResponse<List<ServiceOrderDto>>.ErrorResult("Invalid vehicle type. Must be Personal, Insurance, or Company"));
                 }
 
-                var orders = await _unitOfWork.ServiceOrders.GetAllWithDetailsAsync();
-                var filteredOrders = orders.Where(o => o.Vehicle.VehicleType == vehicleType).ToList();
+                // ✅ OPTIMIZED: Query ở database level thay vì load tất cả vào memory
+                var orders = await _context.ServiceOrders
+                    .Where(so => !so.IsDeleted && so.Vehicle != null && so.Vehicle.VehicleType == vehicleType)
+                    .Include(so => so.Customer)
+                    .Include(so => so.Vehicle)
+                    .Include(so => so.ServiceOrderItems)
+                        .ThenInclude(item => item.Service)
+                    .Include(so => so.ServiceOrderItems)
+                        .ThenInclude(item => item.AssignedTechnician)
+                    .ToListAsync();
+                
                 var orderDtos = new List<ServiceOrderDto>();
-                foreach (var order in filteredOrders)
+                foreach (var order in orders)
                 {
                     orderDtos.Add(await MapToDtoAsync(order));
                 }
@@ -723,6 +808,7 @@ namespace GarageManagementSystem.API.Controllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error retrieving orders by vehicle type");
                 return StatusCode(500, ApiResponse<List<ServiceOrderDto>>.ErrorResult("Error retrieving orders by vehicle type", ex.Message));
             }
         }
@@ -958,12 +1044,58 @@ namespace GarageManagementSystem.API.Controllers
                 var currentStatus = order.Status;
                 var newStatus = statusDto.Status;
 
+                // ✅ HP1: Validate khi chuyển sang "Cancelled" - Check items đang làm việc
+                if (newStatus == "Cancelled")
+                {
+                    if (order.ServiceOrderItems != null && order.ServiceOrderItems.Any())
+                    {
+                        var inProgressItems = order.ServiceOrderItems
+                            .Where(item => item.Status == "InProgress" || item.Status == "In Progress")
+                            .ToList();
+                        
+                        if (inProgressItems.Count > 0)
+                        {
+                            var itemNames = inProgressItems
+                                .Select(item => item.Service?.Name ?? item.ServiceName ?? $"Hạng mục #{item.Id}")
+                                .ToList();
+                            
+                            var errorMessage = $"Không thể hủy phiếu sửa chữa vì có {inProgressItems.Count} hạng mục đang làm việc: " +
+                                string.Join(", ", itemNames.Take(5)) + 
+                                (itemNames.Count > 5 ? $" và {itemNames.Count - 5} hạng mục khác" : "") +
+                                ". Vui lòng hoàn thành hoặc dừng các hạng mục này trước khi hủy.";
+                            
+                            return BadRequest(ApiResponse<ServiceOrderDto>.ErrorResult(errorMessage));
+                        }
+                        
+                        // Check items có giờ công thực tế (đã bắt đầu làm việc)
+                        var startedItems = order.ServiceOrderItems
+                            .Where(item => item.StartTime.HasValue && item.Status != "Completed" && item.Status != "Cancelled")
+                            .ToList();
+                        
+                        if (startedItems.Count > 0)
+                        {
+                            var itemNames = startedItems
+                                .Select(item => item.Service?.Name ?? item.ServiceName ?? $"Hạng mục #{item.Id}")
+                                .ToList();
+                            
+                            var errorMessage = $"Không thể hủy phiếu sửa chữa vì có {startedItems.Count} hạng mục đã bắt đầu làm việc: " +
+                                string.Join(", ", itemNames.Take(5)) + 
+                                (itemNames.Count > 5 ? $" và {itemNames.Count - 5} hạng mục khác" : "") +
+                                ". Vui lòng hoàn thành hoặc dừng các hạng mục này trước khi hủy.";
+                            
+                            return BadRequest(ApiResponse<ServiceOrderDto>.ErrorResult(errorMessage));
+                        }
+                    }
+                }
+
                 // Allowed transitions:
                 // "Pending" -> "PendingAssignment" -> "WaitingForParts" / "ReadyToWork" -> "InProgress" -> "Completed"
                 bool isValidTransition = (currentStatus == "Pending" && newStatus == "PendingAssignment") ||
                                          (currentStatus == "PendingAssignment" && (newStatus == "WaitingForParts" || newStatus == "ReadyToWork")) ||
                                          ((currentStatus == "WaitingForParts" || currentStatus == "ReadyToWork") && newStatus == "InProgress") ||
-                                         (currentStatus == "InProgress" && newStatus == "Completed");
+                                         (currentStatus == "InProgress" && newStatus == "Completed") ||
+                                         // ✅ HP1: Allow cancel from any status except Completed
+                                         (newStatus == "Cancelled" && currentStatus != "Completed");
 
                 if (!isValidTransition && currentStatus != newStatus)
                 {
@@ -1181,11 +1313,18 @@ namespace GarageManagementSystem.API.Controllers
 
                     await _unitOfWork.CommitTransactionAsync();
 
+                    // ✅ HP2: Invalidate workload cache cho cả KTV cũ và mới
+                    if (oldTechnicianId.HasValue)
+                    {
+                        await _cacheService.RemoveByPrefixAsync($"workload_{oldTechnicianId.Value}_");
+                    }
+                    await _cacheService.RemoveByPrefixAsync($"workload_{assignDto.TechnicianId}_");
+
                     // Reload with details
                     order = await _unitOfWork.ServiceOrders.GetByIdWithDetailsAsync(id);
                     var orderDto = await MapToDtoAsync(order!);
 
-                    return Ok(ApiResponse<ServiceOrderDto>.SuccessResult(orderDto, "Đã phân công KTV thành công"));
+                    return Ok(ApiResponse<ServiceOrderDto>.SuccessResult(orderDto, isReassign ? "Đã đổi KTV thành công" : "Đã phân công KTV thành công"));
                 }
                 catch (Exception innerEx)
                 {
@@ -1283,6 +1422,9 @@ namespace GarageManagementSystem.API.Controllers
 
                     await _unitOfWork.CommitTransactionAsync();
 
+                    // ✅ HP2: Invalidate workload cache cho KTV được phân công
+                    await _cacheService.RemoveByPrefixAsync($"workload_{bulkDto.TechnicianId}_");
+
                     // Reload with details
                     order = await _unitOfWork.ServiceOrders.GetByIdWithDetailsAsync(id);
                     var orderDto = await MapToDtoAsync(order!);
@@ -1334,6 +1476,12 @@ namespace GarageManagementSystem.API.Controllers
                     await _unitOfWork.Repository<Core.Entities.ServiceOrderItem>().UpdateAsync(item);
                     await _unitOfWork.SaveChangesAsync();
                     await _unitOfWork.CommitTransactionAsync();
+
+                    // ✅ HP2: Invalidate workload cache cho KTV được phân công (nếu có)
+                    if (item.AssignedTechnicianId.HasValue)
+                    {
+                        await _cacheService.RemoveByPrefixAsync($"workload_{item.AssignedTechnicianId.Value}_");
+                    }
 
                     // Reload with details
                     order = await _unitOfWork.ServiceOrders.GetByIdWithDetailsAsync(id);
@@ -1755,6 +1903,210 @@ namespace GarageManagementSystem.API.Controllers
                 return StatusCode(500, ApiResponse<ServiceOrderProgressDto>.ErrorResult("Lỗi khi lấy tiến độ", ex.Message));
             }
         }
+
+        #region ✅ 3.1: COGS Calculation Endpoints
+
+        /// <summary>
+        /// ✅ 3.1: Tính COGS cho Service Order và lưu vào database
+        /// </summary>
+        [HttpPost("{id}/calculate-cogs")]
+        public async Task<ActionResult<ApiResponse<COGSCalculationDto>>> CalculateCOGS(int id, [FromBody] COGSMethodDto? methodDto = null)
+        {
+            try
+            {
+                var serviceOrder = await _unitOfWork.ServiceOrders.GetByIdAsync(id);
+                if (serviceOrder == null)
+                {
+                    return NotFound(ApiResponse<COGSCalculationDto>.ErrorResult("Không tìm thấy phiếu sửa chữa"));
+                }
+
+                // Lấy phương pháp tính (từ request hoặc từ ServiceOrder)
+                var method = methodDto?.Method ?? serviceOrder.COGSCalculationMethod;
+                if (string.IsNullOrWhiteSpace(method))
+                {
+                    method = "FIFO"; // Default
+                }
+
+                // Tính COGS
+                var cogsResult = await _cogsCalculationService.CalculateCOGSAsync(id, method);
+
+                // Lưu kết quả vào ServiceOrder
+                // ✅ FIX: Null safety cho các properties
+                serviceOrder.TotalCOGS = cogsResult.TotalCOGS;
+                serviceOrder.COGSCalculationMethod = cogsResult.CalculationMethod ?? "FIFO";
+                serviceOrder.COGSCalculationDate = cogsResult.CalculationDate;
+                serviceOrder.COGSBreakdown = cogsResult.BreakdownJson; // Có thể null, OK
+
+                await _unitOfWork.ServiceOrders.UpdateAsync(serviceOrder);
+                await _unitOfWork.SaveChangesAsync();
+
+                // Map sang DTO
+                // ✅ FIX: Null safety cho ItemDetails và từng item
+                var cogsDto = new COGSCalculationDto
+                {
+                    ServiceOrderId = cogsResult.ServiceOrderId,
+                    CalculationMethod = cogsResult.CalculationMethod ?? string.Empty,
+                    TotalCOGS = cogsResult.TotalCOGS,
+                    CalculationDate = cogsResult.CalculationDate,
+                    ItemDetails = (cogsResult.ItemDetails ?? new List<COGSItemDetail>())
+                        .Where(item => item != null)
+                        .Select(item => new COGSItemDetailDto
+                        {
+                            PartId = item.PartId,
+                            PartName = item.PartName ?? string.Empty,
+                            PartNumber = item.PartNumber ?? string.Empty,
+                            QuantityUsed = item.QuantityUsed,
+                            UnitCost = item.UnitCost,
+                            TotalCost = item.TotalCost,
+                            BatchNumber = item.BatchNumber,
+                            BatchReceiveDate = item.BatchReceiveDate,
+                            CalculationMethod = item.CalculationMethod ?? string.Empty
+                        }).ToList()
+                };
+
+                return Ok(ApiResponse<COGSCalculationDto>.SuccessResult(cogsDto, $"Tính COGS thành công: {cogsResult.TotalCOGS:N0} VNĐ"));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<COGSCalculationDto>.ErrorResult("Lỗi khi tính COGS", ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// ✅ 3.1: Lấy chi tiết breakdown COGS cho Service Order
+        /// </summary>
+        [HttpGet("{id}/cogs-details")]
+        public async Task<ActionResult<ApiResponse<COGSBreakdownDto>>> GetCOGSDetails(int id)
+        {
+            try
+            {
+                var serviceOrder = await _unitOfWork.ServiceOrders.GetByIdAsync(id);
+                if (serviceOrder == null)
+                {
+                    return NotFound(ApiResponse<COGSBreakdownDto>.ErrorResult("Không tìm thấy phiếu sửa chữa"));
+                }
+
+                // Lấy breakdown từ service
+                var breakdownResult = await _cogsCalculationService.GetCOGSBreakdownAsync(id);
+
+                // Map sang DTO
+                // ✅ FIX: Null safety cho ItemDetails và từng item
+                var breakdownDto = new COGSBreakdownDto
+                {
+                    ServiceOrderId = breakdownResult.ServiceOrderId,
+                    CalculationMethod = breakdownResult.CalculationMethod ?? string.Empty,
+                    TotalCOGS = breakdownResult.TotalCOGS,
+                    CalculationDate = breakdownResult.CalculationDate,
+                    ItemDetails = (breakdownResult.ItemDetails ?? new List<COGSItemDetail>())
+                        .Where(item => item != null)
+                        .Select(item => new COGSItemDetailDto
+                        {
+                            PartId = item.PartId,
+                            PartName = item.PartName ?? string.Empty,
+                            PartNumber = item.PartNumber ?? string.Empty,
+                            QuantityUsed = item.QuantityUsed,
+                            UnitCost = item.UnitCost,
+                            TotalCost = item.TotalCost,
+                            BatchNumber = item.BatchNumber,
+                            BatchReceiveDate = item.BatchReceiveDate,
+                            CalculationMethod = item.CalculationMethod ?? string.Empty
+                        }).ToList()
+                };
+
+                return Ok(ApiResponse<COGSBreakdownDto>.SuccessResult(breakdownDto));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<COGSBreakdownDto>.ErrorResult("Lỗi khi lấy chi tiết COGS", ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// ✅ 3.1: Thiết lập phương pháp tính COGS cho Service Order
+        /// </summary>
+        [HttpPut("{id}/set-cogs-method")]
+        public async Task<ActionResult<ApiResponse<object>>> SetCOGSMethod(int id, [FromBody] COGSMethodDto methodDto)
+        {
+            try
+            {
+                if (methodDto == null || string.IsNullOrWhiteSpace(methodDto.Method))
+                {
+                    return BadRequest(ApiResponse<object>.ErrorResult("Phương pháp tính COGS không được để trống"));
+                }
+
+                var method = methodDto.Method.ToUpper();
+                if (method != "FIFO" && method != "WEIGHTEDAVERAGE" && method != "WEIGHTED_AVERAGE" && method != "AVERAGE")
+                {
+                    return BadRequest(ApiResponse<object>.ErrorResult("Phương pháp tính COGS không hợp lệ. Chỉ hỗ trợ 'FIFO' hoặc 'WeightedAverage'"));
+                }
+
+                var serviceOrder = await _unitOfWork.ServiceOrders.GetByIdAsync(id);
+                if (serviceOrder == null)
+                {
+                    return NotFound(ApiResponse<object>.ErrorResult("Không tìm thấy phiếu sửa chữa"));
+                }
+
+                // Chuẩn hóa method về FIFO hoặc WeightedAverage
+                var normalizedMethod = method == "FIFO" ? "FIFO" : "WeightedAverage";
+                
+                // ✅ FIX: Nếu đã tính COGS trước đó với method khác, reset để tính lại
+                if (serviceOrder.COGSCalculationDate != null && serviceOrder.COGSCalculationMethod != normalizedMethod)
+                {
+                    serviceOrder.COGSCalculationDate = null;
+                    serviceOrder.COGSBreakdown = null;
+                    serviceOrder.TotalCOGS = 0; // Reset TotalCOGS để đảm bảo tính lại chính xác
+                }
+
+                // Set method
+                serviceOrder.COGSCalculationMethod = normalizedMethod;
+
+                await _unitOfWork.ServiceOrders.UpdateAsync(serviceOrder);
+                await _unitOfWork.SaveChangesAsync();
+
+                return Ok(ApiResponse<object>.SuccessResult(null, $"Đã thiết lập phương pháp tính COGS: {serviceOrder.COGSCalculationMethod}"));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<object>.ErrorResult("Lỗi khi thiết lập phương pháp tính COGS", ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// ✅ 3.1: Tính lợi nhuận gộp cho Service Order
+        /// </summary>
+        [HttpGet("{id}/gross-profit")]
+        public async Task<ActionResult<ApiResponse<GrossProfitDto>>> GetGrossProfit(int id)
+        {
+            try
+            {
+                var serviceOrder = await _unitOfWork.ServiceOrders.GetByIdAsync(id);
+                if (serviceOrder == null)
+                {
+                    return NotFound(ApiResponse<GrossProfitDto>.ErrorResult("Không tìm thấy phiếu sửa chữa"));
+                }
+
+                // Tính lợi nhuận gộp
+                var grossProfitResult = await _cogsCalculationService.CalculateGrossProfitAsync(id);
+
+                // Map sang DTO
+                var grossProfitDto = new GrossProfitDto
+                {
+                    ServiceOrderId = grossProfitResult.ServiceOrderId,
+                    TotalRevenue = grossProfitResult.TotalRevenue,
+                    TotalCOGS = grossProfitResult.TotalCOGS,
+                    GrossProfit = grossProfitResult.GrossProfit,
+                    GrossProfitMargin = grossProfitResult.GrossProfitMargin
+                };
+
+                return Ok(ApiResponse<GrossProfitDto>.SuccessResult(grossProfitDto));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<GrossProfitDto>.ErrorResult("Lỗi khi tính lợi nhuận gộp", ex.Message));
+            }
+        }
+
+        #endregion
     }
 }
 

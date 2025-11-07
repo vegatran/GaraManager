@@ -7,7 +7,9 @@ using GarageManagementSystem.Core.Extensions;
 using GarageManagementSystem.Shared.DTOs;
 using GarageManagementSystem.Shared.Models;
 using GarageManagementSystem.API.Services;
+using GarageManagementSystem.Infrastructure.Data;
 using System.ComponentModel.DataAnnotations;
+using Microsoft.EntityFrameworkCore;
 
 namespace GarageManagementSystem.API.Controllers
 {
@@ -20,13 +22,15 @@ namespace GarageManagementSystem.API.Controllers
         private readonly IMapper _mapper;
         private readonly ILogger<PurchaseOrdersController> _logger;
         private readonly ICacheService _cacheService;
+        private readonly GarageDbContext _context;
 
-        public PurchaseOrdersController(IUnitOfWork unitOfWork, IMapper mapper, ILogger<PurchaseOrdersController> logger, ICacheService cacheService)
+        public PurchaseOrdersController(IUnitOfWork unitOfWork, IMapper mapper, ILogger<PurchaseOrdersController> logger, ICacheService cacheService, GarageDbContext context)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _logger = logger;
             _cacheService = cacheService;
+            _context = context;
         }
 
         [HttpGet]
@@ -38,8 +42,10 @@ namespace GarageManagementSystem.API.Controllers
         {
             try
             {
-                var purchaseOrders = await _unitOfWork.Repository<PurchaseOrder>().GetAllAsync();
-                var query = purchaseOrders.AsQueryable();
+                // ✅ OPTIMIZED: Query ở database level thay vì load tất cả vào memory
+                var query = _context.PurchaseOrders
+                    .Where(o => !o.IsDeleted)
+                    .AsQueryable();
                 
                 if (supplierId.HasValue)
                     query = query.Where(o => o.SupplierId == supplierId.Value);
@@ -49,11 +55,15 @@ namespace GarageManagementSystem.API.Controllers
 
                 query = query.OrderByDescending(o => o.CreatedAt);
 
-                // Get total count
-                var totalCount = await query.GetTotalCountAsync();
+                // ✅ OPTIMIZED: Get total count ở database level (trước khi paginate)
+                var totalCount = await query.CountAsync();
                 
-                // Apply pagination
-                var orders = query.ApplyPagination(pageNumber, pageSize).ToList();
+                // ✅ OPTIMIZED: Apply pagination ở database level với Skip/Take
+                var orders = await query
+                    .Skip((pageNumber - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToListAsync();
+                
                 var purchaseOrderDtos = _mapper.Map<List<PurchaseOrderDto>>(orders);
                 
                 // OPTIMIZED: Load suppliers and items in batch to avoid N+1 queries

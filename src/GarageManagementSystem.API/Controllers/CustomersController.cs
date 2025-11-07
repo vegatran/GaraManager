@@ -3,8 +3,10 @@ using GarageManagementSystem.Core.Interfaces;
 using GarageManagementSystem.Core.Extensions;
 using GarageManagementSystem.Shared.DTOs;
 using GarageManagementSystem.Shared.Models;
+using GarageManagementSystem.Infrastructure.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace GarageManagementSystem.API.Controllers
 {
@@ -15,11 +17,13 @@ namespace GarageManagementSystem.API.Controllers
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
+        private readonly GarageDbContext _context;
 
-        public CustomersController(IUnitOfWork unitOfWork, IMapper mapper)
+        public CustomersController(IUnitOfWork unitOfWork, IMapper mapper, GarageDbContext context)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+            _context = context;
         }
 
         [HttpGet]
@@ -30,23 +34,29 @@ namespace GarageManagementSystem.API.Controllers
         {
             try
             {
-                var customers = await _unitOfWork.Customers.GetAllAsync();
-                var query = customers.AsQueryable();
+                // ✅ OPTIMIZED: Query ở database level thay vì load tất cả vào memory
+                var query = _context.Customers
+                    .Where(c => !c.IsDeleted)
+                    .AsQueryable();
                 
                 // Apply search filter if provided
                 if (!string.IsNullOrEmpty(searchTerm))
                 {
                     query = query.Where(c => 
-                        c.Name.Contains(searchTerm) || 
-                        c.Email.Contains(searchTerm) || 
-                        c.Phone.Contains(searchTerm));
+                        (c.Name != null && c.Name.Contains(searchTerm)) || 
+                        (c.Email != null && c.Email.Contains(searchTerm)) || 
+                        (c.Phone != null && c.Phone.Contains(searchTerm)));
                 }
 
-                // Get total count
-                var totalCount = await query.GetTotalCountAsync();
+                // ✅ OPTIMIZED: Get total count ở database level (trước khi paginate)
+                var totalCount = await query.CountAsync();
                 
-                // Apply pagination
-                var pagedCustomers = query.ApplyPagination(pageNumber, pageSize).ToList();
+                // ✅ OPTIMIZED: Apply pagination ở database level với Skip/Take
+                var pagedCustomers = await query
+                    .Skip((pageNumber - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToListAsync();
+                
                 var customerDtos = pagedCustomers.Select(c => _mapper.Map<CustomerDto>(c)).ToList();
                 
                 return Ok(PagedResponse<CustomerDto>.CreateSuccessResult(

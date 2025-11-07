@@ -66,7 +66,31 @@
 @await Html.PartialAsync("_AssignTechnicianModal")
 @await Html.PartialAsync("_ReportAdditionalIssueModal")
 @await Html.PartialAsync("_CreateQuotationFromIssueModal")
+<!-- ✅ 2.4: QC Modals (cần thiết cho button "Bắt Đầu QC" trong View Order Modal) -->
+@await Html.PartialAsync("../QCManagement/_StartQCModal")
+@await Html.PartialAsync("../QCManagement/_CompleteQCModal")
+@await Html.PartialAsync("../QCManagement/_ViewQCModal")
+@await Html.PartialAsync("../QCManagement/_HandoverModal")
 
 @section Scripts {
     <script src="~/js/order-management.js" asp-append-version="true"></script>
+    <!-- ✅ 2.4: Load QC module để có thể gọi từ Order Management -->
+    <script src="~/js/qc-management.js" asp-append-version="true"></script>
+    <script>
+        // ✅ 2.4: Initialize QC module khi trang load (chỉ bind events, không init table vì không có #qcTable)
+        $(document).ready(function() {
+            if (window.GarageApp && window.GarageApp.QC) {
+                // ✅ FIX: Bind events để đảm bảo các event handlers được đăng ký
+                // Không gọi init() vì init() sẽ gọi initTable() và sẽ fail vì không có #qcTable
+                if (typeof window.GarageApp.QC.bindEvents === 'function') {
+                    window.GarageApp.QC.bindEvents();
+                    console.log('QC module events đã được bind');
+                } else {
+                    console.warn('QC module bindEvents function không tồn tại');
+                }
+            } else {
+                console.error('QC module chưa được load. Vui lòng kiểm tra qc-management.js');
+            }
+        });
+    </script>
 }

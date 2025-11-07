@@ -10,6 +10,7 @@ namespace GarageManagementSystem.API.Services
         Task SetAsync<T>(string key, T value, TimeSpan expiration);
         Task RemoveAsync(string key);
         Task RemoveByPatternAsync(string pattern);
+        Task RemoveByPrefixAsync(string prefix);
         Task<T> GetOrSetAsync<T>(string key, Func<Task<T>> factory, TimeSpan? absoluteExpirationRelativeToNow = null);
         void Remove(string key);
         void RemoveByPrefix(string pattern);
@@ -62,6 +63,39 @@ namespace GarageManagementSystem.API.Services
                     foreach (DictionaryEntry entry in entries)
                     {
                         if (entry.Key.ToString()?.Contains(pattern.Replace("*", "")) == true)
+                        {
+                            keysToRemove.Add(entry.Key);
+                        }
+                    }
+
+                    foreach (var key in keysToRemove)
+                    {
+                        _memoryCache.Remove(key);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// ✅ HP2: Remove all cache entries with the given prefix
+        /// </summary>
+        public async Task RemoveByPrefixAsync(string prefix)
+        {
+            await Task.CompletedTask;
+            var cacheEntries = _memoryCache as MemoryCache;
+            if (cacheEntries != null)
+            {
+                var field = typeof(MemoryCache).GetField("_coherentState", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                var coherentState = field?.GetValue(cacheEntries);
+                var entriesCollection = coherentState?.GetType().GetProperty("EntriesCollection", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                var entries = entriesCollection?.GetValue(coherentState) as IDictionary;
+
+                if (entries != null)
+                {
+                    var keysToRemove = new List<object>();
+                    foreach (DictionaryEntry entry in entries)
+                    {
+                        if (entry.Key.ToString()?.StartsWith(prefix) == true)
                         {
                             keysToRemove.Add(entry.Key);
                         }

@@ -15,12 +15,18 @@ namespace GarageManagementSystem.API.Controllers
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly IWebHostEnvironment _environment;
+        private readonly ILogger<QuotationAttachmentsController> _logger;
 
-        public QuotationAttachmentsController(IUnitOfWork unitOfWork, IMapper mapper, IWebHostEnvironment environment)
+        public QuotationAttachmentsController(
+            IUnitOfWork unitOfWork, 
+            IMapper mapper, 
+            IWebHostEnvironment environment,
+            ILogger<QuotationAttachmentsController> logger)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _environment = environment;
+            _logger = logger;
         }
 
         /// <summary>
@@ -38,6 +44,7 @@ namespace GarageManagementSystem.API.Controllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error retrieving attachments for quotation {QuotationId}", quotationId);
                 return StatusCode(500, new { message = "Internal server error" });
             }
         }
@@ -57,6 +64,7 @@ namespace GarageManagementSystem.API.Controllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error retrieving insurance documents for quotation {QuotationId}", quotationId);
                 return StatusCode(500, new { message = "Internal server error" });
             }
         }
@@ -123,6 +131,7 @@ namespace GarageManagementSystem.API.Controllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error uploading attachment for quotation {QuotationId}", createDto.ServiceQuotationId);
                 return StatusCode(500, new { message = "Internal server error" });
             }
         }
@@ -152,6 +161,7 @@ namespace GarageManagementSystem.API.Controllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error downloading attachment {AttachmentId}", id);
                 return StatusCode(500, new { message = "Internal server error" });
             }
         }
@@ -185,6 +195,7 @@ namespace GarageManagementSystem.API.Controllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error deleting attachment {AttachmentId}", id);
                 return StatusCode(500, new { message = "Internal server error" });
             }
         }

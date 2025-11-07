@@ -14,7 +14,7 @@
         <!-- QUY TRÌNH NGHIỆP VỤ - GIAI ĐOẠN 1 (Multilevel) -->
         <li class="nav-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "CustomerReception" || ViewContext.RouteData.Values["Controller"]?.ToString() == "InspectionManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "QuotationManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "OrderManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "AppointmentManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "MaterialRequestManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "QCManagement" ? "menu-open" : "")">
             <a href="#" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "CustomerReception" || ViewContext.RouteData.Values["Controller"]?.ToString() == "InspectionManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "QuotationManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "OrderManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "AppointmentManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "MaterialRequestManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "QCManagement" ? "active" : "")">
-                <i class="nav-icon fas fa-tasks text-primary"></i>
+                <i class="nav-icon fas fa-project-diagram text-primary"></i>
                 <p>
                     Quy Trình Nghiệp Vụ
                     <i class="right fas fa-angle-left"></i>
@@ -29,7 +29,7 @@
                 <!-- Bước 1: Tiếp nhận & Kiểm tra sơ bộ (CVDV) -->
                 <li class="nav-item">
                     <a href="@Url.Action("Index", "CustomerReception")" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "CustomerReception" ? "active" : "")">
-                        <i class="far fa-circle nav-icon text-primary"></i>
+                        <i class="fas fa-handshake nav-icon text-primary"></i>
                         <p>
                             <span class="badge badge-primary" style="margin-right: 8px;">1</span>
                             Tiếp Đón Khách Hàng
@@ -40,7 +40,7 @@
                 <!-- Bước 2: Chẩn đoán & Lập kế hoạch (KTV) -->
                 <li class="nav-item">
                     <a href="@Url.Action("Index", "InspectionManagement")" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "InspectionManagement" ? "active" : "")">
-                        <i class="far fa-circle nav-icon text-warning"></i>
+                        <i class="fas fa-search nav-icon text-warning"></i>
                         <p>
                             <span class="badge badge-warning" style="margin-right: 8px;">2</span>
                             Kiểm Tra Xe
@@ -51,7 +51,7 @@
                 <!-- Bước 3: Báo giá & Thỏa thuận (CVDV) -->
                 <li class="nav-item">
                     <a href="@Url.Action("Index", "QuotationManagement")" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "QuotationManagement" ? "active" : "")">
-                        <i class="far fa-circle nav-icon text-success"></i>
+                        <i class="fas fa-file-invoice-dollar nav-icon text-success"></i>
                         <p>
                             <span class="badge badge-success" style="margin-right: 8px;">3</span>
                             Báo Giá
@@ -67,7 +67,7 @@
                 <!-- Bước 4: Tạo đơn sửa chữa -->
                 <li class="nav-item">
                     <a href="@Url.Action("Index", "OrderManagement")" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "OrderManagement" ? "active" : "")">
-                        <i class="far fa-circle nav-icon text-danger"></i>
+                        <i class="fas fa-tools nav-icon text-danger"></i>
                         <p>
                             <span class="badge badge-danger" style="font-size: 11px; margin-right: 5px;">4</span>
                             Phiếu Sửa Chữa
@@ -78,7 +78,7 @@
                 <!-- Bước 5: MR - Yêu Cầu Vật Tư -->
                 <li class="nav-item">
                     <a href="@Url.Action("Index", "MaterialRequestManagement")" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "MaterialRequestManagement" ? "active" : "")">
-                        <i class="far fa-circle nav-icon text-purple"></i>
+                        <i class="fas fa-boxes nav-icon text-purple"></i>
                         <p>
                             <span class="badge" style="background-color:#6f42c1; font-size: 11px; margin-right: 5px;">5</span>
                             Yêu Cầu Vật Tư (MR)
@@ -89,7 +89,7 @@
                 <!-- ✅ 2.4: Bước 6: QC - Kiểm Tra Chất Lượng -->
                 <li class="nav-item">
                     <a href="@Url.Action("Index", "QCManagement")" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "QCManagement" ? "active" : "")">
-                        <i class="far fa-circle nav-icon text-teal"></i>
+                        <i class="fas fa-check-circle nav-icon text-teal"></i>
                         <p>
                             <span class="badge" style="background-color:#20c997; font-size: 11px; margin-right: 5px;">6</span>
                             Kiểm Tra QC
@@ -100,7 +100,7 @@
                 <!-- Lịch Hẹn (Có thể ở GĐ1 hoặc riêng) -->
                 <li class="nav-item">
                     <a href="@Url.Action("Index", "AppointmentManagement")" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "AppointmentManagement" ? "active" : "")">
-                        <i class="far fa-circle nav-icon text-info"></i>
+                        <i class="fas fa-calendar-alt nav-icon text-info"></i>
                         <p>Lịch Hẹn</p>
                     </a>
                 </li>
@@ -119,13 +119,13 @@
             <ul class="nav nav-treeview">
                 <li class="nav-item">
                     <a href="@Url.Action("Index", "CustomerManagement")" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "CustomerManagement" ? "active" : "")">
-                        <i class="far fa-circle nav-icon text-info"></i>
+                        <i class="fas fa-user nav-icon text-info"></i>
                         <p>Khách Hàng</p>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a href="@Url.Action("Index", "VehicleManagement")" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "VehicleManagement" ? "active" : "")">
-                        <i class="far fa-circle nav-icon text-secondary"></i>
+                        <i class="fas fa-car nav-icon text-secondary"></i>
                         <p>Xe</p>
                     </a>
                 </li>
@@ -144,31 +144,31 @@
             <ul class="nav nav-treeview">
                 <li class="nav-item">
                     <a href="@Url.Action("Index", "PartsManagement")" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "PartsManagement" ? "active" : "")">
-                        <i class="far fa-circle nav-icon text-warning"></i>
+                        <i class="fas fa-box nav-icon text-warning"></i>
                         <p>Phụ Tùng</p>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a href="@Url.Action("Index", "SupplierManagement")" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "SupplierManagement" ? "active" : "")">
-                        <i class="far fa-circle nav-icon text-info"></i>
+                        <i class="fas fa-truck nav-icon text-info"></i>
                         <p>Nhà Cung Cấp</p>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a href="@Url.Action("Index", "StockManagement")" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "StockManagement" ? "active" : "")">
-                        <i class="far fa-circle nav-icon text-secondary"></i>
+                        <i class="fas fa-exchange-alt nav-icon text-secondary"></i>
                         <p>Nhập Xuất Kho</p>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a href="@Url.Action("Index", "PurchaseOrder")" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "PurchaseOrder" ? "active" : "")">
-                        <i class="far fa-circle nav-icon text-success"></i>
+                        <i class="fas fa-shopping-cart nav-icon text-success"></i>
                         <p>Phiếu Nhập Hàng</p>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a href="@Url.Action("Index", "InventoryAlerts")" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "InventoryAlerts" ? "active" : "")">
-                        <i class="far fa-circle nav-icon text-danger"></i>
+                        <i class="fas fa-exclamation-triangle nav-icon text-danger"></i>
                         <p>Cảnh Báo Tồn Kho</p>
                     </a>
                 </li>
@@ -187,19 +187,19 @@
             <ul class="nav nav-treeview">
                 <li class="nav-item">
                     <a href="@Url.Action("Index", "FinancialTransactionManagement")" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "FinancialTransactionManagement" ? "active" : "")">
-                        <i class="far fa-circle nav-icon text-primary"></i>
+                        <i class="fas fa-receipt nav-icon text-primary"></i>
                         <p>Phiếu Thu/Chi</p>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a href="@Url.Action("Index", "PaymentManagement")" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "PaymentManagement" ? "active" : "")">
-                        <i class="far fa-circle nav-icon text-success"></i>
+                        <i class="fas fa-credit-card nav-icon text-success"></i>
                         <p>Thanh Toán</p>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a href="@Url.Action("Index", "InsuranceInvoice")" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "InsuranceInvoice" ? "active" : "")">
-                        <i class="far fa-circle nav-icon text-info"></i>
+                        <i class="fas fa-file-medical nav-icon text-info"></i>
                         <p>Hóa Đơn Bảo Hiểm</p>
                     </a>
                 </li>
@@ -226,13 +226,13 @@
             <ul class="nav nav-treeview">
                 <li class="nav-item">
                     <a href="@Url.Action("Index", "ServiceManagement")" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "ServiceManagement" ? "active" : "")">
-                        <i class="far fa-circle nav-icon text-danger"></i>
+                        <i class="fas fa-cogs nav-icon text-danger"></i>
                         <p>Dịch Vụ</p>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a href="@Url.Action("Index", "PrintTemplateManagement")" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "PrintTemplateManagement" ? "active" : "")">
-                        <i class="far fa-circle nav-icon text-dark"></i>
+                        <i class="fas fa-file-alt nav-icon text-dark"></i>
                         <p>Mẫu In</p>
                     </a>
                 </li>
@@ -251,25 +251,25 @@
             <ul class="nav nav-treeview">
                 <li class="nav-item">
                     <a href="#" class="nav-link">
-                        <i class="far fa-circle nav-icon"></i>
+                        <i class="fas fa-chart-line nav-icon text-success"></i>
                         <p>Doanh Thu</p>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a href="#" class="nav-link">
-                        <i class="far fa-circle nav-icon"></i>
+                        <i class="fas fa-briefcase nav-icon text-info"></i>
                         <p>Dịch Vụ</p>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a href="#" class="nav-link">
-                        <i class="far fa-circle nav-icon"></i>
+                        <i class="fas fa-cubes nav-icon text-warning"></i>
                         <p>Tồn Kho</p>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a href="#" class="nav-link">
-                        <i class="far fa-circle nav-icon"></i>
+                        <i class="fas fa-users nav-icon text-primary"></i>
                         <p>Khách Hàng</p>
                     </a>
                 </li>
@@ -288,19 +288,19 @@
             <ul class="nav nav-treeview">
                 <li class="nav-item">
                     <a href="@Url.Action("Index", "Setup")" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Setup" ? "active" : "")">
-                        <i class="far fa-circle nav-icon"></i>
+                        <i class="fas fa-database nav-icon text-info"></i>
                         <p>Setup Dữ Liệu</p>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a href="@Url.Action("Profile", "Home")" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Home" && ViewContext.RouteData.Values["Action"]?.ToString() == "Profile" ? "active" : "")">
-                        <i class="far fa-circle nav-icon"></i>
+                        <i class="fas fa-user-circle nav-icon text-primary"></i>
                         <p>Hồ Sơ</p>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a href="@Url.Action("TestApi", "Home")" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Home" && ViewContext.RouteData.Values["Action"]?.ToString() == "TestApi" ? "active" : "")">
-                        <i class="far fa-circle nav-icon"></i>
+                        <i class="fas fa-plug nav-icon text-warning"></i>
                         <p>Kiểm Tra API</p>
                     </a>
                 </li>

@@ -4,8 +4,10 @@ using GarageManagementSystem.Core.Extensions;
 using GarageManagementSystem.Shared.DTOs;
 using GarageManagementSystem.Shared.Models;
 using GarageManagementSystem.API.Services;
+using GarageManagementSystem.Infrastructure.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace GarageManagementSystem.API.Controllers
 {
@@ -17,12 +19,14 @@ namespace GarageManagementSystem.API.Controllers
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly ICacheService _cacheService;
+        private readonly GarageDbContext _context;
 
-        public PartsController(IUnitOfWork unitOfWork, IMapper mapper, ICacheService cacheService)
+        public PartsController(IUnitOfWork unitOfWork, IMapper mapper, ICacheService cacheService, GarageDbContext context)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _cacheService = cacheService;
+            _context = context;
         }
 
         [HttpGet]
@@ -34,16 +38,18 @@ namespace GarageManagementSystem.API.Controllers
         {
             try
             {
-                var parts = await _unitOfWork.Parts.GetAllAsync();
-                var query = parts.AsQueryable();
+                // ✅ OPTIMIZED: Query ở database level thay vì load tất cả vào memory
+                var query = _context.Parts
+                    .Where(p => !p.IsDeleted)
+                    .AsQueryable();
                 
                 // Apply search filter if provided
                 if (!string.IsNullOrEmpty(searchTerm))
                 {
                     query = query.Where(p => 
-                        p.PartName.Contains(searchTerm) || 
-                        p.PartNumber.Contains(searchTerm) || 
-                        p.Description.Contains(searchTerm));
+                        (p.PartName != null && p.PartName.Contains(searchTerm)) || 
+                        (p.PartNumber != null && p.PartNumber.Contains(searchTerm)) || 
+                        (p.Description != null && p.Description.Contains(searchTerm)));
                 }
                 
                 // Apply category filter if provided
@@ -52,11 +58,15 @@ namespace GarageManagementSystem.API.Controllers
                     query = query.Where(p => p.Category == category);
                 }
 
-                // Get total count
-                var totalCount = await query.GetTotalCountAsync();
+                // ✅ OPTIMIZED: Get total count ở database level (trước khi paginate)
+                var totalCount = await query.CountAsync();
                 
-                // Apply pagination
-                var pagedParts = query.ApplyPagination(pageNumber, pageSize).ToList();
+                // ✅ OPTIMIZED: Apply pagination ở database level với Skip/Take
+                var pagedParts = await query
+                    .Skip((pageNumber - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToListAsync();
+                
                 var partDtos = pagedParts.Select(MapToDto).ToList();
                 
                 return Ok(PagedResponse<PartDto>.CreateSuccessResult(
