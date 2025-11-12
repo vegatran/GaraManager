@@ -42,6 +42,7 @@ namespace GarageManagementSystem.Core.Entities
         public virtual ServiceOrder ServiceOrder { get; set; } = null!;
         public virtual Part Part { get; set; } = null!;
         public virtual ServiceOrderItem? ServiceOrderItem { get; set; }
+        public virtual ICollection<WarrantyItem> WarrantyItems { get; set; } = new List<WarrantyItem>();
     }
 }
 

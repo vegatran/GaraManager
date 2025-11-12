@@ -734,5 +734,56 @@ namespace GarageManagementSystem.Web.Services
                 };
             }
         }
+
+        public async Task<ApiResponse<byte[]>> GetByteArrayAsync(string endpoint)
+        {
+            try
+            {
+                await SetAuthorizationHeaderAsync();
+                var response = await _httpClient.GetAsync(endpoint);
+                var contentBytes = await response.Content.ReadAsByteArrayAsync();
+
+                if (response.IsSuccessStatusCode)
+                {
+                    return new ApiResponse<byte[]>
+                    {
+                        Success = true,
+                        Data = contentBytes,
+                        StatusCode = response.StatusCode,
+                        Message = response.Content.Headers.ContentDisposition?.FileName
+                    };
+                }
+                else
+                {
+                    if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                    {
+                        _httpContextAccessor.HttpContext.Response.StatusCode = 401;
+                        return new ApiResponse<byte[]>
+                        {
+                            Success = false,
+                            ErrorMessage = "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
+                            StatusCode = response.StatusCode,
+                            RequiresLogin = true
+                        };
+                    }
+
+                    return new ApiResponse<byte[]>
+                    {
+                        Success = false,
+                        ErrorMessage = $"API Error: {response.StatusCode}",
+                        StatusCode = response.StatusCode
+                    };
+                }
+            }
+            catch (Exception ex)
+            {
+                return new ApiResponse<byte[]>
+                {
+                    Success = false,
+                    ErrorMessage = ex.Message,
+                    StatusCode = System.Net.HttpStatusCode.InternalServerError
+                };
+            }
+        }
     }
 }

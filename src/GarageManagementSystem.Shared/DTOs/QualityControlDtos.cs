@@ -108,5 +108,97 @@ namespace GarageManagementSystem.Shared.DTOs
         [StringLength(500)]
         public string? Notes { get; set; }
     }
+
+    /// <summary>
+    /// ✅ OPTIMIZED: DTO cho QC Checklist Template
+    /// </summary>
+    public class QCChecklistTemplateDto : BaseDto
+    {
+        public string TemplateName { get; set; } = string.Empty;
+        public string? Description { get; set; }
+        public bool IsDefault { get; set; }
+        public string? VehicleType { get; set; }
+        public string? ServiceType { get; set; }
+        public bool IsActive { get; set; }
+        public List<QCChecklistTemplateItemDto> TemplateItems { get; set; } = new();
+    }
+
+    /// <summary>
+    /// ✅ OPTIMIZED: DTO cho QC Checklist Template Item
+    /// </summary>
+    public class QCChecklistTemplateItemDto : BaseDto
+    {
+        public int TemplateId { get; set; }
+        public string ChecklistItemName { get; set; } = string.Empty;
+        public int DisplayOrder { get; set; }
+        public bool IsRequired { get; set; }
+    }
+
+    /// <summary>
+    /// ✅ OPTIMIZED: DTO để tạo QC Checklist Template
+    /// </summary>
+    public class CreateQCChecklistTemplateDto
+    {
+        [Required(ErrorMessage = "Tên template là bắt buộc")]
+        [StringLength(200)]
+        public string TemplateName { get; set; } = string.Empty;
+        
+        [StringLength(500)]
+        public string? Description { get; set; }
+        
+        public bool IsDefault { get; set; }
+        
+        [StringLength(50)]
+        public string? VehicleType { get; set; }
+        
+        [StringLength(50)]
+        public string? ServiceType { get; set; }
+        
+        public bool IsActive { get; set; } = true;
+        
+        public List<CreateQCChecklistTemplateItemDto> TemplateItems { get; set; } = new();
+    }
+
+    /// <summary>
+    /// ✅ OPTIMIZED: DTO để tạo QC Checklist Template Item
+    /// </summary>
+    public class CreateQCChecklistTemplateItemDto
+    {
+        [Required(ErrorMessage = "Tên hạng mục là bắt buộc")]
+        [StringLength(200)]
+        public string ChecklistItemName { get; set; } = string.Empty;
+        
+        public int DisplayOrder { get; set; }
+        
+        public bool IsRequired { get; set; } = false;
+    }
+
+    /// <summary>
+    /// ✅ OPTIMIZED: DTO để cập nhật QC Checklist Template
+    /// </summary>
+    public class UpdateQCChecklistTemplateDto
+    {
+        [Required(ErrorMessage = "ID template là bắt buộc")]
+        public int Id { get; set; }
+        
+        [Required(ErrorMessage = "Tên template là bắt buộc")]
+        [StringLength(200)]
+        public string TemplateName { get; set; } = string.Empty;
+        
+        [StringLength(500)]
+        public string? Description { get; set; }
+        
+        public bool IsDefault { get; set; }
+        
+        [StringLength(50)]
+        public string? VehicleType { get; set; }
+        
+        [StringLength(50)]
+        public string? ServiceType { get; set; }
+        
+        public bool IsActive { get; set; }
+        
+        public List<CreateQCChecklistTemplateItemDto> TemplateItems { get; set; } = new();
+    }
 }
 

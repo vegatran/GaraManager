@@ -20,6 +20,7 @@ namespace GarageManagementSystem.Infrastructure.Repositories
         public async Task<IEnumerable<Part>> GetByCategoryAsync(string category)
         {
             return await _dbSet
+                .Include(p => p.PartUnits.Where(u => !u.IsDeleted))
                 .Where(p => !p.IsDeleted && p.Category == category)
                 .OrderBy(p => p.PartName)
                 .ToListAsync();
@@ -28,6 +29,7 @@ namespace GarageManagementSystem.Infrastructure.Repositories
         public async Task<IEnumerable<Part>> GetLowStockPartsAsync()
         {
             return await _dbSet
+                .Include(p => p.PartUnits.Where(u => !u.IsDeleted))
                 .Where(p => !p.IsDeleted && p.IsActive && p.QuantityInStock <= p.MinimumStock)
                 .OrderBy(p => p.QuantityInStock)
                 .ToListAsync();
@@ -36,6 +38,7 @@ namespace GarageManagementSystem.Infrastructure.Repositories
         public async Task<IEnumerable<Part>> SearchPartsAsync(string searchTerm)
         {
             return await _dbSet
+                .Include(p => p.PartUnits.Where(u => !u.IsDeleted))
                 .Where(p => !p.IsDeleted && 
                     (p.PartNumber.Contains(searchTerm) ||
                      p.PartName.Contains(searchTerm) ||
@@ -69,8 +72,16 @@ namespace GarageManagementSystem.Infrastructure.Repositories
         public async Task<IEnumerable<Part>> GetByIdsAsync(List<int> ids)
         {
             return await _dbSet
+                .Include(p => p.PartUnits.Where(u => !u.IsDeleted))
                 .Where(p => !p.IsDeleted && ids.Contains(p.Id))
                 .ToListAsync();
+        }
+
+        public async Task<Part?> GetWithDetailsAsync(int id)
+        {
+            return await _dbSet
+                .Include(p => p.PartUnits.Where(u => !u.IsDeleted))
+                .FirstOrDefaultAsync(p => !p.IsDeleted && p.Id == id);
         }
     }
 }

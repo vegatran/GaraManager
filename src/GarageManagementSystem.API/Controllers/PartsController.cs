@@ -1,4 +1,8 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using AutoMapper;
+using GarageManagementSystem.Core.Entities;
 using GarageManagementSystem.Core.Interfaces;
 using GarageManagementSystem.Core.Extensions;
 using GarageManagementSystem.Shared.DTOs;
@@ -40,6 +44,7 @@ namespace GarageManagementSystem.API.Controllers
             {
                 // ✅ OPTIMIZED: Query ở database level thay vì load tất cả vào memory
                 var query = _context.Parts
+                    .Include(p => p.PartUnits.Where(u => !u.IsDeleted))
                     .Where(p => !p.IsDeleted)
                     .AsQueryable();
                 
@@ -83,7 +88,7 @@ namespace GarageManagementSystem.API.Controllers
         {
             try
             {
-                var part = await _unitOfWork.Parts.GetByIdAsync(id);
+                var part = await _unitOfWork.Parts.GetWithDetailsAsync(id);
                 if (part == null) return NotFound(ApiResponse<PartDto>.ErrorResult("Part not found"));
                 return Ok(ApiResponse<PartDto>.SuccessResult(MapToDto(part)));
             }
@@ -145,6 +150,9 @@ namespace GarageManagementSystem.API.Controllers
 
                 var part = _mapper.Map<Core.Entities.Part>(dto);
 
+                ApplyPartUnits(part, dto.Units);
+                EnsureDefaultUnit(part, dto.DefaultUnit, dto.Units);
+
                 // Bắt đầu transaction để đảm bảo tính toàn vẹn dữ liệu
                 await _unitOfWork.BeginTransactionAsync();
 
@@ -176,11 +184,14 @@ namespace GarageManagementSystem.API.Controllers
             try
             {
                 if (id != dto.Id) return BadRequest(ApiResponse<PartDto>.ErrorResult("ID mismatch"));
-                var part = await _unitOfWork.Parts.GetByIdAsync(id);
+                var part = await _unitOfWork.Parts.GetWithDetailsAsync(id);
                 if (part == null) return NotFound(ApiResponse<PartDto>.ErrorResult("Part not found"));
 
                 // ✅ SỬA: Dùng AutoMapper thay vì map tay
                 _mapper.Map(dto, part);
+
+                ApplyPartUnits(part, dto.Units);
+                EnsureDefaultUnit(part, dto.DefaultUnit, dto.Units);
 
                 // Bắt đầu transaction để đảm bảo tính toàn vẹn dữ liệu
                 await _unitOfWork.BeginTransactionAsync();
@@ -227,6 +238,125 @@ namespace GarageManagementSystem.API.Controllers
         private PartDto MapToDto(Core.Entities.Part part)
         {
             return _mapper.Map<PartDto>(part);
+        }
+
+        private void ApplyPartUnits(Core.Entities.Part part, IEnumerable<PartUnitRequestDto>? unitDtos)
+        {
+            var dtoList = unitDtos?.Where(u => !string.IsNullOrWhiteSpace(u.UnitName)).ToList() ?? new List<PartUnitRequestDto>();
+            if (part.PartUnits == null)
+            {
+                part.PartUnits = new List<PartUnit>();
+            }
+
+            var existingUnits = part.PartUnits.ToList();
+
+            foreach (var unit in existingUnits)
+            {
+                var keep = dtoList.Any(dto =>
+                    (dto.Id.HasValue && dto.Id.Value == unit.Id) ||
+                    (!dto.Id.HasValue && dto.UnitName.Equals(unit.UnitName, StringComparison.OrdinalIgnoreCase)));
+
+                if (!keep)
+                {
+                    part.PartUnits.Remove(unit);
+                }
+            }
+
+            foreach (var dto in dtoList)
+            {
+                PartUnit? unitEntity = null;
+
+                if (dto.Id.HasValue)
+                {
+                    unitEntity = part.PartUnits.FirstOrDefault(u => u.Id == dto.Id.Value);
+                }
+
+                if (unitEntity == null)
+                {
+                    unitEntity = new PartUnit
+                    {
+                        Part = part
+                    };
+                    part.PartUnits.Add(unitEntity);
+                }
+
+                unitEntity.UnitName = dto.UnitName.Trim();
+                unitEntity.ConversionRate = dto.ConversionRate;
+                unitEntity.Barcode = dto.Barcode;
+                unitEntity.Notes = dto.Notes;
+                unitEntity.IsDefault = dto.IsDefault;
+            }
+
+            // Ensure only one default unit
+            var defaultDto = dtoList.FirstOrDefault(u => u.IsDefault);
+            if (defaultDto != null)
+            {
+                foreach (var unit in part.PartUnits)
+                {
+                    unit.IsDefault = unit.UnitName.Equals(defaultDto.UnitName, StringComparison.OrdinalIgnoreCase) &&
+                                     (!defaultDto.Id.HasValue || unit.Id == defaultDto.Id.Value);
+                }
+            }
+        }
+
+        private void EnsureDefaultUnit(Core.Entities.Part part, string? defaultUnit, IEnumerable<PartUnitRequestDto>? unitDtos)
+        {
+            var dtoList = unitDtos?.ToList() ?? new List<PartUnitRequestDto>();
+
+            if (!string.IsNullOrWhiteSpace(defaultUnit))
+            {
+                part.DefaultUnit = defaultUnit.Trim();
+            }
+            else
+            {
+                var defaultDto = dtoList.FirstOrDefault(u => u.IsDefault);
+                if (defaultDto != null)
+                {
+                    part.DefaultUnit = defaultDto.UnitName.Trim();
+                }
+            }
+
+            if (part.PartUnits == null || !part.PartUnits.Any())
+            {
+                if (!string.IsNullOrWhiteSpace(part.DefaultUnit))
+                {
+                    part.PartUnits = new List<PartUnit>
+                    {
+                        new PartUnit
+                        {
+                            UnitName = part.DefaultUnit!,
+                            ConversionRate = 1,
+                            IsDefault = true,
+                            Part = part
+                        }
+                    };
+                }
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(part.DefaultUnit))
+            {
+                var defaultUnitEntity = part.PartUnits.FirstOrDefault(u => u.IsDefault) ?? part.PartUnits.First();
+                defaultUnitEntity.IsDefault = true;
+                part.DefaultUnit = defaultUnitEntity.UnitName;
+            }
+            else
+            {
+                foreach (var unit in part.PartUnits)
+                {
+                    unit.IsDefault = unit.UnitName.Equals(part.DefaultUnit, StringComparison.OrdinalIgnoreCase);
+                }
+
+                if (!part.PartUnits.Any(u => u.IsDefault))
+                {
+                    var match = part.PartUnits.FirstOrDefault();
+                    if (match != null)
+                    {
+                        match.IsDefault = true;
+                        part.DefaultUnit = match.UnitName;
+                    }
+                }
+            }
         }
     }
 }

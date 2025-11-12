@@ -1,0 +1,141 @@
+@{
+    ViewData["Title"] = "Báo Cáo COGS";
+}
+
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1 class="m-0">Báo Cáo Giá Vốn (COGS)</h1>
+            </div>
+            <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-right">
+                    <li class="breadcrumb-item"><a href="@Url.Action("Index", "Home")">Trang chủ</a></li>
+                    <li class="breadcrumb-item"><a href="@Url.Action("Index", "OrderManagement")">Phiếu Sửa Chữa</a></li>
+                    <li class="breadcrumb-item active">Báo Cáo COGS</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+
+<section class="content">
+    <div class="container-fluid">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-filter mr-2"></i>Bộ lọc</h3>
+            </div>
+            <div class="card-body">
+                <div class="form-row align-items-end">
+                    <div class="form-group col-md-3">
+                        <label for="cogsStartDate">Từ ngày</label>
+                        <input type="date" id="cogsStartDate" class="form-control" />
+                    </div>
+                    <div class="form-group col-md-3">
+                        <label for="cogsEndDate">Đến ngày</label>
+                        <input type="date" id="cogsEndDate" class="form-control" />
+                    </div>
+                    <div class="form-group col-md-3">
+                        <label for="cogsMethod">Phương pháp</label>
+                        <select id="cogsMethod" class="form-control">
+                            <option value="">Tất cả</option>
+                            <option value="FIFO">FIFO</option>
+                            <option value="WeightedAverage">Bình quân gia quyền</option>
+                        </select>
+                    </div>
+                    <div class="form-group col-md-3 text-right">
+                        <button type="button" class="btn btn-primary" id="btnFilterCogs">
+                            <i class="fas fa-search mr-1"></i>Lọc dữ liệu
+                        </button>
+                        <button type="button" class="btn btn-success ml-2" id="btnExportCogs">
+                            <i class="fas fa-file-export mr-1"></i>Xuất CSV
+                        </button>
+                        <button type="button" class="btn btn-outline-success ml-2" id="btnExportCogsExcel">
+                            <i class="fas fa-file-excel mr-1"></i>Xuất Excel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-3">
+                <div class="small-box bg-info">
+                    <div class="inner">
+                        <h3 id="summaryTotalRevenue">0</h3>
+                        <p>Tổng doanh thu</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-donate"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="small-box bg-danger">
+                    <div class="inner">
+                        <h3 id="summaryTotalCogs">0</h3>
+                        <p>Tổng giá vốn</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-warehouse"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="small-box bg-success">
+                    <div class="inner">
+                        <h3 id="summaryGrossProfit">0</h3>
+                        <p>Lợi nhuận gộp</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="small-box bg-warning">
+                    <div class="inner">
+                        <h3 id="summaryGrossMargin">0%</h3>
+                        <p>Tỷ lệ lợi nhuận gộp</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-percentage"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-list-ul mr-2"></i>Chi tiết Phiếu sửa chữa</h3>
+            </div>
+            <div class="card-body table-responsive">
+                <table class="table table-bordered table-striped" id="cogsReportTable" width="100%">
+                    <thead class="thead-light">
+                        <tr>
+                            <th>Số phiếu</th>
+                            <th>Khách hàng</th>
+                            <th>Ngày hoàn tất</th>
+                            <th>Doanh thu</th>
+                            <th>Giá vốn</th>
+                            <th>Lợi nhuận</th>
+                            <th>Tỷ lệ (%)</th>
+                            <th>Phương pháp</th>
+                            <th>Ngày tính COGS</th>
+                        </tr>
+                    </thead>
+                    <tbody id="cogsReportTableBody">
+                        <tr>
+                            <td colspan="9" class="text-center text-muted py-3">Chưa có dữ liệu</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script src="~/js/cogs-report.js" asp-append-version="true"></script>
+}
+

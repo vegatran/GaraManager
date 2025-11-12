@@ -1,3 +1,4 @@
+using System.Linq;
 using AutoMapper;
 using GarageManagementSystem.Core.Entities;
 using GarageManagementSystem.Shared.DTOs;
@@ -9,7 +10,10 @@ namespace GarageManagementSystem.API.Profiles
         public PartProfile()
         {
             // Part Entity to DTO mappings
-            CreateMap<Part, PartDto>();
+            CreateMap<PartUnit, PartUnitDto>();
+
+            CreateMap<Part, PartDto>()
+                .ForMember(dest => dest.Units, opt => opt.MapFrom(src => src.PartUnits.Where(u => !u.IsDeleted)));
 
             // Create DTO to Part Entity
             CreateMap<CreatePartDto, Part>()
@@ -21,10 +25,9 @@ namespace GarageManagementSystem.API.Profiles
                 .ForMember(dest => dest.IsDeleted, opt => opt.Ignore())
                 .ForMember(dest => dest.StockTransactions, opt => opt.Ignore())
                 .ForMember(dest => dest.ServiceOrderParts, opt => opt.Ignore())
-                .ForMember(dest => dest.ServiceOrderParts, opt => opt.Ignore())
                 .ForMember(dest => dest.QuotationItems, opt => opt.Ignore())
-                .ForMember(dest => dest.StockTransactions, opt => opt.Ignore())
-                .ForMember(dest => dest.PartGroup, opt => opt.Ignore());
+                .ForMember(dest => dest.PartGroup, opt => opt.Ignore())
+                .ForMember(dest => dest.PartUnits, opt => opt.Ignore());
 
             // Update DTO to Part Entity
             CreateMap<UpdatePartDto, Part>()
@@ -35,10 +38,9 @@ namespace GarageManagementSystem.API.Profiles
                 .ForMember(dest => dest.IsDeleted, opt => opt.Ignore())
                 .ForMember(dest => dest.StockTransactions, opt => opt.Ignore())
                 .ForMember(dest => dest.ServiceOrderParts, opt => opt.Ignore())
-                .ForMember(dest => dest.ServiceOrderParts, opt => opt.Ignore())
                 .ForMember(dest => dest.QuotationItems, opt => opt.Ignore())
-                .ForMember(dest => dest.StockTransactions, opt => opt.Ignore())
-                .ForMember(dest => dest.PartGroup, opt => opt.Ignore());
+                .ForMember(dest => dest.PartGroup, opt => opt.Ignore())
+                .ForMember(dest => dest.PartUnits, opt => opt.Ignore());
         }
     }
 }

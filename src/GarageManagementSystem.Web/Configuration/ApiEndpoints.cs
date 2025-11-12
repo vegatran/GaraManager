@@ -90,6 +90,56 @@ namespace GarageManagementSystem.Web.Configuration
             public const string CompleteItem = "serviceorders/{0}/items/{1}/complete";
             // ✅ 2.3.4: Lấy tiến độ Service Order
             public const string GetProgress = "serviceorders/{0}/progress";
+            // ✅ 3.1: Quyết toán COGS
+            public const string CalculateCogs = "serviceorders/{0}/calculate-cogs";
+            public const string GetCogsDetails = "serviceorders/{0}/cogs-details";
+            public const string SetCogsMethod = "serviceorders/{0}/set-cogs-method";
+            public const string GetGrossProfit = "serviceorders/{0}/gross-profit";
+            public const string GetFees = "serviceorders/{0}/fees";
+            public const string UpdateFees = "serviceorders/{0}/fees";
+            public const string GetCogsReport = "serviceorders/cogs-report";
+            public const string ExportCogsReport = "serviceorders/cogs-report/export";
+            public const string ExportCogsReportExcel = "serviceorders/cogs-report/export-excel";
+        }
+
+        /// <summary>
+        /// Customer feedback endpoints
+        /// </summary>
+        public static class CustomerFeedbacks
+        {
+            public const string GetAll = "customerfeedbacks";
+            public const string GetById = "customerfeedbacks/{0}";
+            public const string Create = "customerfeedbacks";
+            public const string Update = "customerfeedbacks/{0}";
+            public const string Delete = "customerfeedbacks/{0}";
+        }
+
+        public static class Warehouses
+        {
+            public const string GetAll = "warehouses";
+            public const string GetById = "warehouses/{0}";
+            public const string Create = "warehouses";
+            public const string Update = "warehouses/{0}";
+            public const string Delete = "warehouses/{0}";
+            public const string CreateZone = "warehouses/{0}/zones";
+            public const string UpdateZone = "warehouses/{0}/zones/{1}";
+            public const string DeleteZone = "warehouses/{0}/zones/{1}";
+            public const string CreateBin = "warehouses/{0}/bins";
+            public const string UpdateBin = "warehouses/{0}/bins/{1}";
+            public const string DeleteBin = "warehouses/{0}/bins/{1}";
+        }
+
+        /// <summary>
+        /// Warranty management endpoints
+        /// </summary>
+        public static class Warranties
+        {
+            public const string Search = "warranties";
+            public const string GenerateForServiceOrder = "warranties/service-orders/{0}/generate";
+            public const string GetByServiceOrder = "warranties/service-order/{0}";
+            public const string GetByCode = "warranties/{0}";
+            public const string CreateClaim = "warranties/{0}/claims";
+            public const string UpdateClaim = "warranties/claims/{0}";
         }
 
         /// <summary>
@@ -320,6 +370,9 @@ namespace GarageManagementSystem.Web.Configuration
             
             // ✅ 2.4.4: Bàn giao xe
             public const string Handover = "qualitycontrol/service-orders/{0}/handover";
+            
+            // ✅ OPTIMIZED: QC Template endpoints
+            public const string GetQCTemplate = "qualitycontrol/templates"; // GET với query params: ?vehicleType=...&serviceType=...
         }
 
         /// <summary>

@@ -60,6 +60,20 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group mb-3">
+                                    <label class="font-weight-bold text-muted small">SKU:</label>
+                                    <p id="viewSku" class="form-control-plaintext mb-0"></p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label class="font-weight-bold text-muted small">Mã Vạch / QR:</label>
+                                    <p id="viewBarcode" class="form-control-plaintext mb-0"></p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
                                     <label class="font-weight-bold text-muted small">Danh Mục:</label>
                                     <p id="viewCategory" class="form-control-plaintext mb-0"></p>
                                 </div>
@@ -100,8 +114,16 @@
                             </div>
                             <div class="col-md-4">
                                 <div class="form-group mb-3">
+                                    <label class="font-weight-bold text-muted small">Mức Tồn Bổ Sung:</label>
+                                    <p id="viewReorderLevel" class="form-control-plaintext mb-0"></p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-group mb-3">
                                     <label class="font-weight-bold text-muted small">Đơn Vị:</label>
-                                    <p id="viewUnit" class="form-control-plaintext mb-0"></p>
+                                    <p id="viewDefaultUnit" class="form-control-plaintext mb-0"></p>
                                 </div>
                             </div>
                         </div>
@@ -118,6 +140,25 @@
                                     <p id="viewIsActive" class="form-control-plaintext mb-0"></p>
                                 </div>
                             </div>
+                        </div>
+                        <hr>
+                        <h6 class="text-primary"><i class="fas fa-random"></i> Đơn vị quy đổi</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-striped mb-0" id="viewUnitsTable">
+                                <thead class="thead-light">
+                                    <tr>
+                                        <th>Đơn vị</th>
+                                        <th>Hệ số</th>
+                                        <th>Mã vạch</th>
+                                        <th>Mặc định</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="text-muted">
+                                        <td colspan="4" class="text-center">Chưa khai báo đơn vị quy đổi.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
 

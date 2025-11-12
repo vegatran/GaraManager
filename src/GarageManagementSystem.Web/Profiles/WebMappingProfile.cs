@@ -1,6 +1,7 @@
 using AutoMapper;
 using GarageManagementSystem.Shared.DTOs;
 using GarageManagementSystem.Web.Models;
+using System.Collections.Generic;
 
 namespace GarageManagementSystem.Web.Profiles
 {
@@ -103,7 +104,7 @@ namespace GarageManagementSystem.Web.Profiles
                        .ForMember(dest => dest.Description, opt => opt.MapFrom(src => src.Description ?? "N/A"))
                        .ForMember(dest => dest.Category, opt => opt.MapFrom(src => src.Category ?? "N/A"))
                        .ForMember(dest => dest.Brand, opt => opt.MapFrom(src => src.Brand ?? "N/A"))
-                       .ForMember(dest => dest.Unit, opt => opt.MapFrom(src => src.Unit ?? "N/A"))
+                       .ForMember(dest => dest.DefaultUnit, opt => opt.MapFrom(src => src.DefaultUnit ?? string.Empty))
                        .ForMember(dest => dest.Location, opt => opt.MapFrom(src => src.Location ?? "N/A"))
                        .ForMember(dest => dest.SourceType, opt => opt.MapFrom(src => src.SourceType ?? "Purchased"))
                        .ForMember(dest => dest.InvoiceType, opt => opt.MapFrom(src => src.InvoiceType ?? "WithInvoice"))
@@ -116,7 +117,8 @@ namespace GarageManagementSystem.Web.Profiles
                        .ForMember(dest => dest.Weight, opt => opt.MapFrom(src => src.Weight.HasValue ? src.Weight.Value.ToString("F2") : ""))
                        .ForMember(dest => dest.Material, opt => opt.MapFrom(src => src.Material ?? ""))
                        .ForMember(dest => dest.Color, opt => opt.MapFrom(src => src.Color ?? ""))
-                       .ForMember(dest => dest.ReorderLevel, opt => opt.MapFrom(src => src.ReorderLevel ?? 0));
+                       .ForMember(dest => dest.ReorderLevel, opt => opt.MapFrom(src => src.ReorderLevel))
+                       .ForMember(dest => dest.Units, opt => opt.MapFrom(src => src.Units ?? new List<PartUnitDto>()));
                    CreateMap<SupplierDto, SupplierDetailsViewModel>();
                    CreateMap<StockTransactionDto, StockTransactionDetailsViewModel>();
                    CreateMap<CustomerDto, CustomerDetailsViewModel>();

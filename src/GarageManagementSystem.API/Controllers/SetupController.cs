@@ -1,7 +1,11 @@
+using GarageManagementSystem.Core.Entities;
 using GarageManagementSystem.Core.Interfaces;
 using GarageManagementSystem.Shared.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Reflection;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace GarageManagementSystem.API.Controllers
 {
@@ -91,43 +95,13 @@ namespace GarageManagementSystem.API.Controllers
         {
             try
             {
-                // Xóa theo thứ tự để tránh foreign key constraint
-                var appointmentTasks = await _unitOfWork.Appointments.GetAllAsync();
-                foreach (var item in appointmentTasks) await _unitOfWork.Appointments.DeleteAsync(item);
+                var summary = await ClearAllDataInternalAsync();
 
-                var paymentTasks = await _unitOfWork.PaymentTransactions.GetAllAsync();
-                foreach (var item in paymentTasks) await _unitOfWork.PaymentTransactions.DeleteAsync(item);
-
-                var orderTasks = await _unitOfWork.ServiceOrders.GetAllAsync();
-                foreach (var item in orderTasks) await _unitOfWork.ServiceOrders.DeleteAsync(item);
-
-                var quotationTasks = await _unitOfWork.ServiceQuotations.GetAllAsync();
-                foreach (var item in quotationTasks) await _unitOfWork.ServiceQuotations.DeleteAsync(item);
-
-                var inspectionTasks = await _unitOfWork.VehicleInspections.GetAllAsync();
-                foreach (var item in inspectionTasks) await _unitOfWork.VehicleInspections.DeleteAsync(item);
-
-                var vehicleTasks = await _unitOfWork.Vehicles.GetAllAsync();
-                foreach (var item in vehicleTasks) await _unitOfWork.Vehicles.DeleteAsync(item);
-
-                var customerTasks = await _unitOfWork.Customers.GetAllAsync();
-                foreach (var item in customerTasks) await _unitOfWork.Customers.DeleteAsync(item);
-
-                var employeeTasks = await _unitOfWork.Employees.GetAllAsync();
-                foreach (var item in employeeTasks) await _unitOfWork.Employees.DeleteAsync(item);
-
-                var serviceTasks = await _unitOfWork.Services.GetAllAsync();
-                foreach (var item in serviceTasks) await _unitOfWork.Services.DeleteAsync(item);
-
-                var partTasks = await _unitOfWork.Parts.GetAllAsync();
-                foreach (var item in partTasks) await _unitOfWork.Parts.DeleteAsync(item);
-
-                var supplierTasks = await _unitOfWork.Suppliers.GetAllAsync();
-                foreach (var item in supplierTasks) await _unitOfWork.Suppliers.DeleteAsync(item);
-
-                await _unitOfWork.SaveChangesAsync();
-
-                return Ok(ApiResponse<object>.SuccessResult(new { message = "Đã xóa tất cả dữ liệu demo thành công" }));
+                return Ok(ApiResponse<object>.SuccessResult(new
+                {
+                    message = "Đã xóa tất cả dữ liệu demo thành công",
+                    cleared = summary
+                }));
             }
             catch (Exception ex)
             {
@@ -135,7 +109,127 @@ namespace GarageManagementSystem.API.Controllers
             }
         }
 
+        /// <summary>
+        /// Xóa toàn bộ dữ liệu hiện có và tạo lại dataset demo đầy đủ
+        /// </summary>
+        [HttpPost("create-all")]
+        public async Task<ActionResult<ApiResponse<object>>> CreateAllDemoData()
+        {
+            List<object> cleared = new();
+            var seeded = new List<object>();
+
+            try
+            {
+                cleared = await ClearAllDataInternalAsync();
+
+                async Task RunModuleAsync(string moduleName, Func<Task<object>> moduleFactory)
+                {
+                    var (success, result, message) = await ExecuteSeedAsync(moduleFactory);
+                    seeded.Add(new { module = moduleName, success, message, result });
+
+                    if (!success)
+                    {
+                        throw new InvalidOperationException(
+                            string.IsNullOrWhiteSpace(message)
+                                ? $"Tạo dữ liệu cho module {moduleName} thất bại."
+                                : message);
+                    }
+                }
+
+                await RunModuleAsync("customers", CreateCustomersAsync);
+                await RunModuleAsync("vehicles", CreateVehiclesAsync);
+                await RunModuleAsync("employees", CreateEmployeesAsync);
+                await RunModuleAsync("services", CreateServicesAsync);
+                await RunModuleAsync("parts", CreatePartsAsync);
+                await RunModuleAsync("suppliers", CreateSuppliersAsync);
+                await RunModuleAsync("inspections", CreateInspectionsAsync);
+                await RunModuleAsync("quotations", CreateQuotationsAsync);
+                await RunModuleAsync("orders", CreateServiceOrdersAsync);
+                await RunModuleAsync("payments", CreatePaymentsAsync);
+                await RunModuleAsync("appointments", CreateAppointmentsAsync);
+
+                return Ok(ApiResponse<object>.SuccessResult(new
+                {
+                    message = "Đã khởi tạo dữ liệu demo đầy đủ thành công",
+                    cleared,
+                    seeded
+                }));
+            }
+            catch (InvalidOperationException ex)
+            {
+                var errorResponse = ApiResponse<object>.ErrorResult(ex.Message);
+                errorResponse.Data = new { message = ex.Message, cleared = cleared, seeded };
+                return BadRequest(errorResponse);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<object>.ErrorResult("Lỗi khi khởi tạo dữ liệu demo", ex.Message));
+            }
+        }
+
         #region Private Methods - Create Demo Data
+
+        private async Task<List<object>> ClearAllDataInternalAsync()
+        {
+            var summary = new List<object>();
+
+            async Task ClearAsync<T>(string name, IGenericRepository<T> repository) where T : BaseEntity
+            {
+                var entities = (await repository.GetAllAsync()).ToList();
+                if (entities.Count == 0)
+                {
+                    return;
+                }
+
+                foreach (var entity in entities)
+                {
+                    await repository.DeleteAsync(entity);
+                }
+
+                summary.Add(new { entity = name, cleared = entities.Count });
+            }
+
+            await ClearAsync("PaymentTransactions", _unitOfWork.PaymentTransactions);
+            await ClearAsync("ServiceOrderParts", _unitOfWork.Repository<ServiceOrderPart>());
+            await ClearAsync("ServiceOrderItems", _unitOfWork.Repository<ServiceOrderItem>());
+            await ClearAsync("ServiceOrders", _unitOfWork.ServiceOrders);
+            await ClearAsync("QuotationItems", _unitOfWork.Repository<QuotationItem>());
+            await ClearAsync("ServiceQuotations", _unitOfWork.ServiceQuotations);
+            await ClearAsync("VehicleInspections", _unitOfWork.VehicleInspections);
+            await ClearAsync("Appointments", _unitOfWork.Appointments);
+            await ClearAsync("Vehicles", _unitOfWork.Vehicles);
+            await ClearAsync("Customers", _unitOfWork.Customers);
+            await ClearAsync("Employees", _unitOfWork.Employees);
+            await ClearAsync("Services", _unitOfWork.Services);
+            await ClearAsync("Parts", _unitOfWork.Parts);
+            await ClearAsync("Suppliers", _unitOfWork.Suppliers);
+
+                await _unitOfWork.SaveChangesAsync();
+            return summary;
+        }
+
+        private async Task<(bool Success, object Result, string Message)> ExecuteSeedAsync(Func<Task<object>> seedFunc)
+        {
+            var result = await seedFunc();
+            var resultType = result.GetType();
+
+            bool success = false;
+            string message = string.Empty;
+
+            var successProp = resultType.GetProperty("success", BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
+            if (successProp != null && successProp.PropertyType == typeof(bool))
+            {
+                success = (bool)(successProp.GetValue(result) ?? false);
+            }
+
+            var messageProp = resultType.GetProperty("message", BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
+            if (messageProp != null)
+            {
+                message = messageProp.GetValue(result)?.ToString() ?? string.Empty;
+            }
+
+            return (success, result, message);
+        }
 
         private async Task<object> CreateCustomersAsync()
         {
@@ -494,10 +588,14 @@ namespace GarageManagementSystem.API.Controllers
                     QuantityInStock = 50,
                     MinimumStock = 10,
                     ReorderLevel = 15,
-                    Unit = "Thùng",
+                    DefaultUnit = "Thùng",
                     CompatibleVehicles = "Honda, Toyota, Hyundai, Ford, Mazda",
                     Location = "Kho A - Kệ 1",
-                    IsActive = true
+                    IsActive = true,
+                    PartUnits = new List<Core.Entities.PartUnit>
+                    {
+                        new Core.Entities.PartUnit { UnitName = "Thùng", ConversionRate = 1, IsDefault = true }
+                    }
                 },
                 new Core.Entities.Part
                 {
@@ -512,10 +610,14 @@ namespace GarageManagementSystem.API.Controllers
                     QuantityInStock = 100,
                     MinimumStock = 20,
                     ReorderLevel = 30,
-                    Unit = "Cái",
+                    DefaultUnit = "Cái",
                     CompatibleVehicles = "Honda Civic, Toyota Vios, Hyundai Accent",
                     Location = "Kho A - Kệ 2",
-                    IsActive = true
+                    IsActive = true,
+                    PartUnits = new List<Core.Entities.PartUnit>
+                    {
+                        new Core.Entities.PartUnit { UnitName = "Cái", ConversionRate = 1, IsDefault = true }
+                    }
                 },
                 new Core.Entities.Part
                 {
@@ -530,10 +632,14 @@ namespace GarageManagementSystem.API.Controllers
                     QuantityInStock = 25,
                     MinimumStock = 5,
                     ReorderLevel = 10,
-                    Unit = "Bộ",
+                    DefaultUnit = "Bộ",
                     CompatibleVehicles = "Honda Civic, Toyota Vios, Ford Ranger",
                     Location = "Kho B - Kệ 3",
-                    IsActive = true
+                    IsActive = true,
+                    PartUnits = new List<Core.Entities.PartUnit>
+                    {
+                        new Core.Entities.PartUnit { UnitName = "Bộ", ConversionRate = 1, IsDefault = true }
+                    }
                 },
                 new Core.Entities.Part
                 {
@@ -548,10 +654,14 @@ namespace GarageManagementSystem.API.Controllers
                     QuantityInStock = 40,
                     MinimumStock = 8,
                     ReorderLevel = 12,
-                    Unit = "Bộ 4 cái",
+                    DefaultUnit = "Bộ 4 cái",
                     CompatibleVehicles = "Honda, Toyota, Hyundai, Mazda",
                     Location = "Kho A - Kệ 4",
-                    IsActive = true
+                    IsActive = true,
+                    PartUnits = new List<Core.Entities.PartUnit>
+                    {
+                        new Core.Entities.PartUnit { UnitName = "Bộ 4 cái", ConversionRate = 1, IsDefault = true }
+                    }
                 },
                 new Core.Entities.Part
                 {
@@ -566,10 +676,14 @@ namespace GarageManagementSystem.API.Controllers
                     QuantityInStock = 60,
                     MinimumStock = 12,
                     ReorderLevel = 18,
-                    Unit = "Cái",
+                    DefaultUnit = "Cái",
                     CompatibleVehicles = "Honda Civic, Toyota Vios, Hyundai Accent, Ford Ranger",
                     Location = "Kho A - Kệ 5",
-                    IsActive = true
+                    IsActive = true,
+                    PartUnits = new List<Core.Entities.PartUnit>
+                    {
+                        new Core.Entities.PartUnit { UnitName = "Cái", ConversionRate = 1, IsDefault = true }
+                    }
                 },
                 new Core.Entities.Part
                 {
@@ -584,10 +698,14 @@ namespace GarageManagementSystem.API.Controllers
                     QuantityInStock = 8,
                     MinimumStock = 2,
                     ReorderLevel = 4,
-                    Unit = "Cái",
+                    DefaultUnit = "Cái",
                     CompatibleVehicles = "Honda Civic, Toyota Vios, Hyundai Accent",
                     Location = "Kho C - Kệ 1",
-                    IsActive = true
+                    IsActive = true,
+                    PartUnits = new List<Core.Entities.PartUnit>
+                    {
+                        new Core.Entities.PartUnit { UnitName = "Cái", ConversionRate = 1, IsDefault = true }
+                    }
                 },
                 new Core.Entities.Part
                 {
@@ -602,10 +720,14 @@ namespace GarageManagementSystem.API.Controllers
                     QuantityInStock = 30,
                     MinimumStock = 6,
                     ReorderLevel = 10,
-                    Unit = "Chai 4 lít",
+                    DefaultUnit = "Chai 4 lít",
                     CompatibleVehicles = "Tất cả xe",
                     Location = "Kho A - Kệ 6",
-                    IsActive = true
+                    IsActive = true,
+                    PartUnits = new List<Core.Entities.PartUnit>
+                    {
+                        new Core.Entities.PartUnit { UnitName = "Chai 4 lít", ConversionRate = 1, IsDefault = true }
+                    }
                 },
                 new Core.Entities.Part
                 {
@@ -620,10 +742,14 @@ namespace GarageManagementSystem.API.Controllers
                     QuantityInStock = 12,
                     MinimumStock = 3,
                     ReorderLevel = 5,
-                    Unit = "Cái",
+                    DefaultUnit = "Cái",
                     CompatibleVehicles = "Honda, Toyota, Hyundai, Ford, Mazda",
                     Location = "Kho B - Kệ 4",
-                    IsActive = true
+                    IsActive = true,
+                    PartUnits = new List<Core.Entities.PartUnit>
+                    {
+                        new Core.Entities.PartUnit { UnitName = "Cái", ConversionRate = 1, IsDefault = true }
+                    }
                 }
             };
 

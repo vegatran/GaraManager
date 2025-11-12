@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using GarageManagementSystem.Shared.DTOs;
 using GarageManagementSystem.Shared.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -205,6 +207,306 @@ namespace GarageManagementSystem.Web.Controllers
             catch (Exception ex)
             {
                 return Json(new { success = false, error = $"Lỗi: {ex.Message}" });
+            }
+        }
+
+        /// <summary>
+        /// ✅ 3.1: Lấy chi tiết COGS cho Service Order
+        /// </summary>
+        [HttpGet("GetOrderCogs/{id}")]
+        public async Task<IActionResult> GetOrderCogs(int id)
+        {
+            try
+            {
+                var endpoint = ApiEndpoints.Builder.WithId(ApiEndpoints.ServiceOrders.GetCogsDetails, id);
+                var response = await _apiService.GetAsync<ApiResponse<COGSBreakdownDto>>(endpoint);
+
+                if (response.Success && response.Data != null)
+                {
+                    if (response.Data.Success && response.Data.Data != null)
+                    {
+                        return Json(new { success = true, data = response.Data.Data, message = response.Data.Message });
+                    }
+
+                    return Json(new
+                    {
+                        success = false,
+                        error = response.Data.ErrorMessage ?? response.Data.Message ?? "Không thể lấy chi tiết COGS"
+                    });
+                }
+
+                return Json(new { success = false, error = response.ErrorMessage ?? "Không thể lấy chi tiết COGS" });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, error = $"Lỗi: {ex.Message}" });
+            }
+        }
+
+        /// <summary>
+        /// ✅ 3.1: Tính lại COGS cho Service Order
+        /// </summary>
+        [HttpPost("CalculateOrderCogs/{id}")]
+        public async Task<IActionResult> CalculateOrderCogs(int id, [FromBody] COGSMethodDto? methodDto)
+        {
+            try
+            {
+                var endpoint = ApiEndpoints.Builder.WithId(ApiEndpoints.ServiceOrders.CalculateCogs, id);
+                var response = await _apiService.PostAsync<COGSCalculationDto>(endpoint, methodDto ?? new COGSMethodDto());
+                return Json(response);
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, errorMessage = $"Lỗi: {ex.Message}" });
+            }
+        }
+
+        /// <summary>
+        /// ✅ 3.1: Thiết lập phương pháp tính COGS
+        /// </summary>
+        [HttpPut("SetOrderCogsMethod/{id}")]
+        public async Task<IActionResult> SetOrderCogsMethod(int id, [FromBody] COGSMethodDto methodDto)
+        {
+            try
+            {
+                var endpoint = ApiEndpoints.Builder.WithId(ApiEndpoints.ServiceOrders.SetCogsMethod, id);
+                var response = await _apiService.PutAsync<object>(endpoint, methodDto ?? new COGSMethodDto());
+                return Json(response);
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, errorMessage = $"Lỗi: {ex.Message}" });
+            }
+        }
+
+        /// <summary>
+        /// ✅ 3.1: Lấy lợi nhuận gộp cho Service Order
+        /// </summary>
+        [HttpGet("GetOrderGrossProfit/{id}")]
+        public async Task<IActionResult> GetOrderGrossProfit(int id)
+        {
+            try
+            {
+                var endpoint = ApiEndpoints.Builder.WithId(ApiEndpoints.ServiceOrders.GetGrossProfit, id);
+                var response = await _apiService.GetAsync<ApiResponse<GrossProfitDto>>(endpoint);
+
+                if (response.Success && response.Data != null)
+                {
+                    if (response.Data.Success && response.Data.Data != null)
+                    {
+                        return Json(new { success = true, data = response.Data.Data, message = response.Data.Message });
+                    }
+
+                    return Json(new
+                    {
+                        success = false,
+                        error = response.Data.ErrorMessage ?? response.Data.Message ?? "Không thể lấy lợi nhuận gộp"
+                    });
+                }
+
+                return Json(new { success = false, error = response.ErrorMessage ?? "Không thể lấy lợi nhuận gộp" });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, error = $"Lỗi: {ex.Message}" });
+            }
+        }
+
+        [HttpGet("GetOrderFees/{id}")]
+        public async Task<IActionResult> GetOrderFees(int id)
+        {
+            try
+            {
+                var endpoint = ApiEndpoints.Builder.WithId(ApiEndpoints.ServiceOrders.GetFees, id);
+                var response = await _apiService.GetAsync<ApiResponse<ServiceOrderFeeSummaryDto>>(endpoint);
+                return Json(response);
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, error = $"Lỗi: {ex.Message}" });
+            }
+        }
+
+        [HttpPut("UpdateOrderFees/{id}")]
+        public async Task<IActionResult> UpdateOrderFees(int id, [FromBody] UpdateServiceOrderFeesRequestDto request)
+        {
+            try
+            {
+                var endpoint = ApiEndpoints.Builder.WithId(ApiEndpoints.ServiceOrders.UpdateFees, id);
+                var response = await _apiService.PutAsync<ApiResponse<ServiceOrderFeeSummaryDto>>(endpoint, request ?? new UpdateServiceOrderFeesRequestDto());
+                return Json(response);
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, error = $"Lỗi: {ex.Message}" });
+            }
+        }
+
+        [HttpGet("CogsSummary")]
+        public IActionResult CogsSummary()
+        {
+            return View();
+        }
+
+        [HttpGet("GetCogsSummary")]
+        public async Task<IActionResult> GetCogsSummary(DateTime? startDate, DateTime? endDate, string? method)
+        {
+            try
+            {
+                var endpoint = BuildCogsReportEndpoint(ApiEndpoints.ServiceOrders.GetCogsReport, startDate, endDate, method);
+                var response = await _apiService.GetAsync<ApiResponse<ServiceOrderCogsReportDto>>(endpoint);
+                return Json(response);
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, error = $"Lỗi: {ex.Message}" });
+            }
+        }
+
+        [HttpGet("ExportCogsSummary")]
+        public async Task<IActionResult> ExportCogsSummary(DateTime? startDate, DateTime? endDate, string? method)
+        {
+            try
+            {
+                var endpoint = BuildCogsReportEndpoint(ApiEndpoints.ServiceOrders.ExportCogsReport, startDate, endDate, method);
+                var response = await _apiService.GetByteArrayAsync(endpoint);
+                if (!response.Success || response.Data == null)
+                {
+                    return Json(new { success = false, error = response.ErrorMessage ?? "Không thể xuất báo cáo." });
+                }
+
+                var fileName = string.IsNullOrWhiteSpace(response.Message)
+                    ? $"BaoCaoCOGS-{DateTime.Now:yyyyMMddHHmmss}.csv"
+                    : response.Message.Trim('"');
+
+                return File(response.Data, "text/csv", fileName);
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, error = $"Lỗi: {ex.Message}" });
+            }
+        }
+
+        [HttpGet("ExportCogsSummaryExcel")]
+        public async Task<IActionResult> ExportCogsSummaryExcel(DateTime? startDate, DateTime? endDate, string? method)
+        {
+            try
+            {
+                var endpoint = BuildCogsReportEndpoint(ApiEndpoints.ServiceOrders.ExportCogsReportExcel, startDate, endDate, method);
+                var response = await _apiService.GetByteArrayAsync(endpoint);
+                if (!response.Success || response.Data == null)
+                {
+                    return Json(new { success = false, error = response.ErrorMessage ?? "Không thể xuất báo cáo." });
+                }
+
+                var fileName = string.IsNullOrWhiteSpace(response.Message)
+                    ? $"BaoCaoCOGS-{DateTime.Now:yyyyMMddHHmmss}.xlsx"
+                    : response.Message.Trim('"');
+
+                return File(response.Data, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, error = $"Lỗi: {ex.Message}" });
+            }
+        }
+
+        private string BuildCogsReportEndpoint(string baseEndpoint, DateTime? startDate, DateTime? endDate, string? method)
+        {
+            var queryParams = new List<string>();
+
+            if (startDate.HasValue)
+            {
+                queryParams.Add($"startDate={Uri.EscapeDataString(startDate.Value.ToString("o"))}");
+            }
+
+            if (endDate.HasValue)
+            {
+                queryParams.Add($"endDate={Uri.EscapeDataString(endDate.Value.ToString("o"))}");
+            }
+
+            if (!string.IsNullOrWhiteSpace(method))
+            {
+                queryParams.Add($"method={Uri.EscapeDataString(method)}");
+            }
+
+            if (queryParams.Count == 0)
+            {
+                return baseEndpoint;
+            }
+
+            return $"{baseEndpoint}?{string.Join("&", queryParams)}";
+        }
+
+        /// <summary>
+        /// ✅ 3.2: Tạo hoặc lấy bảo hành cho Service Order
+        /// </summary>
+        [HttpPost("GenerateWarranty/{id}")]
+        public async Task<IActionResult> GenerateWarranty(int id, [FromBody] GenerateWarrantyRequestDto? request)
+        {
+            try
+            {
+                var endpoint = ApiEndpoints.Builder.WithId(ApiEndpoints.Warranties.GenerateForServiceOrder, id);
+                var response = await _apiService.PostAsync<WarrantyDto>(endpoint, request ?? new GenerateWarrantyRequestDto());
+                return Json(response);
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, errorMessage = $"Lỗi: {ex.Message}" });
+            }
+        }
+
+        /// <summary>
+        /// ✅ 3.2: Lấy thông tin bảo hành của Service Order
+        /// </summary>
+        [HttpGet("GetWarranty/{id}")]
+        public async Task<IActionResult> GetWarranty(int id)
+        {
+            try
+            {
+                var endpoint = ApiEndpoints.Builder.WithId(ApiEndpoints.Warranties.GetByServiceOrder, id);
+                var response = await _apiService.GetAsync<ApiResponse<WarrantyDto>>(endpoint);
+                return Json(response);
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, errorMessage = $"Lỗi: {ex.Message}" });
+            }
+        }
+
+        /// <summary>
+        /// ✅ 3.2: Tạo khiếu nại bảo hành cho một Warranty
+        /// </summary>
+        [HttpPost("CreateWarrantyClaim/{warrantyId}")]
+        public async Task<IActionResult> CreateWarrantyClaim(int warrantyId, [FromBody] CreateWarrantyClaimDto request)
+        {
+            try
+            {
+                var endpoint = ApiEndpoints.Builder.WithId(ApiEndpoints.Warranties.CreateClaim, warrantyId);
+                var response = await _apiService.PostAsync<WarrantyClaimDto>(endpoint, request ?? new CreateWarrantyClaimDto { IssueDescription = string.Empty });
+                return Json(response);
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, errorMessage = $"Lỗi: {ex.Message}" });
+            }
+        }
+
+        /// <summary>
+        /// ✅ 3.2: Cập nhật trạng thái khiếu nại bảo hành
+        /// </summary>
+        [HttpPut("UpdateWarrantyClaim/{claimId}")]
+        public async Task<IActionResult> UpdateWarrantyClaim(int claimId, [FromBody] UpdateWarrantyClaimStatusDto request)
+        {
+            try
+            {
+                var endpoint = ApiEndpoints.Builder.WithId(ApiEndpoints.Warranties.UpdateClaim, claimId);
+                var response = await _apiService.PutAsync<WarrantyClaimDto>(endpoint, request ?? new UpdateWarrantyClaimStatusDto());
+                return Json(response);
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, errorMessage = $"Lỗi: {ex.Message}" });
             }
         }
 

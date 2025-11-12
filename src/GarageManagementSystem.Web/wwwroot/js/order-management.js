@@ -8,6 +8,13 @@
 window.OrderManagement = {
     // DataTable instance
     orderTable: null,
+    settlementLoadedOrderId: null,
+    warrantyLoadedOrderId: null,
+    currentWarranty: null,
+    feesLoadedOrderId: null,
+    currentFeeSummary: null,
+    feeTypesCache: [],
+    isEditingFees: false,
 
     // Initialize module
     init: function() {
@@ -50,8 +57,8 @@ window.OrderManagement = {
                     var actions = `
                         <div class="btn-group" role="group">
                             <button class="btn btn-info btn-sm view-order" data-id="${row.id}" title="Xem">
-                                <i class="fas fa-eye"></i>
-                            </button>
+                            <i class="fas fa-eye"></i>
+                        </button>
                     `;
                     
                     // ✅ 2.1.1: Nút "Chuyển sang Chờ Phân công" (chỉ hiện khi status = "Pending")
@@ -216,6 +223,21 @@ window.OrderManagement = {
         $(document).on('click', '#btnSaveAssignments', function() {
             var orderId = $('#assignTechnicianOrderId').val();
             self.saveAllAssignments(orderId);
+        });
+
+        // ✅ 3.1: Áp dụng phương pháp tính COGS
+        $(document).on('click', '#btnApplyCogsMethod', function() {
+            self.applyCogsMethod();
+        });
+
+        // ✅ 3.1: Tính lại COGS
+        $(document).on('click', '#btnRecalculateCogs', function() {
+            self.recalculateCogs();
+        });
+
+        // ✅ 3.1: Làm mới dữ liệu COGS
+        $(document).on('click', '#btnRefreshCogsData', function() {
+            self.refreshSettlementData();
         });
 
         // Update order status
@@ -468,13 +490,13 @@ window.OrderManagement = {
                             data-total-amount="${item.totalAmount}" 
                             data-quotation-date="${item.quotationDate}">${item.text}</option>`);
                     });
-                    
+                
                     // ✅ SỬA: Reinitialize Select2 sau khi append options
                     if ($select.hasClass('select2-hidden-accessible')) {
                         $select.select2('destroy');
                     }
-                    $select.select2({
-                        placeholder: '-- Chọn Báo Giá --',
+                $select.select2({
+                    placeholder: '-- Chọn Báo Giá --',
                         allowClear: true,
                         width: '100%'
                     });
@@ -688,6 +710,14 @@ window.OrderManagement = {
         // ✅ FIX: Store order status để loadQCInfo có thể check
         $('#viewOrderModal').data('order-status', order.status);
         this.currentServiceOrderId = order.id;
+        this.settlementLoadedOrderId = null;
+        this.warrantyLoadedOrderId = null;
+        this.currentWarranty = null;
+        this.feesLoadedOrderId = null;
+        this.currentFeeSummary = null;
+        this.initializeSettlementSection(order);
+        this.resetWarrantySection(false);
+        this.resetFeesSection(false);
 
         $('#viewOrderNumber').text(order.orderNumber || '');
         // ✅ SỬA: Dùng nested objects cho Customer và Vehicle
@@ -809,7 +839,7 @@ window.OrderManagement = {
                 $('#btnCreateMRFromOrder').show().off('click').on('click', function() {
                     window.location.href = '/MaterialRequestManagement?serviceOrderId=' + order.id;
                 });
-            } else {
+        } else {
                 $('#btnCreateMRFromOrder').hide();
             }
             
@@ -883,6 +913,853 @@ window.OrderManagement = {
         } else {
             $('#hoursWarning').hide();
         }
+    },
+
+    // ✅ 3.1: Khởi tạo giao diện Quyết toán
+    initializeSettlementSection: function(order) {
+        if (!$('#settlement').length) {
+            return;
+        }
+
+        var method = this.normalizeCogsMethod(order ? (order.cogsCalculationMethod || order.cogsMethod) : null);
+        var totalCogs = order ? (order.totalCogs ?? order.totalCOGS ?? 0) : 0;
+        var totalRevenue = order ? (order.finalAmount ?? order.totalAmount ?? 0) : 0;
+
+        $('#cogsMethodSelect').val(method);
+        $('#cogsMethodDisplay').text(this.getCogsMethodDisplay(method));
+        $('#cogsCalculationDate').text(this.formatDateTime(order ? order.cogsCalculationDate : null));
+        $('#totalCogsDisplay').text(this.formatCurrency(totalCogs));
+        $('#grossTotalCogsDisplay').text(this.formatCurrency(totalCogs));
+        $('#totalRevenueDisplay').text(this.formatCurrency(totalRevenue));
+        $('#grossProfitDisplay').text('-');
+        $('#grossProfitMarginDisplay').text('-');
+        $('#grossProfitNote').text('');
+        $('#cogsLastUpdatedNote').text('');
+        $('#settlementEmptyMessage').text('Chưa có dữ liệu giá vốn cho phiếu sửa chữa này. Vui lòng tính COGS trước.');
+
+        this.resetSettlementSection(false);
+    },
+
+    // ✅ 3.1: Chuẩn hóa phương pháp tính COGS
+    normalizeCogsMethod: function(method) {
+        if (!method) {
+            return 'FIFO';
+        }
+
+        var normalized = method.toString().replace(/[_\s]/g, '').toUpperCase();
+        if (normalized === 'WEIGHTEDAVERAGE' || normalized === 'AVERAGE') {
+            return 'WeightedAverage';
+        }
+        return 'FIFO';
+    },
+
+    // ✅ 3.1: Hiển thị phương pháp tính COGS thân thiện
+    getCogsMethodDisplay: function(method) {
+        var normalized = this.normalizeCogsMethod(method);
+        if (normalized === 'WeightedAverage') {
+            return 'Bình quân gia quyền';
+        }
+        return 'FIFO (Nhập trước - Xuất trước)';
+    },
+
+    // ✅ 3.1: Format tiền tệ
+    formatCurrency: function(amount) {
+        var parsed = Number(amount);
+        if (!isFinite(parsed)) {
+            parsed = 0;
+        }
+        return parsed.toLocaleString('vi-VN') + ' VNĐ';
+    },
+
+    // ✅ 3.1: Format ngày giờ
+    formatDateTime: function(dateValue) {
+        if (!dateValue) {
+            return '-';
+        }
+        var date = new Date(dateValue);
+        if (isNaN(date.getTime())) {
+            return '-';
+        }
+        return date.toLocaleString('vi-VN', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    },
+
+    // ✅ 3.1: Reset trạng thái tab Quyết toán
+    resetSettlementSection: function(showSpinner) {
+        if (!$('#settlement').length) {
+            return;
+        }
+
+        if (showSpinner === undefined || showSpinner) {
+            $('#settlementLoading').removeClass('d-none');
+        } else {
+            $('#settlementLoading').addClass('d-none');
+        }
+
+        $('#settlementContent').addClass('d-none');
+        $('#settlementEmpty').addClass('d-none');
+        $('#settlementError').addClass('d-none');
+    },
+
+    // ✅ 3.1: Tải dữ liệu Quyết toán
+    loadSettlementData: function(serviceOrderId, forceRefresh) {
+        var self = this;
+
+        if (!$('#settlement').length) {
+            return;
+        }
+
+        if (!serviceOrderId) {
+            GarageApp.showError('Không xác định được phiếu sửa chữa để tải dữ liệu Quyết toán.');
+            return;
+        }
+
+        if (!forceRefresh && self.settlementLoadedOrderId === serviceOrderId) {
+            $('#settlementLoading').addClass('d-none');
+            $('#settlementContent').removeClass('d-none');
+            return;
+        }
+
+        self.resetSettlementSection(true);
+
+        self.fetchOrderCogs(serviceOrderId)
+            .done(function(response) {
+                if (!AuthHandler.validateApiResponse(response)) {
+                    return;
+                }
+
+                if (response.success) {
+                    var cogsData = response.data || {};
+                    self.updateSettlementSummary(cogsData);
+                    self.renderCogsBreakdown(cogsData.itemDetails || []);
+
+                    $('#settlementLoading').addClass('d-none');
+                    $('#settlementEmpty').addClass('d-none');
+                    $('#settlementContent').removeClass('d-none');
+
+                    self.settlementLoadedOrderId = serviceOrderId;
+
+                    self.fetchGrossProfit(serviceOrderId)
+                        .done(function(grossResponse) {
+                            if (!AuthHandler.validateApiResponse(grossResponse)) {
+                                return;
+                            }
+
+                            if (grossResponse.success) {
+                                self.updateGrossProfitSummary(grossResponse.data);
+                            } else {
+                                self.updateGrossProfitSummary(null);
+                                if (grossResponse.error) {
+                                    $('#grossProfitNote').text(grossResponse.error);
+                                }
+                            }
+                        })
+                        .fail(function(xhr) {
+                            if (AuthHandler.isUnauthorized(xhr)) {
+                                AuthHandler.handleUnauthorized(xhr, true);
+                                return;
+                            }
+                            self.updateGrossProfitSummary(null);
+                            $('#grossProfitNote').text('Không thể lấy lợi nhuận gộp hiện tại.');
+                        });
+                } else {
+                    self.settlementLoadedOrderId = null;
+                    $('#settlementLoading').addClass('d-none');
+
+                    var emptyMessage = response.error || response.message || 'Chưa có dữ liệu giá vốn cho phiếu sửa chữa này. Vui lòng tính COGS.';
+                    $('#settlementEmptyMessage').text(emptyMessage);
+                    $('#settlementEmpty').removeClass('d-none');
+                    self.updateGrossProfitSummary(null);
+                }
+            })
+            .fail(function(xhr) {
+                if (AuthHandler.isUnauthorized(xhr)) {
+                    AuthHandler.handleUnauthorized(xhr, true);
+                    return;
+                }
+                var errorMsg = GarageApp.parseErrorMessage ? GarageApp.parseErrorMessage(xhr) : 'Không thể tải dữ liệu Quyết toán.';
+                self.handleSettlementError(errorMsg);
+            });
+    },
+
+    // ✅ 3.1: Lấy chi tiết COGS từ server
+    fetchOrderCogs: function(serviceOrderId) {
+        return $.ajax({
+            url: '/OrderManagement/GetOrderCogs/' + serviceOrderId,
+            type: 'GET'
+        });
+    },
+
+    // ✅ 3.1: Lấy lợi nhuận gộp từ server
+    fetchGrossProfit: function(serviceOrderId) {
+        return $.ajax({
+            url: '/OrderManagement/GetOrderGrossProfit/' + serviceOrderId,
+            type: 'GET'
+        });
+    },
+
+    // ✅ 3.1: Cập nhật thông tin tổng quan COGS
+    updateSettlementSummary: function(cogsData) {
+        if (!cogsData) {
+            return;
+        }
+
+        var method = this.normalizeCogsMethod(cogsData.calculationMethod || cogsData.method);
+        var totalCogs = cogsData.totalCogs ?? cogsData.totalCOGS ?? 0;
+
+        $('#cogsMethodDisplay').text(this.getCogsMethodDisplay(method));
+        $('#cogsMethodSelect').val(method);
+        $('#cogsCalculationDate').text(this.formatDateTime(cogsData.calculationDate));
+        $('#totalCogsDisplay').text(this.formatCurrency(totalCogs));
+        $('#grossTotalCogsDisplay').text(this.formatCurrency(totalCogs));
+
+        if (cogsData.calculationDate) {
+            $('#cogsLastUpdatedNote').text('Cập nhật lần cuối: ' + this.formatDateTime(cogsData.calculationDate));
+        } else {
+            $('#cogsLastUpdatedNote').text('');
+        }
+    },
+
+    // ✅ 3.1: Hiển thị bảng chi tiết COGS
+    renderCogsBreakdown: function(items) {
+        var $tbody = $('#cogsBreakdownBody');
+        if (!$tbody.length) {
+            return;
+        }
+
+        if (!items || items.length === 0) {
+            $tbody.html('<tr><td colspan="7" class="text-center text-muted py-3">Chưa có dữ liệu giá vốn.</td></tr>');
+            return;
+        }
+
+        var self = this;
+        var rows = items.map(function(item) {
+            var quantity = item.quantityUsed ?? 0;
+            var quantityValue = Number(quantity);
+            if (!isFinite(quantityValue)) {
+                quantityValue = 0;
+            }
+            var quantityDisplay = quantityValue.toLocaleString('vi-VN');
+            var unitCostDisplay = self.formatCurrency(item.unitCost ?? 0);
+            var totalCostDisplay = self.formatCurrency(item.totalCost ?? 0);
+            var batchNumber = item.batchNumber || '-';
+            var batchDate = self.formatDateTime(item.batchReceiveDate);
+            var partName = item.partName || '';
+            var partNumber = item.partNumber || '';
+
+            return (
+                '<tr>' +
+                '<td>' + partName + '</td>' +
+                '<td>' + (partNumber || '-') + '</td>' +
+                '<td>' + quantityDisplay + '</td>' +
+                '<td>' + unitCostDisplay + '</td>' +
+                '<td>' + totalCostDisplay + '</td>' +
+                '<td>' + batchNumber + '</td>' +
+                '<td>' + (batchDate === '-' ? '-' : batchDate) + '</td>' +
+                '</tr>'
+            );
+        }).join('');
+
+        $tbody.html(rows);
+    },
+
+    // ✅ 3.1: Cập nhật thông tin lợi nhuận gộp
+    updateGrossProfitSummary: function(grossData) {
+        if (!$('#grossProfitDisplay').length) {
+            return;
+        }
+
+        if (!grossData) {
+            $('#grossProfitDisplay').text('-');
+            $('#grossProfitMarginDisplay').text('-');
+            $('#grossProfitNote').text('');
+            return;
+        }
+
+        var totalRevenue = grossData.totalRevenue ?? 0;
+        var totalCogs = grossData.totalCogs ?? grossData.totalCOGS ?? 0;
+        var grossProfit = grossData.grossProfit ?? 0;
+        var grossMargin = Number(grossData.grossProfitMargin);
+
+        $('#totalRevenueDisplay').text(this.formatCurrency(totalRevenue));
+        $('#grossTotalCogsDisplay').text(this.formatCurrency(totalCogs));
+        $('#grossProfitDisplay').text(this.formatCurrency(grossProfit));
+        if (isFinite(grossMargin)) {
+            $('#grossProfitMarginDisplay').text(grossMargin.toFixed(2) + '%');
+        } else {
+            $('#grossProfitMarginDisplay').text('-');
+        }
+        $('#grossProfitNote').text('Được tính dựa trên doanh thu và giá vốn hiện tại của phiếu sửa chữa.');
+    },
+
+    // ✅ 3.1: Xử lý lỗi khi tải Quyết toán
+    handleSettlementError: function(message) {
+        $('#settlementLoading').addClass('d-none');
+        $('#settlementContent').addClass('d-none');
+        $('#settlementEmpty').addClass('d-none');
+
+        $('#settlementErrorMessage').text(message || 'Không thể tải dữ liệu Quyết toán.');
+        $('#settlementError').removeClass('d-none');
+    },
+
+    // ✅ 3.2: Reset trạng thái tab bảo hành
+    resetWarrantySection: function(showSpinner) {
+        if (!$('#warranty').length) {
+            return;
+        }
+
+        if (showSpinner === undefined || showSpinner) {
+            $('#warrantyLoading').removeClass('d-none');
+        } else {
+            $('#warrantyLoading').addClass('d-none');
+        }
+
+        $('#warrantyContent').addClass('d-none');
+        $('#warrantyEmpty').addClass('d-none');
+        $('#warrantyError').addClass('d-none');
+        $('#btnCreateWarrantyClaim').addClass('d-none');
+        $('#btnShowCreateClaim').addClass('d-none');
+
+        $('#warrantyCodeDisplay').text('-');
+        $('#warrantyStatusBadge').attr('class', 'badge badge-secondary').text('Chưa tạo');
+        $('#warrantyStartDate').text('-');
+        $('#warrantyEndDate').text('-');
+        $('#warrantyCustomerName').text('-');
+        $('#warrantyVehiclePlate').text('-');
+        $('#warrantyHandoverBy').text('-');
+        $('#warrantyHandoverLocation').text('-');
+        $('#warrantyItemCount').text('0');
+        $('#warrantyClaimCount').text('0');
+        $('#warrantyExpiryAlert, #warrantyExpiringAlert, #warrantyExpiredAlert').addClass('d-none');
+
+        $('#warrantyItemsBody').html('<tr><td colspan="6" class="text-center text-muted py-3">Chưa có dữ liệu</td></tr>');
+        $('#warrantyClaimsBody').html('<tr><td colspan="5" class="text-center text-muted py-3">Chưa có khiếu nại</td></tr>');
+    },
+
+    // ✅ 3.2: Tải dữ liệu bảo hành
+    loadWarrantyData: function(serviceOrderId, forceRefresh) {
+        var self = this;
+
+        if (!$('#warranty').length) {
+            return;
+        }
+
+        if (!serviceOrderId) {
+            GarageApp.showError('Không xác định được phiếu sửa chữa để tải dữ liệu bảo hành.');
+            return;
+        }
+
+        if (!forceRefresh && self.warrantyLoadedOrderId === serviceOrderId && self.currentWarranty) {
+            $('#warrantyLoading').addClass('d-none');
+            $('#warrantyContent').removeClass('d-none');
+            return;
+        }
+
+        self.resetWarrantySection(true);
+
+        self.fetchWarranty(serviceOrderId)
+            .done(function(response) {
+                if (!AuthHandler.validateApiResponse(response)) {
+                    return;
+                }
+
+        var payload = response.data || response.Data || null;
+        var warranty = null;
+        var message = response.message || response.errorMessage || null;
+        var isApiError = !response.success;
+
+        if (!isApiError && payload) {
+            // payload có thể là ApiResponse<WarrantyDto> hoặc trực tiếp WarrantyDto
+            if (typeof payload.success === 'boolean') {
+                if (payload.success) {
+                    warranty = payload.data || payload.Data || null;
+                    message = payload.message || payload.errorMessage || message;
+                } else {
+                    message = payload.message || payload.errorMessage || 'Chưa có thông tin bảo hành.';
+                }
+            } else {
+                warranty = payload;
+            }
+        } else if (isApiError) {
+            message = response.errorMessage || response.message || message;
+        }
+
+        if (warranty) {
+            self.currentWarranty = warranty;
+            self.updateWarrantySummary(warranty);
+            self.renderWarrantyItems(warranty.items || []);
+            self.renderWarrantyClaims(warranty.claims || []);
+            self.updateWarrantyAlerts(warranty);
+
+            $('#warrantyLoading').addClass('d-none');
+            $('#warrantyContent').removeClass('d-none');
+            $('#warrantyEmpty').addClass('d-none');
+            $('#warrantyError').addClass('d-none');
+
+            $('#btnCreateWarrantyClaim').toggleClass('d-none', !warranty.id);
+            $('#btnShowCreateClaim').toggleClass('d-none', !warranty.id);
+
+            self.warrantyLoadedOrderId = serviceOrderId;
+        } else {
+            self.currentWarranty = null;
+            if (isApiError) {
+                self.handleWarrantyError(message || 'Không thể tải dữ liệu bảo hành.');
+            } else {
+                self.handleWarrantyEmpty(message || 'Chưa có thông tin bảo hành.');
+            }
+        }
+            })
+            .fail(function(xhr) {
+                if (AuthHandler.isUnauthorized(xhr)) {
+                    AuthHandler.handleUnauthorized(xhr, true);
+                    return;
+                }
+                var errorMsg = GarageApp.parseErrorMessage ? GarageApp.parseErrorMessage(xhr) : 'Không thể tải dữ liệu bảo hành.';
+                self.handleWarrantyError(errorMsg);
+            });
+    },
+
+    // ✅ 3.2: Gọi controller lấy thông tin bảo hành
+    fetchWarranty: function(serviceOrderId) {
+        return $.ajax({
+            url: '/OrderManagement/GetWarranty/' + serviceOrderId,
+            type: 'GET'
+        });
+    },
+
+    // ✅ 3.2: Cập nhật thông tin bảo hành
+    updateWarrantySummary: function(warranty) {
+        $('#warrantyCodeDisplay').text(warranty.warrantyCode || '-');
+
+        var status = (warranty.status || '').toLowerCase();
+        var $statusBadge = $('#warrantyStatusBadge');
+        $statusBadge.removeClass('badge-secondary badge-success badge-warning badge-danger badge-info');
+
+        switch (status) {
+            case 'active':
+            case 'đang hiệu lực':
+                $statusBadge.addClass('badge-success').text('Đang hiệu lực');
+                break;
+            case 'expired':
+            case 'hết hạn':
+                $statusBadge.addClass('badge-danger').text('Đã hết hạn');
+                break;
+            case 'voided':
+            case 'hủy':
+                $statusBadge.addClass('badge-secondary').text('Đã hủy');
+                break;
+            default:
+                $statusBadge.addClass('badge-info').text(warranty.status || 'Không xác định');
+                break;
+        }
+
+        $('#warrantyStartDate').text(this.formatDateTime(warranty.warrantyStartDate));
+        $('#warrantyEndDate').text(this.formatDateTime(warranty.warrantyEndDate));
+        $('#warrantyCustomerName').text(warranty.customerName || '-');
+        $('#warrantyVehiclePlate').text(warranty.vehicleLicensePlate || '-');
+        $('#warrantyHandoverBy').text(warranty.handoverBy || '-');
+        $('#warrantyHandoverLocation').text(warranty.handoverLocation || '-');
+
+        var itemCount = (warranty.items || []).filter(function(item) { return !item.isDeleted; }).length;
+        var claimCount = (warranty.claims || []).filter(function(claim) { return !claim.isDeleted; }).length;
+        $('#warrantyItemCount').text(itemCount);
+        $('#warrantyClaimCount').text(claimCount);
+
+        $('#btnCreateWarrantyClaim').toggleClass('d-none', !warranty.id);
+        $('#btnShowCreateClaim').toggleClass('d-none', !warranty.id);
+    },
+
+    // ✅ 3.2: Render danh sách vật tư bảo hành
+    renderWarrantyItems: function(items) {
+        var self = this;
+        var $tbody = $('#warrantyItemsBody');
+        if (!items || items.length === 0) {
+            $tbody.html('<tr><td colspan="6" class="text-center text-muted py-3">Chưa có dữ liệu</td></tr>');
+            return;
+        }
+
+        var rows = items.map(function(item) {
+            var statusText = item.status || 'Không xác định';
+            var statusClass = 'badge-secondary';
+            var status = (item.status || '').toLowerCase();
+            if (status === 'active' || status === 'đang hiệu lực') {
+                statusClass = 'badge-success';
+            } else if (status === 'expired' || status === 'hết hạn') {
+                statusClass = 'badge-danger';
+            }
+
+            return (
+                '<tr>' +
+                '<td>' + (item.partName || '-') + '</td>' +
+                '<td>' + (item.partNumber || '-') + '</td>' +
+                '<td>' + (item.warrantyMonths || 0) + '</td>' +
+                '<td>' + self.formatDateTime(item.warrantyStartDate) + '</td>' +
+                '<td>' + self.formatDateTime(item.warrantyEndDate) + '</td>' +
+                '<td><span class="badge ' + statusClass + '">' + statusText + '</span></td>' +
+                '</tr>'
+            );
+        }).join('');
+
+        $tbody.html(rows);
+    },
+
+    // ✅ 3.2: Render danh sách khiếu nại
+    renderWarrantyClaims: function(claims) {
+        var self = this;
+        var $tbody = $('#warrantyClaimsBody');
+        if (!claims || claims.length === 0) {
+            $tbody.html('<tr><td colspan="5" class="text-center text-muted py-3">Chưa có khiếu nại</td></tr>');
+            return;
+        }
+
+        var rows = claims.map(function(claim) {
+            var status = claim.status || 'Không xác định';
+            var statusClass = 'badge-secondary';
+            var statusLower = status.toLowerCase();
+
+            if (statusLower === 'pending' || statusLower === 'đang xử lý') {
+                statusClass = 'badge-warning';
+            } else if (statusLower === 'approved' || statusLower === 'completed' || statusLower === 'hoàn tất') {
+                statusClass = 'badge-success';
+            } else if (statusLower === 'rejected' || statusLower === 'từ chối') {
+                statusClass = 'badge-danger';
+            }
+
+            return (
+                '<tr>' +
+                '<td>' + (claim.claimNumber || '-') + '</td>' +
+                '<td>' + self.formatDateTime(claim.claimDate) + '</td>' +
+                '<td>' + (claim.issueDescription || '-') + '</td>' +
+                '<td><span class="badge ' + statusClass + '">' + status + '</span></td>' +
+                '<td>' + self.formatDateTime(claim.resolvedDate) + '</td>' +
+                '</tr>'
+            );
+        }).join('');
+
+        $tbody.html(rows);
+    },
+
+    // ✅ 3.2: Cập nhật cảnh báo hết hạn
+    updateWarrantyAlerts: function(warranty) {
+        $('#warrantyExpiryAlert, #warrantyExpiringAlert, #warrantyExpiredAlert').addClass('d-none');
+
+        if (!warranty || !warranty.warrantyEndDate) {
+            return;
+        }
+
+        var endDate = new Date(warranty.warrantyEndDate);
+        if (isNaN(endDate.getTime())) {
+            return;
+        }
+
+        var now = new Date();
+        var diffDays = Math.ceil((endDate - now) / (1000 * 60 * 60 * 24));
+
+        if (diffDays >= 30) {
+            $('#warrantyExpiryAlert').removeClass('d-none');
+        } else if (diffDays >= 0) {
+            $('#warrantyExpiringAlert').removeClass('d-none');
+        } else {
+            $('#warrantyExpiredAlert').removeClass('d-none');
+        }
+    },
+
+    // ✅ 3.2: Hiển thị thông báo khi không có dữ liệu bảo hành
+    handleWarrantyEmpty: function(message) {
+        $('#warrantyLoading').addClass('d-none');
+        $('#warrantyContent').addClass('d-none');
+        $('#warrantyError').addClass('d-none');
+        $('#warrantyEmpty').removeClass('d-none').find('span').text(message || 'Chưa có thông tin bảo hành.');
+    },
+
+    // ✅ 3.2: Xử lý lỗi bảo hành
+    handleWarrantyError: function(message) {
+        $('#warrantyLoading').addClass('d-none');
+        $('#warrantyContent').addClass('d-none');
+        $('#warrantyEmpty').addClass('d-none');
+        $('#warrantyError').removeClass('d-none').find('span').text(message || 'Không thể tải dữ liệu bảo hành.');
+    },
+
+    // ✅ 3.2: Tạo hoặc tái tạo bảo hành
+    generateWarranty: function(serviceOrderId) {
+        var self = this;
+        var hasExisting = !!self.currentWarranty;
+
+        Swal.fire({
+            title: hasExisting ? 'Tạo lại bảo hành?' : 'Tạo bảo hành?',
+            text: hasExisting
+                ? 'Phiếu sửa chữa đã có bảo hành. Bạn có muốn tạo lại để cập nhật thông tin mới nhất?'
+                : 'Hệ thống sẽ tạo bảo hành dựa trên thông tin bàn giao hiện tại.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: hasExisting ? 'Tạo lại' : 'Tạo',
+            cancelButtonText: 'Hủy'
+        }).then(function(result) {
+            if (result.isConfirmed) {
+                self.executeGenerateWarranty(serviceOrderId, hasExisting);
+            }
+        });
+    },
+
+    executeGenerateWarranty: function(serviceOrderId, forceRegenerate) {
+        var self = this;
+        $('#btnGenerateWarranty').prop('disabled', true);
+
+        $.ajax({
+            url: '/OrderManagement/GenerateWarranty/' + serviceOrderId,
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                ForceRegenerate: !!forceRegenerate
+            })
+        })
+            .done(function(response) {
+                if (!AuthHandler.validateApiResponse(response)) {
+                    return;
+                }
+
+                if (response.success) {
+                    GarageApp.showSuccess(response.message || 'Đã tạo bảo hành thành công.');
+                    self.warrantyLoadedOrderId = null;
+                    self.loadWarrantyData(serviceOrderId, true);
+                } else {
+                    var errorMsg = GarageApp.parseErrorMessage(response) || response.errorMessage || response.message || 'Không thể tạo bảo hành.';
+                    GarageApp.showError(errorMsg);
+                }
+            })
+            .fail(function(xhr) {
+                if (AuthHandler.isUnauthorized(xhr)) {
+                    AuthHandler.handleUnauthorized(xhr, true);
+                    return;
+                }
+                var errorMsg = GarageApp.parseErrorMessage ? GarageApp.parseErrorMessage(xhr) : 'Không thể tạo bảo hành.';
+                GarageApp.showError(errorMsg);
+            })
+            .always(function() {
+                $('#btnGenerateWarranty').prop('disabled', false);
+            });
+    },
+
+    // ✅ 3.2: Hiển thị form tạo khiếu nại bảo hành
+    openCreateWarrantyClaimModal: function(serviceOrderId, warranty) {
+        var self = this;
+        var defaultDate = new Date().toISOString().split('T')[0];
+
+        Swal.fire({
+            title: 'Tạo khiếu nại bảo hành',
+            html:
+                '<div class="form-group text-left">' +
+                '   <label for="warrantyClaimDate" class="font-weight-bold">Ngày khiếu nại</label>' +
+                '   <input type="date" id="warrantyClaimDate" class="form-control" value="' + defaultDate + '">' +
+                '</div>' +
+                '<div class="form-group text-left">' +
+                '   <label for="warrantyClaimDescription" class="font-weight-bold">Mô tả vấn đề <span class="text-danger">*</span></label>' +
+                '   <textarea id="warrantyClaimDescription" class="form-control" rows="3" placeholder="Mô tả chi tiết vấn đề bảo hành"></textarea>' +
+                '</div>' +
+                '<div class="form-group text-left">' +
+                '   <label for="warrantyClaimNotes" class="font-weight-bold">Ghi chú</label>' +
+                '   <textarea id="warrantyClaimNotes" class="form-control" rows="2" placeholder="Ghi chú thêm (nếu có)"></textarea>' +
+                '</div>',
+            focusConfirm: false,
+            showCancelButton: true,
+            confirmButtonText: 'Tạo khiếu nại',
+            cancelButtonText: 'Hủy',
+            preConfirm: function() {
+                var description = ($('#warrantyClaimDescription').val() || '').trim();
+                if (!description) {
+                    Swal.showValidationMessage('Vui lòng nhập mô tả vấn đề bảo hành.');
+                    return false;
+                }
+
+                return {
+                    claimDate: $('#warrantyClaimDate').val(),
+                    issueDescription: description,
+                    notes: ($('#warrantyClaimNotes').val() || '').trim()
+                };
+            }
+        }).then(function(result) {
+            if (result.isConfirmed && result.value) {
+                self.submitWarrantyClaim(warranty.id, serviceOrderId, result.value);
+            }
+        });
+    },
+
+    // ✅ 3.2: Gửi yêu cầu tạo khiếu nại bảo hành
+    submitWarrantyClaim: function(warrantyId, serviceOrderId, formData) {
+        var self = this;
+        if (!warrantyId) {
+            GarageApp.showError('Không xác định được bảo hành.');
+            return;
+        }
+
+        var payload = {
+            ClaimDate: formData.claimDate || null,
+            IssueDescription: formData.issueDescription,
+            Notes: formData.notes || null,
+            ServiceOrderId: serviceOrderId || null
+        };
+
+        $.ajax({
+            url: '/OrderManagement/CreateWarrantyClaim/' + warrantyId,
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(payload)
+        })
+            .done(function(response) {
+                if (!AuthHandler.validateApiResponse(response)) {
+                    return;
+                }
+
+                if (response.success) {
+                    GarageApp.showSuccess(response.message || 'Đã tạo khiếu nại bảo hành.');
+                    self.warrantyLoadedOrderId = null;
+                    self.loadWarrantyData(serviceOrderId, true);
+                } else {
+                    var errorMsg = GarageApp.parseErrorMessage(response) || response.errorMessage || response.message || 'Không thể tạo khiếu nại.';
+                    GarageApp.showError(errorMsg);
+                }
+            })
+            .fail(function(xhr) {
+                if (AuthHandler.isUnauthorized(xhr)) {
+                    AuthHandler.handleUnauthorized(xhr, true);
+                    return;
+                }
+                var errorMsg = GarageApp.parseErrorMessage ? GarageApp.parseErrorMessage(xhr) : 'Không thể tạo khiếu nại bảo hành.';
+                GarageApp.showError(errorMsg);
+            });
+    },
+
+    // ✅ 3.1: Áp dụng phương pháp tính COGS
+    applyCogsMethod: function() {
+        var self = this;
+        var serviceOrderId = self.currentServiceOrderId || $('#viewOrderModal').data('order-id');
+        if (!serviceOrderId) {
+            GarageApp.showError('Không xác định được phiếu sửa chữa.');
+            return;
+        }
+
+        var method = self.normalizeCogsMethod($('#cogsMethodSelect').val());
+        var $button = $('#btnApplyCogsMethod');
+        $button.prop('disabled', true);
+
+        $.ajax({
+            url: '/OrderManagement/SetOrderCogsMethod/' + serviceOrderId,
+            type: 'PUT',
+            contentType: 'application/json',
+            data: JSON.stringify({ Method: method })
+        })
+            .done(function(response) {
+                if (!AuthHandler.validateApiResponse(response)) {
+                    return;
+                }
+
+                if (response.success) {
+                    GarageApp.showSuccess(response.message || 'Đã cập nhật phương pháp tính COGS.');
+                    self.settlementLoadedOrderId = null;
+                    self.loadSettlementData(serviceOrderId, true);
+                } else {
+                    var errorMsg = GarageApp.parseErrorMessage(response) || response.error || response.message || 'Không thể cập nhật phương pháp tính COGS.';
+                    GarageApp.showError(errorMsg);
+                }
+            })
+            .fail(function(xhr) {
+                if (AuthHandler.isUnauthorized(xhr)) {
+                    AuthHandler.handleUnauthorized(xhr, true);
+                    return;
+                }
+                var errorMsg = GarageApp.parseErrorMessage ? GarageApp.parseErrorMessage(xhr) : 'Không thể cập nhật phương pháp tính COGS.';
+                GarageApp.showError(errorMsg);
+            })
+            .always(function() {
+                $button.prop('disabled', false);
+            });
+    },
+
+    // ✅ 3.1: Yêu cầu tính lại COGS
+    recalculateCogs: function() {
+        var self = this;
+        var serviceOrderId = self.currentServiceOrderId || $('#viewOrderModal').data('order-id');
+        if (!serviceOrderId) {
+            GarageApp.showError('Không xác định được phiếu sửa chữa.');
+            return;
+        }
+
+        var method = self.normalizeCogsMethod($('#cogsMethodSelect').val());
+
+        Swal.fire({
+            title: 'Tính lại COGS?',
+            text: 'Hệ thống sẽ tính lại giá vốn theo phương pháp đã chọn. Thao tác này có thể mất vài giây.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Tính lại',
+            cancelButtonText: 'Hủy'
+        }).then(function(result) {
+            if (result.isConfirmed) {
+                self.executeRecalculateCogs(serviceOrderId, method);
+            }
+        });
+    },
+
+    // ✅ 3.1: Gọi API tính lại COGS
+    executeRecalculateCogs: function(serviceOrderId, method) {
+        var self = this;
+        var $button = $('#btnRecalculateCogs');
+        $button.prop('disabled', true);
+
+        self.resetSettlementSection(true);
+
+        $.ajax({
+            url: '/OrderManagement/CalculateOrderCogs/' + serviceOrderId,
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ Method: method })
+        })
+            .done(function(response) {
+                if (!AuthHandler.validateApiResponse(response)) {
+                    return;
+                }
+
+                if (response.success) {
+                    GarageApp.showSuccess(response.message || 'Đã tính lại COGS thành công.');
+                    self.settlementLoadedOrderId = null;
+                    self.loadSettlementData(serviceOrderId, true);
+                    if (self.orderTable) {
+                        self.orderTable.ajax.reload(null, false);
+                    }
+                } else {
+                    var errorMsg = GarageApp.parseErrorMessage(response) || response.error || response.message || 'Không thể tính lại COGS.';
+                    GarageApp.showError(errorMsg);
+                    self.handleSettlementError(errorMsg);
+                }
+            })
+            .fail(function(xhr) {
+                if (AuthHandler.isUnauthorized(xhr)) {
+                    AuthHandler.handleUnauthorized(xhr, true);
+                    return;
+                }
+                var errorMsg = GarageApp.parseErrorMessage ? GarageApp.parseErrorMessage(xhr) : 'Không thể tính lại COGS.';
+                GarageApp.showError(errorMsg);
+                self.handleSettlementError(errorMsg);
+            })
+            .always(function() {
+                $button.prop('disabled', false);
+            });
+    },
+
+    // ✅ 3.1: Làm mới dữ liệu Quyết toán
+    refreshSettlementData: function() {
+        var serviceOrderId = this.currentServiceOrderId || $('#viewOrderModal').data('order-id');
+        if (!serviceOrderId) {
+            GarageApp.showError('Không xác định được phiếu sửa chữa.');
+            return;
+        }
+        this.settlementLoadedOrderId = null;
+        this.loadSettlementData(serviceOrderId, true);
     },
 
     // ✅ 2.4: Update QC buttons visibility based on order status
@@ -3033,7 +3910,368 @@ window.OrderManagement = {
         $('#reworkHours').val('');
         $('#reworkNotes').val('');
         $('#recordReworkHoursModal').modal('show');
-    }
+    },
+
+    // ✅ 3.3: Reset trạng thái tab phí dịch vụ
+    resetFeesSection: function(showSpinner) {
+        if (!$('#fees').length) {
+            return;
+        }
+
+        this.currentFeeSummary = null;
+
+        if (showSpinner === undefined || showSpinner) {
+            $('#feesLoading').removeClass('d-none');
+        } else {
+            $('#feesLoading').addClass('d-none');
+        }
+
+        $('#feesContent').addClass('d-none');
+        $('#feesEmpty').addClass('d-none');
+        $('#feesError').addClass('d-none');
+        $('#feesTableBody').html('<tr><td colspan="6" class="text-center text-muted py-3">Chưa có dữ liệu</td></tr>');
+        $('#feeTotalAmount').text('0 VNĐ');
+        $('#feeTotalVat').text('0 VNĐ');
+        $('#feeTotalDiscount').text('0 VNĐ');
+    },
+
+    fetchFees: function(serviceOrderId) {
+        return $.ajax({
+            url: '/OrderManagement/GetOrderFees/' + serviceOrderId,
+            type: 'GET'
+        });
+    },
+
+    loadFeesData: function(serviceOrderId, forceRefresh) {
+        var self = this;
+        if (!$('#fees').length) {
+            return;
+        }
+
+        if (!serviceOrderId) {
+            GarageApp.showError('Không xác định được phiếu sửa chữa để tải dữ liệu phí dịch vụ.');
+            return;
+        }
+
+        if (!forceRefresh && self.feesLoadedOrderId === serviceOrderId && self.currentFeeSummary) {
+            $('#feesLoading').addClass('d-none');
+            $('#feesContent').removeClass('d-none');
+            return;
+        }
+
+        self.resetFeesSection(true);
+
+        self.fetchFees(serviceOrderId)
+            .done(function(response) {
+                if (!AuthHandler.validateApiResponse(response)) {
+                    return;
+                }
+
+                var payload = response.data || response.Data || null;
+                var summary = null;
+                var message = response.message || response.errorMessage || null;
+                var isApiError = !response.success;
+
+                if (!isApiError && payload) {
+                    if (typeof payload.success === 'boolean') {
+                        if (payload.success) {
+                            summary = payload.data || payload.Data || null;
+                            message = payload.message || payload.errorMessage || message;
+                        } else {
+                            message = payload.message || payload.errorMessage || 'Chưa có dữ liệu phí dịch vụ.';
+                        }
+                    } else {
+                        summary = payload;
+                    }
+                } else if (isApiError) {
+                    message = response.errorMessage || response.message || message;
+                }
+
+                if (summary) {
+                    self.currentFeeSummary = summary;
+                    self.feeTypesCache = summary.feeTypes || [];
+                    self.updateFeesSummary(summary);
+                    self.renderFeesTable(summary.fees || []);
+
+                    $('#feesLoading').addClass('d-none');
+                    $('#feesContent').removeClass('d-none');
+                    $('#feesEmpty').addClass('d-none');
+                    $('#feesError').addClass('d-none');
+
+                    self.feesLoadedOrderId = serviceOrderId;
+                } else {
+                    if (isApiError) {
+                        self.handleFeesError(message || 'Không thể tải dữ liệu phí dịch vụ.');
+                    } else {
+                        self.handleFeesEmpty(message || 'Chưa có dữ liệu phí dịch vụ.');
+                    }
+                }
+            })
+            .fail(function(xhr) {
+                if (AuthHandler.isUnauthorized(xhr)) {
+                    AuthHandler.handleUnauthorized(xhr, true);
+                    return;
+                }
+                var errorMsg = GarageApp.parseErrorMessage ? GarageApp.parseErrorMessage(xhr) : 'Không thể tải dữ liệu phí dịch vụ.';
+                self.handleFeesError(errorMsg);
+            });
+    },
+
+    updateFeesSummary: function(summary) {
+        $('#feeTotalAmount').text(this.formatCurrency(summary.totalAmount || 0));
+        $('#feeTotalVat').text(this.formatCurrency(summary.totalVat || 0));
+        $('#feeTotalDiscount').text(this.formatCurrency(summary.totalDiscount || 0));
+    },
+
+    renderFeesTable: function(fees) {
+        var self = this;
+        var $tbody = $('#feesTableBody');
+        if (!fees || fees.length === 0) {
+            $tbody.html('<tr><td colspan="6" class="text-center text-muted py-3">Chưa có dữ liệu</td></tr>');
+            return;
+        }
+
+        var rows = fees.map(function(fee) {
+            return (
+                '<tr>' +
+                '<td>' + (fee.serviceFeeTypeName || '-') + '</td>' +
+                '<td>' + self.formatCurrency(fee.amount || 0) + '</td>' +
+                '<td>' + self.formatCurrency(fee.vatAmount || 0) + '</td>' +
+                '<td>' + self.formatCurrency(fee.discountAmount || 0) + '</td>' +
+                '<td>' + (fee.notes || '-') + '</td>' +
+                '<td class="text-center"><span class="badge badge-light">&mdash;</span></td>' +
+                '</tr>'
+            );
+        }).join('');
+
+        $tbody.html(rows);
+    },
+
+    openFeesEditor: function() {
+        var self = this;
+        if (!self.currentFeeSummary) {
+            GarageApp.showError('Không có dữ liệu phí để chỉnh sửa.');
+            return;
+        }
+
+        if (!self.feeTypesCache || self.feeTypesCache.length === 0) {
+            GarageApp.showError('Chưa cấu hình loại phí. Vui lòng thêm loại phí trước.');
+            return;
+        }
+
+        var rowsHtml = self.buildFeeEditorRows(self.currentFeeSummary.fees || []);
+
+        Swal.fire({
+            title: 'Chỉnh sửa phí dịch vụ',
+            html:
+                '<div class="table-responsive fee-editor-table">' +
+                '  <table class="table table-sm table-bordered mb-2">' +
+                '    <thead class="thead-light">' +
+                '      <tr>' +
+                '        <th>Loại phí</th>' +
+                '        <th style="width: 120px;">Số tiền</th>' +
+                '        <th style="width: 120px;">VAT</th>' +
+                '        <th style="width: 120px;">Giảm trừ</th>' +
+                '        <th>Ghi chú</th>' +
+                '        <th style="width: 60px;"></th>' +
+                '      </tr>' +
+                '    </thead>' +
+                '    <tbody id="feeEditorBody">' + rowsHtml + '</tbody>' +
+                '  </table>' +
+                '  <button type="button" class="btn btn-outline-primary btn-sm" id="btnAddFeeRow"><i class="fas fa-plus mr-1"></i>Thêm dòng</button>' +
+                '</div>',
+            width: '70%',
+            focusConfirm: false,
+            showCancelButton: true,
+            confirmButtonText: 'Lưu thay đổi',
+            cancelButtonText: 'Hủy',
+            didOpen: function(popup) {
+                self.attachFeeEditorEvents(popup);
+            },
+            preConfirm: function() {
+                var popup = Swal.getPopup();
+                var payload = self.collectFeeEditorData(popup);
+                if (!payload) {
+                    return false;
+                }
+                return payload;
+            }
+        }).then(function(result) {
+            if (result.isConfirmed && result.value) {
+                self.saveFees(result.value);
+            }
+        });
+    },
+
+    buildFeeEditorRows: function(fees) {
+        var self = this;
+        var list = fees && fees.length ? fees : [{ id: null, serviceFeeTypeId: (self.feeTypesCache[0] || {}).id || 0, amount: 0, vatAmount: 0, discountAmount: 0, notes: '', isManual: true }];
+        return list.map(function(fee, index) {
+            return (
+                '<tr class="fee-editor-row" data-index="' + index + '">' +
+                '  <td>' +
+                '    <select class="form-control form-control-sm fee-type-select">' + self.getFeeTypeOptions(fee.serviceFeeTypeId) + '</select>' +
+                '    <input type="hidden" class="fee-id-input" value="' + (fee.id || '') + '">' +
+                '  </td>' +
+                '  <td><input type="number" class="form-control form-control-sm fee-amount-input" min="0" step="0.01" value="' + (fee.amount || 0) + '"></td>' +
+                '  <td><input type="number" class="form-control form-control-sm fee-vat-input" min="0" step="0.01" value="' + (fee.vatAmount || 0) + '"></td>' +
+                '  <td><input type="number" class="form-control form-control-sm fee-discount-input" min="0" step="0.01" value="' + (fee.discountAmount || 0) + '"></td>' +
+                '  <td><input type="text" class="form-control form-control-sm fee-notes-input" value="' + (fee.notes || '') + '"></td>' +
+                '  <td class="text-center"><button type="button" class="btn btn-outline-danger btn-sm remove-fee-row" title="Xóa dòng"><i class="fas fa-trash"></i></button></td>' +
+                '</tr>'
+            );
+        }).join('');
+    },
+
+    getFeeTypeOptions: function(selectedId) {
+        return this.feeTypesCache.map(function(type) {
+            var selected = type.id === selectedId ? 'selected' : '';
+            return '<option value="' + type.id + '" ' + selected + '>' + type.name + '</option>';
+        }).join('');
+    },
+
+    attachFeeEditorEvents: function(popup) {
+        var self = this;
+        var body = $(popup).find('#feeEditorBody');
+        $(popup).find('#btnAddFeeRow').on('click', function() {
+            var newIndex = body.find('.fee-editor-row').length;
+            var newRow = self.buildFeeEditorRows([{ id: null, serviceFeeTypeId: (self.feeTypesCache[0] || {}).id || 0, amount: 0, vatAmount: 0, discountAmount: 0, notes: '', isManual: true }]);
+            body.append(newRow);
+        });
+
+        body.on('click', '.remove-fee-row', function() {
+            if (body.find('.fee-editor-row').length === 1) {
+                GarageApp.showWarning('Phải có ít nhất một dòng phí.');
+                return;
+            }
+            $(this).closest('.fee-editor-row').remove();
+        });
+    },
+
+    collectFeeEditorData: function(popup) {
+        var rows = $(popup).find('.fee-editor-row');
+        if (!rows.length) {
+            GarageApp.showError('Phải có ít nhất một dòng phí.');
+            return false;
+        }
+
+        var result = [];
+        var hasError = false;
+
+        rows.each(function() {
+            if (hasError) {
+                return;
+            }
+
+            var $row = $(this);
+            var feeTypeId = parseInt($row.find('.fee-type-select').val(), 10);
+            var amount = parseFloat($row.find('.fee-amount-input').val() || '0');
+            var vat = parseFloat($row.find('.fee-vat-input').val() || '0');
+            var discount = parseFloat($row.find('.fee-discount-input').val() || '0');
+            var notes = $row.find('.fee-notes-input').val() || '';
+            var idValue = $row.find('.fee-id-input').val();
+
+            if (!feeTypeId) {
+                GarageApp.showError('Vui lòng chọn loại phí.');
+                hasError = true;
+                return;
+            }
+
+            if (amount < 0 || vat < 0 || discount < 0) {
+                GarageApp.showError('Số tiền không được nhỏ hơn 0.');
+                hasError = true;
+                return;
+            }
+
+            result.push({
+                Id: idValue ? parseInt(idValue, 10) : null,
+                ServiceFeeTypeId: feeTypeId,
+                Amount: amount,
+                VatAmount: vat,
+                DiscountAmount: discount,
+                ReferenceSource: null,
+                Notes: notes,
+                IsManual: true
+            });
+        });
+
+        if (hasError) {
+            return false;
+        }
+
+        return { Fees: result };
+    },
+
+    saveFees: function(payload) {
+        var self = this;
+        var serviceOrderId = self.currentServiceOrderId || $('#viewOrderModal').data('order-id');
+        if (!serviceOrderId) {
+            GarageApp.showError('Không xác định được phiếu sửa chữa.');
+            return;
+        }
+
+        self.isEditingFees = true;
+        GarageApp.showLoading('Đang lưu phí dịch vụ...');
+
+        $.ajax({
+            url: '/OrderManagement/UpdateOrderFees/' + serviceOrderId,
+            type: 'PUT',
+            contentType: 'application/json',
+            data: JSON.stringify(payload)
+        })
+            .done(function(response) {
+                if (!AuthHandler.validateApiResponse(response)) {
+                    return;
+                }
+
+                if (response.success && response.data) {
+                    var summaryPayload = response.data.data || response.data.Data || response.data;
+                    if (summaryPayload) {
+                        self.currentFeeSummary = summaryPayload;
+                        self.feeTypesCache = summaryPayload.feeTypes || [];
+                        self.updateFeesSummary(summaryPayload);
+                        self.renderFeesTable(summaryPayload.fees || []);
+                        self.feesLoadedOrderId = serviceOrderId;
+                        $('#feesLoading').addClass('d-none');
+                        $('#feesContent').removeClass('d-none');
+                        $('#feesEmpty').addClass('d-none');
+                        $('#feesError').addClass('d-none');
+                        GarageApp.showSuccess(response.data.message || 'Đã cập nhật phí dịch vụ thành công.');
+                    } else {
+                        GarageApp.showError('Không lấy được dữ liệu sau khi cập nhật.');
+                    }
+                } else {
+                    var errorMsg = GarageApp.parseErrorMessage(response) || response.errorMessage || response.message || 'Không thể cập nhật phí dịch vụ.';
+                    GarageApp.showError(errorMsg);
+                }
+            })
+            .fail(function(xhr) {
+                if (AuthHandler.isUnauthorized(xhr)) {
+                    AuthHandler.handleUnauthorized(xhr, true);
+                    return;
+                }
+                var errorMsg = GarageApp.parseErrorMessage ? GarageApp.parseErrorMessage(xhr) : 'Không thể cập nhật phí dịch vụ.';
+                GarageApp.showError(errorMsg);
+            })
+            .always(function() {
+                self.isEditingFees = false;
+                GarageApp.hideLoading();
+            });
+    },
+
+    handleFeesEmpty: function(message) {
+        $('#feesLoading').addClass('d-none');
+        $('#feesContent').addClass('d-none');
+        $('#feesError').addClass('d-none');
+        $('#feesEmpty').removeClass('d-none').find('span').text(message || 'Chưa có dữ liệu phí dịch vụ.');
+    },
+
+    handleFeesError: function(message) {
+        $('#feesLoading').addClass('d-none');
+        $('#feesContent').addClass('d-none');
+        $('#feesEmpty').addClass('d-none');
+        $('#feesError').removeClass('d-none').find('span').text(message || 'Không thể tải dữ liệu phí dịch vụ.');
+    },
 };
 
 // Initialize when document is ready
@@ -3065,6 +4303,49 @@ $(document).ready(function() {
             OrderManagement.loadOrderProgress(serviceOrderId);
         } else {
             $('#progressContent').html('<p class="text-muted">Vui lòng xem chi tiết phiếu sửa chữa trước.</p>');
+        }
+    });
+
+    // ✅ 3.1: Load settlement data when tab is shown
+    $('#settlement-tab').on('shown.bs.tab', function() {
+        var serviceOrderId = OrderManagement.currentServiceOrderId || $('#viewOrderModal').data('order-id');
+        if (serviceOrderId) {
+            OrderManagement.loadSettlementData(serviceOrderId);
+        } else {
+            OrderManagement.resetSettlementSection(false);
+            $('#settlementEmptyMessage').text('Vui lòng xem chi tiết phiếu sửa chữa trước.');
+            $('#settlementEmpty').removeClass('d-none');
+        }
+    });
+
+    $('#warranty-tab').on('shown.bs.tab', function() {
+        var serviceOrderId = OrderManagement.currentServiceOrderId || $('#viewOrderModal').data('order-id');
+        if (serviceOrderId) {
+            OrderManagement.loadWarrantyData(serviceOrderId);
+        } else {
+            OrderManagement.resetWarrantySection(false);
+            $('#warrantyEmpty').removeClass('d-none');
+        }
+    });
+
+    $('#btnRefreshWarranty').on('click', function() {
+        var serviceOrderId = OrderManagement.currentServiceOrderId || $('#viewOrderModal').data('order-id');
+        if (serviceOrderId) {
+            OrderManagement.loadWarrantyData(serviceOrderId, true);
+        }
+    });
+
+    $('#btnGenerateWarranty').on('click', function() {
+        var serviceOrderId = OrderManagement.currentServiceOrderId || $('#viewOrderModal').data('order-id');
+        if (serviceOrderId) {
+            OrderManagement.generateWarranty(serviceOrderId);
+        }
+    });
+
+    $('#btnCreateWarrantyClaim, #btnShowCreateClaim').on('click', function() {
+        var serviceOrderId = OrderManagement.currentServiceOrderId || $('#viewOrderModal').data('order-id');
+        if (serviceOrderId && OrderManagement.currentWarranty) {
+            OrderManagement.openCreateWarrantyClaimModal(serviceOrderId, OrderManagement.currentWarranty);
         }
     });
 
@@ -3189,5 +4470,26 @@ $(document).ready(function() {
                 }
             }
         });
+    });
+
+    $('#fees-tab').on('shown.bs.tab', function() {
+        var serviceOrderId = OrderManagement.currentServiceOrderId || $('#viewOrderModal').data('order-id');
+        if (serviceOrderId) {
+            OrderManagement.loadFeesData(serviceOrderId);
+        } else {
+            OrderManagement.resetFeesSection(false);
+            $('#feesEmpty').removeClass('d-none').find('span').text('Vui lòng xem chi tiết phiếu sửa chữa trước.');
+        }
+    });
+
+    $('#btnRefreshFees').on('click', function() {
+        var serviceOrderId = OrderManagement.currentServiceOrderId || $('#viewOrderModal').data('order-id');
+        if (serviceOrderId) {
+            OrderManagement.loadFeesData(serviceOrderId, true);
+        }
+    });
+
+    $('#btnEditFees').on('click', function() {
+        OrderManagement.openFeesEditor();
     });
 });

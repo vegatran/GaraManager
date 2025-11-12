@@ -1,3 +1,8 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using GarageManagementSystem.Core.Entities;
 using GarageManagementSystem.Core.Interfaces;
 using GarageManagementSystem.Core.Enums;
 using GarageManagementSystem.Core.Extensions;
@@ -213,7 +218,7 @@ namespace GarageManagementSystem.API.Controllers
                                 PartName = item.PartName,
                                 Category = item.Category,
                                 Brand = item.Brand,
-                                Unit = item.Unit,
+                                DefaultUnit = item.Unit,
                                 Location = item.Location,
                                 CompatibleVehicles = item.CompatibleVehicles,
                                 CostPrice = item.UnitPrice,
@@ -226,6 +231,20 @@ namespace GarageManagementSystem.API.Controllers
                                 UpdatedAt = DateTime.Now
                             };
 
+                            if (!string.IsNullOrWhiteSpace(item.Unit))
+                            {
+                                part.PartUnits = new List<PartUnit>
+                                {
+                                    new PartUnit
+                                    {
+                                        UnitName = item.Unit!,
+                                        ConversionRate = 1,
+                                        IsDefault = true,
+                                        Part = part
+                                    }
+                                };
+                            }
+
                             await _unitOfWork.Parts.AddAsync(part);
                         }
                         else
@@ -234,13 +253,31 @@ namespace GarageManagementSystem.API.Controllers
                             part.PartName = item.PartName;
                             part.Category = item.Category;
                             part.Brand = item.Brand;
-                            part.Unit = item.Unit;
+                            part.DefaultUnit = item.Unit;
                             part.Location = item.Location;
                             part.CompatibleVehicles = item.CompatibleVehicles;
                             part.AverageCostPrice = item.UnitPrice;
                             part.QuantityInStock = item.Quantity;
                             part.UpdatedAt = DateTime.Now;
 
+                            await _unitOfWork.Parts.UpdateAsync(part);
+                        }
+
+                        if (!string.IsNullOrWhiteSpace(item.Unit))
+                        {
+                            await _unitOfWork.Parts.UpdateAsync(part);
+                            await _unitOfWork.SaveChangesAsync();
+
+                            var detailedPart = await _unitOfWork.Parts.GetWithDetailsAsync(part.Id);
+                            if (detailedPart != null)
+                            {
+                                part = detailedPart;
+                                EnsurePartUnit(part, item.Unit!);
+                                await _unitOfWork.Parts.UpdateAsync(part);
+                            }
+                        }
+                        else
+                        {
                             await _unitOfWork.Parts.UpdateAsync(part);
                         }
 
@@ -275,7 +312,6 @@ namespace GarageManagementSystem.API.Controllers
                         errors.Add($"Lỗi xử lý {item.PartNumber}: {ex.Message}");
                     }
                 }
-
                 await _unitOfWork.SaveChangesAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
@@ -292,6 +328,36 @@ namespace GarageManagementSystem.API.Controllers
             {
                 await _unitOfWork.RollbackTransactionAsync();
                 return StatusCode(500, ApiResponse<OpeningBalanceImportResult>.ErrorResult("Lỗi khi import tồn đầu kỳ", ex.Message));
+            }
+        }
+
+        private static void EnsurePartUnit(Part part, string unitName)
+        {
+            if (part.PartUnits == null)
+            {
+                part.PartUnits = new List<PartUnit>();
+            }
+
+            var existing = part.PartUnits.FirstOrDefault(u => u.UnitName.Equals(unitName, StringComparison.OrdinalIgnoreCase));
+            if (existing == null)
+            {
+                existing = new PartUnit
+                {
+                    PartId = part.Id,
+                    UnitName = unitName,
+                    ConversionRate = 1,
+                    IsDefault = true
+                };
+                part.PartUnits.Add(existing);
+            }
+
+            existing.ConversionRate = 1;
+            existing.IsDefault = true;
+            part.DefaultUnit = unitName;
+
+            foreach (var other in part.PartUnits.Where(u => !u.UnitName.Equals(unitName, StringComparison.OrdinalIgnoreCase)))
+            {
+                other.IsDefault = false;
             }
         }
 

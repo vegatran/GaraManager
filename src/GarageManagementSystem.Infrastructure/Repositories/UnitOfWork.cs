@@ -38,6 +38,18 @@ namespace GarageManagementSystem.Infrastructure.Repositories
             InsuranceClaims = new GenericRepository<InsuranceClaim>(_context);
             Quotations = ServiceQuotations; // Alias
             Inspections = VehicleInspections; // Alias
+            Warranties = new WarrantyRepository(_context);
+            WarrantyItems = new GenericRepository<WarrantyItem>(_context);
+            WarrantyClaims = new GenericRepository<WarrantyClaim>(_context);
+            ServiceFeeTypes = new GenericRepository<ServiceFeeType>(_context);
+            ServiceOrderFees = new GenericRepository<ServiceOrderFee>(_context);
+            CustomerFeedbacks = new GenericRepository<CustomerFeedback>(_context);
+            CustomerFeedbackAttachments = new GenericRepository<CustomerFeedbackAttachment>(_context);
+            FeedbackChannels = new GenericRepository<FeedbackChannel>(_context);
+            PartUnits = new GenericRepository<PartUnit>(_context);
+            Warehouses = new GenericRepository<Warehouse>(_context);
+            WarehouseZones = new GenericRepository<WarehouseZone>(_context);
+            WarehouseBins = new GenericRepository<WarehouseBin>(_context);
         }
 
         public ICustomerRepository Customers { get; private set; }
@@ -65,6 +77,18 @@ namespace GarageManagementSystem.Infrastructure.Repositories
         public IGenericRepository<InsuranceClaim> InsuranceClaims { get; private set; }
         public IGenericRepository<ServiceQuotation> Quotations { get; private set; }
         public IVehicleInspectionRepository Inspections { get; private set; }
+        public IWarrantyRepository Warranties { get; private set; }
+        public IGenericRepository<WarrantyItem> WarrantyItems { get; private set; }
+        public IGenericRepository<WarrantyClaim> WarrantyClaims { get; private set; }
+        public IGenericRepository<ServiceFeeType> ServiceFeeTypes { get; private set; }
+        public IGenericRepository<ServiceOrderFee> ServiceOrderFees { get; private set; }
+        public IGenericRepository<CustomerFeedback> CustomerFeedbacks { get; private set; }
+        public IGenericRepository<CustomerFeedbackAttachment> CustomerFeedbackAttachments { get; private set; }
+        public IGenericRepository<FeedbackChannel> FeedbackChannels { get; private set; }
+        public IGenericRepository<PartUnit> PartUnits { get; private set; }
+        public IGenericRepository<Warehouse> Warehouses { get; private set; }
+        public IGenericRepository<WarehouseZone> WarehouseZones { get; private set; }
+        public IGenericRepository<WarehouseBin> WarehouseBins { get; private set; }
 
         public IGenericRepository<T> Repository<T>() where T : BaseEntity
         {

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
 namespace GarageManagementSystem.Shared.DTOs
@@ -6,6 +7,8 @@ namespace GarageManagementSystem.Shared.DTOs
     {
         public string PartNumber { get; set; } = string.Empty;
         public string PartName { get; set; } = string.Empty;
+        public string? Sku { get; set; }
+        public string? Barcode { get; set; }
         public string? Description { get; set; }
         public string? Category { get; set; }
         public string? Brand { get; set; }
@@ -14,10 +17,11 @@ namespace GarageManagementSystem.Shared.DTOs
         public int QuantityInStock { get; set; }
         public int MinimumStock { get; set; }
         public int? ReorderLevel { get; set; }
-        public string? Unit { get; set; }
+        public string? DefaultUnit { get; set; }
         public string? CompatibleVehicles { get; set; }
         public string? Location { get; set; }
         public bool IsActive { get; set; }
+        public List<PartUnitDto> Units { get; set; } = new();
         
         // ✅ THÊM: Classification fields
         public string SourceType { get; set; } = "Purchased";
@@ -45,10 +49,42 @@ namespace GarageManagementSystem.Shared.DTOs
         public bool IsOEM { get; set; } = false;
     }
 
+    public class PartUnitDto : BaseDto
+    {
+        public int PartId { get; set; }
+        public string UnitName { get; set; } = string.Empty;
+        public decimal ConversionRate { get; set; } = 1m;
+        public string? Barcode { get; set; }
+        public string? Notes { get; set; }
+        public bool IsDefault { get; set; }
+    }
+
+    public class PartUnitRequestDto
+    {
+        public int? Id { get; set; }
+
+        [Required]
+        [StringLength(50)]
+        public string UnitName { get; set; } = string.Empty;
+
+        [Range(0.0001, double.MaxValue)]
+        public decimal ConversionRate { get; set; } = 1m;
+
+        [StringLength(150)]
+        public string? Barcode { get; set; }
+
+        [StringLength(200)]
+        public string? Notes { get; set; }
+
+        public bool IsDefault { get; set; } = false;
+    }
+
     public class CreatePartDto
     {
         [Required] [StringLength(50)] public string PartNumber { get; set; } = string.Empty;
         [Required] [StringLength(200)] public string PartName { get; set; } = string.Empty;
+        [StringLength(100)] public string? Sku { get; set; }
+        [StringLength(150)] public string? Barcode { get; set; }
         [StringLength(1000)] public string? Description { get; set; }
         [StringLength(100)] public string? Category { get; set; }
         [StringLength(100)] public string? Brand { get; set; }
@@ -57,10 +93,11 @@ namespace GarageManagementSystem.Shared.DTOs
         [Required] [Range(0, int.MaxValue)] public int QuantityInStock { get; set; } = 0;
         [Range(0, int.MaxValue)] public int MinimumStock { get; set; } = 0;
         public int? ReorderLevel { get; set; }
-        [StringLength(20)] public string? Unit { get; set; }
+        [StringLength(20)] public string? DefaultUnit { get; set; }
         [StringLength(500)] public string? CompatibleVehicles { get; set; }
         [StringLength(100)] public string? Location { get; set; }
         public bool IsActive { get; set; } = true;
+        public List<PartUnitRequestDto> Units { get; set; } = new();
         
         // ✅ THÊM: Classification fields
         [StringLength(30)] public string SourceType { get; set; } = "Purchased";

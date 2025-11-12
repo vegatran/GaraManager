@@ -6,9 +6,14 @@ namespace GarageManagementSystem.Core.Interfaces
     public interface ICustomerReceptionRepository : IGenericRepository<CustomerReception>
     {
         /// <summary>
-        /// Lấy danh sách tiếp đón với thông tin khách hàng và xe
+        /// Lấy danh sách tiếp đón với thông tin khách hàng và xe (full load)
         /// </summary>
         Task<IEnumerable<CustomerReception>> GetAllWithDetailsAsync();
+
+        /// <summary>
+        /// Truy vấn tiếp đón với thông tin chi tiết (dùng cho pagination/filter phía database)
+        /// </summary>
+        IQueryable<CustomerReception> GetAllWithDetailsQueryable();
 
         /// <summary>
         /// Lấy tiếp đón theo ID với thông tin chi tiết

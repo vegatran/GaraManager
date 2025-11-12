@@ -72,6 +72,10 @@ namespace GarageManagementSystem.Core.Entities
         
         [StringLength(50)]
         public string? Bin { get; set; } // Ngăn
+
+        public int? WarehouseId { get; set; }
+        public int? WarehouseZoneId { get; set; }
+        public int? WarehouseBinId { get; set; }
         
         // Ngày hết hạn (nếu có)
         public DateTime? ExpiryDate { get; set; }
@@ -96,5 +100,8 @@ namespace GarageManagementSystem.Core.Entities
         public virtual ServiceOrder? SourceServiceOrder { get; set; }
         public virtual Employee? Employee { get; set; }
         public virtual ICollection<PartBatchUsage> BatchUsages { get; set; } = new List<PartBatchUsage>();
+        public virtual Warehouse? Warehouse { get; set; }
+        public virtual WarehouseZone? WarehouseZone { get; set; }
+        public virtual WarehouseBin? WarehouseBin { get; set; }
     }
 }

@@ -62,6 +62,20 @@
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="form-group">
+                                        <label for="editSku">Mã SKU</label>
+                                        <input type="text" class="form-control form-control-sm" id="editSku" name="Sku" maxlength="100">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="editBarcode">Mã Vạch / QR</label>
+                                        <input type="text" class="form-control form-control-sm" id="editBarcode" name="Barcode" maxlength="150">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
                                         <label for="editCategory">Danh Mục</label>
                                         <input type="text" class="form-control form-control-sm" id="editCategory" name="Category" maxlength="100">
                                     </div>
@@ -101,17 +115,52 @@
                                     </div>
                                 </div>
                                 <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="editReorderLevel">Mức Tồn Bổ Sung</label>
+                                    <input type="number" class="form-control form-control-sm" id="editReorderLevel" name="ReorderLevel" min="0">
+                                </div>
+                            </div>
+                        </div>
+                            <div class="row">
+                                <div class="col-md-4">
                                     <div class="form-group">
-                                        <label for="editUnit">Đơn Vị Tính</label>
-                                        <input type="text" class="form-control form-control-sm" id="editUnit" name="Unit" maxlength="20">
+                                        <label for="editDefaultUnit">Đơn Vị Chính</label>
+                                        <input type="text" class="form-control form-control-sm" id="editDefaultUnit" name="DefaultUnit" maxlength="20">
                                     </div>
                                 </div>
                             </div>
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        <label for="editLocation">Vị Trí Kho</label>
+                                        <label for="editWarehouseSelect">Kho lưu trữ</label>
+                                        <select class="form-control form-control-sm" id="editWarehouseSelect">
+                                            <option value="">-- Chọn kho --</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="editWarehouseZoneSelect">Khu vực</label>
+                                        <select class="form-control form-control-sm" id="editWarehouseZoneSelect" disabled>
+                                            <option value="">-- Chọn khu vực --</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="editWarehouseBinSelect">Kệ / Ngăn</label>
+                                        <select class="form-control form-control-sm" id="editWarehouseBinSelect" disabled>
+                                            <option value="">-- Chọn vị trí --</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="editLocation">Ghi chú vị trí</label>
                                         <input type="text" class="form-control form-control-sm" id="editLocation" name="Location" maxlength="100">
+                                        <small class="form-text text-muted">Tự động cập nhật theo lựa chọn kho, có thể chỉnh tay.</small>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
@@ -128,6 +177,56 @@
                                         <label class="custom-control-label" for="editIsActive">Đang Hoạt Động</label>
                                     </div>
                                 </div>
+                            </div>
+
+                            <hr>
+                            <h6 class="text-primary"><i class="fas fa-random"></i> Đơn vị quy đổi</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered" id="editPartUnitsTable">
+                                    <thead class="thead-light">
+                                        <tr>
+                                            <th>Đơn vị</th>
+                                            <th>Hệ số</th>
+                                            <th>Mã vạch</th>
+                                            <th>Mặc định</th>
+                                            <th style="width: 40px;"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="editPartUnitsTableBody">
+                                        <tr class="text-muted">
+                                            <td colspan="5" class="text-center">Nhập thông tin bên dưới để bổ sung đơn vị.</td>
+                                        </tr>
+                                    </tbody>
+                                    <tfoot class="bg-light">
+                                        <tr>
+                                            <td>
+                                                <input type="text" class="form-control form-control-sm" id="editUnitNameInput" maxlength="50">
+                                            </td>
+                                            <td>
+                                                <input type="number" class="form-control form-control-sm" id="editUnitConversionInput" min="0.0001" step="0.0001" value="1">
+                                                <small class="text-muted d-block">1 đơn vị này bằng bao nhiêu đơn vị chính</small>
+                                            </td>
+                                            <td>
+                                                <input type="text" class="form-control form-control-sm" id="editUnitBarcodeInput" maxlength="150">
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="custom-control custom-checkbox mt-2">
+                                                    <input type="checkbox" class="custom-control-input" id="editUnitIsDefaultInput">
+                                                    <label class="custom-control-label" for="editUnitIsDefaultInput"></label>
+                                                </div>
+                                            </td>
+                                            <td class="text-center">
+                                                <button type="button" class="btn btn-sm btn-primary mb-1" id="btnEditSaveUnit">
+                                                    <i class="fas fa-save"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-secondary mb-1 d-none" id="btnEditCancelEditUnit">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                                <input type="hidden" id="editUnitEditIndex" value="-1">
                             </div>
                         </div>
 

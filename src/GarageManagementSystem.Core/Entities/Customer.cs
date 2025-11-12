@@ -41,5 +41,7 @@ namespace GarageManagementSystem.Core.Entities
         public virtual ICollection<VehicleInspection> VehicleInspections { get; set; } = new List<VehicleInspection>();
         public virtual ICollection<ServiceQuotation> ServiceQuotations { get; set; } = new List<ServiceQuotation>();
         public virtual ICollection<Appointment> Appointments { get; set; } = new List<Appointment>();
+        public virtual ICollection<Warranty> Warranties { get; set; } = new List<Warranty>();
+        public virtual ICollection<CustomerFeedback> CustomerFeedbacks { get; set; } = new List<CustomerFeedback>();
     }
 }

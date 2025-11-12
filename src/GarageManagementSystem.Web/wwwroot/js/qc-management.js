@@ -213,14 +213,41 @@ GarageApp.QC = {
                     $('#qcChecklistItems').empty();
                     self.checklistItemCounter = 0;
                     
-                    // Add default checklist items
-                    self.addChecklistItem('Kiểm tra chất lượng sơn');
-                    self.addChecklistItem('Kiểm tra lắp ráp phụ tùng');
-                    self.addChecklistItem('Kiểm tra hoạt động động cơ');
-                    self.addChecklistItem('Kiểm tra hệ thống điện');
-                    self.addChecklistItem('Kiểm tra an toàn');
+                    // ✅ OPTIMIZED: Load template từ API với fallback về hardcode
+                    // ✅ FIX: Đảm bảo vehicleType và serviceType không null/undefined
+                    var vehicleType = (order.vehicle && order.vehicle.vehicleType) ? order.vehicle.vehicleType : null;
+                    var serviceType = order.serviceType || null;
                     
-                    $('#startQCModal').modal('show');
+                    // ✅ FIX: Đảm bảo callback chỉ được gọi 1 lần và modal chỉ show 1 lần
+                    var callbackCalled = false;
+                    self.loadQCTemplate(vehicleType, serviceType, function(templateItems) {
+                        if (callbackCalled) {
+                            console.warn('QC template callback đã được gọi, bỏ qua lần gọi thứ 2');
+                            return;
+                        }
+                        callbackCalled = true;
+                        
+                        if (templateItems && templateItems.length > 0) {
+                            // Load từ template
+                            templateItems.forEach(function(item) {
+                                if (item && item.checklistItemName) {
+                                    self.addChecklistItem(item.checklistItemName);
+                                }
+                            });
+                        } else {
+                            // Fallback: Sử dụng hardcode mặc định
+                            self.addChecklistItem('Kiểm tra chất lượng sơn');
+                            self.addChecklistItem('Kiểm tra lắp ráp phụ tùng');
+                            self.addChecklistItem('Kiểm tra hoạt động động cơ');
+                            self.addChecklistItem('Kiểm tra hệ thống điện');
+                            self.addChecklistItem('Kiểm tra an toàn');
+                        }
+                        
+                        // ✅ FIX: Chỉ show modal nếu chưa được show
+                        if (!$('#startQCModal').is(':visible')) {
+                            $('#startQCModal').modal('show');
+                        }
+                    });
                 } else {
                     GarageApp.showError('Không thể tải thông tin đơn hàng');
                 }
@@ -248,6 +275,76 @@ GarageApp.QC = {
         }
         
         $('#qcChecklistItems').append($item);
+    },
+
+    // ✅ OPTIMIZED: Load QC Template từ API với fallback
+    loadQCTemplate: function(vehicleType, serviceType, callback) {
+        var self = this;
+        var url = '/QCManagement/GetQCTemplate';
+        var params = [];
+        
+        // ✅ FIX: Validate và sanitize input
+        if (vehicleType && typeof vehicleType === 'string' && vehicleType.trim() !== '') {
+            params.push('vehicleType=' + encodeURIComponent(vehicleType.trim()));
+        }
+        if (serviceType && typeof serviceType === 'string' && serviceType.trim() !== '') {
+            params.push('serviceType=' + encodeURIComponent(serviceType.trim()));
+        }
+        
+        if (params.length > 0) {
+            url += '?' + params.join('&');
+        }
+        
+        $.ajax({
+            url: url,
+            type: 'GET',
+            success: function(res) {
+                if (AuthHandler && !AuthHandler.validateApiResponse(res)) {
+                    // Fallback về hardcode nếu có lỗi auth
+                    if (callback) callback([]);
+                    return;
+                }
+                
+                // ✅ FIX: Kiểm tra kỹ hơn về structure của response
+                if (res && res.success && res.data) {
+                    // ✅ FIX: Kiểm tra res.data có phải là object và có templateItems không
+                    var templateData = res.data.data || res.data.Data || res.data;
+                    var templateItems = (templateData && templateData.templateItems) ? templateData.templateItems : 
+                                       (templateData && templateData.TemplateItems) ? templateData.TemplateItems :
+                                       (res.data.templateItems) ? res.data.templateItems :
+                                       (res.data.TemplateItems) ? res.data.TemplateItems : [];
+                    
+                    if (Array.isArray(templateItems) && templateItems.length > 0) {
+                        // Load từ template thành công
+                        var items = templateItems.map(function(item) {
+                            return {
+                                checklistItemName: (item.checklistItemName || item.ChecklistItemName || '').trim(),
+                                displayOrder: parseInt(item.displayOrder || item.DisplayOrder || 0, 10),
+                                isRequired: item.isRequired || item.IsRequired || false
+                            };
+                        }).filter(function(item) {
+                            // ✅ FIX: Lọc bỏ items không có tên
+                            return item.checklistItemName && item.checklistItemName.length > 0;
+                        }).sort(function(a, b) {
+                            return a.displayOrder - b.displayOrder;
+                        });
+                        
+                        if (items.length > 0 && callback) {
+                            callback(items);
+                            return;
+                        }
+                    }
+                }
+                
+                // Không có template hoặc template rỗng, fallback về hardcode
+                if (callback) callback([]);
+            },
+            error: function(xhr) {
+                // Lỗi khi load template, fallback về hardcode
+                console.warn('Error loading QC template, using hardcoded default', xhr);
+                if (callback) callback([]);
+            }
+        });
     },
 
     addCompleteChecklistItem: function(itemName) {

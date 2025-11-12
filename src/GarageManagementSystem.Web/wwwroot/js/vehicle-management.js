@@ -8,6 +8,8 @@
 window.VehicleManagement = {
     // DataTable instance
     vehicleTable: null,
+    isCreating: false,
+    isUpdating: false,
 
     // Initialize module
     init: function() {
@@ -106,13 +108,13 @@ window.VehicleManagement = {
         });
 
         // Create vehicle form
-        $(document).on('submit', '#createVehicleForm', function(e) {
+        $(document).off('submit', '#createVehicleForm').on('submit', '#createVehicleForm', function(e) {
             e.preventDefault();
             self.createVehicle();
         });
 
         // Update vehicle form
-        $(document).on('submit', '#editVehicleForm', function(e) {
+        $(document).off('submit', '#editVehicleForm').on('submit', '#editVehicleForm', function(e) {
             e.preventDefault();
             self.updateVehicle();
         });
@@ -242,6 +244,9 @@ window.VehicleManagement = {
     // Create vehicle
     createVehicle: function() {
         var self = this;
+        if (self.isCreating) {
+            return;
+        }
         var formData = {
             CustomerId: parseInt($('#createCustomerId').val()),
             LicensePlate: $('#createLicensePlate').val(),
@@ -260,6 +265,10 @@ window.VehicleManagement = {
             GarageApp.showError('Vui lòng điền đầy đủ thông tin bắt buộc');
             return;
         }
+
+        self.isCreating = true;
+        var $submitBtn = $('#createVehicleForm button[type="submit"]');
+        $submitBtn.prop('disabled', true);
 
         $.ajax({
             url: '/VehicleManagement/CreateVehicle',
@@ -283,6 +292,10 @@ window.VehicleManagement = {
                 } else {
                     GarageApp.showError('Error creating vehicle');
                 }
+            },
+            complete: function() {
+                self.isCreating = false;
+                $submitBtn.prop('disabled', false);
             }
         });
     },
@@ -290,6 +303,9 @@ window.VehicleManagement = {
     // Update vehicle
     updateVehicle: function() {
         var self = this;
+        if (self.isUpdating) {
+            return;
+        }
         var vehicleId = $('#editId').val();
         var formData = {
             Id: parseInt(vehicleId),
@@ -310,6 +326,10 @@ window.VehicleManagement = {
             GarageApp.showError('Vui lòng điền đầy đủ thông tin bắt buộc');
             return;
         }
+
+        self.isUpdating = true;
+        var $submitBtn = $('#editVehicleForm button[type="submit"]');
+        $submitBtn.prop('disabled', true);
 
         $.ajax({
             url: '/VehicleManagement/UpdateVehicle/' + vehicleId,
@@ -333,6 +353,10 @@ window.VehicleManagement = {
                 } else {
                     GarageApp.showError('Error updating vehicle');
                 }
+            },
+            complete: function() {
+                self.isUpdating = false;
+                $submitBtn.prop('disabled', false);
             }
         });
     },

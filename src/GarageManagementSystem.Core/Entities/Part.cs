@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace GarageManagementSystem.Core.Entities
 {
@@ -10,6 +11,12 @@ namespace GarageManagementSystem.Core.Entities
         [Required]
         [StringLength(50)]
         public string PartNumber { get; set; } = string.Empty; // Mã phụ tùng
+
+        [StringLength(100)]
+        public string? Sku { get; set; } // Mã SKU chuẩn hóa
+
+        [StringLength(150)]
+        public string? Barcode { get; set; } // Mã vạch/QR code
 
         [Required]
         [StringLength(200)]
@@ -41,7 +48,15 @@ namespace GarageManagementSystem.Core.Entities
         public int? ReorderLevel { get; set; } // Mức đặt hàng lại
 
         [StringLength(20)]
-        public string? Unit { get; set; } // Đơn vị: cái, lít, bộ, kg...
+        public string? DefaultUnit { get; set; } // Đơn vị chuẩn
+
+        [NotMapped]
+        [Obsolete("Sử dụng DefaultUnit thay cho Unit")]
+        public string? Unit
+        {
+            get => DefaultUnit;
+            set => DefaultUnit = value;
+        }
 
         [StringLength(500)]
         public string? CompatibleVehicles { get; set; } // Xe nào dùng được (Brand/Model)
@@ -112,6 +127,8 @@ namespace GarageManagementSystem.Core.Entities
         public virtual ICollection<ServiceOrderPart> ServiceOrderParts { get; set; } = new List<ServiceOrderPart>();
         public virtual ICollection<QuotationItem> QuotationItems { get; set; } = new List<QuotationItem>();
         public virtual ICollection<StockTransaction> StockTransactions { get; set; } = new List<StockTransaction>();
+        public virtual ICollection<WarrantyItem> WarrantyItems { get; set; } = new List<WarrantyItem>();
+        public virtual ICollection<PartUnit> PartUnits { get; set; } = new List<PartUnit>();
     }
 }
 

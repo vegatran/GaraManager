@@ -1,8 +1,10 @@
 using AutoMapper;
 using GarageManagementSystem.Core.Interfaces;
+using GarageManagementSystem.Core.Entities;
 using GarageManagementSystem.Shared.DTOs;
 using GarageManagementSystem.Shared.Models;
 using GarageManagementSystem.Infrastructure.Data;
+using GarageManagementSystem.API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -21,18 +23,24 @@ namespace GarageManagementSystem.API.Controllers
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly GarageDbContext _context;
+        private readonly ICacheService _cacheService;
         private readonly ILogger<QualityControlController> _logger;
+        private readonly IWarrantyService _warrantyService;
 
         public QualityControlController(
             IUnitOfWork unitOfWork, 
             IMapper mapper, 
             GarageDbContext context,
-            ILogger<QualityControlController> logger)
+            ICacheService cacheService,
+            ILogger<QualityControlController> logger,
+            IWarrantyService warrantyService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _context = context;
+            _cacheService = cacheService;
             _logger = logger;
+            _warrantyService = warrantyService;
         }
 
         /// <summary>
@@ -94,12 +102,70 @@ namespace GarageManagementSystem.API.Controllers
                 order.CompletedDate = DateTime.Now;
 
                 await _unitOfWork.ServiceOrders.UpdateAsync(order);
+                // ✅ FIX: Gọi SaveChangesAsync trước khi commit transaction để đảm bảo dữ liệu được lưu vào database
+                await _unitOfWork.SaveChangesAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
-                // Reload để lấy dữ liệu mới nhất
-                order = await _unitOfWork.ServiceOrders.GetByIdWithDetailsAsync(id);
-                var orderDto = _mapper.Map<ServiceOrderDto>(order);
+                // ✅ FIX: Detach entity để force reload từ database (tránh EF tracking cache)
+                _context.Entry(order).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+                
+                // ✅ FIX: Reload trực tiếp từ DbContext với AsNoTracking để đảm bảo lấy dữ liệu mới nhất từ DB
+                var reloadedOrder = await _context.ServiceOrders
+                    .AsNoTracking()
+                    .Include(so => so.Customer)
+                    .Include(so => so.Vehicle)
+                    .Include(so => so.ServiceOrderItems.Where(soi => !soi.IsDeleted))
+                        .ThenInclude(soi => soi.Service)
+                    .Include(so => so.ServiceOrderItems.Where(soi => !soi.IsDeleted))
+                        .ThenInclude(soi => soi.AssignedTechnician)
+                    .Include(so => so.ServiceOrderParts.Where(sop => !sop.IsDeleted))
+                        .ThenInclude(sop => sop.Part)
+                    .Include(so => so.ServiceQuotation)
+                    .FirstOrDefaultAsync(so => so.Id == id && !so.IsDeleted);
+                
+                if (reloadedOrder == null)
+                {
+                    return NotFound(ApiResponse<ServiceOrderDto>.ErrorResult("Không tìm thấy phiếu sửa chữa sau khi cập nhật"));
+                }
+                
+                // ✅ FIX: Verify status đã được cập nhật đúng trong database
+                if (reloadedOrder.Status != "WaitingForQC")
+                {
+                    _logger.LogError($"❌ CRITICAL: Status không khớp sau khi reload từ DB. Expected: WaitingForQC, Actual: {reloadedOrder.Status}. ServiceOrderId: {id}");
+                    // Force update lại status trực tiếp trong database
+                    await _context.Database.ExecuteSqlRawAsync(
+                        "UPDATE ServiceOrders SET Status = 'WaitingForQC' WHERE Id = {0} AND IsDeleted = 0", id);
+                    
+                    // Reload lại sau khi force update
+                    reloadedOrder = await _context.ServiceOrders
+                        .AsNoTracking()
+                        .Include(so => so.Customer)
+                        .Include(so => so.Vehicle)
+                        .Include(so => so.ServiceOrderItems.Where(soi => !soi.IsDeleted))
+                            .ThenInclude(soi => soi.Service)
+                        .Include(so => so.ServiceOrderItems.Where(soi => !soi.IsDeleted))
+                            .ThenInclude(soi => soi.AssignedTechnician)
+                        .Include(so => so.ServiceOrderParts.Where(sop => !sop.IsDeleted))
+                            .ThenInclude(sop => sop.Part)
+                        .Include(so => so.ServiceQuotation)
+                        .FirstOrDefaultAsync(so => so.Id == id && !so.IsDeleted);
+                    
+                    if (reloadedOrder == null)
+                    {
+                        return NotFound(ApiResponse<ServiceOrderDto>.ErrorResult("Không tìm thấy phiếu sửa chữa sau khi force update"));
+                    }
+                }
+                
+                // ✅ FIX: Map từ reloadedOrder (đã verify status)
+                var orderDto = _mapper.Map<ServiceOrderDto>(reloadedOrder);
                 orderDto.TotalActualHours = totalActualHours;
+                
+                // ✅ FIX: Đảm bảo status trong DTO đúng
+                if (orderDto.Status != "WaitingForQC")
+                {
+                    _logger.LogWarning($"Status trong DTO không khớp. Expected: WaitingForQC, Actual: {orderDto.Status}. Force set lại.");
+                    orderDto.Status = "WaitingForQC";
+                }
                 
                 return Ok(ApiResponse<ServiceOrderDto>.SuccessResult(orderDto, 
                     $"Đã hoàn thành kỹ thuật. Tổng giờ công thực tế: {totalActualHours:F2} giờ"));
@@ -201,13 +267,25 @@ namespace GarageManagementSystem.API.Controllers
         {
             try
             {
-                // ✅ FIX: Set ServiceOrderId từ route parameter vào DTO (trước khi validation)
-                // Vì JavaScript không gửi ServiceOrderId trong body, chỉ gửi trong URL
+                // ✅ VALIDATION: Kiểm tra createDto không null
                 if (createDto == null)
                 {
-                    createDto = new CreateQualityControlDto();
+                    return BadRequest(ApiResponse<QualityControlDto>.ErrorResult("Dữ liệu không hợp lệ"));
                 }
-                createDto.ServiceOrderId = id;
+
+                // ✅ FIX: Set ServiceOrderId từ route parameter vào DTO (trước khi validation)
+                // Vì JavaScript không gửi ServiceOrderId trong body, chỉ gửi trong URL
+                if (createDto.ServiceOrderId == 0)
+                {
+                    createDto.ServiceOrderId = id;
+                }
+                
+                // ✅ VALIDATION: Kiểm tra ServiceOrderId khớp với route parameter
+                if (createDto.ServiceOrderId != id)
+                {
+                    return BadRequest(ApiResponse<QualityControlDto>.ErrorResult(
+                        "ServiceOrderId trong body không khớp với route parameter"));
+                }
                 
                 // ✅ FIX: Clear ModelState và validate lại sau khi set ServiceOrderId
                 // Vì ModelState đã được validate trước khi set ServiceOrderId
@@ -326,18 +404,32 @@ namespace GarageManagementSystem.API.Controllers
                 await _unitOfWork.SaveChangesAsync();
 
                 // Tạo checklist items
+                // ✅ TẠO QC CHECKLIST ITEMS: Mỗi item sẽ được tạo MỚI với ID tự động từ database
+                // Không quan trọng item từ template có Id = 0 hay không, vì đây là entity mới
+                // Id sẽ được database tự động generate (auto-increment)
                 if (createDto.ChecklistItems != null && createDto.ChecklistItems.Any())
                 {
-                    foreach (var itemDto in createDto.ChecklistItems)
+                    int displayOrder = 1;
+                    foreach (var itemDto in createDto.ChecklistItems.OrderBy(i => i.DisplayOrder))
                     {
+                        // ✅ VALIDATION: Kiểm tra ChecklistItemName không rỗng
+                        if (string.IsNullOrWhiteSpace(itemDto.ChecklistItemName))
+                        {
+                            await _unitOfWork.RollbackTransactionAsync();
+                            return BadRequest(ApiResponse<QualityControlDto>.ErrorResult(
+                                $"Hạng mục thứ {displayOrder} không có tên. Vui lòng điền đầy đủ thông tin."));
+                        }
+                        
+                        // ✅ Tạo entity mới - Id sẽ được database tự động gán (không dùng itemDto.Id)
                         var checklistItem = new Core.Entities.QCChecklistItem
                         {
+                            // Id không được set - sẽ được database tự động gán
                             QualityControlId = qc.Id,
-                            ChecklistItemName = itemDto.ChecklistItemName,
+                            ChecklistItemName = itemDto.ChecklistItemName.Trim(),
                             IsChecked = itemDto.IsChecked,
                             Result = itemDto.Result,
                             Notes = itemDto.Notes,
-                            DisplayOrder = itemDto.DisplayOrder,
+                            DisplayOrder = displayOrder++, // Đảm bảo thứ tự đúng
                             CreatedAt = DateTime.Now
                         };
                         await _unitOfWork.Repository<Core.Entities.QCChecklistItem>().AddAsync(checklistItem);
@@ -347,7 +439,8 @@ namespace GarageManagementSystem.API.Controllers
                 // Chuyển trạng thái JO sang "QCInProgress"
                 order.Status = "QCInProgress";
                 await _unitOfWork.ServiceOrders.UpdateAsync(order);
-
+                // ✅ FIX: Gọi SaveChangesAsync trước khi commit transaction
+                await _unitOfWork.SaveChangesAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
                 var qcDto = await MapToDtoAsync(qc);
@@ -369,6 +462,12 @@ namespace GarageManagementSystem.API.Controllers
         {
             try
             {
+                // ✅ VALIDATION: Kiểm tra completeDto không null
+                if (completeDto == null)
+                {
+                    return BadRequest(ApiResponse<QualityControlDto>.ErrorResult("Dữ liệu không hợp lệ"));
+                }
+
                 // ✅ VALIDATION: Check ModelState
                 if (!ModelState.IsValid)
                 {
@@ -475,10 +574,35 @@ namespace GarageManagementSystem.API.Controllers
                     // Thêm checklist items mới
                     foreach (var itemDto in completeDto.ChecklistItems)
                     {
+                        // ✅ VALIDATION: Kiểm tra ChecklistItemName không rỗng
+                        if (string.IsNullOrWhiteSpace(itemDto.ChecklistItemName))
+                        {
+                            await _unitOfWork.RollbackTransactionAsync();
+                            return BadRequest(ApiResponse<QualityControlDto>.ErrorResult(
+                                "Tên hạng mục kiểm tra không được để trống. Vui lòng điền đầy đủ thông tin."));
+                        }
+                        
+                        // ✅ VALIDATION: Kiểm tra DisplayOrder hợp lệ
+                        if (itemDto.DisplayOrder < 0)
+                        {
+                            await _unitOfWork.RollbackTransactionAsync();
+                            return BadRequest(ApiResponse<QualityControlDto>.ErrorResult(
+                                $"Thứ tự hiển thị không hợp lệ: {itemDto.DisplayOrder}. Phải >= 0."));
+                        }
+                        
+                        // ✅ VALIDATION: Kiểm tra Result hợp lệ (nếu có)
+                        if (!string.IsNullOrEmpty(itemDto.Result) && 
+                            itemDto.Result != "Pass" && itemDto.Result != "Fail")
+                        {
+                            await _unitOfWork.RollbackTransactionAsync();
+                            return BadRequest(ApiResponse<QualityControlDto>.ErrorResult(
+                                $"Kết quả kiểm tra không hợp lệ: {itemDto.Result}. Chỉ chấp nhận 'Pass' hoặc 'Fail'."));
+                        }
+                        
                         var checklistItem = new Core.Entities.QCChecklistItem
                         {
                             QualityControlId = qc.Id,
-                            ChecklistItemName = itemDto.ChecklistItemName,
+                            ChecklistItemName = itemDto.ChecklistItemName.Trim(),
                             IsChecked = itemDto.IsChecked,
                             Result = itemDto.Result,
                             Notes = itemDto.Notes,
@@ -505,6 +629,8 @@ namespace GarageManagementSystem.API.Controllers
                 }
 
                 await _unitOfWork.ServiceOrders.UpdateAsync(order);
+                // ✅ FIX: Gọi SaveChangesAsync trước khi commit transaction
+                await _unitOfWork.SaveChangesAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
                 // Reload để lấy dữ liệu mới nhất
@@ -670,6 +796,8 @@ namespace GarageManagementSystem.API.Controllers
                 order.QCFailedCount++;
 
                 await _unitOfWork.ServiceOrders.UpdateAsync(order);
+                // ✅ FIX: Gọi SaveChangesAsync trước khi commit transaction
+                await _unitOfWork.SaveChangesAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
                 // Reload để lấy dữ liệu mới nhất
@@ -704,10 +832,11 @@ namespace GarageManagementSystem.API.Controllers
                 // ✅ AUTHORIZATION: Chỉ Cố vấn Dịch vụ mới có quyền bàn giao xe
                 var currentUserId = User.FindFirst("sub")?.Value ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 bool isAuthorized = false;
+                Employee? currentEmployee = null;
                 
                 if (!string.IsNullOrEmpty(currentUserId) && int.TryParse(currentUserId, out var userId))
                 {
-                    var currentEmployee = await _unitOfWork.Employees.GetByIdAsync(userId);
+                    currentEmployee = await _unitOfWork.Employees.GetByIdAsync(userId);
                     if (currentEmployee != null)
                     {
                         var position = (currentEmployee.Position ?? "").ToLower();
@@ -769,6 +898,16 @@ namespace GarageManagementSystem.API.Controllers
                 }
 
                 await _unitOfWork.ServiceOrders.UpdateAsync(order);
+                await _unitOfWork.SaveChangesAsync();
+
+                await _warrantyService.GenerateWarrantyForServiceOrderAsync(order.Id, new WarrantyGenerationOptions
+                {
+                    WarrantyStartDate = order.HandoverDate,
+                    DefaultWarrantyMonths = 0,
+                    HandoverBy = currentEmployee?.Name,
+                    HandoverLocation = order.HandoverLocation
+                });
+
                 await _unitOfWork.CommitTransactionAsync();
 
                 // Reload để lấy dữ liệu mới nhất
@@ -836,6 +975,8 @@ namespace GarageManagementSystem.API.Controllers
                 item.UpdatedAt = DateTime.Now;
 
                 await _unitOfWork.Repository<Core.Entities.ServiceOrderItem>().UpdateAsync(item);
+                // ✅ FIX: Gọi SaveChangesAsync trước khi commit transaction
+                await _unitOfWork.SaveChangesAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
                 // Reload để lấy dữ liệu mới nhất
@@ -850,6 +991,167 @@ namespace GarageManagementSystem.API.Controllers
                 await _unitOfWork.RollbackTransactionAsync();
                 _logger.LogError(ex, "Error recording rework hours for service order {ServiceOrderId}, item {ItemId}", id, itemId);
                 return StatusCode(500, ApiResponse<ServiceOrderDto>.ErrorResult("Lỗi khi ghi nhận giờ công làm lại", ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// ✅ OPTIMIZED: Lấy QC Template để tạo QC Checklist
+        /// Có caching và fallback về hardcode mặc định
+        /// </summary>
+        [HttpGet("templates")]
+        public async Task<ActionResult<ApiResponse<QCChecklistTemplateDto>>> GetQCTemplate(
+            [FromQuery] string? vehicleType = null,
+            [FromQuery] string? serviceType = null)
+        {
+            try
+            {
+                // ✅ OPTIMIZED: Build cache key (sanitize để tránh conflict)
+                var safeVehicleType = string.IsNullOrWhiteSpace(vehicleType) ? "all" : vehicleType.Trim();
+                var safeServiceType = string.IsNullOrWhiteSpace(serviceType) ? "all" : serviceType.Trim();
+                var cacheKey = $"qc_template_{safeVehicleType}_{safeServiceType}";
+                
+                // ✅ OPTIMIZED: Try get from cache first
+                var cachedTemplate = await _cacheService.GetAsync<QCChecklistTemplateDto>(cacheKey);
+                if (cachedTemplate != null)
+                {
+                    _logger.LogDebug($"QC Template loaded from cache: {cacheKey}");
+                    return Ok(ApiResponse<QCChecklistTemplateDto>.SuccessResult(cachedTemplate));
+                }
+
+                // ✅ OPTIMIZED: Query database với điều kiện
+                var query = _context.QCChecklistTemplates
+                    .Where(t => !t.IsDeleted && t.IsActive)
+                    .Include(t => t.TemplateItems.Where(i => !i.IsDeleted))
+                    .AsQueryable();
+
+                Core.Entities.QCChecklistTemplate? template = null;
+
+                // ✅ FIX: Sanitize input để tránh null/whitespace issues
+                var searchVehicleType = string.IsNullOrWhiteSpace(vehicleType) ? null : vehicleType.Trim();
+                var searchServiceType = string.IsNullOrWhiteSpace(serviceType) ? null : serviceType.Trim();
+
+                // Ưu tiên tìm template theo VehicleType và ServiceType (cả hai đều có giá trị)
+                if (!string.IsNullOrEmpty(searchVehicleType) && !string.IsNullOrEmpty(searchServiceType))
+                {
+                    template = await query
+                        .FirstOrDefaultAsync(t => 
+                            t.VehicleType == searchVehicleType && 
+                            t.ServiceType == searchServiceType);
+                }
+
+                // Nếu không tìm thấy, tìm theo VehicleType (ServiceType = null)
+                if (template is null && !string.IsNullOrEmpty(searchVehicleType))
+                {
+                    template = await query
+                        .FirstOrDefaultAsync(t => 
+                            t.VehicleType == searchVehicleType && 
+                            t.ServiceType == null);
+                }
+
+                // Nếu không tìm thấy, tìm theo ServiceType (VehicleType = null)
+                if (template is null && !string.IsNullOrEmpty(searchServiceType))
+                {
+                    template = await query
+                        .FirstOrDefaultAsync(t => 
+                            t.VehicleType == null && 
+                            t.ServiceType == searchServiceType);
+                }
+
+                // Nếu không tìm thấy, lấy template mặc định (cả VehicleType và ServiceType đều null)
+                if (template is null)
+                {
+                    template = await query
+                        .FirstOrDefaultAsync(t => t.IsDefault);
+                }
+
+                // ✅ OPTIMIZED: Nếu vẫn không tìm thấy, fallback về hardcode
+                if (template is null)
+                {
+                    _logger.LogWarning($"No QC template found, using hardcoded default. VehicleType: {searchVehicleType}, ServiceType: {searchServiceType}");
+                    
+                    // ✅ LƯU Ý: Template fallback với Id = 0 chỉ là DTO tạm thời để hiển thị
+                    // KHÔNG được lưu vào database. Khi user tạo QC record từ template này:
+                    // - Các checklist items sẽ được tạo MỚI với ID tự động từ database (auto-increment)
+                    // - Không có reference đến template Id = 0
+                    // - Template này chỉ dùng để populate UI, không dùng để query sau này
+                    var defaultTemplate = new QCChecklistTemplateDto
+                    {
+                        Id = 0, // ✅ DTO tạm thời, không lưu DB. Khi tạo QC record, items sẽ có ID mới từ DB
+                        TemplateName = "Template Mặc Định",
+                        Description = "Template mặc định (hardcoded)",
+                        IsDefault = true,
+                        IsActive = true,
+                        TemplateItems = new List<QCChecklistTemplateItemDto>
+                        {
+                            // ✅ LƯU Ý: Id = 0 chỉ là placeholder. Khi tạo QC record, mỗi item sẽ được tạo mới với ID tự động
+                            new() { Id = 0, ChecklistItemName = "Kiểm tra chất lượng sơn", DisplayOrder = 1, IsRequired = false },
+                            new() { Id = 0, ChecklistItemName = "Kiểm tra lắp ráp phụ tùng", DisplayOrder = 2, IsRequired = false },
+                            new() { Id = 0, ChecklistItemName = "Kiểm tra hoạt động động cơ", DisplayOrder = 3, IsRequired = false },
+                            new() { Id = 0, ChecklistItemName = "Kiểm tra hệ thống điện", DisplayOrder = 4, IsRequired = false },
+                            new() { Id = 0, ChecklistItemName = "Kiểm tra an toàn", DisplayOrder = 5, IsRequired = false }
+                        }
+                    };
+                    
+                    return Ok(ApiResponse<QCChecklistTemplateDto>.SuccessResult(defaultTemplate, "Sử dụng template mặc định (hardcoded)"));
+                }
+
+                // Map to DTO
+                var templateDto = _mapper.Map<QCChecklistTemplateDto>(template);
+                
+                // ✅ FIX: Đảm bảo TemplateItems không null sau khi map
+                if (templateDto.TemplateItems == null)
+                {
+                    templateDto.TemplateItems = new List<QCChecklistTemplateItemDto>();
+                }
+                
+                // ✅ OPTIMIZED: Cache template với TTL 30 phút (chỉ cache template từ DB, không cache fallback)
+                await _cacheService.SetAsync(cacheKey, templateDto, TimeSpan.FromMinutes(30));
+                
+                return Ok(ApiResponse<QCChecklistTemplateDto>.SuccessResult(templateDto));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting QC template. VehicleType: {VehicleType}, ServiceType: {ServiceType}", vehicleType, serviceType);
+                
+                // ✅ OPTIMIZED: Fallback về hardcode nếu có lỗi
+                // ✅ LƯU Ý: Template fallback với Id = 0 chỉ là DTO tạm thời, không lưu DB
+                // Khi tạo QC record, các items sẽ được tạo mới với ID tự động từ database
+                var fallbackTemplate = new QCChecklistTemplateDto
+                {
+                    Id = 0, // ✅ DTO tạm thời, không lưu DB
+                    TemplateName = "Template Mặc Định (Fallback)",
+                    Description = "Template fallback khi có lỗi",
+                    IsDefault = true,
+                    IsActive = true,
+                    TemplateItems = new List<QCChecklistTemplateItemDto>
+                    {
+                        // ✅ LƯU Ý: Id = 0 chỉ là placeholder. Khi tạo QC record, mỗi item sẽ được tạo mới với ID tự động
+                        new() { Id = 0, ChecklistItemName = "Kiểm tra chất lượng sơn", DisplayOrder = 1, IsRequired = false },
+                        new() { Id = 0, ChecklistItemName = "Kiểm tra lắp ráp phụ tùng", DisplayOrder = 2, IsRequired = false },
+                        new() { Id = 0, ChecklistItemName = "Kiểm tra hoạt động động cơ", DisplayOrder = 3, IsRequired = false },
+                        new() { Id = 0, ChecklistItemName = "Kiểm tra hệ thống điện", DisplayOrder = 4, IsRequired = false },
+                        new() { Id = 0, ChecklistItemName = "Kiểm tra an toàn", DisplayOrder = 5, IsRequired = false }
+                    }
+                };
+                
+                return Ok(ApiResponse<QCChecklistTemplateDto>.SuccessResult(fallbackTemplate, "Sử dụng template fallback do lỗi hệ thống"));
+            }
+        }
+
+        /// <summary>
+        /// ✅ OPTIMIZED: Invalidate cache khi template được tạo/sửa/xóa
+        /// </summary>
+        private async Task InvalidateTemplateCache()
+        {
+            try
+            {
+                // ✅ FIX: Sử dụng RemoveByPrefixAsync để invalidate tất cả cache keys (nhất quán với QCTemplatesController)
+                await _cacheService.RemoveByPrefixAsync("qc_template_");
+                _logger.LogDebug("QC Template cache invalidated");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error invalidating QC template cache");
             }
         }
 

@@ -9,6 +9,12 @@ using GarageManagementSystem.Infrastructure.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using OfficeOpenXml;
+using OfficeOpenXml.Style;
+using System.Drawing;
 
 namespace GarageManagementSystem.API.Controllers
 {
@@ -736,6 +742,11 @@ namespace GarageManagementSystem.API.Controllers
             dto.QCFailedCount = order.QCFailedCount;
             dto.HandoverDate = order.HandoverDate;
             dto.HandoverLocation = order.HandoverLocation;
+
+            if (order.ServiceOrderFees != null && order.ServiceOrderFees.Count > 0)
+            {
+                dto.ServiceOrderFees = _mapper.Map<List<ServiceOrderFeeDto>>(order.ServiceOrderFees.Where(f => !f.IsDeleted));
+            }
             
             return dto;
         }
@@ -2104,6 +2115,446 @@ namespace GarageManagementSystem.API.Controllers
             {
                 return StatusCode(500, ApiResponse<GrossProfitDto>.ErrorResult("Lỗi khi tính lợi nhuận gộp", ex.Message));
             }
+        }
+
+        /// <summary>
+        /// ✅ 3.1: Báo cáo tổng hợp COGS cho phiếu sửa chữa
+        /// </summary>
+        [HttpGet("cogs-report")]
+        public async Task<ActionResult<ApiResponse<ServiceOrderCogsReportDto>>> GetCogsReport(
+            [FromQuery] DateTime? startDate,
+            [FromQuery] DateTime? endDate,
+            [FromQuery] string? method)
+        {
+            try
+            {
+                var report = await BuildCogsReportAsync(startDate, endDate, method);
+                return Ok(ApiResponse<ServiceOrderCogsReportDto>.SuccessResult(report, "Lấy báo cáo COGS thành công"));
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ApiResponse<ServiceOrderCogsReportDto>.ErrorResult(ex.Message));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error generating COGS report");
+                return StatusCode(500, ApiResponse<ServiceOrderCogsReportDto>.ErrorResult("Lỗi khi tạo báo cáo COGS", ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// ✅ 3.1: Export báo cáo COGS ra CSV
+        /// </summary>
+        [HttpGet("cogs-report/export")]
+        public async Task<IActionResult> ExportCogsReport(
+            [FromQuery] DateTime? startDate,
+            [FromQuery] DateTime? endDate,
+            [FromQuery] string? method)
+        {
+            try
+            {
+                var report = await BuildCogsReportAsync(startDate, endDate, method);
+
+                var builder = new StringBuilder();
+                builder.AppendLine("Số phiếu,Số tiền,Giá vốn,Lợi nhuận,Tỷ lệ (%),Ngày hoàn tất,Phương pháp,Ngày tính");
+
+                foreach (var order in report.Orders)
+                {
+                    var completedDate = order.CompletedDate?.ToString("dd/MM/yyyy") ?? string.Empty;
+                    var cogsDate = order.CogsCalculationDate?.ToString("dd/MM/yyyy HH:mm") ?? string.Empty;
+                    var methodDisplay = string.IsNullOrWhiteSpace(order.CogsCalculationMethod) ? string.Empty : order.CogsCalculationMethod;
+
+                    builder.AppendLine(string.Join(',', new[]
+                    {
+                        EscapeCsv(order.OrderNumber),
+                        order.TotalRevenue.ToString("0.00"),
+                        order.TotalCogs.ToString("0.00"),
+                        order.GrossProfit.ToString("0.00"),
+                        order.GrossMargin.ToString("0.00"),
+                        EscapeCsv(completedDate),
+                        EscapeCsv(methodDisplay),
+                        EscapeCsv(cogsDate)
+                    }));
+                }
+
+                builder.AppendLine();
+                builder.AppendLine("Tổng cộng");
+                builder.AppendLine($"Tổng doanh thu,{report.TotalRevenue:0.00}");
+                builder.AppendLine($"Tổng giá vốn,{report.TotalCogs:0.00}");
+                builder.AppendLine($"Tổng lợi nhuận,{report.TotalGrossProfit:0.00}");
+                builder.AppendLine($"Tỷ lệ lợi nhuận gộp TB (%),{report.AverageGrossMargin:0.00}");
+                builder.AppendLine($"Tổng số phiếu,{report.TotalOrders}");
+
+                var bytes = Encoding.UTF8.GetBytes(builder.ToString());
+                var fileName = $"cogs-report-{DateTime.Now:yyyyMMddHHmmss}.csv";
+                return File(bytes, "text/csv", fileName);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ApiResponse<ServiceOrderCogsReportDto>.ErrorResult(ex.Message));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error exporting COGS report");
+                return StatusCode(500, ApiResponse<ServiceOrderCogsReportDto>.ErrorResult("Lỗi khi xuất báo cáo COGS", ex.Message));
+            }
+        }
+
+        [HttpGet("cogs-report/export-excel")]
+        public async Task<IActionResult> ExportCogsReportExcel(
+            [FromQuery] DateTime? startDate,
+            [FromQuery] DateTime? endDate,
+            [FromQuery] string? method)
+        {
+            try
+            {
+                var report = await BuildCogsReportAsync(startDate, endDate, method);
+
+#pragma warning disable CS0618
+                ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+#pragma warning restore CS0618
+                using var package = new ExcelPackage();
+                var worksheet = package.Workbook.Worksheets.Add("COGS Report");
+
+                BuildCogsExcelWorksheet(worksheet, report);
+
+                var fileName = $"cogs-report-{DateTime.Now:yyyyMMddHHmmss}.xlsx";
+                var bytes = package.GetAsByteArray();
+                return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ApiResponse<ServiceOrderCogsReportDto>.ErrorResult(ex.Message));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error exporting COGS report excel");
+                return StatusCode(500, ApiResponse<ServiceOrderCogsReportDto>.ErrorResult("Lỗi khi xuất báo cáo COGS", ex.Message));
+            }
+        }
+
+        private async Task<ServiceOrderCogsReportDto> BuildCogsReportAsync(DateTime? startDate, DateTime? endDate, string? method)
+        {
+            var query = _context.ServiceOrders
+                .AsNoTracking()
+                .Where(so => !so.IsDeleted);
+
+            if (startDate.HasValue)
+            {
+                query = query.Where(so => so.CompletedDate >= startDate.Value);
+            }
+
+            if (endDate.HasValue)
+            {
+                var end = endDate.Value.Date.AddDays(1);
+                query = query.Where(so => so.CompletedDate < end);
+            }
+
+            if (!string.IsNullOrWhiteSpace(method))
+            {
+                var normalizedMethod = NormalizeCogsMethod(method);
+                query = query.Where(so => so.COGSCalculationMethod == normalizedMethod);
+            }
+
+            var orders = await query
+                .OrderByDescending(so => so.CompletedDate)
+                .Select(so => new ServiceOrderCogsReportItemDto
+                {
+                    ServiceOrderId = so.Id,
+                    OrderNumber = so.OrderNumber,
+                    CustomerName = so.Customer != null ? so.Customer.Name : null,
+                    CompletedDate = so.CompletedDate,
+                    TotalRevenue = so.FinalAmount,
+                    TotalCogs = so.TotalCOGS,
+                    GrossProfit = so.FinalAmount - so.TotalCOGS,
+                    GrossMargin = so.FinalAmount != 0 ? ((so.FinalAmount - so.TotalCOGS) / so.FinalAmount) * 100 : 0,
+                    CogsCalculationMethod = so.COGSCalculationMethod,
+                    CogsCalculationDate = so.COGSCalculationDate
+                })
+                .ToListAsync();
+
+            var totalRevenue = orders.Sum(o => o.TotalRevenue);
+            var totalCogs = orders.Sum(o => o.TotalCogs);
+            var totalGrossProfit = totalRevenue - totalCogs;
+            var averageGrossMargin = totalRevenue != 0 ? (totalGrossProfit / totalRevenue) * 100 : 0;
+
+            return new ServiceOrderCogsReportDto
+            {
+                TotalRevenue = totalRevenue,
+                TotalCogs = totalCogs,
+                TotalGrossProfit = totalGrossProfit,
+                AverageGrossMargin = averageGrossMargin,
+                TotalOrders = orders.Count,
+                Orders = orders
+            };
+        }
+
+        private static string NormalizeCogsMethod(string? method)
+        {
+            if (string.IsNullOrWhiteSpace(method))
+            {
+                return "FIFO";
+            }
+
+            var normalized = method.Trim().ToUpperInvariant();
+            return normalized switch
+            {
+                "FIFO" => "FIFO",
+                "WEIGHTEDAVERAGE" => "WeightedAverage",
+                "WEIGHTED_AVERAGE" => "WeightedAverage",
+                "AVERAGE" => "WeightedAverage",
+                _ => throw new ArgumentException("Phương pháp tính COGS không hợp lệ. Hỗ trợ 'FIFO' hoặc 'WeightedAverage'.")
+            };
+        }
+
+        private static string EscapeCsv(string? value)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                return string.Empty;
+            }
+
+            if (value.Contains('"') || value.Contains(',') || value.Contains('\n'))
+            {
+                return $"\"{value.Replace("\"", "\"\"")}\"";
+            }
+
+            return value;
+        }
+
+        /// <summary>
+        /// ✅ 3.3: Lấy danh sách phí dịch vụ cho Service Order
+        /// </summary>
+        [HttpGet("{id}/fees")]
+        public async Task<ActionResult<ApiResponse<ServiceOrderFeeSummaryDto>>> GetServiceOrderFees(int id)
+        {
+            try
+            {
+                var order = await _unitOfWork.ServiceOrders.GetByIdWithDetailsAsync(id);
+                if (order == null)
+                {
+                    return NotFound(ApiResponse<ServiceOrderFeeSummaryDto>.ErrorResult("Không tìm thấy phiếu sửa chữa"));
+                }
+
+                var fees = order.ServiceOrderFees.Where(f => !f.IsDeleted).ToList();
+                var feeTypes = (await _unitOfWork.ServiceFeeTypes.FindAsync(t => t.IsActive && !t.IsDeleted))
+                    .OrderBy(t => t.DisplayOrder)
+                    .ThenBy(t => t.Name)
+                    .ToList();
+                var summary = BuildFeeSummary(order.Id, fees, feeTypes);
+                return Ok(ApiResponse<ServiceOrderFeeSummaryDto>.SuccessResult(summary));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting service order fees for {ServiceOrderId}", id);
+                return StatusCode(500, ApiResponse<ServiceOrderFeeSummaryDto>.ErrorResult("Lỗi khi lấy danh sách phí dịch vụ", ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// ✅ 3.3: Cập nhật danh sách phí dịch vụ cho Service Order
+        /// </summary>
+        [HttpPut("{id}/fees")]
+        public async Task<ActionResult<ApiResponse<ServiceOrderFeeSummaryDto>>> UpdateServiceOrderFees(int id, [FromBody] UpdateServiceOrderFeesRequestDto request)
+        {
+            if (request == null)
+            {
+                return BadRequest(ApiResponse<ServiceOrderFeeSummaryDto>.ErrorResult("Dữ liệu không hợp lệ"));
+            }
+
+            try
+            {
+                await _unitOfWork.BeginTransactionAsync();
+
+                var order = await _unitOfWork.ServiceOrders.GetByIdWithDetailsAsync(id);
+                if (order == null)
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    return NotFound(ApiResponse<ServiceOrderFeeSummaryDto>.ErrorResult("Không tìm thấy phiếu sửa chữa"));
+                }
+
+                var existingFees = (await _unitOfWork.ServiceOrderFees.FindAsync(f => f.ServiceOrderId == id && !f.IsDeleted))
+                    .ToDictionary(f => f.Id);
+
+                var typeIds = request.Fees.Select(f => f.ServiceFeeTypeId).Distinct().ToList();
+                Dictionary<int, Core.Entities.ServiceFeeType> feeTypes = new();
+                if (typeIds.Count > 0)
+                {
+                    feeTypes = (await _unitOfWork.ServiceFeeTypes.FindAsync(t => typeIds.Contains(t.Id) && !t.IsDeleted))
+                        .ToDictionary(t => t.Id);
+
+                    foreach (var feeDto in request.Fees)
+                    {
+                        if (!feeTypes.ContainsKey(feeDto.ServiceFeeTypeId))
+                        {
+                            await _unitOfWork.RollbackTransactionAsync();
+                            return BadRequest(ApiResponse<ServiceOrderFeeSummaryDto>.ErrorResult($"Loại phí (ID: {feeDto.ServiceFeeTypeId}) không hợp lệ hoặc đã bị vô hiệu"));
+                        }
+
+                        if (feeDto.Amount < 0 || feeDto.VatAmount < 0 || feeDto.DiscountAmount < 0)
+                        {
+                            await _unitOfWork.RollbackTransactionAsync();
+                            return BadRequest(ApiResponse<ServiceOrderFeeSummaryDto>.ErrorResult("Số tiền không được nhỏ hơn 0"));
+                        }
+                    }
+                }
+
+                var handledIds = new HashSet<int>();
+                foreach (var feeDto in request.Fees)
+                {
+                    if (feeDto.Id.HasValue && existingFees.TryGetValue(feeDto.Id.Value, out var existingFee))
+                    {
+                        existingFee.ServiceFeeTypeId = feeDto.ServiceFeeTypeId;
+                        existingFee.Amount = feeDto.Amount;
+                        existingFee.VatAmount = feeDto.VatAmount;
+                        existingFee.DiscountAmount = feeDto.DiscountAmount;
+                        existingFee.ReferenceSource = feeDto.ReferenceSource;
+                        existingFee.Notes = feeDto.Notes;
+                        existingFee.IsManual = feeDto.IsManual;
+                        existingFee.UpdatedAt = DateTime.Now;
+
+                        await _unitOfWork.ServiceOrderFees.UpdateAsync(existingFee);
+                        handledIds.Add(existingFee.Id);
+                    }
+                    else
+                    {
+                        var newFee = new Core.Entities.ServiceOrderFee
+                        {
+                            ServiceOrderId = id,
+                            ServiceFeeTypeId = feeDto.ServiceFeeTypeId,
+                            Amount = feeDto.Amount,
+                            VatAmount = feeDto.VatAmount,
+                            DiscountAmount = feeDto.DiscountAmount,
+                            ReferenceSource = feeDto.ReferenceSource,
+                            Notes = feeDto.Notes,
+                            IsManual = feeDto.IsManual,
+                            CreatedAt = DateTime.Now
+                        };
+
+                        await _unitOfWork.ServiceOrderFees.AddAsync(newFee);
+                    }
+                }
+
+                var feesToRemove = existingFees.Values.Where(f => !handledIds.Contains(f.Id)).ToList();
+                foreach (var fee in feesToRemove)
+                {
+                    await _unitOfWork.ServiceOrderFees.DeleteAsync(fee);
+                }
+
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransactionAsync();
+
+                order = await _unitOfWork.ServiceOrders.GetByIdWithDetailsAsync(id) ?? order;
+                var updatedFees = order.ServiceOrderFees.Where(f => !f.IsDeleted).ToList();
+                var activeTypes = (await _unitOfWork.ServiceFeeTypes.FindAsync(t => t.IsActive && !t.IsDeleted))
+                    .OrderBy(t => t.DisplayOrder)
+                    .ThenBy(t => t.Name)
+                    .ToList();
+                var summary = BuildFeeSummary(order.Id, updatedFees, activeTypes);
+
+                return Ok(ApiResponse<ServiceOrderFeeSummaryDto>.SuccessResult(summary, "Cập nhật phí dịch vụ thành công"));
+            }
+            catch (Exception ex)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                _logger.LogError(ex, "Error updating service order fees for {ServiceOrderId}", id);
+                return StatusCode(500, ApiResponse<ServiceOrderFeeSummaryDto>.ErrorResult("Lỗi khi cập nhật phí dịch vụ", ex.Message));
+            }
+        }
+
+        private ServiceOrderFeeSummaryDto BuildFeeSummary(int serviceOrderId, IEnumerable<Core.Entities.ServiceOrderFee> fees, IEnumerable<Core.Entities.ServiceFeeType> feeTypes)
+        {
+            var feeList = fees?.ToList() ?? new List<Core.Entities.ServiceOrderFee>();
+            var dto = new ServiceOrderFeeSummaryDto
+            {
+                ServiceOrderId = serviceOrderId,
+                TotalAmount = feeList.Sum(f => f.Amount),
+                TotalVat = feeList.Sum(f => f.VatAmount),
+                TotalDiscount = feeList.Sum(f => f.DiscountAmount),
+                Fees = _mapper.Map<List<ServiceOrderFeeDto>>(feeList),
+                FeeTypes = _mapper.Map<List<ServiceFeeTypeDto>>(feeTypes?.ToList() ?? new List<Core.Entities.ServiceFeeType>())
+            };
+
+            return dto;
+        }
+
+        private void BuildCogsExcelWorksheet(ExcelWorksheet worksheet, ServiceOrderCogsReportDto report)
+        {
+            var currentRow = 1;
+            var titleRange = worksheet.Cells[currentRow, 1, currentRow, 8];
+            titleRange.Merge = true;
+            titleRange.Value = "BÁO CÁO GIÁ VỐN (COGS)";
+            titleRange.Style.Font.Bold = true;
+            titleRange.Style.Font.Size = 16;
+            titleRange.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+            currentRow += 2;
+
+            worksheet.Cells[currentRow, 1].Value = "Tổng doanh thu";
+            worksheet.Cells[currentRow, 2].Value = report.TotalRevenue;
+            worksheet.Cells[currentRow, 2].Style.Numberformat.Format = "#,##0.00";
+            currentRow++;
+
+            worksheet.Cells[currentRow, 1].Value = "Tổng giá vốn";
+            worksheet.Cells[currentRow, 2].Value = report.TotalCogs;
+            worksheet.Cells[currentRow, 2].Style.Numberformat.Format = "#,##0.00";
+            currentRow++;
+
+            worksheet.Cells[currentRow, 1].Value = "Tổng lợi nhuận";
+            worksheet.Cells[currentRow, 2].Value = report.TotalGrossProfit;
+            worksheet.Cells[currentRow, 2].Style.Numberformat.Format = "#,##0.00";
+            currentRow++;
+
+            worksheet.Cells[currentRow, 1].Value = "Tỷ lệ lợi nhuận gộp TB";
+            worksheet.Cells[currentRow, 2].Value = report.AverageGrossMargin / 100;
+            worksheet.Cells[currentRow, 2].Style.Numberformat.Format = "0.00%";
+            currentRow++;
+
+            worksheet.Cells[currentRow, 1].Value = "Tổng số phiếu";
+            worksheet.Cells[currentRow, 2].Value = report.TotalOrders;
+            worksheet.Cells[currentRow, 2].Style.Numberformat.Format = "0";
+            currentRow += 2;
+
+            var headerRow = currentRow;
+            var headers = new[] { "Số phiếu", "Khách hàng", "Ngày hoàn tất", "Doanh thu", "Giá vốn", "Lợi nhuận", "Tỷ lệ", "Phương pháp", "Ngày tính COGS" };
+            for (int i = 0; i < headers.Length; i++)
+            {
+                worksheet.Cells[headerRow, i + 1].Value = headers[i];
+                worksheet.Cells[headerRow, i + 1].Style.Font.Bold = true;
+                worksheet.Cells[headerRow, i + 1].Style.Fill.PatternType = ExcelFillStyle.Solid;
+                worksheet.Cells[headerRow, i + 1].Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.FromArgb(79, 129, 189));
+                worksheet.Cells[headerRow, i + 1].Style.Font.Color.SetColor(System.Drawing.Color.White);
+                worksheet.Cells[headerRow, i + 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+            }
+
+            currentRow++;
+            foreach (var order in report.Orders)
+            {
+                worksheet.Cells[currentRow, 1].Value = order.OrderNumber;
+                worksheet.Cells[currentRow, 2].Value = order.CustomerName;
+                worksheet.Cells[currentRow, 3].Value = order.CompletedDate;
+                worksheet.Cells[currentRow, 3].Style.Numberformat.Format = "dd/MM/yyyy";
+                worksheet.Cells[currentRow, 4].Value = order.TotalRevenue;
+                worksheet.Cells[currentRow, 4].Style.Numberformat.Format = "#,##0.00";
+                worksheet.Cells[currentRow, 5].Value = order.TotalCogs;
+                worksheet.Cells[currentRow, 5].Style.Numberformat.Format = "#,##0.00";
+                worksheet.Cells[currentRow, 6].Value = order.GrossProfit;
+                worksheet.Cells[currentRow, 6].Style.Numberformat.Format = "#,##0.00";
+                worksheet.Cells[currentRow, 7].Value = order.GrossMargin / 100;
+                worksheet.Cells[currentRow, 7].Style.Numberformat.Format = "0.00%";
+                worksheet.Cells[currentRow, 8].Value = order.CogsCalculationMethod;
+                worksheet.Cells[currentRow, 9].Value = order.CogsCalculationDate;
+                worksheet.Cells[currentRow, 9].Style.Numberformat.Format = "dd/MM/yyyy HH:mm";
+                currentRow++;
+            }
+
+            worksheet.Cells[headerRow, 1, currentRow - 1, 9].AutoFitColumns();
+            worksheet.Cells[headerRow, 4, currentRow - 1, 6].Style.HorizontalAlignment = ExcelHorizontalAlignment.Right;
+            worksheet.Cells[headerRow, 7, currentRow - 1, 7].Style.HorizontalAlignment = ExcelHorizontalAlignment.Right;
+            worksheet.Cells[headerRow, 1, currentRow - 1, 9].Style.Border.BorderAround(ExcelBorderStyle.Thin);
+            worksheet.Cells[headerRow, 1, currentRow - 1, 9].Style.Border.Top.Style = ExcelBorderStyle.Thin;
+            worksheet.Cells[headerRow, 1, currentRow - 1, 9].Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
+            worksheet.Cells[headerRow, 1, currentRow - 1, 9].Style.Border.Left.Style = ExcelBorderStyle.Thin;
+            worksheet.Cells[headerRow, 1, currentRow - 1, 9].Style.Border.Right.Style = ExcelBorderStyle.Thin;
         }
 
         #endregion

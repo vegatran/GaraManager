@@ -81,6 +81,11 @@ namespace GarageManagementSystem.Core.Entities
         [StringLength(200)]
         public string? HandoverLocation { get; set; }
 
+        [StringLength(50)]
+        public string? WarrantyCode { get; set; }
+
+        public DateTime? WarrantyExpiryDate { get; set; }
+
         // ✅ 3.1: Quyết toán COGS (Cost of Goods Sold)
         /// <summary>
         /// ✅ 3.1: Tổng giá vốn hàng bán (COGS) - Tính từ vật tư đã xuất kho
@@ -134,6 +139,9 @@ namespace GarageManagementSystem.Core.Entities
         public virtual ICollection<ServiceOrderItem> ServiceOrderItems { get; set; } = new List<ServiceOrderItem>();
         public virtual ICollection<ServiceOrderPart> ServiceOrderParts { get; set; } = new List<ServiceOrderPart>();
         public virtual ICollection<PaymentTransaction> PaymentTransactions { get; set; } = new List<PaymentTransaction>();
+        public virtual ICollection<Warranty> Warranties { get; set; } = new List<Warranty>();
+        public virtual ICollection<ServiceOrderFee> ServiceOrderFees { get; set; } = new List<ServiceOrderFee>();
+        public virtual ICollection<CustomerFeedback> CustomerFeedbacks { get; set; } = new List<CustomerFeedback>();
         
         /// <summary>
         /// ✅ 2.4.2: Navigation property đến QualityControl

@@ -2,10 +2,20 @@
 window.PartsManagement = {
     partTable: null,
     currentEditData: null, // ✅ THÊM: Store data for edit modal
+    unitData: {
+        create: [],
+        edit: []
+    },
+    warehouses: [],
 
     init: function() {
         this.initDataTable();
         this.bindEvents();
+        this.renderUnitsTable('create');
+        this.renderUnitsTable('edit');
+        this.resetUnitForm('create');
+        this.resetUnitForm('edit');
+        this.loadWarehouses();
     },
 
     initDataTable: function() {
@@ -15,6 +25,7 @@ window.PartsManagement = {
         var columns = [
             { data: 'id', title: 'ID', width: '5%' },
             { data: 'partNumber', title: 'Mã Phụ Tùng', width: '10%' },
+            { data: 'sku', title: 'SKU', width: '10%', render: function(data) { return data || '<span class="text-muted">-</span>'; } },
             { data: 'partName', title: 'Tên Phụ Tùng', width: '15%' },
             { data: 'category', title: 'Danh Mục', width: '10%' },
             { data: 'brand', title: 'Thương Hiệu', width: '10%' },
@@ -26,7 +37,7 @@ window.PartsManagement = {
             },
             { data: 'quantityInStock', title: 'Tồn Kho', width: '8%' },
             { data: 'minimumStock', title: 'Tồn TT', width: '8%' },
-            { data: 'unit', title: 'Đơn Vị', width: '7%' },
+            { data: 'defaultUnit', title: 'Đơn Vị', width: '7%', render: function(data){ return data || '<span class="text-muted">-</span>'; } },
             { 
                 data: 'isActive', 
                 title: 'Trạng Thái', 
@@ -119,6 +130,84 @@ window.PartsManagement = {
             if (presetKey && window.PartClassificationPresets) {
                 PartClassificationPresets.applyPreset(presetKey, 'edit');
             }
+        });
+
+        $('#createPartModal').on('hidden.bs.modal', function() {
+            $('#createPartForm')[0].reset();
+            self.unitData.create = [];
+            self.renderUnitsTable('create');
+            self.resetUnitForm('create');
+            self.resetWarehouseSelectors('create');
+            if (window.PartClassificationPresets) {
+                PartClassificationPresets.updateSummary('create');
+            }
+        });
+
+        $('#editPartModal').on('hidden.bs.modal', function() {
+            self.unitData.edit = [];
+            self.renderUnitsTable('edit');
+            self.resetUnitForm('edit');
+            self.resetWarehouseSelectors('edit');
+        });
+
+        $('#btnCreateSaveUnit').on('click', function() {
+            self.saveUnitFromForm('create');
+        });
+        $('#btnCreateCancelEditUnit').on('click', function() {
+            self.resetUnitForm('create');
+        });
+
+        $('#btnEditSaveUnit').on('click', function() {
+            self.saveUnitFromForm('edit');
+        });
+        $('#btnEditCancelEditUnit').on('click', function() {
+            self.resetUnitForm('edit');
+        });
+
+        $(document).on('click', '.btn-unit-edit', function() {
+            var prefix = $(this).data('prefix');
+            var index = parseInt($(this).data('index'), 10);
+            self.startEditUnit(prefix, index);
+        });
+
+        $(document).on('click', '.btn-unit-delete', function() {
+            var prefix = $(this).data('prefix');
+            var index = parseInt($(this).data('index'), 10);
+            self.removeUnit(prefix, index);
+        });
+
+        $(document).on('click', '.btn-unit-default', function() {
+            var prefix = $(this).data('prefix');
+            var index = parseInt($(this).data('index'), 10);
+            self.setDefaultUnit(prefix, index);
+        });
+
+        $('#createDefaultUnit').on('blur change', function() {
+            self.ensureDefaultUnitFromInput('create');
+        });
+
+        $('#editDefaultUnit').on('blur change', function() {
+            self.ensureDefaultUnitFromInput('edit');
+        });
+
+        $('#createWarehouseSelect').on('change', function() {
+            self.onWarehouseChange('create');
+        });
+        $('#createWarehouseZoneSelect').on('change', function() {
+            self.onWarehouseZoneChange('create');
+        });
+        $('#createWarehouseBinSelect').on('change', function() {
+            self.onWarehouseBinChange('create');
+        });
+
+        $('#editWarehouseSelect').on('change', function() {
+            self.onWarehouseChange('edit');
+        });
+        $('#editWarehouseZoneSelect').on('change', function() {
+            self.onWarehouseZoneChange('edit');
+        });
+        $('#editWarehouseBinSelect').on('change', function() {
+            self.onWarehouseBinChange('edit');
         });
 
         // ✅ THÊM: Auto-update summary khi thay đổi classification fields
@@ -216,12 +305,15 @@ window.PartsManagement = {
             Description: $('#createDescription').val(),
             Category: $('#createCategory').val(),
             Brand: $('#createBrand').val(),
+            Sku: $('#createSku').val(),
+            Barcode: $('#createBarcode').val(),
             CostPrice: parseFloat($('#createCostPrice').val()) || 0,
             SellPrice: parseFloat($('#createSellPrice').val()) || 0,
             QuantityInStock: parseInt($('#createQuantityInStock').val()) || 0,
             MinimumStock: parseInt($('#createMinimumStock').val()) || 0,
-            ReorderLevel: parseInt($('#createReorderLevel').val()) || null,
-            Unit: $('#createUnit').val(),
+            ReorderLevel: $('#createReorderLevel').val() ? parseInt($('#createReorderLevel').val()) : null,
+            DefaultUnit: $('#createDefaultUnit').val(),
+            Units: this.collectUnitData('create'),
             Location: $('#createLocation').val(),
             CompatibleVehicles: $('#createCompatibleVehicles').val(),
             IsActive: $('#createIsActive').is(':checked'),
@@ -314,6 +406,425 @@ window.PartsManagement = {
         GarageApp.showError('Vui lòng kiểm tra lại thông tin đã nhập');
     },
 
+    getUnitFormSelectors: function(prefix) {
+        var capitalized = prefix.charAt(0).toUpperCase() + prefix.slice(1);
+        return {
+            name: $('#' + prefix + 'UnitNameInput'),
+            conversion: $('#' + prefix + 'UnitConversionInput'),
+            barcode: $('#' + prefix + 'UnitBarcodeInput'),
+            isDefault: $('#' + prefix + 'UnitIsDefaultInput'),
+            saveButton: $('#btn' + capitalized + 'SaveUnit'),
+            cancelButton: $('#btn' + capitalized + 'CancelEditUnit'),
+            editIndex: $('#' + prefix + 'UnitEditIndex'),
+            tableBody: $('#' + prefix + 'PartUnitsTableBody')
+        };
+    },
+
+    resetUnitForm: function(prefix) {
+        var selectors = this.getUnitFormSelectors(prefix);
+        selectors.name.val('');
+        selectors.conversion.val('1');
+        selectors.barcode.val('');
+        selectors.isDefault.prop('checked', false);
+        selectors.editIndex.val('-1');
+        selectors.cancelButton.addClass('d-none');
+        selectors.saveButton.removeClass('btn-success').addClass('btn-primary');
+        if (prefix === 'create') {
+            selectors.saveButton.html('<i class="fas fa-plus"></i>');
+        } else {
+            selectors.saveButton.html('<i class="fas fa-save"></i>');
+        }
+        selectors.name.focus();
+    },
+
+    getUnitFormData: function(prefix) {
+        var selectors = this.getUnitFormSelectors(prefix);
+        var unitName = selectors.name.val().trim();
+        var conversionRate = parseFloat(selectors.conversion.val());
+        var barcode = selectors.barcode.val().trim();
+        var isDefault = selectors.isDefault.is(':checked');
+
+        if (!unitName) {
+            GarageApp.showError('Vui lòng nhập tên đơn vị');
+            selectors.name.focus();
+            return null;
+        }
+
+        if (!conversionRate || conversionRate <= 0) {
+            GarageApp.showError('Hệ số quy đổi phải lớn hơn 0');
+            selectors.conversion.focus();
+            return null;
+        }
+
+        return {
+            unitName: unitName,
+            conversionRate: conversionRate,
+            barcode: barcode || null,
+            isDefault: isDefault === true
+        };
+    },
+
+    saveUnitFromForm: function(prefix) {
+        var data = this.getUnitFormData(prefix);
+        if (!data) {
+            return;
+        }
+
+        var selectors = this.getUnitFormSelectors(prefix);
+        var units = this.unitData[prefix];
+        var editIndex = parseInt(selectors.editIndex.val(), 10);
+        var normalizedName = data.unitName.toLowerCase();
+
+        var duplicateIndex = units.findIndex(function(u, idx) {
+            return u.unitName.toLowerCase() === normalizedName && idx !== editIndex;
+        });
+        if (duplicateIndex >= 0) {
+            GarageApp.showError('Đơn vị này đã tồn tại trong danh sách');
+            selectors.name.focus();
+            return;
+        }
+
+        if (editIndex >= 0 && units[editIndex]) {
+            units[editIndex] = Object.assign({}, units[editIndex], data);
+        } else {
+            units.push({
+                unitName: data.unitName,
+                conversionRate: data.conversionRate,
+                barcode: data.barcode,
+                isDefault: data.isDefault
+            });
+        }
+
+        if (data.isDefault) {
+            this.ensureDefaultUnitFromInput(prefix, data.unitName);
+        } else {
+            this.renderUnitsTable(prefix);
+        }
+
+        this.resetUnitForm(prefix);
+    },
+
+    startEditUnit: function(prefix, index) {
+        var selectors = this.getUnitFormSelectors(prefix);
+        var units = this.unitData[prefix];
+        var unit = units[index];
+        if (!unit) {
+            return;
+        }
+
+        selectors.name.val(unit.unitName);
+        selectors.conversion.val(unit.conversionRate);
+        selectors.barcode.val(unit.barcode || '');
+        selectors.isDefault.prop('checked', unit.isDefault === true);
+        selectors.editIndex.val(index);
+        selectors.saveButton.removeClass('btn-primary').addClass('btn-success').html('<i class="fas fa-check"></i>');
+        selectors.cancelButton.removeClass('d-none');
+        selectors.name.focus();
+    },
+
+    removeUnit: function(prefix, index) {
+        var selectors = this.getUnitFormSelectors(prefix);
+        var editIndex = parseInt(selectors.editIndex.val(), 10);
+        var units = this.unitData[prefix];
+        if (!units[index]) {
+            return;
+        }
+
+        var wasDefault = units[index].isDefault;
+        units.splice(index, 1);
+        if (editIndex === index) {
+            this.resetUnitForm(prefix);
+        }
+        if (wasDefault) {
+            $('#' + prefix + 'DefaultUnit').val('');
+        }
+        this.renderUnitsTable(prefix);
+        this.ensureDefaultUnitFromInput(prefix);
+    },
+
+    setDefaultUnit: function(prefix, index) {
+        var units = this.unitData[prefix];
+        var unit = units[index];
+        if (!unit) {
+            return;
+        }
+        this.ensureDefaultUnitFromInput(prefix, unit.unitName);
+    },
+
+    ensureDefaultUnitFromInput: function(prefix, overrideUnitName) {
+        var unitName = overrideUnitName !== undefined ? overrideUnitName : $('#' + prefix + 'DefaultUnit').val();
+        var normalizedName = unitName ? unitName.trim().toLowerCase() : '';
+        var units = this.unitData[prefix];
+
+        units.forEach(function(u) { u.isDefault = false; });
+
+        if (normalizedName) {
+            var match = units.find(function(u) { return u.unitName.toLowerCase() === normalizedName; });
+            if (match) {
+                match.isDefault = true;
+                $('#' + prefix + 'DefaultUnit').val(match.unitName);
+            } else {
+                units.push({
+                    unitName: unitName.trim(),
+                    conversionRate: 1,
+                    barcode: null,
+                    isDefault: true
+                });
+                $('#' + prefix + 'DefaultUnit').val(unitName.trim());
+            }
+        }
+
+        this.renderUnitsTable(prefix);
+    },
+
+    renderUnitsTable: function(prefix) {
+        var selectors = this.getUnitFormSelectors(prefix);
+        var units = this.unitData[prefix];
+        var defaultUnit = $('#' + prefix + 'DefaultUnit').val() ? $('#' + prefix + 'DefaultUnit').val().trim().toLowerCase() : '';
+
+        if (!units || units.length === 0) {
+            selectors.tableBody.html('<tr class="text-muted"><td colspan="5" class="text-center">Nhập thông tin ở hàng dưới rồi bấm Thêm.</td></tr>');
+            return;
+        }
+
+        var rows = units.map(function(unit, index) {
+            var isDefault = unit.isDefault || (defaultUnit && unit.unitName.toLowerCase() === defaultUnit);
+            var defaultBadge = isDefault ? '<span class="badge badge-primary">Mặc định</span>' : '';
+            var conversion = GarageApp.formatNumber ? GarageApp.formatNumber(unit.conversionRate) : unit.conversionRate;
+            return `
+                <tr>
+                    <td>${unit.unitName}</td>
+                    <td class="text-right">${conversion}</td>
+                    <td>${unit.barcode || '<span class="text-muted">-</span>'}</td>
+                    <td class="text-center">${defaultBadge}</td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-xs btn-outline-primary btn-unit-default" data-prefix="${prefix}" data-index="${index}" title="Đặt làm mặc định">
+                            <i class="fas fa-check"></i>
+                        </button>
+                        <button type="button" class="btn btn-xs btn-outline-secondary btn-unit-edit" data-prefix="${prefix}" data-index="${index}" title="Chỉnh sửa">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button type="button" class="btn btn-xs btn-outline-danger btn-unit-delete" data-prefix="${prefix}" data-index="${index}" title="Xóa">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+        selectors.tableBody.html(rows);
+    },
+
+    collectUnitData: function(prefix) {
+        var defaultUnitName = $('#' + prefix + 'DefaultUnit').val();
+        var normalizedDefault = defaultUnitName ? defaultUnitName.trim().toLowerCase() : '';
+        var units = this.unitData[prefix].map(function(unit) {
+            return {
+                UnitName: unit.unitName,
+                ConversionRate: unit.conversionRate,
+                Barcode: unit.barcode,
+                Notes: unit.notes || null,
+                IsDefault: false
+            };
+        });
+
+        if (normalizedDefault) {
+            var match = units.find(function(u) { return u.UnitName.toLowerCase() === normalizedDefault; });
+            units.forEach(function(u) { u.IsDefault = false; });
+            if (match) {
+                match.IsDefault = true;
+            } else {
+                units.push({
+                    UnitName: defaultUnitName.trim(),
+                    ConversionRate: 1,
+                    Barcode: null,
+                    Notes: null,
+                    IsDefault: true
+                });
+            }
+        } else if (units.length > 0 && !units.some(function(u) { return u.IsDefault; })) {
+            units[0].IsDefault = true;
+            $('#' + prefix + 'DefaultUnit').val(units[0].UnitName);
+        }
+
+        return units;
+    },
+
+    loadWarehouses: function() {
+        var self = this;
+        $.ajax({
+            url: '/PartsManagement/Warehouses',
+            type: 'GET'
+        }).done(function(response) {
+            if (response && response.success) {
+                self.warehouses = response.data || [];
+                self.populateWarehouseSelect('create');
+                self.populateWarehouseSelect('edit');
+            } else {
+                self.warehouses = [];
+            }
+        }).fail(function(xhr) {
+            if (AuthHandler && AuthHandler.isUnauthorized && AuthHandler.isUnauthorized(xhr)) {
+                AuthHandler.handleUnauthorized(xhr, true);
+            } else {
+                console.warn('Không thể tải danh sách kho');
+            }
+        });
+    },
+
+    populateWarehouseSelect: function(prefix) {
+        var $warehouseSelect = $('#' + prefix + 'WarehouseSelect');
+        if (!$warehouseSelect.length) return;
+
+        var options = ['<option value="">-- Chọn kho --</option>'];
+        this.warehouses.forEach(function(warehouse) {
+            options.push(`<option value="${warehouse.id}">${warehouse.name}</option>`);
+        });
+
+        $warehouseSelect.html(options.join(''));
+        this.resetWarehouseSelectors(prefix);
+    },
+
+    resetWarehouseSelectors: function(prefix) {
+        $('#' + prefix + 'WarehouseSelect').val('');
+        $('#' + prefix + 'WarehouseZoneSelect').prop('disabled', true).html('<option value="">-- Chọn khu vực --</option>');
+        $('#' + prefix + 'WarehouseBinSelect').prop('disabled', true).html('<option value="">-- Chọn vị trí --</option>');
+        if (prefix === 'create') {
+            $('#createLocation').val('');
+        } else if (prefix === 'edit') {
+            // giữ nguyên location hiện tại
+        }
+    },
+
+    onWarehouseChange: function(prefix) {
+        var warehouseId = $('#' + prefix + 'WarehouseSelect').val();
+        var $zoneSelect = $('#' + prefix + 'WarehouseZoneSelect');
+        var $binSelect = $('#' + prefix + 'WarehouseBinSelect');
+
+        $zoneSelect.empty().append('<option value="">-- Chọn khu vực --</option>');
+        $binSelect.empty().append('<option value="">-- Chọn vị trí --</option>').prop('disabled', true);
+
+        if (!warehouseId) {
+            $zoneSelect.prop('disabled', true);
+            this.updateLocationField(prefix);
+            return;
+        }
+
+        var warehouse = this.warehouses.find(function(w) { return w.id.toString() === warehouseId; });
+        if (!warehouse) {
+            $zoneSelect.prop('disabled', true);
+            this.updateLocationField(prefix);
+            return;
+        }
+
+        if (warehouse.zones && warehouse.zones.length > 0) {
+            warehouse.zones.forEach(function(zone) {
+                $zoneSelect.append(`<option value="${zone.id}">${zone.name}</option>`);
+            });
+            $zoneSelect.prop('disabled', false);
+        } else {
+            $zoneSelect.prop('disabled', true);
+        }
+
+        if (warehouse.bins && warehouse.bins.length > 0) {
+            $binSelect.prop('disabled', false);
+            warehouse.bins.forEach(function(bin) {
+                $binSelect.append(`<option value="${bin.id}">${bin.name}</option>`);
+            });
+        }
+
+        this.updateLocationField(prefix);
+    },
+
+    onWarehouseZoneChange: function(prefix) {
+        var warehouseId = $('#' + prefix + 'WarehouseSelect').val();
+        var zoneId = $('#' + prefix + 'WarehouseZoneSelect').val();
+        var $binSelect = $('#' + prefix + 'WarehouseBinSelect');
+
+        $binSelect.empty().append('<option value="">-- Chọn vị trí --</option>');
+
+        if (!warehouseId) {
+            $binSelect.prop('disabled', true);
+            this.updateLocationField(prefix);
+            return;
+        }
+
+        var warehouse = this.warehouses.find(function(w) { return w.id.toString() === warehouseId; });
+        if (!warehouse) {
+            $binSelect.prop('disabled', true);
+            this.updateLocationField(prefix);
+            return;
+        }
+
+        if (zoneId) {
+            var zone = (warehouse.zones || []).find(function(z) { return z.id.toString() === zoneId; });
+            if (zone && zone.bins && zone.bins.length > 0) {
+                zone.bins.forEach(function(bin) {
+                    $binSelect.append(`<option value="${bin.id}">${bin.name}</option>`);
+                });
+                $binSelect.prop('disabled', false);
+            } else {
+                $binSelect.prop('disabled', true);
+            }
+        } else {
+            if (warehouse.bins && warehouse.bins.length > 0) {
+                warehouse.bins.forEach(function(bin) {
+                    $binSelect.append(`<option value="${bin.id}">${bin.name}</option>`);
+                });
+                $binSelect.prop('disabled', false);
+            } else {
+                $binSelect.prop('disabled', true);
+            }
+        }
+
+        this.updateLocationField(prefix);
+    },
+
+    onWarehouseBinChange: function(prefix) {
+        this.updateLocationField(prefix);
+    },
+
+    updateLocationField: function(prefix) {
+        var warehouseId = $('#' + prefix + 'WarehouseSelect').val();
+        var zoneId = $('#' + prefix + 'WarehouseZoneSelect').val();
+        var binId = $('#' + prefix + 'WarehouseBinSelect').val();
+        var warehouseName = '';
+        var zoneName = '';
+        var binName = '';
+
+        if (warehouseId) {
+            var warehouse = this.warehouses.find(function(w) { return w.id.toString() === warehouseId; });
+            if (warehouse) {
+                warehouseName = warehouse.name;
+                if (zoneId) {
+                    var zone = (warehouse.zones || []).find(function(z) { return z.id.toString() === zoneId; });
+                    if (zone) {
+                        zoneName = zone.name;
+                        if (binId) {
+                            var bin = (zone.bins || []).find(function(b) { return b.id.toString() === binId; });
+                            if (bin) {
+                                binName = bin.name;
+                            }
+                        }
+                    }
+                } else if (binId) {
+                    var binDirect = (warehouse.bins || []).find(function(b) { return b.id.toString() === binId; });
+                    if (binDirect) {
+                        binName = binDirect.name;
+                    }
+                }
+            }
+        }
+
+        var parts = [warehouseName, zoneName, binName].filter(function(x) { return x; });
+        var locationField = $('#' + prefix + 'Location');
+        if (parts.length > 0) {
+            locationField.val(parts.join(' - '));
+        } else if (prefix === 'create') {
+            locationField.val('');
+        }
+    },
+
     loadPartForEdit: function(partId) {
         var self = this;
         $.ajax({
@@ -346,6 +857,8 @@ window.PartsManagement = {
         $('#editDescription').val(part.description);
         $('#editCategory').val(part.category);
         $('#editBrand').val(part.brand);
+        $('#editSku').val(part.sku || '');
+        $('#editBarcode').val(part.barcode || '');
         
         // Set giá trị cho các trường giá (dùng unmasked value)
         if (part.costPrice) {
@@ -356,11 +869,32 @@ window.PartsManagement = {
         }
         $('#editQuantityInStock').val(part.quantityInStock);
         $('#editMinimumStock').val(part.minimumStock);
-        $('#editReorderLevel').val(part.reorderLevel);
-        $('#editUnit').val(part.unit);
-        $('#editLocation').val(part.location);
+        $('#editReorderLevel').val(part.reorderLevel || '');
+        $('#editDefaultUnit').val(part.defaultUnit || '');
+        $('#editLocation').val(part.location || '');
         $('#editCompatibleVehicles').val(part.compatibleVehicles);
         $('#editIsActive').prop('checked', part.isActive);
+
+        this.unitData.edit = (part.units || []).map(function(unit) {
+            return {
+                unitName: unit.unitName,
+                conversionRate: unit.conversionRate,
+                barcode: unit.barcode,
+                isDefault: unit.isDefault === true
+            };
+        });
+
+        if (!$('#editDefaultUnit').val() && this.unitData.edit.length > 0) {
+            var defaultUnit = this.unitData.edit.find(function(u) { return u.isDefault; });
+            if (defaultUnit) {
+                $('#editDefaultUnit').val(defaultUnit.unitName);
+            }
+        }
+
+        this.renderUnitsTable('edit');
+        this.ensureDefaultUnitFromInput('edit');
+        this.resetUnitForm('edit');
+        this.resetWarehouseSelectors('edit');
         
         // ✅ THÊM: Classification fields
         $('#editSourceType').val(part.sourceType || 'Purchased');
@@ -426,18 +960,21 @@ window.PartsManagement = {
         console.log('DEBUG: editSellPrice value:', $('#editSellPrice').val());
         
         var formData = {
-            Id: parseInt(partId),
+            Id: parseInt(partId, 10),
             PartNumber: $('#editPartNumber').val(),
             PartName: $('#editPartName').val(),
             Description: $('#editDescription').val(),
             Category: $('#editCategory').val(),
             Brand: $('#editBrand').val(),
+            Sku: $('#editSku').val(),
+            Barcode: $('#editBarcode').val(),
             CostPrice: parseFloat($('#editCostPrice').val()) || 0,
             SellPrice: parseFloat($('#editSellPrice').val()) || 0,
             QuantityInStock: parseInt($('#editQuantityInStock').val()) || 0,
             MinimumStock: parseInt($('#editMinimumStock').val()) || 0,
-            ReorderLevel: parseInt($('#editReorderLevel').val()) || null,
-            Unit: $('#editUnit').val(),
+            ReorderLevel: $('#editReorderLevel').val() ? parseInt($('#editReorderLevel').val()) : null,
+            DefaultUnit: $('#editDefaultUnit').val(),
+            Units: this.collectUnitData('edit'),
             Location: $('#editLocation').val(),
             CompatibleVehicles: $('#editCompatibleVehicles').val(),
             IsActive: $('#editIsActive').is(':checked'),
@@ -525,12 +1062,16 @@ window.PartsManagement = {
         $('#viewDescription').text(part.description || 'N/A');
         $('#viewCategory').text(part.category || 'N/A');
         $('#viewBrand').text(part.brand || 'N/A');
+        $('#viewSku').text(part.sku || 'N/A');
+        $('#viewBarcode').text(part.barcode || 'N/A');
         $('#viewCostPrice').text(part.costPrice ? part.costPrice.toLocaleString() + ' VNĐ' : 'N/A');
         $('#viewSellPrice').text(part.sellPrice ? part.sellPrice.toLocaleString() + ' VNĐ' : 'N/A');
         $('#viewQuantityInStock').text(part.quantityInStock);
         $('#viewMinimumStock').text(part.minimumStock);
-        $('#viewUnit').text(part.unit || 'N/A');
+        $('#viewReorderLevel').text(part.reorderLevel !== null && part.reorderLevel !== undefined ? part.reorderLevel : 'N/A');
+        $('#viewDefaultUnit').text(part.defaultUnit || 'N/A');
         $('#viewLocation').text(part.location || 'N/A');
+        this.renderViewUnitsTable(part.units || []);
         
         // ✅ THÊM: Classification fields
         const sourceTypeMap = {
@@ -598,6 +1139,28 @@ window.PartsManagement = {
         
         // ✅ THÊM: Classification summary badges
         this.updateViewBadges(part);
+    },
+
+    renderViewUnitsTable: function(units) {
+        var $tbody = $('#viewUnitsTable tbody');
+        if (!units || units.length === 0) {
+            $tbody.html('<tr class="text-muted"><td colspan="4" class="text-center">Chưa khai báo đơn vị quy đổi.</td></tr>');
+            return;
+        }
+
+        var rows = units.map(function(unit) {
+            var badge = unit.isDefault ? '<span class="badge badge-primary"><i class="fas fa-star"></i> Mặc định</span>' : '';
+            return `
+                <tr>
+                    <td>${unit.unitName}</td>
+                    <td class="text-right">${unit.conversionRate}</td>
+                    <td>${unit.barcode || '<span class="text-muted">-</span>'}</td>
+                    <td class="text-center">${badge}</td>
+                </tr>
+            `;
+        }).join('');
+
+        $tbody.html(rows);
     },
 
     // ✅ THÊM: Update classification badges trong view modal

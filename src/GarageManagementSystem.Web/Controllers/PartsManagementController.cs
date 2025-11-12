@@ -6,6 +6,9 @@ using GarageManagementSystem.Web.Services;
 using GarageManagementSystem.Web.Configuration;
 using AutoMapper;
 using GarageManagementSystem.Web.Models;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace GarageManagementSystem.Web.Controllers
 {
@@ -105,14 +108,13 @@ namespace GarageManagementSystem.Web.Controllers
                 ApiEndpoints.Builder.WithId(ApiEndpoints.Parts.GetById, id)
             );
             
-            if (response.Success && response.Data != null)
+            if (response.Success && response.Data?.Data != null)
             {
                 var partData = _mapper.Map<PartDetailsViewModel>(response.Data.Data);
-                
-                return Json(new ApiResponse { Data = partData, Success = true, StatusCode = System.Net.HttpStatusCode.OK });
+                return Json(new { success = true, data = partData });
             }
             
-            return Json(new { success = false, error = "Phụ tùng không tồn tại" });
+            return Json(new { success = false, error = response.ErrorMessage ?? "Phụ tùng không tồn tại" });
         }
 
         /// <summary>
@@ -257,6 +259,18 @@ namespace GarageManagementSystem.Web.Controllers
             }
 
             return Json(new List<object>());
+        }
+
+        [HttpGet("Warehouses")]
+        public async Task<IActionResult> GetWarehouses()
+        {
+            var response = await _apiService.GetAsync<List<WarehouseDto>>(ApiEndpoints.Warehouses.GetAll);
+            if (response.Success && response.Data != null)
+            {
+                return Json(new { success = true, data = response.Data });
+            }
+
+            return Json(new { success = false, data = new List<object>() });
         }
     }
 }

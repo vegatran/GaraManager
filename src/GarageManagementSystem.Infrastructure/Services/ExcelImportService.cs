@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using OfficeOpenXml;
 using System.ComponentModel.DataAnnotations;
+using System.Linq;
 
 namespace GarageManagementSystem.Infrastructure.Services
 {
@@ -191,7 +192,7 @@ namespace GarageManagementSystem.Infrastructure.Services
                                 // Cập nhật Part hiện có
                                 part = existingPart;
                                 part.PartName = item.PartName;
-                                part.Unit = item.Unit;
+                                part.DefaultUnit = item.Unit;
                                 part.AverageCostPrice = item.CalculatedUnitPrice;
                                 part.UpdatedAt = DateTime.Now;
                                 
@@ -204,14 +205,55 @@ namespace GarageManagementSystem.Infrastructure.Services
                                 {
                                     PartNumber = item.PartCode,
                                     PartName = item.PartName,
-                                    Unit = item.Unit,
+                                    DefaultUnit = item.Unit,
                                     AverageCostPrice = item.CalculatedUnitPrice,
                                     CreatedAt = DateTime.Now,
                                     UpdatedAt = DateTime.Now
                                 };
+                                if (!string.IsNullOrWhiteSpace(item.Unit))
+                                {
+                                    part.PartUnits = new List<PartUnit>
+                                    {
+                                        new PartUnit
+                                        {
+                                            UnitName = item.Unit!,
+                                            ConversionRate = 1,
+                                            IsDefault = true,
+                                            Part = part
+                                        }
+                                    };
+                                }
                                 
                                 _context.Parts.Add(part);
                                 await _context.SaveChangesAsync(); // Save để lấy ID
+                            }
+
+                            if (!string.IsNullOrWhiteSpace(item.Unit))
+                            {
+                                part.DefaultUnit = item.Unit!;
+                                await _context.Entry(part).Collection(p => p.PartUnits).LoadAsync();
+                                var unitEntity = part.PartUnits.FirstOrDefault(u => u.UnitName.Equals(item.Unit, StringComparison.OrdinalIgnoreCase));
+                                if (unitEntity == null)
+                                {
+                                    unitEntity = new PartUnit
+                                    {
+                                        PartId = part.Id,
+                                        UnitName = item.Unit!,
+                                        ConversionRate = 1,
+                                        IsDefault = true
+                                    };
+                                    part.PartUnits.Add(unitEntity);
+                                }
+                                else
+                                {
+                                    unitEntity.ConversionRate = 1;
+                                    unitEntity.IsDefault = true;
+                                }
+
+                                foreach (var unit in part.PartUnits.Where(u => !u.UnitName.Equals(item.Unit, StringComparison.OrdinalIgnoreCase)))
+                                {
+                                    unit.IsDefault = false;
+                                }
                             }
 
                             // Tạo Stock Transaction cho Opening Balance

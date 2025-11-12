@@ -24,6 +24,18 @@ namespace GarageManagementSystem.Infrastructure.Repositories
                 .ToListAsync();
         }
 
+        public IQueryable<CustomerReception> GetAllWithDetailsQueryable()
+        {
+            return _context.CustomerReceptions
+                .Include(r => r.Customer)
+                .Include(r => r.Vehicle)
+                .Include(r => r.AssignedTechnician)
+                .Include(r => r.VehicleInspection)
+                .Where(r => !r.IsDeleted)
+                .OrderByDescending(r => r.CreatedDate)
+                .AsQueryable();
+        }
+
         public async Task<CustomerReception?> GetByIdWithDetailsAsync(int id)
         {
             return await _context.CustomerReceptions

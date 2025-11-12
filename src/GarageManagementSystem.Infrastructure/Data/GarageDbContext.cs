@@ -46,6 +46,10 @@ namespace GarageManagementSystem.Infrastructure.Data
         public DbSet<QualityControl> QualityControls { get; set; }
         public DbSet<QCChecklistItem> QCChecklistItems { get; set; }
         
+        // ✅ OPTIMIZED: QC Checklist Template (Template mẫu cho QC Checklist)
+        public DbSet<QCChecklistTemplate> QCChecklistTemplates { get; set; }
+        public DbSet<QCChecklistTemplateItem> QCChecklistTemplateItems { get; set; }
+        
         public DbSet<ServiceQuotation> ServiceQuotations { get; set; }
         public DbSet<QuotationItem> QuotationItems { get; set; }
         public DbSet<QuotationAttachment> QuotationAttachments { get; set; }
@@ -66,6 +70,18 @@ namespace GarageManagementSystem.Infrastructure.Data
         public DbSet<Invoice> Invoices { get; set; }
         public DbSet<InvoiceItem> InvoiceItems { get; set; }
         public DbSet<Payment> Payments { get; set; }
+        public DbSet<Warranty> Warranties { get; set; }
+        public DbSet<WarrantyItem> WarrantyItems { get; set; }
+        public DbSet<WarrantyClaim> WarrantyClaims { get; set; }
+        public DbSet<ServiceFeeType> ServiceFeeTypes { get; set; }
+        public DbSet<ServiceOrderFee> ServiceOrderFees { get; set; }
+        public DbSet<CustomerFeedback> CustomerFeedbacks { get; set; }
+        public DbSet<CustomerFeedbackAttachment> CustomerFeedbackAttachments { get; set; }
+        public DbSet<FeedbackChannel> FeedbackChannels { get; set; }
+        public DbSet<PartUnit> PartUnits { get; set; }
+        public DbSet<Warehouse> Warehouses { get; set; }
+        public DbSet<WarehouseZone> WarehouseZones { get; set; }
+        public DbSet<WarehouseBin> WarehouseBins { get; set; }
         
         // Advanced features
         public DbSet<PartGroup> PartGroups { get; set; }
@@ -150,8 +166,13 @@ namespace GarageManagementSystem.Infrastructure.Data
                 entity.Property(e => e.Department).HasMaxLength(100);
                 entity.Property(e => e.CostCenter).HasMaxLength(50);
                 
-                // Unique index chỉ áp dụng cho bản ghi chưa xóa
-                entity.HasIndex(e => e.LicensePlate)
+                // Shadow property for computed unique index (chỉ enforce với bản ghi chưa xóa)
+                entity.Property<string>("LicensePlateUnique")
+                    .HasMaxLength(20)
+                    .HasColumnType("varchar(20)")
+                    .HasComputedColumnSql("CASE WHEN (`IsDeleted` = 0) THEN `LicensePlate` ELSE NULL END", stored: true);
+
+                entity.HasIndex("LicensePlateUnique")
                     .IsUnique();
                     
                 entity.HasIndex(e => e.VIN)
@@ -184,6 +205,9 @@ namespace GarageManagementSystem.Infrastructure.Data
                 entity.Property(e => e.DiscountAmount).HasColumnType("decimal(18,2)");
                 entity.Property(e => e.FinalAmount).HasColumnType("decimal(18,2)");
                 entity.Property(e => e.PaymentStatus).HasMaxLength(50);
+                entity.Property(e => e.HandoverLocation).HasMaxLength(200);
+                entity.Property(e => e.WarrantyCode).HasMaxLength(50);
+                entity.Property(e => e.WarrantyExpiryDate).HasColumnType("datetime(6)");
                 
                 // Unique index cho OrderNumber (chỉ áp dụng cho bản ghi chưa xóa)
                 entity.HasIndex(e => e.OrderNumber)
@@ -198,6 +222,199 @@ namespace GarageManagementSystem.Infrastructure.Data
                     .WithMany(v => v.ServiceOrders)
                     .HasForeignKey(e => e.VehicleId)
                     .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // Warranty configuration
+            modelBuilder.Entity<Warranty>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.WarrantyCode).IsRequired().HasMaxLength(50);
+                entity.HasIndex(e => e.WarrantyCode).IsUnique();
+                entity.Property(e => e.Status).HasMaxLength(20);
+                entity.Property(e => e.Notes).HasMaxLength(1000);
+                entity.Property(e => e.HandoverBy).HasMaxLength(50);
+                entity.Property(e => e.HandoverLocation).HasMaxLength(200);
+
+                entity.HasOne(e => e.ServiceOrder)
+                    .WithMany(o => o.Warranties)
+                    .HasForeignKey(e => e.ServiceOrderId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Customer)
+                    .WithMany(c => c.Warranties)
+                    .HasForeignKey(e => e.CustomerId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.Vehicle)
+                    .WithMany(v => v.Warranties)
+                    .HasForeignKey(e => e.VehicleId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<WarrantyItem>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.PartName).HasMaxLength(200);
+                entity.Property(e => e.PartNumber).HasMaxLength(100);
+                entity.Property(e => e.SerialNumber).HasMaxLength(100);
+                entity.Property(e => e.Status).HasMaxLength(20);
+                entity.Property(e => e.Notes).HasMaxLength(500);
+
+                entity.HasOne(e => e.Warranty)
+                    .WithMany(w => w.Items)
+                    .HasForeignKey(e => e.WarrantyId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Part)
+                    .WithMany(p => p.WarrantyItems)
+                    .HasForeignKey(e => e.PartId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.ServiceOrderPart)
+                    .WithMany(p => p.WarrantyItems)
+                    .HasForeignKey(e => e.ServiceOrderPartId)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            modelBuilder.Entity<WarrantyClaim>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.ClaimNumber).IsRequired().HasMaxLength(50);
+                entity.HasIndex(e => e.ClaimNumber).IsUnique();
+                entity.Property(e => e.IssueDescription).HasMaxLength(1000);
+                entity.Property(e => e.Status).HasMaxLength(20);
+                entity.Property(e => e.Resolution).HasMaxLength(1000);
+                entity.Property(e => e.Notes).HasMaxLength(500);
+
+                entity.HasOne(e => e.Warranty)
+                    .WithMany(w => w.Claims)
+                    .HasForeignKey(e => e.WarrantyId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.ServiceOrder)
+                    .WithMany()
+                    .HasForeignKey(e => e.ServiceOrderId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.Customer)
+                    .WithMany()
+                    .HasForeignKey(e => e.CustomerId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.Vehicle)
+                    .WithMany()
+                    .HasForeignKey(e => e.VehicleId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<ServiceFeeType>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Code).IsRequired().HasMaxLength(50);
+                entity.HasIndex(e => e.Code).IsUnique();
+                entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.Description).HasMaxLength(500);
+                entity.Property(e => e.IsActive).HasDefaultValue(true);
+
+                var seedCreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Local);
+
+                entity.HasData(
+                    new ServiceFeeType { Id = 1, Code = "LABOR", Name = "Công sửa chữa", Description = "Tiền công kỹ thuật viên", DisplayOrder = 1, IsSystem = true, CreatedAt = seedCreatedAt },
+                    new ServiceFeeType { Id = 2, Code = "PARTS", Name = "Phụ tùng", Description = "Chi phí phụ tùng, vật tư", DisplayOrder = 2, IsSystem = true, CreatedAt = seedCreatedAt },
+                    new ServiceFeeType { Id = 3, Code = "CONSUMABLE", Name = "Vật tư tiêu hao", Description = "Dầu nhớt, dung dịch, vật tư tiêu hao", DisplayOrder = 3, IsSystem = true, CreatedAt = seedCreatedAt },
+                    new ServiceFeeType { Id = 4, Code = "SUBLET", Name = "Dịch vụ ngoài", Description = "Thuê ngoài/đối tác thực hiện", DisplayOrder = 4, IsSystem = true, CreatedAt = seedCreatedAt },
+                    new ServiceFeeType { Id = 5, Code = "OTHER", Name = "Phí khác", Description = "Các khoản phí khác", DisplayOrder = 5, IsSystem = true, CreatedAt = seedCreatedAt }
+                );
+            });
+
+            modelBuilder.Entity<ServiceOrderFee>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Amount).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.VatAmount).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.DiscountAmount).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.ReferenceSource).HasMaxLength(200);
+                entity.Property(e => e.Notes).HasMaxLength(500);
+
+                entity.HasOne(e => e.ServiceOrder)
+                    .WithMany(o => o.ServiceOrderFees)
+                    .HasForeignKey(e => e.ServiceOrderId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.ServiceFeeType)
+                    .WithMany(t => t.ServiceOrderFees)
+                    .HasForeignKey(e => e.ServiceFeeTypeId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<FeedbackChannel>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Code).IsRequired().HasMaxLength(50);
+                entity.HasIndex(e => e.Code).IsUnique();
+                entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.Description).HasMaxLength(500);
+                entity.Property(e => e.IsActive).HasDefaultValue(true);
+
+                var channelSeedDate = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Local);
+
+                entity.HasData(
+                    new FeedbackChannel { Id = 1, Code = "HOTLINE", Name = "Hotline", Description = "Gọi hotline/điện thoại", DisplayOrder = 1, IsSystem = true, IsActive = true, CreatedAt = channelSeedDate },
+                    new FeedbackChannel { Id = 2, Code = "IN_PERSON", Name = "Tại gara", Description = "Khách phản hồi trực tiếp tại gara", DisplayOrder = 2, IsSystem = true, IsActive = true, CreatedAt = channelSeedDate },
+                    new FeedbackChannel { Id = 3, Code = "EMAIL", Name = "Email", Description = "Phản hồi qua email", DisplayOrder = 3, IsSystem = true, IsActive = true, CreatedAt = channelSeedDate },
+                    new FeedbackChannel { Id = 4, Code = "APP", Name = "Ứng dụng di động", Description = "Phản hồi qua app", DisplayOrder = 4, IsSystem = true, IsActive = true, CreatedAt = channelSeedDate },
+                    new FeedbackChannel { Id = 5, Code = "SOCIAL", Name = "Mạng xã hội", Description = "Phản hồi Facebook/Zalo...", DisplayOrder = 5, IsSystem = true, IsActive = true, CreatedAt = channelSeedDate },
+                    new FeedbackChannel { Id = 6, Code = "SURVEY", Name = "Survey hậu mãi", Description = "Khảo sát hậu mãi", DisplayOrder = 6, IsSystem = true, IsActive = true, CreatedAt = channelSeedDate }
+                );
+            });
+
+            modelBuilder.Entity<CustomerFeedback>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Source).HasMaxLength(100);
+                entity.Property(e => e.Rating).HasMaxLength(50);
+                entity.Property(e => e.Topic).HasMaxLength(200);
+                entity.Property(e => e.Content).IsRequired().HasMaxLength(2000);
+                entity.Property(e => e.ActionTaken).HasMaxLength(1000);
+                entity.Property(e => e.Status).HasMaxLength(50);
+                entity.Property(e => e.Notes).HasMaxLength(1000);
+
+                entity.HasOne(e => e.Customer)
+                    .WithMany(c => c.CustomerFeedbacks)
+                    .HasForeignKey(e => e.CustomerId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(e => e.ServiceOrder)
+                    .WithMany(o => o.CustomerFeedbacks)
+                    .HasForeignKey(e => e.ServiceOrderId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(e => e.FollowUpBy)
+                    .WithMany()
+                    .HasForeignKey(e => e.FollowUpById)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(e => e.FeedbackChannel)
+                    .WithMany(c => c.Feedbacks)
+                    .HasForeignKey(e => e.FeedbackChannelId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasIndex(e => new { e.CustomerId, e.ServiceOrderId, e.Status });
+                entity.HasIndex(e => e.FollowUpDate);
+                entity.HasIndex(e => e.Source);
+            });
+
+            modelBuilder.Entity<CustomerFeedbackAttachment>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.FileName).HasMaxLength(200);
+                entity.Property(e => e.FilePath).HasMaxLength(500);
+                entity.Property(e => e.ContentType).HasMaxLength(100);
+
+                entity.HasOne(e => e.CustomerFeedback)
+                    .WithMany(f => f.Attachments)
+                    .HasForeignKey(e => e.CustomerFeedbackId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
 
             // ServiceOrderItem configuration
@@ -438,6 +655,35 @@ namespace GarageManagementSystem.Infrastructure.Data
                     .OnDelete(DeleteBehavior.Cascade);
             });
 
+            // ✅ OPTIMIZED: QCChecklistTemplate configuration
+            modelBuilder.Entity<QCChecklistTemplate>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.TemplateName).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.Description).HasMaxLength(500);
+                entity.Property(e => e.VehicleType).HasMaxLength(50);
+                entity.Property(e => e.ServiceType).HasMaxLength(50);
+
+                // Index for faster lookup
+                entity.HasIndex(e => new { e.IsDefault, e.IsActive });
+                entity.HasIndex(e => new { e.VehicleType, e.ServiceType, e.IsActive });
+            });
+
+            // ✅ OPTIMIZED: QCChecklistTemplateItem configuration
+            modelBuilder.Entity<QCChecklistTemplateItem>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.ChecklistItemName).IsRequired().HasMaxLength(200);
+
+                entity.HasOne(e => e.Template)
+                    .WithMany(t => t.TemplateItems)
+                    .HasForeignKey(e => e.TemplateId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                // Index for ordering
+                entity.HasIndex(e => new { e.TemplateId, e.DisplayOrder });
+            });
+
             // ServiceQuotation configuration
             modelBuilder.Entity<ServiceQuotation>(entity =>
             {
@@ -548,11 +794,110 @@ namespace GarageManagementSystem.Infrastructure.Data
                 entity.Property(e => e.PartName).IsRequired().HasMaxLength(200);
                 entity.Property(e => e.CostPrice).HasColumnType("decimal(18,2)");
                 entity.Property(e => e.SellPrice).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.Sku).HasMaxLength(100);
+                entity.Property(e => e.Barcode).HasMaxLength(150);
+                entity.Property(e => e.DefaultUnit).HasMaxLength(20);
                 
                 // Unique index cho PartNumber (chỉ áp dụng cho bản ghi chưa xóa)
                 entity.HasIndex(e => e.PartNumber)
                     .IsUnique();
                     // Note: MySQL filtered index syntax is different, handled at database level
+
+                entity.HasIndex(e => e.Sku)
+                    .IsUnique();
+
+                entity.HasIndex(e => e.Barcode)
+                    .IsUnique();
+            });
+
+            modelBuilder.Entity<PartUnit>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.UnitName).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.ConversionRate).HasColumnType("decimal(18,4)");
+                entity.Property(e => e.Barcode).HasMaxLength(150);
+                entity.Property(e => e.Notes).HasMaxLength(200);
+
+                entity.HasIndex(e => new { e.PartId, e.UnitName })
+                    .IsUnique();
+
+                entity.HasOne(e => e.Part)
+                    .WithMany(p => p.PartUnits)
+                    .HasForeignKey(e => e.PartId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(e => e.Barcode)
+                    .IsUnique();
+            });
+
+            modelBuilder.Entity<Warehouse>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Code).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.Name).IsRequired().HasMaxLength(150);
+                entity.Property(e => e.Description).HasMaxLength(300);
+                entity.Property(e => e.Address).HasMaxLength(300);
+                entity.Property(e => e.ManagerName).HasMaxLength(100);
+                entity.Property(e => e.PhoneNumber).HasMaxLength(50);
+
+                entity.HasIndex(e => e.Code)
+                    .IsUnique();
+            });
+
+            modelBuilder.Entity<WarehouseZone>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Code).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.Name).IsRequired().HasMaxLength(150);
+                entity.Property(e => e.Description).HasMaxLength(300);
+
+                entity.HasIndex(e => new { e.WarehouseId, e.Code })
+                    .IsUnique();
+
+                entity.HasOne(e => e.Warehouse)
+                    .WithMany(w => w.Zones)
+                    .HasForeignKey(e => e.WarehouseId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<WarehouseBin>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Code).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.Name).IsRequired().HasMaxLength(150);
+                entity.Property(e => e.Description).HasMaxLength(300);
+                entity.Property(e => e.Capacity).HasColumnType("decimal(18,2)");
+
+                entity.HasIndex(e => new { e.WarehouseId, e.Code })
+                    .IsUnique();
+
+                entity.HasOne(e => e.Warehouse)
+                    .WithMany(w => w.Bins)
+                    .HasForeignKey(e => e.WarehouseId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.WarehouseZone)
+                    .WithMany(z => z.Bins)
+                    .HasForeignKey(e => e.WarehouseZoneId)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            modelBuilder.Entity<PartInventoryBatch>(entity =>
+            {
+                entity.HasOne(e => e.Warehouse)
+                    .WithMany(w => w.InventoryBatches)
+                    .HasForeignKey(e => e.WarehouseId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(e => e.WarehouseZone)
+                    .WithMany(z => z.InventoryBatches)
+                    .HasForeignKey(e => e.WarehouseZoneId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(e => e.WarehouseBin)
+                    .WithMany(b => b.InventoryBatches)
+                    .HasForeignKey(e => e.WarehouseBinId)
+                    .OnDelete(DeleteBehavior.SetNull);
             });
 
             // Supplier configuration

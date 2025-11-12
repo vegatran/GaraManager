@@ -139,6 +139,7 @@ builder.Services.AddScoped<GarageManagementSystem.Shared.Services.IInvoiceServic
 
 // ✅ 3.1: COGS Calculation Service
 builder.Services.AddScoped<GarageManagementSystem.Core.Interfaces.ICOGSCalculationService, GarageManagementSystem.Infrastructure.Services.COGSCalculationService>();
+builder.Services.AddScoped<GarageManagementSystem.Core.Interfaces.IWarrantyService, GarageManagementSystem.Infrastructure.Services.WarrantyService>();
 
 // Configuration Service
 builder.Services.AddScoped<GarageManagementSystem.Core.Services.IConfigurationService, GarageManagementSystem.Core.Services.ConfigurationService>();

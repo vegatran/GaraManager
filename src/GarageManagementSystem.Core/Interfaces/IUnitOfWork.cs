@@ -29,6 +29,18 @@ namespace GarageManagementSystem.Core.Interfaces
         IGenericRepository<InsuranceClaim> InsuranceClaims { get; }
         IGenericRepository<ServiceQuotation> Quotations { get; } // Alias for ServiceQuotations
         IVehicleInspectionRepository Inspections { get; } // Alias for VehicleInspections
+        IWarrantyRepository Warranties { get; }
+        IGenericRepository<WarrantyItem> WarrantyItems { get; }
+        IGenericRepository<WarrantyClaim> WarrantyClaims { get; }
+        IGenericRepository<ServiceFeeType> ServiceFeeTypes { get; }
+        IGenericRepository<ServiceOrderFee> ServiceOrderFees { get; }
+        IGenericRepository<CustomerFeedback> CustomerFeedbacks { get; }
+        IGenericRepository<CustomerFeedbackAttachment> CustomerFeedbackAttachments { get; }
+        IGenericRepository<FeedbackChannel> FeedbackChannels { get; }
+        IGenericRepository<PartUnit> PartUnits { get; }
+        IGenericRepository<Warehouse> Warehouses { get; }
+        IGenericRepository<WarehouseZone> WarehouseZones { get; }
+        IGenericRepository<WarehouseBin> WarehouseBins { get; }
         
         IGenericRepository<T> Repository<T>() where T : BaseEntity;
         Task<int> SaveChangesAsync();

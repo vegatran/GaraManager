@@ -32,6 +32,21 @@
                             <i class="fas fa-tasks mr-1"></i>Tiến Độ
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="settlement-tab" data-toggle="tab" href="#settlement" role="tab">
+                            <i class="fas fa-balance-scale mr-1"></i>Quyết Toán
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="fees-tab" data-toggle="tab" href="#fees" role="tab">
+                            <i class="fas fa-file-invoice-dollar mr-1"></i>Phí Dịch Vụ
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="warranty-tab" data-toggle="tab" href="#warranty" role="tab">
+                            <i class="fas fa-shield-alt mr-1"></i>Bảo Hành
+                        </a>
+                    </li>
                     <!-- ✅ 2.4: QC Tab -->
                     <li class="nav-item">
                         <a class="nav-link" id="qc-tab" data-toggle="tab" href="#qc" role="tab">
@@ -198,6 +213,370 @@
                                 </div>
                                 <p class="text-muted mt-2">Đang tải tiến độ...</p>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- ✅ 3.1: Settlement Tab -->
+                    <div class="tab-pane fade" id="settlement" role="tabpanel">
+                        <div id="settlementContent" class="d-none">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="card border-info mb-3">
+                                        <div class="card-header bg-info text-white">
+                                            <h5 class="mb-0"><i class="fas fa-warehouse mr-2"></i>Giá Vốn (COGS)</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <div>
+                                                    <p class="mb-1 text-muted">Phương pháp</p>
+                                                    <h5 id="cogsMethodDisplay" class="font-weight-bold mb-2">-</h5>
+                                                </div>
+                                                <div>
+                                                    <p class="mb-1 text-muted">Ngày tính</p>
+                                                    <h6 id="cogsCalculationDate" class="mb-0">-</h6>
+                                                </div>
+                                            </div>
+                                            <hr />
+                                            <p class="mb-1 text-muted">Tổng giá vốn</p>
+                                            <h4 id="totalCogsDisplay" class="text-primary font-weight-bold mb-3">0 VNĐ</h4>
+                                            <div class="d-flex flex-wrap gap-2">
+                                                <div class="form-group mb-2 mr-2">
+                                                    <label for="cogsMethodSelect" class="form-text text-muted mb-1">Đổi phương pháp</label>
+                                                    <select id="cogsMethodSelect" class="form-control form-control-sm">
+                                                        <option value="FIFO">FIFO</option>
+                                                        <option value="WeightedAverage">Bình quân gia quyền</option>
+                                                    </select>
+                                                </div>
+                                                <div class="align-self-end mb-2">
+                                                    <button type="button" class="btn btn-outline-primary btn-sm mr-2" id="btnApplyCogsMethod">
+                                                        <i class="fas fa-sync-alt"></i> Áp dụng
+                                                    </button>
+                                                    <button type="button" class="btn btn-primary btn-sm" id="btnRecalculateCogs">
+                                                        <i class="fas fa-calculator"></i> Tính lại COGS
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <small id="cogsLastUpdatedNote" class="form-text text-muted mt-2"></small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card border-success mb-3">
+                                        <div class="card-header bg-success text-white">
+                                            <h5 class="mb-0"><i class="fas fa-chart-line mr-2"></i>Lợi Nhuận Gộp</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="row">
+                                                <div class="col-sm-6 mb-3">
+                                                    <p class="mb-1 text-muted">Doanh thu</p>
+                                                    <h5 id="totalRevenueDisplay" class="font-weight-bold">0 VNĐ</h5>
+                                                </div>
+                                                <div class="col-sm-6 mb-3">
+                                                    <p class="mb-1 text-muted">Giá vốn</p>
+                                                    <h5 id="grossTotalCogsDisplay" class="font-weight-bold">0 VNĐ</h5>
+                                                </div>
+                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <div>
+                                                    <p class="mb-1 text-muted">Lợi nhuận gộp</p>
+                                                    <h4 id="grossProfitDisplay" class="text-success font-weight-bold mb-0">0 VNĐ</h4>
+                                                </div>
+                                                <div class="text-right">
+                                                    <p class="mb-1 text-muted">Tỷ lệ</p>
+                                                    <h4 id="grossProfitMarginDisplay" class="text-success font-weight-bold mb-0">0%</h4>
+                                                </div>
+                                            </div>
+                                            <small id="grossProfitNote" class="form-text text-muted mt-2"></small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card">
+                                <div class="card-header bg-light">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h5 class="mb-0"><i class="fas fa-list-ul mr-2"></i>Chi Tiết Giá Vốn</h5>
+                                        <div>
+                                            <button type="button" class="btn btn-outline-secondary btn-sm" id="btnRefreshCogsData">
+                                                <i class="fas fa-redo"></i> Làm mới
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="card-body p-0">
+                                    <div class="table-responsive">
+                                        <table class="table table-striped table-hover mb-0">
+                                            <thead class="thead-light">
+                                                <tr>
+                                                    <th>Vật tư</th>
+                                                    <th>Mã vật tư</th>
+                                                    <th>Số lượng</th>
+                                                    <th>Đơn giá (COGS)</th>
+                                                    <th>Thành tiền</th>
+                                                    <th>Mã lô</th>
+                                                    <th>Ngày nhập</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="cogsBreakdownBody">
+                                                <tr>
+                                                    <td colspan="7" class="text-center text-muted py-3">Chưa có dữ liệu</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="settlementLoading" class="text-center py-4">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="sr-only">Đang tải...</span>
+                            </div>
+                            <p class="text-muted mt-2 mb-0">Đang tải dữ liệu quyết toán...</p>
+                        </div>
+
+                        <div id="settlementEmpty" class="alert alert-info d-none mt-3 mb-0">
+                            <i class="fas fa-info-circle mr-2"></i><span id="settlementEmptyMessage">Chưa có dữ liệu giá vốn cho phiếu sửa chữa này. Vui lòng tính COGS trước.</span>
+                        </div>
+
+                        <div id="settlementError" class="alert alert-danger d-none mt-3 mb-0">
+                            <i class="fas fa-exclamation-triangle mr-2"></i><span id="settlementErrorMessage">Không thể tải dữ liệu quyết toán.</span>
+                        </div>
+                    </div>
+                    
+                    <!-- ✅ 3.3: Service Fees Tab -->
+                    <div class="tab-pane fade" id="fees" role="tabpanel">
+                        <div id="feesLoading" class="text-center py-4">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="sr-only">Đang tải...</span>
+                            </div>
+                            <p class="text-muted mt-2 mb-0">Đang tải dữ liệu phí dịch vụ...</p>
+                        </div>
+                        <div id="feesContent" class="d-none">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <div>
+                                    <h5 class="mb-1"><i class="fas fa-file-invoice-dollar mr-2"></i>Tổng quan phí dịch vụ</h5>
+                                    <p class="text-muted mb-0">Quản lý chi tiết các khoản phí theo loại</p>
+                                </div>
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-outline-info btn-sm" id="btnRefreshFees">
+                                        <i class="fas fa-sync-alt mr-1"></i>Tải lại
+                                    </button>
+                                    <button type="button" class="btn btn-primary btn-sm" id="btnEditFees">
+                                        <i class="fas fa-edit mr-1"></i>Chỉnh sửa
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="card border-primary mb-3">
+                                        <div class="card-header bg-primary text-white">
+                                            <h6 class="mb-0 text-uppercase">Tổng tiền</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <p class="mb-1 text-muted">Tổng phí (chưa VAT)</p>
+                                            <h4 id="feeTotalAmount" class="font-weight-bold text-primary mb-3">0 VNĐ</h4>
+                                            <p class="mb-1 text-muted">VAT</p>
+                                            <p id="feeTotalVat" class="font-weight-bold mb-2">0 VNĐ</p>
+                                            <p class="mb-1 text-muted">Giảm trừ</p>
+                                            <p id="feeTotalDiscount" class="font-weight-bold text-success mb-0">0 VNĐ</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-8">
+                                    <div class="card border-light mb-3">
+                                        <div class="card-header d-flex justify-content-between align-items-center">
+                                            <h6 class="mb-0 text-uppercase"><i class="fas fa-list-ul mr-2"></i>Chi tiết phí</h6>
+                                        </div>
+                                        <div class="card-body p-0">
+                                            <div class="table-responsive">
+                                                <table class="table table-striped table-hover mb-0" id="serviceFeeTable">
+                                                    <thead class="thead-light">
+                                                        <tr>
+                                                            <th>Loại phí</th>
+                                                            <th>Số tiền</th>
+                                                            <th>VAT</th>
+                                                            <th>Giảm trừ</th>
+                                                            <th>Ghi chú</th>
+                                                            <th style="width: 70px;">Thao tác</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody id="feesTableBody">
+                                                        <tr>
+                                                            <td colspan="6" class="text-center text-muted py-3">Chưa có dữ liệu</td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="feesEmpty" class="alert alert-info d-none mt-3 mb-0">
+                            <i class="fas fa-info-circle mr-2"></i><span>Chưa có dữ liệu phí dịch vụ.</span>
+                        </div>
+                        <div id="feesError" class="alert alert-danger d-none mt-3 mb-0">
+                            <i class="fas fa-exclamation-triangle mr-2"></i><span>Không thể tải dữ liệu phí dịch vụ.</span>
+                        </div>
+                    </div>
+
+                    <!-- ✅ 3.2: Warranty Tab -->
+                    <div class="tab-pane fade" id="warranty" role="tabpanel">
+                        <div id="warrantyLoading" class="text-center py-4">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="sr-only">Đang tải...</span>
+                            </div>
+                            <p class="text-muted mt-2 mb-0">Đang tải dữ liệu bảo hành...</p>
+                        </div>
+                        <div id="warrantyContent" class="d-none">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <div>
+                                    <h5 class="mb-1"><i class="fas fa-shield-alt mr-2"></i>Thông tin bảo hành</h5>
+                                    <p class="text-muted mb-0">Theo dõi trạng thái bảo hành và các khiếu nại phát sinh</p>
+                                </div>
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-outline-info btn-sm" id="btnRefreshWarranty">
+                                        <i class="fas fa-sync-alt mr-1"></i>Tải lại
+                                    </button>
+                                    <button type="button" class="btn btn-primary btn-sm" id="btnGenerateWarranty">
+                                        <i class="fas fa-certificate mr-1"></i>Tạo bảo hành
+                                    </button>
+                                    <button type="button" class="btn btn-warning btn-sm d-none" id="btnCreateWarrantyClaim">
+                                        <i class="fas fa-exclamation-circle mr-1"></i>Tạo khiếu nại
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="card border-primary mb-3">
+                                        <div class="card-header bg-primary text-white">
+                                            <h6 class="mb-0 text-uppercase">Thông tin chung</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <p class="mb-1 text-muted">Mã bảo hành</p>
+                                            <h5 id="warrantyCodeDisplay" class="font-weight-bold">-</h5>
+                                            <span id="warrantyStatusBadge" class="badge badge-secondary">Chưa tạo</span>
+                                            <hr />
+                                            <p class="mb-1 text-muted">Ngày bắt đầu</p>
+                                            <p id="warrantyStartDate" class="font-weight-bold">-</p>
+                                            <p class="mb-1 text-muted">Ngày hết hạn</p>
+                                            <p id="warrantyEndDate" class="font-weight-bold">-</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="card border-info mb-3">
+                                        <div class="card-header bg-info text-white">
+                                            <h6 class="mb-0 text-uppercase">Khách hàng & Xe</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <p class="mb-1 text-muted">Khách hàng</p>
+                                            <p id="warrantyCustomerName" class="font-weight-bold">-</p>
+                                            <p class="mb-1 text-muted">Biển số xe</p>
+                                            <p id="warrantyVehiclePlate" class="font-weight-bold">-</p>
+                                            <p class="mb-1 text-muted">Bàn giao bởi</p>
+                                            <p id="warrantyHandoverBy" class="font-weight-bold">-</p>
+                                            <p class="mb-1 text-muted">Khu vực bàn giao</p>
+                                            <p id="warrantyHandoverLocation" class="font-weight-bold">-</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="card border-success mb-3">
+                                        <div class="card-header bg-success text-white">
+                                            <h6 class="mb-0 text-uppercase">Thống kê</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between mb-2">
+                                                <span class="text-muted">Số vật tư bảo hành</span>
+                                                <span id="warrantyItemCount" class="font-weight-bold">0</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between mb-2">
+                                                <span class="text-muted">Số khiếu nại</span>
+                                                <span id="warrantyClaimCount" class="font-weight-bold">0</span>
+                                            </div>
+                                            <div class="alert alert-success d-none" id="warrantyExpiryAlert">
+                                                <i class="fas fa-check-circle mr-2"></i>Còn hiệu lực
+                                            </div>
+                                            <div class="alert alert-warning d-none" id="warrantyExpiringAlert">
+                                                <i class="fas fa-hourglass-half mr-2"></i>Sắp hết hạn
+                                            </div>
+                                            <div class="alert alert-danger d-none" id="warrantyExpiredAlert">
+                                                <i class="fas fa-times-circle mr-2"></i>Đã hết hạn
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card border-light mb-3">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0 text-uppercase"><i class="fas fa-tools mr-2"></i>Vật tư bảo hành</h6>
+                                    <div>
+                                        <span class="badge badge-success" id="warrantyActiveItemBadge" style="display:none;">Đang hiệu lực</span>
+                                        <span class="badge badge-secondary" id="warrantyInactiveItemBadge" style="display:none;">Hết hiệu lực</span>
+                                    </div>
+                                </div>
+                                <div class="card-body p-0">
+                                    <div class="table-responsive">
+                                        <table class="table table-striped table-hover mb-0">
+                                            <thead class="thead-light">
+                                                <tr>
+                                                    <th>Phụ tùng</th>
+                                                    <th>Mã phụ tùng</th>
+                                                    <th>Số tháng</th>
+                                                    <th>Ngày bắt đầu</th>
+                                                    <th>Ngày kết thúc</th>
+                                                    <th>Trạng thái</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="warrantyItemsBody">
+                                                <tr>
+                                                    <td colspan="6" class="text-center text-muted py-3">Chưa có dữ liệu</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card border-light">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0 text-uppercase"><i class="fas fa-clipboard-list mr-2"></i>Danh sách khiếu nại</h6>
+                                    <button type="button" class="btn btn-outline-warning btn-sm d-none" id="btnShowCreateClaim">
+                                        <i class="fas fa-plus mr-1"></i>Thêm khiếu nại
+                                    </button>
+                                </div>
+                                <div class="card-body p-0">
+                                    <div class="table-responsive">
+                                        <table class="table table-bordered mb-0">
+                                            <thead class="thead-light">
+                                                <tr>
+                                                    <th>Mã khiếu nại</th>
+                                                    <th>Ngày khiếu nại</th>
+                                                    <th>Mô tả</th>
+                                                    <th>Trạng thái</th>
+                                                    <th>Ngày xử lý</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="warrantyClaimsBody">
+                                                <tr>
+                                                    <td colspan="5" class="text-center text-muted py-3">Chưa có khiếu nại</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="warrantyEmpty" class="alert alert-info d-none mt-3 mb-0">
+                            <i class="fas fa-info-circle mr-2"></i><span>Chưa có thông tin bảo hành. Nhấn "Tạo bảo hành" để khởi tạo.</span>
+                        </div>
+                        <div id="warrantyError" class="alert alert-danger d-none mt-3 mb-0">
+                            <i class="fas fa-exclamation-triangle mr-2"></i><span>Không thể tải dữ liệu bảo hành.</span>
                         </div>
                     </div>
                     

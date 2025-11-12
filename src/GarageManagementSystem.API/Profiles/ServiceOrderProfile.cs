@@ -12,7 +12,9 @@ namespace GarageManagementSystem.API.Profiles
             CreateMap<ServiceOrder, ServiceOrderDto>()
                 .ForMember(dest => dest.Customer, opt => opt.MapFrom(src => src.Customer))
                 .ForMember(dest => dest.Vehicle, opt => opt.MapFrom(src => src.Vehicle))
-                .ForMember(dest => dest.ServiceOrderItems, opt => opt.MapFrom(src => src.ServiceOrderItems));
+                .ForMember(dest => dest.ServiceOrderItems, opt => opt.MapFrom(src => src.ServiceOrderItems))
+                .ForMember(dest => dest.Warranties, opt => opt.MapFrom(src => src.Warranties.Where(w => !w.IsDeleted)))
+                .ForMember(dest => dest.ServiceOrderFees, opt => opt.MapFrom(src => src.ServiceOrderFees.Where(f => !f.IsDeleted)));
 
             // Create DTO to ServiceOrder Entity
             CreateMap<CreateServiceOrderDto, ServiceOrder>()

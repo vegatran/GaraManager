@@ -9,6 +9,7 @@ using GarageManagementSystem.API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.ComponentModel.DataAnnotations;
+using Microsoft.EntityFrameworkCore;
 
 namespace GarageManagementSystem.API.Controllers
 {
@@ -49,8 +50,7 @@ namespace GarageManagementSystem.API.Controllers
         {
             try
             {
-                var receptions = await _repository.GetAllWithDetailsAsync();
-                var query = receptions.AsQueryable();
+                var query = _repository.GetAllWithDetailsQueryable();
 
                 // Apply search filter
                 if (!string.IsNullOrEmpty(searchTerm))
@@ -68,13 +68,13 @@ namespace GarageManagementSystem.API.Controllers
                 }
 
                 // Get total count before pagination
-                var totalCount = query.Count();
+                var totalCount = await query.CountAsync();
 
                 // Apply pagination
-                var receptionsList = query
+                var receptionsList = await query
                     .Skip((pageNumber - 1) * pageSize)
                     .Take(pageSize)
-                    .ToList();
+                    .ToListAsync();
 
                 var receptionDtos = receptionsList.Select(r => _mapper.Map<CustomerReceptionDto>(r)).ToList();
 

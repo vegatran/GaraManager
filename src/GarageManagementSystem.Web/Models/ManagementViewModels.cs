@@ -1,4 +1,5 @@
 using GarageManagementSystem.Shared.DTOs;
+using System.Collections.Generic;
 
 namespace GarageManagementSystem.Web.Models
 {
@@ -13,12 +14,16 @@ namespace GarageManagementSystem.Web.Models
         public string Description { get; set; } = string.Empty;
         public string Category { get; set; } = string.Empty;
         public string Brand { get; set; } = string.Empty;
+        public string? Sku { get; set; }
+        public string? Barcode { get; set; }
         public decimal CostPrice { get; set; }
         public decimal SellPrice { get; set; }
         public int QuantityInStock { get; set; }
         public int MinimumStock { get; set; }
-        public int ReorderLevel { get; set; }
-        public string Unit { get; set; } = string.Empty;
+        public int? ReorderLevel { get; set; }
+        public string DefaultUnit { get; set; } = string.Empty;
+        public string Unit => DefaultUnit;
+        public List<PartUnitDto> Units { get; set; } = new();
         public string Location { get; set; } = string.Empty;
         public bool IsActive { get; set; }
         public string SourceType { get; set; } = string.Empty;

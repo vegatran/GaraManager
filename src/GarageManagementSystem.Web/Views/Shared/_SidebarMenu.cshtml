@@ -66,12 +66,18 @@
                 
                 <!-- Bước 4: Tạo đơn sửa chữa -->
                 <li class="nav-item">
-                    <a href="@Url.Action("Index", "OrderManagement")" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "OrderManagement" ? "active" : "")">
+                    <a href="@Url.Action("Index", "OrderManagement")" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "OrderManagement" && ViewContext.RouteData.Values["Action"]?.ToString() == "Index" ? "active" : "")">
                         <i class="fas fa-tools nav-icon text-danger"></i>
                         <p>
                             <span class="badge badge-danger" style="font-size: 11px; margin-right: 5px;">4</span>
                             Phiếu Sửa Chữa
                         </p>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="@Url.Action("CogsSummary", "OrderManagement")" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "OrderManagement" && ViewContext.RouteData.Values["Action"]?.ToString() == "CogsSummary" ? "active" : "")">
+                        <i class="fas fa-chart-bar nav-icon text-primary"></i>
+                        <p>Báo Cáo COGS</p>
                     </a>
                 </li>
 

@@ -44,6 +44,31 @@ namespace GarageManagementSystem.API.Profiles
                 .ForMember(dest => dest.UpdatedBy, opt => opt.Ignore())
                 .ForMember(dest => dest.IsDeleted, opt => opt.Ignore())
                 .ForMember(dest => dest.QualityControl, opt => opt.Ignore());
+
+            // ✅ OPTIMIZED: QCChecklistTemplate mappings
+            CreateMap<QCChecklistTemplate, QCChecklistTemplateDto>()
+                .ForMember(dest => dest.TemplateItems, opt => opt.MapFrom(src => src.TemplateItems.Where(i => !i.IsDeleted).OrderBy(i => i.DisplayOrder)));
+
+            CreateMap<QCChecklistTemplateItem, QCChecklistTemplateItemDto>();
+
+            CreateMap<CreateQCChecklistTemplateDto, QCChecklistTemplate>()
+                .ForMember(dest => dest.Id, opt => opt.Ignore())
+                .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
+                .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())
+                .ForMember(dest => dest.CreatedBy, opt => opt.Ignore())
+                .ForMember(dest => dest.UpdatedBy, opt => opt.Ignore())
+                .ForMember(dest => dest.IsDeleted, opt => opt.Ignore())
+                .ForMember(dest => dest.TemplateItems, opt => opt.Ignore());
+
+            CreateMap<CreateQCChecklistTemplateItemDto, QCChecklistTemplateItem>()
+                .ForMember(dest => dest.Id, opt => opt.Ignore())
+                .ForMember(dest => dest.TemplateId, opt => opt.Ignore())
+                .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
+                .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())
+                .ForMember(dest => dest.CreatedBy, opt => opt.Ignore())
+                .ForMember(dest => dest.UpdatedBy, opt => opt.Ignore())
+                .ForMember(dest => dest.IsDeleted, opt => opt.Ignore())
+                .ForMember(dest => dest.Template, opt => opt.Ignore());
         }
     }
 }
