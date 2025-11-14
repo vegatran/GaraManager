@@ -53,13 +53,13 @@ window.PartsManagement = {
                 orderable: false,
                 render: function(data, type, row) {
                     return `
-                        <button class="btn btn-info btn-sm view-part" data-id="${row.id}" title="Xem chi tiết">
+                        <button class="btn btn-info btn-sm view-part" data-id="${row.id}" title="Xem chi tiết" data-title="Xem chi tiết">
                             <i class="fas fa-eye"></i>
                         </button>
-                        <button class="btn btn-warning btn-sm edit-part" data-id="${row.id}" title="Sửa">
+                        <button class="btn btn-warning btn-sm edit-part" data-id="${row.id}" title="Sửa" data-title="Chỉnh sửa">
                             <i class="fas fa-edit"></i>
                         </button>
-                        <button class="btn btn-danger btn-sm delete-part" data-id="${row.id}" title="Xóa">
+                        <button class="btn btn-danger btn-sm delete-part" data-id="${row.id}" title="Xóa" data-title="Xóa phụ tùng">
                             <i class="fas fa-trash"></i>
                         </button>
                     `;
@@ -240,6 +240,64 @@ window.PartsManagement = {
         // Áp dụng inputmask cho các trường giá
         this.initPriceInputMask();
 
+        // ✅ THÊM: Real-time validation cho MinimumStock và ReorderLevel trong create modal
+        $('#createMinimumStock').on('change', function() {
+            var minimumStock = parseInt($(this).val()) || 0;
+            var reorderLevel = parseInt($('#createReorderLevel').val()) || 0;
+            if (minimumStock < 0) {
+                GarageApp.showError('Tồn kho tối thiểu không được âm');
+                $(this).val(0);
+                return;
+            }
+            if (reorderLevel > 0 && reorderLevel < minimumStock) {
+                GarageApp.showWarning('Mức tồn bổ sung sẽ được tự động cập nhật để >= Tồn kho tối thiểu');
+                $('#createReorderLevel').val(minimumStock);
+            }
+        });
+
+        $('#createReorderLevel').on('change', function() {
+            var reorderLevel = parseInt($(this).val()) || 0;
+            var minimumStock = parseInt($('#createMinimumStock').val()) || 0;
+            if (reorderLevel < 0) {
+                GarageApp.showError('Mức tồn bổ sung không được âm');
+                $(this).val('');
+                return;
+            }
+            if (reorderLevel > 0 && reorderLevel < minimumStock) {
+                GarageApp.showError('Mức tồn bổ sung phải lớn hơn hoặc bằng tồn kho tối thiểu (' + minimumStock + ')');
+                $(this).val(minimumStock);
+            }
+        });
+
+        // ✅ THÊM: Real-time validation cho MinimumStock và ReorderLevel trong edit modal
+        $('#editMinimumStock').on('change', function() {
+            var minimumStock = parseInt($(this).val()) || 0;
+            var reorderLevel = parseInt($('#editReorderLevel').val()) || 0;
+            if (minimumStock < 0) {
+                GarageApp.showError('Tồn kho tối thiểu không được âm');
+                $(this).val(0);
+                return;
+            }
+            if (reorderLevel > 0 && reorderLevel < minimumStock) {
+                GarageApp.showWarning('Mức tồn bổ sung sẽ được tự động cập nhật để >= Tồn kho tối thiểu');
+                $('#editReorderLevel').val(minimumStock);
+            }
+        });
+
+        $('#editReorderLevel').on('change', function() {
+            var reorderLevel = parseInt($(this).val()) || 0;
+            var minimumStock = parseInt($('#editMinimumStock').val()) || 0;
+            if (reorderLevel < 0) {
+                GarageApp.showError('Mức tồn bổ sung không được âm');
+                $(this).val('');
+                return;
+            }
+            if (reorderLevel > 0 && reorderLevel < minimumStock) {
+                GarageApp.showError('Mức tồn bổ sung phải lớn hơn hoặc bằng tồn kho tối thiểu (' + minimumStock + ')');
+                $(this).val(minimumStock);
+            }
+        });
+
     },
 
     // ✅ THÊM: Initialize InputMask cho các trường giá
@@ -344,6 +402,22 @@ window.PartsManagement = {
             Color: $('#createColor').val()
         };
 
+        // ✅ THÊM: Validate MinimumStock và ReorderLevel
+        if (formData.MinimumStock < 0) {
+            GarageApp.showError('Tồn kho tối thiểu không được âm');
+            return;
+        }
+        if (formData.ReorderLevel !== null && formData.ReorderLevel !== undefined) {
+            if (formData.ReorderLevel < 0) {
+                GarageApp.showError('Mức tồn bổ sung không được âm');
+                return;
+            }
+            if (formData.ReorderLevel < formData.MinimumStock) {
+                GarageApp.showError('Mức tồn bổ sung phải lớn hơn hoặc bằng tồn kho tối thiểu');
+                return;
+            }
+        }
+
         // Validate required fields
         if (!formData.PartNumber || !formData.PartName || formData.SellPrice <= 0) {
             GarageApp.showError('Vui lòng điền đầy đủ thông tin bắt buộc');
@@ -431,9 +505,12 @@ window.PartsManagement = {
         selectors.saveButton.removeClass('btn-success').addClass('btn-primary');
         if (prefix === 'create') {
             selectors.saveButton.html('<i class="fas fa-plus"></i>');
+            selectors.saveButton.attr('data-title', 'Thêm đơn vị').attr('title', 'Thêm đơn vị');
         } else {
             selectors.saveButton.html('<i class="fas fa-save"></i>');
+            selectors.saveButton.attr('data-title', 'Lưu đơn vị').attr('title', 'Lưu đơn vị');
         }
+        selectors.cancelButton.attr('data-title', 'Hủy chỉnh sửa').attr('title', 'Hủy chỉnh sửa');
         selectors.name.focus();
     },
 
@@ -518,6 +595,8 @@ window.PartsManagement = {
         selectors.isDefault.prop('checked', unit.isDefault === true);
         selectors.editIndex.val(index);
         selectors.saveButton.removeClass('btn-primary').addClass('btn-success').html('<i class="fas fa-check"></i>');
+        selectors.saveButton.attr('data-title', 'Cập nhật đơn vị').attr('title', 'Cập nhật đơn vị');
+        selectors.cancelButton.attr('data-title', 'Hủy chỉnh sửa').attr('title', 'Hủy chỉnh sửa');
         selectors.cancelButton.removeClass('d-none');
         selectors.name.focus();
     },
@@ -598,13 +677,13 @@ window.PartsManagement = {
                     <td>${unit.barcode || '<span class="text-muted">-</span>'}</td>
                     <td class="text-center">${defaultBadge}</td>
                     <td class="text-center">
-                        <button type="button" class="btn btn-xs btn-outline-primary btn-unit-default" data-prefix="${prefix}" data-index="${index}" title="Đặt làm mặc định">
+                        <button type="button" class="btn btn-sm btn-outline-primary btn-unit-default" data-prefix="${prefix}" data-index="${index}" title="Đặt làm mặc định" data-title="Đặt làm mặc định">
                             <i class="fas fa-check"></i>
                         </button>
-                        <button type="button" class="btn btn-xs btn-outline-secondary btn-unit-edit" data-prefix="${prefix}" data-index="${index}" title="Chỉnh sửa">
+                        <button type="button" class="btn btn-sm btn-outline-secondary btn-unit-edit" data-prefix="${prefix}" data-index="${index}" title="Chỉnh sửa" data-title="Chỉnh sửa đơn vị">
                             <i class="fas fa-edit"></i>
                         </button>
-                        <button type="button" class="btn btn-xs btn-outline-danger btn-unit-delete" data-prefix="${prefix}" data-index="${index}" title="Xóa">
+                        <button type="button" class="btn btn-sm btn-outline-danger btn-unit-delete" data-prefix="${prefix}" data-index="${index}" title="Xóa" data-title="Xóa đơn vị">
                             <i class="fas fa-trash"></i>
                         </button>
                     </td>
@@ -726,11 +805,34 @@ window.PartsManagement = {
             $zoneSelect.prop('disabled', true);
         }
 
+        // ✅ FIX: Load bins trực thuộc Warehouse (bins có WarehouseZoneId = null)
+        // Cho phép chọn Bin ngay khi chọn Warehouse (không cần chọn Zone)
         if (warehouse.bins && warehouse.bins.length > 0) {
-            $binSelect.prop('disabled', false);
-            warehouse.bins.forEach(function(bin) {
+            // Sort bins theo name để dễ tìm
+            var bins = warehouse.bins.slice().sort(function(a, b) {
+                return a.name.localeCompare(b.name);
+            });
+            
+            bins.forEach(function(bin) {
                 $binSelect.append(`<option value="${bin.id}">${bin.name}</option>`);
             });
+            $binSelect.prop('disabled', false);
+        } else {
+            // Nếu không có bins trực thuộc Warehouse, disable dropdown Bin
+            // (sẽ enable lại khi chọn Zone nếu Zone có bins)
+            $binSelect.prop('disabled', true);
+            $binSelect.append('<option value="">-- Chưa có kệ/ngăn nào --</option>');
+        }
+
+        // ✅ FIX: Nếu có zone được chọn, trigger zone change để load bins từ zones
+        // (Trường hợp này xảy ra khi edit part đã có zone được chọn)
+        var currentZoneId = $zoneSelect.val();
+        if (currentZoneId) {
+            // Delay một chút để đảm bảo zone dropdown đã được populate
+            var self = this;
+            setTimeout(function() {
+                self.onWarehouseZoneChange(prefix);
+            }, 100);
         }
 
         this.updateLocationField(prefix);
@@ -756,25 +858,50 @@ window.PartsManagement = {
             return;
         }
 
+        // ✅ FIX: Luôn hiển thị cả bins trong Zone VÀ bins trực thuộc Warehouse
+        var allBins = [];
+        var binIds = new Set(); // Dùng Set để tránh trùng lặp
+
+        // 1. Load bins trong Zone (nếu có Zone được chọn và Zone có bins)
         if (zoneId) {
             var zone = (warehouse.zones || []).find(function(z) { return z.id.toString() === zoneId; });
             if (zone && zone.bins && zone.bins.length > 0) {
                 zone.bins.forEach(function(bin) {
-                    $binSelect.append(`<option value="${bin.id}">${bin.name}</option>`);
+                    if (!binIds.has(bin.id)) {
+                        allBins.push({ id: bin.id, name: bin.name });
+                        binIds.add(bin.id);
+                    }
                 });
-                $binSelect.prop('disabled', false);
-            } else {
-                $binSelect.prop('disabled', true);
             }
+        }
+
+        // 2. Load bins trực thuộc Warehouse (bins có WarehouseZoneId = null)
+        // Luôn load bins trực thuộc Warehouse, bất kể có chọn Zone hay không
+        if (warehouse.bins && warehouse.bins.length > 0) {
+            warehouse.bins.forEach(function(bin) {
+                // Chỉ thêm nếu chưa có trong allBins (tránh trùng lặp)
+                if (!binIds.has(bin.id)) {
+                    allBins.push({ id: bin.id, name: bin.name });
+                    binIds.add(bin.id);
+                }
+            });
+        }
+
+        // 3. Hiển thị tất cả bins
+        if (allBins.length > 0) {
+            // Sort bins theo name để dễ tìm
+            allBins.sort(function(a, b) {
+                return a.name.localeCompare(b.name);
+            });
+            
+            allBins.forEach(function(bin) {
+                $binSelect.append(`<option value="${bin.id}">${bin.name}</option>`);
+            });
+            $binSelect.prop('disabled', false);
         } else {
-            if (warehouse.bins && warehouse.bins.length > 0) {
-                warehouse.bins.forEach(function(bin) {
-                    $binSelect.append(`<option value="${bin.id}">${bin.name}</option>`);
-                });
-                $binSelect.prop('disabled', false);
-            } else {
-                $binSelect.prop('disabled', true);
-            }
+            // Nếu không có bins nào, disable dropdown và hiển thị message
+            $binSelect.prop('disabled', true);
+            $binSelect.append('<option value="">-- Chưa có kệ/ngăn nào --</option>');
         }
 
         this.updateLocationField(prefix);
@@ -1005,6 +1132,22 @@ window.PartsManagement = {
             Color: $('#editColor').val()
         };
 
+        // ✅ THÊM: Validate MinimumStock và ReorderLevel
+        if (formData.MinimumStock < 0) {
+            GarageApp.showError('Tồn kho tối thiểu không được âm');
+            return;
+        }
+        if (formData.ReorderLevel !== null && formData.ReorderLevel !== undefined) {
+            if (formData.ReorderLevel < 0) {
+                GarageApp.showError('Mức tồn bổ sung không được âm');
+                return;
+            }
+            if (formData.ReorderLevel < formData.MinimumStock) {
+                GarageApp.showError('Mức tồn bổ sung phải lớn hơn hoặc bằng tồn kho tối thiểu');
+                return;
+            }
+        }
+
         // ✅ DEBUG: Log formData
         console.log('DEBUG: formData being sent:', formData);
         console.log('DEBUG: CostPrice in formData:', formData.CostPrice);
@@ -1066,8 +1209,26 @@ window.PartsManagement = {
         $('#viewBarcode').text(part.barcode || 'N/A');
         $('#viewCostPrice').text(part.costPrice ? part.costPrice.toLocaleString() + ' VNĐ' : 'N/A');
         $('#viewSellPrice').text(part.sellPrice ? part.sellPrice.toLocaleString() + ' VNĐ' : 'N/A');
-        $('#viewQuantityInStock').text(part.quantityInStock);
-        $('#viewMinimumStock').text(part.minimumStock);
+        // ✅ THÊM: Hiển thị số lượng tồn với cảnh báo nếu thấp
+        var quantityInStock = part.quantityInStock || 0;
+        var minimumStock = part.minimumStock || 0;
+        var stockStatus = '';
+        var stockClass = '';
+        
+        if (quantityInStock === 0) {
+            stockStatus = ' <span class="badge badge-danger">Hết hàng</span>';
+            stockClass = 'text-danger';
+        } else if (quantityInStock <= minimumStock) {
+            stockStatus = ' <span class="badge badge-warning">Cảnh báo</span>';
+            stockClass = 'text-warning';
+        } else {
+            stockClass = 'text-success';
+        }
+        
+        // ✅ FIX: Escape HTML để tránh XSS
+        var escapedQuantity = $('<div>').text(quantityInStock).html();
+        $('#viewQuantityInStock').html('<span class="' + stockClass + '">' + escapedQuantity + '</span>' + stockStatus);
+        $('#viewMinimumStock').text(minimumStock);
         $('#viewReorderLevel').text(part.reorderLevel !== null && part.reorderLevel !== undefined ? part.reorderLevel : 'N/A');
         $('#viewDefaultUnit').text(part.defaultUnit || 'N/A');
         $('#viewLocation').text(part.location || 'N/A');

@@ -148,8 +148,42 @@ namespace GarageManagementSystem.API.Controllers
                 if (!ModelState.IsValid)
                     return BadRequest(ApiResponse<PartDto>.ErrorResult("Invalid data"));
 
-                var part = _mapper.Map<Core.Entities.Part>(dto);
+                // ✅ SỬA: Normalize SKU và Barcode TRƯỚC khi validate để đảm bảo consistency
+                var normalizedSku = !string.IsNullOrWhiteSpace(dto.Sku) ? dto.Sku.Trim() : null;
+                var normalizedBarcode = !string.IsNullOrWhiteSpace(dto.Barcode) ? dto.Barcode.Trim() : null;
 
+                // ✅ THÊM: Validate SKU unique (chỉ check nếu không null/empty)
+                if (!string.IsNullOrEmpty(normalizedSku))
+                {
+                    var existingSku = await _context.Parts
+                        .Where(p => !p.IsDeleted && p.Sku == normalizedSku)
+                        .FirstOrDefaultAsync();
+                    if (existingSku != null)
+                    {
+                        return BadRequest(ApiResponse<PartDto>.ErrorResult($"SKU '{normalizedSku}' đã tồn tại trong hệ thống"));
+                    }
+                }
+
+                // ✅ THÊM: Validate Barcode unique (chỉ check nếu không null/empty)
+                if (!string.IsNullOrEmpty(normalizedBarcode))
+                {
+                    var existingBarcode = await _context.Parts
+                        .Where(p => !p.IsDeleted && p.Barcode == normalizedBarcode)
+                        .FirstOrDefaultAsync();
+                    if (existingBarcode != null)
+                    {
+                        return BadRequest(ApiResponse<PartDto>.ErrorResult($"Mã vạch '{normalizedBarcode}' đã tồn tại trong hệ thống"));
+                    }
+                }
+
+                var part = _mapper.Map<Core.Entities.Part>(dto);
+                
+                // ✅ Update part với normalized values (đã normalize ở trên)
+                part.Sku = normalizedSku;
+                part.Barcode = normalizedBarcode;
+
+                // ✅ SỬA: Đảm bảo logic đồng bộ: EnsureDefaultUnit được gọi SAU ApplyPartUnits
+                // ApplyPartUnits chỉ xử lý collection, EnsureDefaultUnit xử lý đồng bộ DefaultUnit ↔ PartUnits
                 ApplyPartUnits(part, dto.Units);
                 EnsureDefaultUnit(part, dto.DefaultUnit, dto.Units);
 
@@ -163,6 +197,25 @@ namespace GarageManagementSystem.API.Controllers
 
                     // Commit transaction nếu thành công
                     await _unitOfWork.CommitTransactionAsync();
+                }
+                catch (DbUpdateException dbEx)
+                {
+                    // Rollback transaction nếu có lỗi
+                    await _unitOfWork.RollbackTransactionAsync();
+                    
+                    // ✅ THÊM: Handle database unique constraint violation
+                    if (dbEx.InnerException != null && dbEx.InnerException.Message.Contains("Duplicate entry"))
+                    {
+                        if (dbEx.InnerException.Message.Contains("Sku"))
+                        {
+                            return BadRequest(ApiResponse<PartDto>.ErrorResult($"SKU '{normalizedSku}' đã tồn tại trong hệ thống"));
+                        }
+                        if (dbEx.InnerException.Message.Contains("Barcode"))
+                        {
+                            return BadRequest(ApiResponse<PartDto>.ErrorResult($"Mã vạch '{normalizedBarcode}' đã tồn tại trong hệ thống"));
+                        }
+                    }
+                    return StatusCode(500, ApiResponse<PartDto>.ErrorResult("Error creating part", dbEx.Message));
                 }
                 catch
                 {
@@ -187,8 +240,50 @@ namespace GarageManagementSystem.API.Controllers
                 var part = await _unitOfWork.Parts.GetWithDetailsAsync(id);
                 if (part == null) return NotFound(ApiResponse<PartDto>.ErrorResult("Part not found"));
 
+                // ✅ SỬA: Normalize SKU và Barcode TRƯỚC khi validate để đảm bảo consistency
+                var normalizedSku = !string.IsNullOrWhiteSpace(dto.Sku) ? dto.Sku.Trim() : null;
+                var normalizedBarcode = !string.IsNullOrWhiteSpace(dto.Barcode) ? dto.Barcode.Trim() : null;
+
+                // ✅ THÊM: Validate SKU unique (chỉ check nếu không null/empty và khác với giá trị hiện tại)
+                if (!string.IsNullOrEmpty(normalizedSku))
+                {
+                    // So sánh với giá trị hiện tại (đã normalize từ database)
+                    var currentSku = part.Sku != null ? part.Sku.Trim() : null;
+                    if (currentSku != normalizedSku)
+                    {
+                        var existingSku = await _context.Parts
+                            .Where(p => !p.IsDeleted && p.Id != id && p.Sku == normalizedSku)
+                            .FirstOrDefaultAsync();
+                        if (existingSku != null)
+                        {
+                            return BadRequest(ApiResponse<PartDto>.ErrorResult($"SKU '{normalizedSku}' đã tồn tại trong hệ thống"));
+                        }
+                    }
+                }
+
+                // ✅ THÊM: Validate Barcode unique (chỉ check nếu không null/empty và khác với giá trị hiện tại)
+                if (!string.IsNullOrEmpty(normalizedBarcode))
+                {
+                    // So sánh với giá trị hiện tại (đã normalize từ database)
+                    var currentBarcode = part.Barcode != null ? part.Barcode.Trim() : null;
+                    if (currentBarcode != normalizedBarcode)
+                    {
+                        var existingBarcode = await _context.Parts
+                            .Where(p => !p.IsDeleted && p.Id != id && p.Barcode == normalizedBarcode)
+                            .FirstOrDefaultAsync();
+                        if (existingBarcode != null)
+                        {
+                            return BadRequest(ApiResponse<PartDto>.ErrorResult($"Mã vạch '{normalizedBarcode}' đã tồn tại trong hệ thống"));
+                        }
+                    }
+                }
+
                 // ✅ SỬA: Dùng AutoMapper thay vì map tay
                 _mapper.Map(dto, part);
+                
+                // ✅ Update part với normalized values (đã normalize ở trên)
+                part.Sku = normalizedSku;
+                part.Barcode = normalizedBarcode;
 
                 ApplyPartUnits(part, dto.Units);
                 EnsureDefaultUnit(part, dto.DefaultUnit, dto.Units);
@@ -203,6 +298,25 @@ namespace GarageManagementSystem.API.Controllers
 
                     // Commit transaction nếu thành công
                     await _unitOfWork.CommitTransactionAsync();
+                }
+                catch (DbUpdateException dbEx)
+                {
+                    // Rollback transaction nếu có lỗi
+                    await _unitOfWork.RollbackTransactionAsync();
+                    
+                    // ✅ THÊM: Handle database unique constraint violation
+                    if (dbEx.InnerException != null && dbEx.InnerException.Message.Contains("Duplicate entry"))
+                    {
+                        if (dbEx.InnerException.Message.Contains("Sku"))
+                        {
+                            return BadRequest(ApiResponse<PartDto>.ErrorResult($"SKU '{normalizedSku}' đã tồn tại trong hệ thống"));
+                        }
+                        if (dbEx.InnerException.Message.Contains("Barcode"))
+                        {
+                            return BadRequest(ApiResponse<PartDto>.ErrorResult($"Mã vạch '{normalizedBarcode}' đã tồn tại trong hệ thống"));
+                        }
+                    }
+                    return StatusCode(500, ApiResponse<PartDto>.ErrorResult("Error updating part", dbEx.Message));
                 }
                 catch
                 {
@@ -248,7 +362,7 @@ namespace GarageManagementSystem.API.Controllers
                 part.PartUnits = new List<PartUnit>();
             }
 
-            var existingUnits = part.PartUnits.ToList();
+            var existingUnits = part.PartUnits.Where(u => !u.IsDeleted).ToList();
 
             foreach (var unit in existingUnits)
             {
@@ -258,7 +372,11 @@ namespace GarageManagementSystem.API.Controllers
 
                 if (!keep)
                 {
-                    part.PartUnits.Remove(unit);
+                    // ✅ SỬA: Soft delete thay vì hard delete để giữ lại lịch sử
+                    unit.IsDeleted = true;
+                    unit.DeletedAt = DateTime.UtcNow;
+                    // Không remove từ collection, chỉ đánh dấu IsDeleted = true
+                    // EF Core sẽ tự động cập nhật khi SaveChangesAsync
                 }
             }
 
@@ -268,35 +386,55 @@ namespace GarageManagementSystem.API.Controllers
 
                 if (dto.Id.HasValue)
                 {
+                    // ✅ SỬA: Tìm unit kể cả đã bị soft delete (để restore nếu cần)
                     unitEntity = part.PartUnits.FirstOrDefault(u => u.Id == dto.Id.Value);
+                    // Nếu unit đã bị soft delete, restore lại
+                    if (unitEntity != null && unitEntity.IsDeleted)
+                    {
+                        unitEntity.IsDeleted = false;
+                        unitEntity.DeletedAt = null;
+                        unitEntity.DeletedBy = null;
+                    }
                 }
 
                 if (unitEntity == null)
                 {
-                    unitEntity = new PartUnit
+                    // ✅ SỬA: Kiểm tra xem có unit bị soft delete với cùng UnitName không (case-insensitive)
+                    var normalizedUnitName = dto.UnitName.Trim();
+                    unitEntity = part.PartUnits.FirstOrDefault(u => 
+                        u.UnitName.Equals(normalizedUnitName, StringComparison.OrdinalIgnoreCase) && 
+                        u.IsDeleted);
+                    
+                    if (unitEntity != null)
                     {
-                        Part = part
-                    };
-                    part.PartUnits.Add(unitEntity);
+                        // Restore unit đã bị soft delete
+                        unitEntity.IsDeleted = false;
+                        unitEntity.DeletedAt = null;
+                        unitEntity.DeletedBy = null;
+                    }
+                    else
+                    {
+                        // Tạo unit mới
+                        unitEntity = new PartUnit
+                        {
+                            Part = part
+                        };
+                        part.PartUnits.Add(unitEntity);
+                    }
                 }
 
                 unitEntity.UnitName = dto.UnitName.Trim();
                 unitEntity.ConversionRate = dto.ConversionRate;
-                unitEntity.Barcode = dto.Barcode;
-                unitEntity.Notes = dto.Notes;
-                unitEntity.IsDefault = dto.IsDefault;
+                // ✅ SỬA: Normalize Barcode và Notes (trim và set null nếu empty)
+                unitEntity.Barcode = string.IsNullOrWhiteSpace(dto.Barcode) ? null : dto.Barcode.Trim();
+                unitEntity.Notes = string.IsNullOrWhiteSpace(dto.Notes) ? null : dto.Notes.Trim();
+                // ✅ SỬA: Không set IsDefault ở đây, để EnsureDefaultUnit xử lý đồng bộ
+                // unitEntity.IsDefault = dto.IsDefault; // Removed - handled by EnsureDefaultUnit
             }
 
-            // Ensure only one default unit
-            var defaultDto = dtoList.FirstOrDefault(u => u.IsDefault);
-            if (defaultDto != null)
-            {
-                foreach (var unit in part.PartUnits)
-                {
-                    unit.IsDefault = unit.UnitName.Equals(defaultDto.UnitName, StringComparison.OrdinalIgnoreCase) &&
-                                     (!defaultDto.Id.HasValue || unit.Id == defaultDto.Id.Value);
-                }
-            }
+            // ✅ SỬA: Xóa logic set IsDefault trong ApplyPartUnits vì EnsureDefaultUnit sẽ xử lý
+            // ApplyPartUnits chỉ cập nhật collection và properties, không xử lý IsDefault
+            // Logic đồng bộ DefaultUnit ↔ PartUnits.IsDefault được xử lý trong EnsureDefaultUnit
         }
 
         private void EnsureDefaultUnit(Core.Entities.Part part, string? defaultUnit, IEnumerable<PartUnitRequestDto>? unitDtos)
@@ -336,25 +474,52 @@ namespace GarageManagementSystem.API.Controllers
 
             if (string.IsNullOrWhiteSpace(part.DefaultUnit))
             {
-                var defaultUnitEntity = part.PartUnits.FirstOrDefault(u => u.IsDefault) ?? part.PartUnits.First();
-                defaultUnitEntity.IsDefault = true;
-                part.DefaultUnit = defaultUnitEntity.UnitName;
+                // Nếu DefaultUnit null/empty, lấy từ PartUnits có IsDefault=true hoặc PartUnits.First()
+                var defaultUnitEntity = part.PartUnits.FirstOrDefault(u => u.IsDefault) ?? part.PartUnits.FirstOrDefault();
+                if (defaultUnitEntity != null)
+                {
+                    // Set tất cả units về IsDefault=false trước
+                    foreach (var unit in part.PartUnits)
+                    {
+                        unit.IsDefault = false;
+                    }
+                    // Chỉ set defaultUnitEntity thành IsDefault=true
+                    defaultUnitEntity.IsDefault = true;
+                    part.DefaultUnit = defaultUnitEntity.UnitName;
+                }
             }
             else
             {
+                // ✅ SỬA: Đảm bảo chỉ 1 PartUnit có IsDefault=true
+                var normalizedDefaultUnit = part.DefaultUnit.Trim();
+                var matchingUnit = part.PartUnits.FirstOrDefault(u => 
+                    u.UnitName.Equals(normalizedDefaultUnit, StringComparison.OrdinalIgnoreCase));
+                
+                // Set tất cả units về IsDefault=false trước
                 foreach (var unit in part.PartUnits)
                 {
-                    unit.IsDefault = unit.UnitName.Equals(part.DefaultUnit, StringComparison.OrdinalIgnoreCase);
+                    unit.IsDefault = false;
                 }
-
-                if (!part.PartUnits.Any(u => u.IsDefault))
+                
+                if (matchingUnit != null)
                 {
-                    var match = part.PartUnits.FirstOrDefault();
-                    if (match != null)
+                    // Nếu có matching unit, set IsDefault=true cho unit đó
+                    matchingUnit.IsDefault = true;
+                    // Đảm bảo DefaultUnit match với UnitName (case-sensitive từ database)
+                    part.DefaultUnit = matchingUnit.UnitName;
+                }
+                else
+                {
+                    // Nếu DefaultUnit không có trong PartUnits, tạo mới
+                    var newUnit = new PartUnit
                     {
-                        match.IsDefault = true;
-                        part.DefaultUnit = match.UnitName;
-                    }
+                        UnitName = normalizedDefaultUnit,
+                        ConversionRate = 1,
+                        IsDefault = true,
+                        Part = part
+                    };
+                    part.PartUnits.Add(newUnit);
+                    part.DefaultUnit = newUnit.UnitName;
                 }
             }
         }

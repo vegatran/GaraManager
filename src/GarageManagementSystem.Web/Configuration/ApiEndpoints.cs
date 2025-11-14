@@ -481,5 +481,23 @@ namespace GarageManagementSystem.Web.Configuration
             public const string SetDefault = "printtemplates/{0}/set-default"; // printtemplates/{id}/set-default
             public const string CreateDefaultQuotation = "printtemplates/create-default-quotation";
         }
+
+        /// <summary>
+        /// Inventory Checks management endpoints
+        /// </summary>
+        public static class InventoryChecks
+        {
+            public const string GetAll = "inventorychecks";
+            public const string GetById = "inventorychecks/{0}"; // inventorychecks/{id}
+            public const string Create = "inventorychecks";
+            public const string Update = "inventorychecks/{0}"; // inventorychecks/{id}
+            public const string Delete = "inventorychecks/{0}"; // inventorychecks/{id}
+            public const string Complete = "inventorychecks/{0}/complete"; // inventorychecks/{id}/complete
+            public const string AddItem = "inventorychecks/{0}/items"; // inventorychecks/{id}/items
+            public const string UpdateItem = "inventorychecks/{0}/items/{1}"; // inventorychecks/{id}/items/{itemId}
+            public const string DeleteItem = "inventorychecks/{0}/items/{1}"; // inventorychecks/{id}/items/{itemId}
+            public const string ExportExcel = "inventorychecks/export-excel";
+            public const string ExportDetailExcel = "inventorychecks/{0}/export-excel"; // inventorychecks/{id}/export-excel
+        }
     }
 }

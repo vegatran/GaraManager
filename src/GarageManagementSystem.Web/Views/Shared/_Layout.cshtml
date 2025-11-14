@@ -137,6 +137,8 @@
     <script src="~/js/modal-select2.js" asp-append-version="true"></script>
     <script src="~/js/setup.js" asp-append-version="true"></script>
     <script src="~/js/excel-import.js" asp-append-version="true"></script>
+    <!-- ✅ THÊM: Inventory Alerts Badge -->
+    <script src="~/js/inventory-alerts-badge.js" asp-append-version="true"></script>
 
     @await RenderSectionAsync("Scripts", required: false)
 
@@ -145,6 +147,11 @@
         $(document).ready(function() {
             // Don't clear active classes - let Razor handle it
             // The server-side logic in _SidebarMenu.cshtml already sets the correct active state
+            
+            // ✅ THÊM: Load và update inventory alerts badge count
+            if (typeof InventoryAlertsBadge !== 'undefined') {
+                InventoryAlertsBadge.init();
+            }
         });
     </script>
 </body>

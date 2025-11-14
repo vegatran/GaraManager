@@ -70,8 +70,46 @@ window.GarageApp = {
 
     // Format date
     formatDate: function(date, format) {
-        format = format || 'YYYY-MM-DD';
-        return moment(date).format(format);
+        if (!date) return '';
+        
+        try {
+            var d = new Date(date);
+            if (isNaN(d.getTime())) return '';
+            
+            // Format mặc định: DD/MM/YYYY HH:mm
+            format = format || 'DD/MM/YYYY HH:mm';
+            
+            // Parse format string và format date
+            var day = String(d.getDate()).padStart(2, '0');
+            var month = String(d.getMonth() + 1).padStart(2, '0');
+            var year = d.getFullYear();
+            var hours = String(d.getHours()).padStart(2, '0');
+            var minutes = String(d.getMinutes()).padStart(2, '0');
+            var seconds = String(d.getSeconds()).padStart(2, '0');
+            
+            // Replace format tokens (thay thế từ dài nhất trước để tránh conflict)
+            var formatted = format
+                .replace(/YYYY/g, year)
+                .replace(/DD/g, day)
+                .replace(/MM/g, month)
+                .replace(/HH/g, hours)
+                .replace(/mm/g, minutes)
+                .replace(/ss/g, seconds);
+            
+            return formatted;
+        } catch (e) {
+            console.error('Error formatting date:', e);
+            // Fallback: sử dụng toLocaleDateString
+            try {
+                var d = new Date(date);
+                if (format && format.includes('HH:mm')) {
+                    return d.toLocaleDateString('vi-VN') + ' ' + d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+                }
+                return d.toLocaleDateString('vi-VN');
+            } catch (e2) {
+                return '';
+            }
+        }
     },
 
     // Validate form

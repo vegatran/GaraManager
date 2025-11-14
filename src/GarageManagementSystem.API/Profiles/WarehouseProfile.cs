@@ -9,12 +9,15 @@ namespace GarageManagementSystem.API.Profiles
     {
         public WarehouseProfile()
         {
+            // ✅ SỬA: Không filter lại trong AutoMapper vì Include đã filter rồi
+            // Include(w => w.Zones.Where(z => !z.IsDeleted)) đã filter zones deleted
+            // Nên chỉ cần map trực tiếp, không cần filter lại
             CreateMap<Warehouse, WarehouseDto>()
-                .ForMember(dest => dest.Zones, opt => opt.MapFrom(src => src.Zones.Where(z => !z.IsDeleted)))
-                .ForMember(dest => dest.Bins, opt => opt.MapFrom(src => src.Bins.Where(b => !b.IsDeleted)));
+                .ForMember(dest => dest.Zones, opt => opt.MapFrom(src => src.Zones ?? new List<WarehouseZone>()))
+                .ForMember(dest => dest.Bins, opt => opt.MapFrom(src => src.Bins ?? new List<WarehouseBin>()));
 
             CreateMap<WarehouseZone, WarehouseZoneDto>()
-                .ForMember(dest => dest.Bins, opt => opt.MapFrom(src => src.Bins.Where(b => !b.IsDeleted)));
+                .ForMember(dest => dest.Bins, opt => opt.MapFrom(src => src.Bins ?? new List<WarehouseBin>()));
 
             CreateMap<WarehouseBin, WarehouseBinDto>();
 

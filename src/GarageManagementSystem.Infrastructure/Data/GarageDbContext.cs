@@ -109,6 +109,12 @@ namespace GarageManagementSystem.Infrastructure.Data
         
         // Customer Reception for new workflow
         public DbSet<CustomerReception> CustomerReceptions { get; set; }
+        
+        // ✅ Phase 4.1 - Sprint 2: Periodic Inventory Checks
+        public DbSet<InventoryCheck> InventoryChecks { get; set; }
+        public DbSet<InventoryCheckItem> InventoryCheckItems { get; set; }
+        public DbSet<InventoryAdjustment> InventoryAdjustments { get; set; }
+        public DbSet<InventoryAdjustmentItem> InventoryAdjustmentItems { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -1487,6 +1493,137 @@ namespace GarageManagementSystem.Infrastructure.Data
                     .WithOne(i => i.CustomerReception)
                     .HasForeignKey<VehicleInspection>(i => i.CustomerReceptionId)
                     .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            // ✅ Phase 4.1 - Sprint 2: InventoryCheck configuration
+            // Inventory Adjustment configuration
+            modelBuilder.Entity<InventoryAdjustment>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.AdjustmentNumber).IsRequired().HasMaxLength(50);
+                entity.HasIndex(e => e.AdjustmentNumber).IsUnique();
+                entity.Property(e => e.Status).IsRequired().HasMaxLength(50).HasDefaultValue("Pending");
+                entity.Property(e => e.Reason).HasMaxLength(1000);
+                entity.Property(e => e.RejectionReason).HasMaxLength(1000);
+                entity.Property(e => e.Notes).HasMaxLength(500);
+                entity.Property(e => e.AdjustmentDate).IsRequired();
+
+                entity.HasOne(e => e.InventoryCheck)
+                    .WithMany()
+                    .HasForeignKey(e => e.InventoryCheckId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(e => e.Warehouse)
+                    .WithMany()
+                    .HasForeignKey(e => e.WarehouseId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(e => e.WarehouseZone)
+                    .WithMany()
+                    .HasForeignKey(e => e.WarehouseZoneId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(e => e.WarehouseBin)
+                    .WithMany()
+                    .HasForeignKey(e => e.WarehouseBinId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(e => e.ApprovedByEmployee)
+                    .WithMany()
+                    .HasForeignKey(e => e.ApprovedByEmployeeId)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            modelBuilder.Entity<InventoryAdjustmentItem>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Notes).HasMaxLength(500);
+                entity.Property(e => e.QuantityChange).IsRequired();
+                entity.Property(e => e.SystemQuantityBefore).IsRequired();
+                entity.Property(e => e.SystemQuantityAfter).IsRequired();
+
+                entity.HasOne(e => e.InventoryAdjustment)
+                    .WithMany(a => a.Items)
+                    .HasForeignKey(e => e.InventoryAdjustmentId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Part)
+                    .WithMany()
+                    .HasForeignKey(e => e.PartId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.InventoryCheckItem)
+                    .WithMany()
+                    .HasForeignKey(e => e.InventoryCheckItemId)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            modelBuilder.Entity<InventoryCheck>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Code).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.Description).HasMaxLength(500);
+                entity.Property(e => e.Status).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.Notes).HasMaxLength(500);
+
+                // ✅ NOTE: Unique index for Code - không filter IsDeleted vì có thể reuse code sau khi soft delete
+                // Nếu cần filter IsDeleted, cần sử dụng unique constraint với filter
+                entity.HasIndex(e => e.Code).IsUnique();
+
+                // Foreign keys
+                entity.HasOne(e => e.Warehouse)
+                    .WithMany()
+                    .HasForeignKey(e => e.WarehouseId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(e => e.WarehouseZone)
+                    .WithMany()
+                    .HasForeignKey(e => e.WarehouseZoneId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(e => e.WarehouseBin)
+                    .WithMany()
+                    .HasForeignKey(e => e.WarehouseBinId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(e => e.StartedByEmployee)
+                    .WithMany()
+                    .HasForeignKey(e => e.StartedByEmployeeId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(e => e.CompletedByEmployee)
+                    .WithMany()
+                    .HasForeignKey(e => e.CompletedByEmployeeId)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            // ✅ Phase 4.1 - Sprint 2: InventoryCheckItem configuration
+            modelBuilder.Entity<InventoryCheckItem>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Notes).HasMaxLength(500);
+
+                // Foreign keys
+                entity.HasOne(e => e.InventoryCheck)
+                    .WithMany(ic => ic.Items)
+                    .HasForeignKey(e => e.InventoryCheckId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Part)
+                    .WithMany()
+                    .HasForeignKey(e => e.PartId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.InventoryAdjustmentItem)
+                    .WithMany()
+                    .HasForeignKey(e => e.InventoryAdjustmentItemId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                // Index for faster lookup
+                entity.HasIndex(e => e.InventoryCheckId);
+                entity.HasIndex(e => e.PartId);
+                entity.HasIndex(e => e.IsDiscrepancy);
             });
         }
     }

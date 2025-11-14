@@ -220,6 +220,8 @@ namespace GarageManagementSystem.Web.Controllers
                         partId = p.Id,
                         partName = p.PartName,
                         partNumber = p.PartNumber,
+                        partSku = p.Sku,
+                        quantityInStock = p.QuantityInStock,
                         text = $"{p.PartName} ({p.PartNumber}) - {p.SellPrice.ToString("N0")} VNĐ",
                         costPrice = p.CostPrice,
                         sellPrice = p.SellPrice,

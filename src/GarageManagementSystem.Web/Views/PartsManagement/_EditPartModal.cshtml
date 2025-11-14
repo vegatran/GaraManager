@@ -111,15 +111,17 @@
                                 <div class="col-md-4">
                                     <div class="form-group">
                                         <label for="editMinimumStock">Tồn Kho Tối Thiểu</label>
-                                        <input type="number" class="form-control form-control-sm" id="editMinimumStock" name="MinimumStock" min="0">
+                                        <input type="number" class="form-control form-control-sm" id="editMinimumStock" name="MinimumStock" min="0" data-title="Mức tồn kho tối thiểu để cảnh báo">
+                                        <small class="form-text text-muted">Hệ thống sẽ cảnh báo khi tồn kho <= mức này</small>
                                     </div>
                                 </div>
                                 <div class="col-md-4">
-                                <div class="form-group">
-                                    <label for="editReorderLevel">Mức Tồn Bổ Sung</label>
-                                    <input type="number" class="form-control form-control-sm" id="editReorderLevel" name="ReorderLevel" min="0">
+                                    <div class="form-group">
+                                        <label for="editReorderLevel">Mức Tồn Bổ Sung</label>
+                                        <input type="number" class="form-control form-control-sm" id="editReorderLevel" name="ReorderLevel" min="0" data-title="Mức tồn kho đề xuất để đặt hàng lại">
+                                        <small class="form-text text-muted">Gợi ý số lượng cần đặt hàng (≥ Tồn kho tối thiểu)</small>
+                                    </div>
                                 </div>
-                            </div>
                         </div>
                             <div class="row">
                                 <div class="col-md-4">
@@ -216,10 +218,10 @@
                                                 </div>
                                             </td>
                                             <td class="text-center">
-                                                <button type="button" class="btn btn-sm btn-primary mb-1" id="btnEditSaveUnit">
+                                                <button type="button" class="btn btn-sm btn-primary mb-1" id="btnEditSaveUnit" data-title="Lưu đơn vị">
                                                     <i class="fas fa-save"></i>
                                                 </button>
-                                                <button type="button" class="btn btn-sm btn-secondary mb-1 d-none" id="btnEditCancelEditUnit">
+                                                <button type="button" class="btn btn-sm btn-secondary mb-1 d-none" id="btnEditCancelEditUnit" data-title="Hủy chỉnh sửa">
                                                     <i class="fas fa-times"></i>
                                                 </button>
                                             </td>
@@ -248,7 +250,7 @@
                                     </div>
                                     <div class="col-md-3 text-right">
                                         <br>
-                                        <button type="button" class="btn btn-sm btn-primary" id="editApplyPreset">
+                                        <button type="button" class="btn btn-sm btn-primary" id="editApplyPreset" data-title="Áp dụng preset">
                                             <i class="fas fa-check"></i> Áp dụng
                                         </button>
                                     </div>
@@ -462,10 +464,10 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                    <button type="button" class="btn btn-sm btn-secondary" data-dismiss="modal" data-title="Đóng">
                         <i class="fas fa-times"></i> Hủy
                     </button>
-                    <button type="submit" class="btn btn-info">
+                    <button type="submit" class="btn btn-sm btn-info" data-title="Lưu cập nhật">
                         <i class="fas fa-save"></i> Cập Nhật
                     </button>
                 </div>

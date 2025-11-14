@@ -50,6 +50,12 @@ namespace GarageManagementSystem.Infrastructure.Repositories
             Warehouses = new GenericRepository<Warehouse>(_context);
             WarehouseZones = new GenericRepository<WarehouseZone>(_context);
             WarehouseBins = new GenericRepository<WarehouseBin>(_context);
+            
+            // ✅ Phase 4.1 - Sprint 2: Periodic Inventory Checks
+            InventoryChecks = new GenericRepository<InventoryCheck>(_context);
+            InventoryCheckItems = new GenericRepository<InventoryCheckItem>(_context);
+            InventoryAdjustments = new GenericRepository<InventoryAdjustment>(_context);
+            InventoryAdjustmentItems = new GenericRepository<InventoryAdjustmentItem>(_context);
         }
 
         public ICustomerRepository Customers { get; private set; }
@@ -89,6 +95,12 @@ namespace GarageManagementSystem.Infrastructure.Repositories
         public IGenericRepository<Warehouse> Warehouses { get; private set; }
         public IGenericRepository<WarehouseZone> WarehouseZones { get; private set; }
         public IGenericRepository<WarehouseBin> WarehouseBins { get; private set; }
+        
+        // ✅ Phase 4.1 - Sprint 2: Periodic Inventory Checks
+        public IGenericRepository<InventoryCheck> InventoryChecks { get; private set; }
+        public IGenericRepository<InventoryCheckItem> InventoryCheckItems { get; private set; }
+        public IGenericRepository<InventoryAdjustment> InventoryAdjustments { get; private set; }
+        public IGenericRepository<InventoryAdjustmentItem> InventoryAdjustmentItems { get; private set; }
 
         public IGenericRepository<T> Repository<T>() where T : BaseEntity
         {

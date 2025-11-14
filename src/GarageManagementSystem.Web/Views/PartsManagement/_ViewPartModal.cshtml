@@ -110,12 +110,14 @@
                                 <div class="form-group mb-3">
                                     <label class="font-weight-bold text-muted small">Tồn Kho Tối Thiểu:</label>
                                     <p id="viewMinimumStock" class="form-control-plaintext mb-0"></p>
+                                    <small class="text-muted">Hệ thống sẽ cảnh báo khi tồn kho <= mức này</small>
                                 </div>
                             </div>
                             <div class="col-md-4">
                                 <div class="form-group mb-3">
                                     <label class="font-weight-bold text-muted small">Mức Tồn Bổ Sung:</label>
                                     <p id="viewReorderLevel" class="form-control-plaintext mb-0"></p>
+                                    <small class="text-muted">Gợi ý số lượng cần đặt hàng</small>
                                 </div>
                             </div>
                         </div>
@@ -305,7 +307,7 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                <button type="button" class="btn btn-sm btn-secondary" data-dismiss="modal" data-title="Đóng">
                     <i class="fas fa-times"></i> Đóng
                 </button>
             </div>

@@ -109,14 +109,16 @@
                         </div>
                         <div class="col-md-4">
                             <div class="form-group">
-                                        <label for="createMinimumStock">Tồn Kho Tối Thiểu</label>
-                                        <input type="number" class="form-control form-control-sm" id="createMinimumStock" name="MinimumStock" min="0" value="0">
+                                <label for="createMinimumStock">Tồn Kho Tối Thiểu</label>
+                                <input type="number" class="form-control form-control-sm" id="createMinimumStock" name="MinimumStock" min="0" value="0" data-title="Mức tồn kho tối thiểu để cảnh báo">
+                                <small class="form-text text-muted">Hệ thống sẽ cảnh báo khi tồn kho <= mức này</small>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="form-group">
                                 <label for="createReorderLevel">Mức Tồn Bổ Sung</label>
-                                <input type="number" class="form-control form-control-sm" id="createReorderLevel" name="ReorderLevel" min="0">
+                                <input type="number" class="form-control form-control-sm" id="createReorderLevel" name="ReorderLevel" min="0" data-title="Mức tồn kho đề xuất để đặt hàng lại">
+                                <small class="form-text text-muted">Gợi ý số lượng cần đặt hàng (≥ Tồn kho tối thiểu)</small>
                             </div>
                         </div>
                     </div>
@@ -216,10 +218,10 @@
                                                 </div>
                                             </td>
                                             <td class="text-center">
-                                                <button type="button" class="btn btn-sm btn-primary mb-1" id="btnCreateSaveUnit">
+                                                <button type="button" class="btn btn-sm btn-primary mb-1" id="btnCreateSaveUnit" data-title="Thêm đơn vị">
                                                     <i class="fas fa-plus"></i>
                                                 </button>
-                                                <button type="button" class="btn btn-sm btn-secondary mb-1 d-none" id="btnCreateCancelEditUnit">
+                                                <button type="button" class="btn btn-sm btn-secondary mb-1 d-none" id="btnCreateCancelEditUnit" data-title="Hủy chỉnh sửa">
                                                     <i class="fas fa-times"></i>
                                                 </button>
                                             </td>
@@ -249,7 +251,7 @@
                                     </div>
                                     <div class="col-md-3 text-right">
                                         <br>
-                                        <button type="button" class="btn btn-sm btn-primary" id="createApplyPreset">
+                                        <button type="button" class="btn btn-sm btn-primary" id="createApplyPreset" data-title="Áp dụng preset">
                                             <i class="fas fa-check"></i> Áp dụng
                                         </button>
                                     </div>
@@ -468,10 +470,10 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                    <button type="button" class="btn btn-sm btn-secondary" data-dismiss="modal" data-title="Đóng">
                         <i class="fas fa-times"></i> Hủy
                     </button>
-                    <button type="submit" class="btn btn-primary">
+                    <button type="submit" class="btn btn-sm btn-primary" data-title="Lưu phụ tùng">
                         <i class="fas fa-save"></i> Lưu Phụ Tùng
                     </button>
                 </div>

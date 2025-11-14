@@ -42,6 +42,12 @@ namespace GarageManagementSystem.Core.Interfaces
         IGenericRepository<WarehouseZone> WarehouseZones { get; }
         IGenericRepository<WarehouseBin> WarehouseBins { get; }
         
+        // ✅ Phase 4.1 - Sprint 2: Periodic Inventory Checks
+        IGenericRepository<InventoryCheck> InventoryChecks { get; }
+        IGenericRepository<InventoryCheckItem> InventoryCheckItems { get; }
+        IGenericRepository<InventoryAdjustment> InventoryAdjustments { get; }
+        IGenericRepository<InventoryAdjustmentItem> InventoryAdjustmentItems { get; }
+        
         IGenericRepository<T> Repository<T>() where T : BaseEntity;
         Task<int> SaveChangesAsync();
         Task BeginTransactionAsync();

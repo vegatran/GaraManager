@@ -98,21 +98,40 @@ window.InventoryAlertsManagement = {
                 }
             },
             { 
-                data: 'alertDate', 
+                data: 'createdAt', 
                 title: 'Ngày Cảnh Báo', 
                 width: '10%',
-                render: DataTablesUtility.renderDate
-            },
-            { 
-                data: 'isResolved', 
-                title: 'Trạng Thái', 
-                width: '8%',
                 render: function(data, type, row) {
                     if (data) {
-                        return `<span class="badge badge-success">Đã Xử Lý</span>`;
-                    } else {
-                        return `<span class="badge badge-warning">Chưa Xử Lý</span>`;
+                        try {
+                            var date = new Date(data);
+                            if (!isNaN(date.getTime())) {
+                                return date.toLocaleDateString('vi-VN');
+                            }
+                        } catch (e) {
+                            // Ignore
+                        }
                     }
+                    return '-';
+                }
+            },
+            { 
+                data: 'deficit', 
+                title: 'Thiếu', 
+                width: '8%',
+                render: function(data, type, row) {
+                    if (data && data > 0) {
+                        return `<span class="text-danger">-${data}</span>`;
+                    }
+                    return data || '-';
+                }
+            },
+            { 
+                data: 'location', 
+                title: 'Vị Trí', 
+                width: '10%',
+                render: function(data) {
+                    return data || '-';
                 }
             },
             {
@@ -121,20 +140,22 @@ window.InventoryAlertsManagement = {
                 width: '12%',
                 orderable: false,
                 render: function(data, type, row) {
-                    if (row.isResolved) {
-                        return `<span class="text-muted">Đã xử lý</span>`;
-                    } else {
-                        return `
-                            <button class="btn btn-success btn-sm resolve-alert" data-id="${row.id}" title="Đánh dấu đã xử lý">
-                                <i class="fas fa-check"></i>
-                            </button>
+                    var actions = '';
+                    if (row.id) {
+                        actions += `
+                            <a href="/PartsManagement?partId=${row.id}" class="btn btn-info btn-sm" title="Xem chi tiết phụ tùng" target="_blank">
+                                <i class="fas fa-eye"></i>
+                            </a>
                         `;
                     }
+                    // Note: Mark as resolved functionality can be added later if needed
+                    return actions || '-';
                 }
             }
         ];
         
-        this.alertsTable = DataTablesUtility.initServerSideTable('#alertsTable', '/InventoryAlerts/GetAlerts', columns, {
+        // Use client-side processing since GetAlerts returns all data
+        this.alertsTable = DataTablesUtility.initAjaxTable('#alertsTable', '/InventoryAlerts/GetAlerts', columns, {
             order: [[0, 'desc']],
             pageLength: 10,
             processing: true,
@@ -142,10 +163,32 @@ window.InventoryAlertsManagement = {
                 processing: "Đang tải dữ liệu..."
             },
             ajax: {
+                url: '/InventoryAlerts/GetAlerts',
                 data: function(d) {
                     d.alertType = $('#alertTypeFilter').val();
                     d.severity = $('#severityFilter').val();
                     d.status = $('#statusFilter').val();
+                },
+                dataSrc: function(json) {
+                    // Filter by severity and status on client side
+                    var data = json.data || [];
+                    var severityFilter = $('#severityFilter').val();
+                    var statusFilter = $('#statusFilter').val();
+                    
+                    if (severityFilter) {
+                        data = data.filter(function(item) {
+                            return item.severity === severityFilter;
+                        });
+                    }
+                    
+                    if (statusFilter) {
+                        var isResolved = statusFilter === 'true';
+                        data = data.filter(function(item) {
+                            return (item.isResolved || false) === isResolved;
+                        });
+                    }
+                    
+                    return data;
                 }
             }
         });
@@ -165,9 +208,9 @@ window.InventoryAlertsManagement = {
             self.alertsTable.ajax.reload();
         });
 
-        // Mark all as resolved
-        $('#markAllResolved').on('click', function() {
-            self.markAllAsResolved();
+        // Export Excel
+        $('#exportExcelBtn').on('click', function() {
+            self.exportExcel();
         });
 
         // Refresh alerts
@@ -295,6 +338,16 @@ window.InventoryAlertsManagement = {
                 });
             }
         });
+    },
+
+    // Export Excel
+    exportExcel: function() {
+        var alertType = $('#alertTypeFilter').val() || '';
+        var url = '/InventoryAlerts/ExportExcel';
+        if (alertType) {
+            url += '?alertType=' + encodeURIComponent(alertType);
+        }
+        window.location.href = url;
     }
 };
 
