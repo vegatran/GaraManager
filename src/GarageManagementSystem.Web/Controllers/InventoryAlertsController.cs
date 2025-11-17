@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using GarageManagementSystem.Web.Services;
 using GarageManagementSystem.Shared.Models;
@@ -6,6 +7,8 @@ using System.Text.Json;
 
 namespace GarageManagementSystem.Web.Controllers
 {
+    [Authorize]
+    [Route("InventoryAlerts")]
     public class InventoryAlertsController : Controller
     {
         private readonly ApiService _apiService;
@@ -50,7 +53,7 @@ namespace GarageManagementSystem.Web.Controllers
                                         partNumber = item.TryGetProperty("PartNumber", out var numProp) ? numProp.GetString() : "",
                                         alertType = "LowStock",
                                         severity = item.TryGetProperty("AlertLevel", out var levelProp) ? levelProp.GetString() : "Medium",
-                                        message = $"Tồn kho thấp: {item.TryGetProperty("CurrentStock", out var stockProp) ? stockProp.GetInt32() : 0} (Tối thiểu: {item.TryGetProperty("MinStock", out var minProp) ? minProp.GetInt32() : 0})",
+                                        message = $"Tồn kho thấp: {(item.TryGetProperty("CurrentStock", out var stockProp) ? stockProp.GetInt32() : 0)} (Tối thiểu: {(item.TryGetProperty("MinStock", out var minProp) ? minProp.GetInt32() : 0)})",
                                         currentQuantity = item.TryGetProperty("CurrentStock", out var qtyProp) ? qtyProp.GetInt32() : 0,
                                         minimumQuantity = item.TryGetProperty("MinStock", out var minQtyProp) ? minQtyProp.GetInt32() : 0,
                                         deficit = item.TryGetProperty("Deficit", out var defProp) ? defProp.GetInt32() : 0,

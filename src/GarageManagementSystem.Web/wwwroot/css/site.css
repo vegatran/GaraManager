@@ -98,6 +98,39 @@ body {
     background-color: rgba(0, 0, 0, 0.075);
 }
 
+/* Card Collapse Smooth Animation */
+.card-collapse-btn {
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.card-collapse-btn i {
+    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    display: inline-block;
+    will-change: transform;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+}
+
+.card-collapse-btn[aria-expanded="false"] i {
+    transform: rotate(180deg);
+}
+
+.card-collapse-btn[aria-expanded="true"] i {
+    transform: rotate(0deg);
+}
+
+/* Smooth collapse animation - override Bootstrap default */
+.modal .card-body.collapsing {
+    transition: height 0.35s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    overflow: hidden;
+    will-change: height;
+}
+
+.modal .card-body.collapse {
+    transition: height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 .table-striped > tbody > tr:nth-of-type(odd) > td,
 .table-striped > tbody > tr:nth-of-type(odd) > th {
     background-color: rgba(0, 0, 0, 0.02);

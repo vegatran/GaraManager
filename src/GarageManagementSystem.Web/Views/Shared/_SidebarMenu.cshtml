@@ -139,8 +139,8 @@
         </li>
 
         <!-- QUẢN LÝ KHO (Multilevel) -->
-        <li class="nav-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "WarehouseManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "PartsManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "SupplierManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "StockManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "PurchaseOrder" || ViewContext.RouteData.Values["Controller"]?.ToString() == "InventoryAlerts" || ViewContext.RouteData.Values["Controller"]?.ToString() == "InventoryChecks" ? "menu-open" : "")">
-            <a href="#" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "WarehouseManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "PartsManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "SupplierManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "StockManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "PurchaseOrder" || ViewContext.RouteData.Values["Controller"]?.ToString() == "InventoryAlerts" || ViewContext.RouteData.Values["Controller"]?.ToString() == "InventoryChecks" ? "active" : "")">
+        <li class="nav-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "WarehouseManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "PartsManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "SupplierManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "StockManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "PurchaseOrder" || ViewContext.RouteData.Values["Controller"]?.ToString() == "InventoryAlerts" || ViewContext.RouteData.Values["Controller"]?.ToString() == "InventoryChecks" || ViewContext.RouteData.Values["Controller"]?.ToString() == "InventoryAdjustments" ? "menu-open" : "")">
+            <a href="#" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "WarehouseManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "PartsManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "SupplierManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "StockManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "PurchaseOrder" || ViewContext.RouteData.Values["Controller"]?.ToString() == "InventoryAlerts" || ViewContext.RouteData.Values["Controller"]?.ToString() == "InventoryChecks" || ViewContext.RouteData.Values["Controller"]?.ToString() == "InventoryAdjustments" ? "active" : "")">
                 <i class="nav-icon fas fa-warehouse text-warning"></i>
                 <p>
                     Quản Lý Kho
@@ -191,6 +191,12 @@
                     <a href="@Url.Action("Index", "InventoryChecks")" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "InventoryChecks" ? "active" : "")">
                         <i class="fas fa-clipboard-check nav-icon text-teal"></i>
                         <p>Kiểm Kê Định Kỳ</p>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="@Url.Action("Index", "InventoryAdjustments")" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "InventoryAdjustments" ? "active" : "")">
+                        <i class="fas fa-adjust nav-icon text-orange"></i>
+                        <p>Điều Chỉnh Tồn Kho</p>
                     </a>
                 </li>
             </ul>

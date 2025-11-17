@@ -115,6 +115,9 @@ namespace GarageManagementSystem.Infrastructure.Data
         public DbSet<InventoryCheckItem> InventoryCheckItems { get; set; }
         public DbSet<InventoryAdjustment> InventoryAdjustments { get; set; }
         public DbSet<InventoryAdjustmentItem> InventoryAdjustmentItems { get; set; }
+        // ✅ Phase 4.1 - Advanced Features: Comments/Notes Timeline
+        public DbSet<InventoryCheckComment> InventoryCheckComments { get; set; }
+        public DbSet<InventoryAdjustmentComment> InventoryAdjustmentComments { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -1553,8 +1556,8 @@ namespace GarageManagementSystem.Infrastructure.Data
                     .OnDelete(DeleteBehavior.Restrict);
 
                 entity.HasOne(e => e.InventoryCheckItem)
-                    .WithMany()
-                    .HasForeignKey(e => e.InventoryCheckItemId)
+                    .WithOne(ici => ici.InventoryAdjustmentItem)
+                    .HasForeignKey<InventoryAdjustmentItem>(e => e.InventoryCheckItemId)
                     .OnDelete(DeleteBehavior.SetNull);
             });
 
@@ -1616,14 +1619,55 @@ namespace GarageManagementSystem.Infrastructure.Data
                     .OnDelete(DeleteBehavior.Restrict);
 
                 entity.HasOne(e => e.InventoryAdjustmentItem)
-                    .WithMany()
-                    .HasForeignKey(e => e.InventoryAdjustmentItemId)
+                    .WithOne(iai => iai.InventoryCheckItem)
+                    .HasForeignKey<InventoryCheckItem>(e => e.InventoryAdjustmentItemId)
                     .OnDelete(DeleteBehavior.SetNull);
 
                 // Index for faster lookup
                 entity.HasIndex(e => e.InventoryCheckId);
                 entity.HasIndex(e => e.PartId);
                 entity.HasIndex(e => e.IsDiscrepancy);
+            });
+
+            // ✅ Phase 4.1 - Advanced Features: Comments/Notes Timeline configuration
+            modelBuilder.Entity<InventoryCheckComment>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.CommentText).IsRequired().HasMaxLength(2000);
+                entity.Property(e => e.CreatedByUserName).HasMaxLength(100);
+
+                entity.HasOne(e => e.InventoryCheck)
+                    .WithMany(ic => ic.Comments)
+                    .HasForeignKey(e => e.InventoryCheckId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.CreatedByEmployee)
+                    .WithMany()
+                    .HasForeignKey(e => e.CreatedByEmployeeId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasIndex(e => e.InventoryCheckId);
+                entity.HasIndex(e => e.CreatedAt);
+            });
+
+            modelBuilder.Entity<InventoryAdjustmentComment>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.CommentText).IsRequired().HasMaxLength(2000);
+                entity.Property(e => e.CreatedByUserName).HasMaxLength(100);
+
+                entity.HasOne(e => e.InventoryAdjustment)
+                    .WithMany(ia => ia.Comments)
+                    .HasForeignKey(e => e.InventoryAdjustmentId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.CreatedByEmployee)
+                    .WithMany()
+                    .HasForeignKey(e => e.CreatedByEmployeeId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasIndex(e => e.InventoryAdjustmentId);
+                entity.HasIndex(e => e.CreatedAt);
             });
         }
     }

@@ -43,6 +43,8 @@ namespace GarageManagementSystem.Core.Entities
         public virtual WarehouseBin? WarehouseBin { get; set; }
         public virtual Employee? ApprovedByEmployee { get; set; }
         public virtual ICollection<InventoryAdjustmentItem> Items { get; set; } = new List<InventoryAdjustmentItem>();
+        // ✅ Phase 4.1 - Advanced Features: Comments/Notes Timeline
+        public virtual ICollection<InventoryAdjustmentComment> Comments { get; set; } = new List<InventoryAdjustmentComment>();
     }
 }
 

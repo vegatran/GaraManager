@@ -47,6 +47,8 @@ namespace GarageManagementSystem.Core.Entities
         public virtual Employee? StartedByEmployee { get; set; }
         public virtual Employee? CompletedByEmployee { get; set; }
         public virtual ICollection<InventoryCheckItem> Items { get; set; } = new List<InventoryCheckItem>();
+        // ✅ Phase 4.1 - Advanced Features: Comments/Notes Timeline
+        public virtual ICollection<InventoryCheckComment> Comments { get; set; } = new List<InventoryCheckComment>();
     }
 }
 

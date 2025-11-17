@@ -56,6 +56,9 @@ namespace GarageManagementSystem.Infrastructure.Repositories
             InventoryCheckItems = new GenericRepository<InventoryCheckItem>(_context);
             InventoryAdjustments = new GenericRepository<InventoryAdjustment>(_context);
             InventoryAdjustmentItems = new GenericRepository<InventoryAdjustmentItem>(_context);
+            // ✅ Phase 4.1 - Advanced Features: Comments/Notes Timeline
+            InventoryCheckComments = new GenericRepository<InventoryCheckComment>(_context);
+            InventoryAdjustmentComments = new GenericRepository<InventoryAdjustmentComment>(_context);
         }
 
         public ICustomerRepository Customers { get; private set; }
@@ -101,6 +104,9 @@ namespace GarageManagementSystem.Infrastructure.Repositories
         public IGenericRepository<InventoryCheckItem> InventoryCheckItems { get; private set; }
         public IGenericRepository<InventoryAdjustment> InventoryAdjustments { get; private set; }
         public IGenericRepository<InventoryAdjustmentItem> InventoryAdjustmentItems { get; private set; }
+        // ✅ Phase 4.1 - Advanced Features: Comments/Notes Timeline
+        public IGenericRepository<InventoryCheckComment> InventoryCheckComments { get; private set; }
+        public IGenericRepository<InventoryAdjustmentComment> InventoryAdjustmentComments { get; private set; }
 
         public IGenericRepository<T> Repository<T>() where T : BaseEntity
         {

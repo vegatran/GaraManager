@@ -498,6 +498,28 @@ namespace GarageManagementSystem.Web.Configuration
             public const string DeleteItem = "inventorychecks/{0}/items/{1}"; // inventorychecks/{id}/items/{itemId}
             public const string ExportExcel = "inventorychecks/export-excel";
             public const string ExportDetailExcel = "inventorychecks/{0}/export-excel"; // inventorychecks/{id}/export-excel
+            public const string GetHistory = "inventorychecks/{0}/history"; // ✅ Phase 4.1 - Advanced Features: Audit history
+            public const string AddComment = "inventorychecks/{0}/comments"; // ✅ Phase 4.1 - Advanced Features: Add comment
+            public const string GetComments = "inventorychecks/{0}/comments"; // ✅ Phase 4.1 - Advanced Features: Get comments timeline
+            public const string DeleteComment = "inventorychecks/{0}/comments/{1}"; // ✅ Phase 4.1 - Advanced Features: Delete comment
+        }
+
+        /// <summary>
+        /// Inventory Adjustments management endpoints
+        /// </summary>
+        public static class InventoryAdjustments
+        {
+            public const string GetAll = "inventoryadjustments";
+            public const string GetById = "inventoryadjustments/{0}"; // inventoryadjustments/{id}
+            public const string Create = "inventoryadjustments";
+            public const string CreateFromCheck = "inventoryadjustments/from-check/{0}"; // inventoryadjustments/from-check/{checkId}
+            public const string Approve = "inventoryadjustments/{0}/approve"; // inventoryadjustments/{id}/approve
+            public const string Reject = "inventoryadjustments/{0}/reject"; // inventoryadjustments/{id}/reject
+            public const string Delete = "inventoryadjustments/{0}"; // inventoryadjustments/{id}
+            public const string GetHistory = "inventoryadjustments/{0}/history"; // ✅ Phase 4.1 - Advanced Features: Audit history
+            public const string AddComment = "inventoryadjustments/{0}/comments"; // ✅ Phase 4.1 - Advanced Features: Add comment
+            public const string GetComments = "inventoryadjustments/{0}/comments"; // ✅ Phase 4.1 - Advanced Features: Get comments timeline
+            public const string DeleteComment = "inventoryadjustments/{0}/comments/{1}"; // ✅ Phase 4.1 - Advanced Features: Delete comment
         }
     }
 }

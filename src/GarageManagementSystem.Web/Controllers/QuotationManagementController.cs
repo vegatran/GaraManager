@@ -60,44 +60,69 @@ namespace GarageManagementSystem.Web.Controllers
                 
                 var response = await _apiService.GetAsync<PagedResponse<ServiceQuotationDto>>(endpoint);
                 
-                if (response.Success && response.Data != null)
-                {
-                    var quotationList = response.Data.Data.Select(q => new
-                    {
-                        id = q.Id,
-                        quotationNumber = q.QuotationNumber,
-                        vehicleInfo = $"{q.Vehicle?.Brand} {q.Vehicle?.Model} - {q.Vehicle?.LicensePlate}",
-                        customerName = q.Customer?.Name ?? "N/A",
-                        quotationType = q.QuotationType,
-                        // ✅ SỬA: Tính lại totalAmount từ SubTotal + TaxAmount - DiscountAmount
-                        totalAmount = (q.SubTotal + q.TaxAmount - q.DiscountAmount).ToString("N0"),
-                        status = TranslateQuotationStatus(q.Status),
-                        statusOriginal = q.Status, // ✅ THÊM: Lưu status gốc (tiếng Anh) để JavaScript check
-                        serviceOrderId = q.ServiceOrderId, // ✅ 2.1.1: Thêm ServiceOrderId để check lock
-                        validUntil = q.ValidUntil?.ToString("yyyy-MM-dd") ?? "",
-                        createdDate = q.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss")
-                    }).ToList();
-
-                    return Json(new { 
-                        success = true,
-                        data = quotationList,
-                        totalCount = response.Data.TotalCount,
-                        message = "Lấy danh sách báo giá thành công"
-                    });
-                }
-                else
+                // ✅ FIX: Kiểm tra response và log chi tiết để debug
+                if (!response.Success)
                 {
                     return Json(new { 
                         success = false,
-                        message = response.ErrorMessage ?? "Lỗi khi lấy danh sách báo giá"
+                        message = response.ErrorMessage ?? "Lỗi khi lấy danh sách báo giá",
+                        errorDetails = response.StatusCode.ToString() ?? "Unknown"
                     });
                 }
+                
+                if (response.Data == null)
+                {
+                    return Json(new { 
+                        success = false,
+                        message = "API trả về dữ liệu null"
+                    });
+                }
+                
+                // ✅ FIX: Kiểm tra Data.Data có null không
+                if (response.Data.Data == null)
+                {
+                    return Json(new { 
+                        success = true,
+                        data = new List<object>(),
+                        totalCount = 0,
+                        message = "Không có dữ liệu báo giá"
+                    });
+                }
+                
+                var quotationList = response.Data.Data.Select(q => new
+                {
+                    id = q.Id,
+                    quotationNumber = q.QuotationNumber ?? "N/A",
+                    vehicleInfo = $"{q.Vehicle?.Brand ?? ""} {q.Vehicle?.Model ?? ""} - {q.Vehicle?.LicensePlate ?? ""}".Trim(),
+                    customerName = q.Customer?.Name ?? "N/A",
+                    quotationType = q.QuotationType ?? "Personal",
+                    // ✅ SỬA: Tính lại totalAmount từ SubTotal + TaxAmount - DiscountAmount
+                    totalAmount = (q.SubTotal + q.TaxAmount - q.DiscountAmount).ToString("N0"),
+                    status = TranslateQuotationStatus(q.Status ?? "Draft"),
+                    statusOriginal = q.Status ?? "Draft", // ✅ THÊM: Lưu status gốc (tiếng Anh) để JavaScript check
+                    serviceOrderId = q.ServiceOrderId, // ✅ 2.1.1: Thêm ServiceOrderId để check lock
+                    validUntil = q.ValidUntil?.ToString("yyyy-MM-dd") ?? "",
+                    createdDate = q.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss")
+                }).ToList();
+
+                return Json(new { 
+                    success = true,
+                    data = quotationList,
+                    totalCount = response.Data.TotalCount,
+                    pageNumber = response.Data.PageNumber,
+                    pageSize = response.Data.PageSize,
+                    totalPages = response.Data.TotalPages,
+                    message = "Lấy danh sách báo giá thành công"
+                });
             }
             catch (Exception ex)
             {
+                // ✅ FIX: Log exception chi tiết
                 return Json(new { 
                     success = false,
-                    message = "Lỗi khi lấy danh sách báo giá: " + ex.Message
+                    message = "Lỗi khi lấy danh sách báo giá: " + ex.Message,
+                    stackTrace = ex.StackTrace,
+                    innerException = ex.InnerException?.Message
                 });
             }
         }

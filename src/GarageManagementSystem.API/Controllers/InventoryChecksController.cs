@@ -331,6 +331,10 @@ namespace GarageManagementSystem.API.Controllers
                     return StatusCode(500, ApiResponse<InventoryCheckDto>.ErrorResult("Không thể tải lại thông tin phiếu kiểm kê sau khi tạo"));
                 }
 
+                // ✅ Phase 4.1 - Advanced Features: Log audit
+                await LogAuditAsync("InventoryCheck", savedCheck.Id, "Create", 
+                    $"Tạo phiếu kiểm kê: {savedCheck.Code}, Status: {savedCheck.Status}, Items: {savedCheck.Items.Count}");
+
                 return CreatedAtAction(nameof(GetInventoryCheck), new { id = savedCheck.Id }, ApiResponse<InventoryCheckDto>.SuccessResult(_mapper.Map<InventoryCheckDto>(savedCheck)));
             }
             catch (Exception ex)
@@ -427,6 +431,10 @@ namespace GarageManagementSystem.API.Controllers
                     }
                 }
 
+                // ✅ Track old values for audit
+                var oldStatus = inventoryCheck.Status;
+                var oldCode = inventoryCheck.Code;
+
                 // Map DTO to Entity
                 _mapper.Map(dto, inventoryCheck);
                 inventoryCheck.Code = normalizedCode;
@@ -498,6 +506,21 @@ namespace GarageManagementSystem.API.Controllers
                     return StatusCode(500, ApiResponse<InventoryCheckDto>.ErrorResult("Không thể tải lại thông tin phiếu kiểm kê sau khi cập nhật"));
                 }
 
+                // ✅ Phase 4.1 - Advanced Features: Log audit với thông tin thay đổi
+                var changes = new List<string>();
+                if (oldStatus != savedCheck.Status)
+                {
+                    changes.Add($"Status: {oldStatus} → {savedCheck.Status}");
+                }
+                if (oldCode != savedCheck.Code)
+                {
+                    changes.Add($"Code: {oldCode} → {savedCheck.Code}");
+                }
+                var details = changes.Any() 
+                    ? $"Cập nhật phiếu kiểm kê: {savedCheck.Code}. Thay đổi: {string.Join(", ", changes)}"
+                    : $"Cập nhật phiếu kiểm kê: {savedCheck.Code}";
+                await LogAuditAsync("InventoryCheck", savedCheck.Id, "Update", details);
+
                 return Ok(ApiResponse<InventoryCheckDto>.SuccessResult(_mapper.Map<InventoryCheckDto>(savedCheck)));
             }
             catch (Exception ex)
@@ -520,8 +543,14 @@ namespace GarageManagementSystem.API.Controllers
                     return NotFound(ApiResponse.ErrorResult("Inventory check not found"));
                 }
 
+                var checkCode = inventoryCheck.Code;
                 await _unitOfWork.InventoryChecks.DeleteAsync(inventoryCheck);
                 await _unitOfWork.SaveChangesAsync();
+
+                // ✅ Phase 4.1 - Advanced Features: Log audit
+                await LogAuditAsync("InventoryCheck", id, "Delete", 
+                    $"Xóa phiếu kiểm kê: {checkCode}, Status: {inventoryCheck.Status}", 
+                    "Warning");
 
                 return Ok(ApiResponse.SuccessResult("Inventory check deleted"));
             }
@@ -599,6 +628,12 @@ namespace GarageManagementSystem.API.Controllers
                 {
                     return StatusCode(500, ApiResponse<InventoryCheckDto>.ErrorResult("Không thể tải lại thông tin phiếu kiểm kê sau khi hoàn thành"));
                 }
+
+                // ✅ Phase 4.1 - Advanced Features: Log audit
+                var discrepancyCount = savedCheck.Items.Count(i => i.IsDiscrepancy);
+                await LogAuditAsync("InventoryCheck", savedCheck.Id, "Complete", 
+                    $"Hoàn thành phiếu kiểm kê: {savedCheck.Code}. Tổng items: {savedCheck.Items.Count}, Items có chênh lệch: {discrepancyCount}", 
+                    "Info");
 
                 return Ok(ApiResponse<InventoryCheckDto>.SuccessResult(_mapper.Map<InventoryCheckDto>(savedCheck)));
             }
@@ -689,6 +724,10 @@ namespace GarageManagementSystem.API.Controllers
                     return StatusCode(500, ApiResponse<InventoryCheckItemDto>.ErrorResult("Không thể tải lại thông tin item sau khi tạo"));
                 }
 
+                // ✅ Phase 4.1 - Advanced Features: Log audit
+                await LogAuditAsync("InventoryCheckItem", savedItem.Id, "Create", 
+                    $"Thêm item vào phiếu kiểm kê {inventoryCheck.Code}: PartId={savedItem.PartId}, ActualQty={savedItem.ActualQuantity}, SystemQty={savedItem.SystemQuantity}, IsDiscrepancy={savedItem.IsDiscrepancy}");
+
                 return CreatedAtAction(nameof(GetInventoryCheck), new { id = id }, ApiResponse<InventoryCheckItemDto>.SuccessResult(_mapper.Map<InventoryCheckItemDto>(savedItem)));
             }
             catch (Exception ex)
@@ -731,6 +770,10 @@ namespace GarageManagementSystem.API.Controllers
                 {
                     return NotFound(ApiResponse<InventoryCheckItemDto>.ErrorResult("Inventory check item not found"));
                 }
+
+                // ✅ Track old values for audit
+                var oldActualQty = item.ActualQuantity;
+                var oldIsDiscrepancy = item.IsDiscrepancy;
 
                 // Validate part exists (if changed)
                 if (item.PartId != dto.PartId)
@@ -809,6 +852,21 @@ namespace GarageManagementSystem.API.Controllers
                     return StatusCode(500, ApiResponse<InventoryCheckItemDto>.ErrorResult("Không thể tải lại thông tin item sau khi cập nhật"));
                 }
 
+                // ✅ Phase 4.1 - Advanced Features: Log audit
+                var changes = new List<string>();
+                if (oldActualQty != savedItem.ActualQuantity)
+                {
+                    changes.Add($"ActualQuantity: {oldActualQty} → {savedItem.ActualQuantity}");
+                }
+                if (oldIsDiscrepancy != savedItem.IsDiscrepancy)
+                {
+                    changes.Add($"IsDiscrepancy: {oldIsDiscrepancy} → {savedItem.IsDiscrepancy}");
+                }
+                var details = changes.Any()
+                    ? $"Cập nhật item trong phiếu kiểm kê {inventoryCheck.Code}: PartId={savedItem.PartId}. Thay đổi: {string.Join(", ", changes)}"
+                    : $"Cập nhật item trong phiếu kiểm kê {inventoryCheck.Code}: PartId={savedItem.PartId}";
+                await LogAuditAsync("InventoryCheckItem", savedItem.Id, "Update", details);
+
                 return Ok(ApiResponse<InventoryCheckItemDto>.SuccessResult(_mapper.Map<InventoryCheckItemDto>(savedItem)));
             }
             catch (Exception ex)
@@ -844,14 +902,326 @@ namespace GarageManagementSystem.API.Controllers
                     return NotFound(ApiResponse.ErrorResult("Inventory check item not found"));
                 }
 
+                var partInfo = item.Part != null ? $"{item.Part.PartNumber}" : $"PartId={item.PartId}";
                 await _unitOfWork.InventoryCheckItems.DeleteAsync(item);
                 await _unitOfWork.SaveChangesAsync();
+
+                // ✅ Phase 4.1 - Advanced Features: Log audit
+                await LogAuditAsync("InventoryCheckItem", itemId, "Delete", 
+                    $"Xóa item khỏi phiếu kiểm kê {inventoryCheck.Code}: {partInfo}, ActualQty={item.ActualQuantity}", 
+                    "Warning");
 
                 return Ok(ApiResponse.SuccessResult("Inventory check item deleted"));
             }
             catch (Exception ex)
             {
                 return StatusCode(500, ApiResponse.ErrorResult("Error deleting inventory check item", ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// ✅ Phase 4.1 - Advanced Features: Bulk update Inventory Check Items
+        /// </summary>
+        [HttpPost("{checkId}/items/bulk-update")]
+        public async Task<ActionResult<ApiResponse<BulkOperationResultDto>>> BulkUpdateInventoryCheckItems(
+            int checkId, 
+            [FromBody] BulkUpdateInventoryCheckItemsDto dto)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                    return BadRequest(ApiResponse<BulkOperationResultDto>.ErrorResult("Invalid data"));
+
+                if (dto.InventoryCheckId != checkId)
+                    return BadRequest(ApiResponse<BulkOperationResultDto>.ErrorResult("Check ID mismatch"));
+
+                if (dto.ItemIds == null || !dto.ItemIds.Any())
+                    return BadRequest(ApiResponse<BulkOperationResultDto>.ErrorResult("Phải chọn ít nhất 1 item"));
+
+                var inventoryCheck = await _context.InventoryChecks
+                    .Where(ic => !ic.IsDeleted && ic.Id == checkId)
+                    .FirstOrDefaultAsync();
+                
+                if (inventoryCheck == null)
+                    return NotFound(ApiResponse<BulkOperationResultDto>.ErrorResult("Inventory check not found"));
+
+                if (inventoryCheck.Status == "Completed")
+                    return BadRequest(ApiResponse<BulkOperationResultDto>.ErrorResult("Không thể cập nhật items trong phiếu kiểm kê đã hoàn thành"));
+
+                var result = new BulkOperationResultDto();
+
+                // Load items cần update (query hiệu quả)
+                var itemIds = dto.ItemIds.Distinct().ToList();
+                var items = await _context.InventoryCheckItems
+                    .Where(i => !i.IsDeleted && i.InventoryCheckId == checkId && itemIds.Contains(i.Id))
+                    .Include(i => i.Part)
+                    .ToListAsync();
+
+                if (!items.Any())
+                    return BadRequest(ApiResponse<BulkOperationResultDto>.ErrorResult("Không tìm thấy items nào"));
+
+                await _unitOfWork.BeginTransactionAsync();
+
+                try
+                {
+                    foreach (var item in items)
+                    {
+                        try
+                        {
+                            // Update các fields nếu có giá trị
+                            if (dto.ActualQuantity.HasValue)
+                            {
+                                if (dto.ActualQuantity.Value < 0)
+                                {
+                                    result.Errors.Add($"Item {item.Part?.PartNumber}: ActualQuantity không được âm");
+                                    result.FailedIds.Add(item.Id);
+                                    result.FailureCount++;
+                                    continue;
+                                }
+                                item.ActualQuantity = dto.ActualQuantity.Value;
+                                
+                                // Auto-calculate discrepancy
+                                item.IsDiscrepancy = item.ActualQuantity != item.SystemQuantity;
+                                item.DiscrepancyQuantity = item.ActualQuantity - item.SystemQuantity;
+                            }
+
+                            if (!string.IsNullOrWhiteSpace(dto.Notes))
+                                item.Notes = dto.Notes.Trim();
+
+                            if (dto.IsDiscrepancy.HasValue)
+                            {
+                                // ✅ FIX: Nếu ActualQuantity đã được update, IsDiscrepancy đã được tính tự động
+                                // Chỉ override nếu IsDiscrepancy được set mà ActualQuantity không được update
+                                if (!dto.ActualQuantity.HasValue)
+                                {
+                                    item.IsDiscrepancy = dto.IsDiscrepancy.Value;
+                                    if (dto.IsDiscrepancy.Value)
+                                    {
+                                        // Nếu set IsDiscrepancy = true nhưng chưa có ActualQuantity, giữ nguyên ActualQuantity hiện tại
+                                        item.DiscrepancyQuantity = item.ActualQuantity - item.SystemQuantity;
+                                    }
+                                }
+                                // Nếu ActualQuantity đã được update, IsDiscrepancy đã được tính tự động ở trên
+                            }
+
+                            await _unitOfWork.InventoryCheckItems.UpdateAsync(item);
+                            result.SuccessIds.Add(item.Id);
+                            result.SuccessCount++;
+                        }
+                        catch (Exception ex)
+                        {
+                            result.Errors.Add($"Item {item.Part?.PartNumber}: {ex.Message}");
+                            result.FailedIds.Add(item.Id);
+                            result.FailureCount++;
+                        }
+                    }
+
+                    await _unitOfWork.SaveChangesAsync();
+                    await _unitOfWork.CommitTransactionAsync();
+
+                    return Ok(ApiResponse<BulkOperationResultDto>.SuccessResult(result, 
+                        $"Đã cập nhật {result.SuccessCount} items thành công" + 
+                        (result.FailureCount > 0 ? $", {result.FailureCount} items thất bại" : "")));
+                }
+                catch
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    throw;
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<BulkOperationResultDto>.ErrorResult("Error updating items", ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// ✅ Phase 4.1 - Advanced Features: Bulk add Inventory Check Items
+        /// </summary>
+        [HttpPost("{checkId}/items/bulk-add")]
+        public async Task<ActionResult<ApiResponse<BulkOperationResultDto>>> BulkAddInventoryCheckItems(
+            int checkId, 
+            [FromBody] BulkAddInventoryCheckItemsDto dto)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                    return BadRequest(ApiResponse<BulkOperationResultDto>.ErrorResult("Invalid data"));
+
+                if (dto.InventoryCheckId != checkId)
+                    return BadRequest(ApiResponse<BulkOperationResultDto>.ErrorResult("Check ID mismatch"));
+
+                if (dto.Items == null || !dto.Items.Any())
+                    return BadRequest(ApiResponse<BulkOperationResultDto>.ErrorResult("Phải có ít nhất 1 item"));
+
+                var inventoryCheck = await _context.InventoryChecks
+                    .Where(ic => !ic.IsDeleted && ic.Id == checkId)
+                    .FirstOrDefaultAsync();
+                
+                if (inventoryCheck == null)
+                    return NotFound(ApiResponse<BulkOperationResultDto>.ErrorResult("Inventory check not found"));
+
+                if (inventoryCheck.Status == "Completed")
+                    return BadRequest(ApiResponse<BulkOperationResultDto>.ErrorResult("Không thể thêm items vào phiếu kiểm kê đã hoàn thành"));
+
+                var result = new BulkOperationResultDto();
+
+                // Get existing part IDs in this check để tránh duplicate
+                var existingPartIds = (await _context.InventoryCheckItems
+                    .Where(i => !i.IsDeleted && i.InventoryCheckId == checkId)
+                    .Select(i => i.PartId)
+                    .ToListAsync()).ToHashSet();
+
+                // ✅ FIX: Batch load parts để tránh N+1 query problem
+                var partIdsToLoad = dto.Items.Select(i => i.PartId).Distinct().ToList();
+                var partsDict = partIdsToLoad.Any()
+                    ? (await _context.Parts
+                        .Where(p => !p.IsDeleted && partIdsToLoad.Contains(p.Id))
+                        .ToListAsync())
+                        .ToDictionary(p => p.Id)
+                    : new Dictionary<int, Core.Entities.Part>();
+
+                // ✅ FIX: Track successful part IDs để reload sau
+                var successfulPartIds = new List<int>();
+                // Note: transactionStartTime sẽ được set sau khi SaveChanges để đảm bảo chính xác
+
+                await _unitOfWork.BeginTransactionAsync();
+
+                try
+                {
+                    foreach (var itemDto in dto.Items)
+                    {
+                        try
+                        {
+                            // Validate part exists (sử dụng dictionary)
+                            if (!partsDict.TryGetValue(itemDto.PartId, out var part))
+                            {
+                                result.Errors.Add($"Phụ tùng ID {itemDto.PartId} không tồn tại");
+                                result.FailureCount++;
+                                continue;
+                            }
+
+                            // Check duplicate
+                            if (existingPartIds.Contains(itemDto.PartId))
+                            {
+                                result.Errors.Add($"Phụ tùng {part.PartNumber} đã có trong phiếu kiểm kê");
+                                result.FailureCount++;
+                                continue;
+                            }
+
+                            // Get current stock quantity
+                            var systemQuantity = part.QuantityInStock;
+
+                            var item = new Core.Entities.InventoryCheckItem
+                            {
+                                InventoryCheckId = checkId,
+                                PartId = itemDto.PartId,
+                                SystemQuantity = systemQuantity,
+                                ActualQuantity = itemDto.ActualQuantity,
+                                DiscrepancyQuantity = itemDto.ActualQuantity - systemQuantity,
+                                IsDiscrepancy = itemDto.ActualQuantity != systemQuantity,
+                                Notes = string.IsNullOrWhiteSpace(itemDto.Notes) ? null : itemDto.Notes.Trim()
+                            };
+
+                            await _unitOfWork.InventoryCheckItems.AddAsync(item);
+                            existingPartIds.Add(itemDto.PartId); // Track để tránh duplicate trong cùng batch
+                            successfulPartIds.Add(itemDto.PartId); // Track để reload sau
+                            result.SuccessCount++;
+                        }
+                        catch (Exception ex)
+                        {
+                            result.Errors.Add($"Item PartId {itemDto.PartId}: {ex.Message}");
+                            result.FailureCount++;
+                        }
+                    }
+
+                    // ✅ FIX: Set time buffer trước SaveChanges để capture items được tạo
+                    var timeBuffer = DateTime.UtcNow.AddSeconds(-2); // Buffer 2 giây để đảm bảo capture
+                    
+                    await _unitOfWork.SaveChangesAsync();
+                    
+                    // ✅ FIX: Reload items để lấy IDs đã được generate (chỉ reload những items vừa thêm)
+                    // Sử dụng CreatedAt để filter chỉ những items vừa được tạo trong transaction này
+                    if (successfulPartIds.Any())
+                    {
+                        var addedItems = await _context.InventoryCheckItems
+                            .Where(i => !i.IsDeleted && 
+                                i.InventoryCheckId == checkId && 
+                                successfulPartIds.Contains(i.PartId) &&
+                                i.CreatedAt >= timeBuffer)
+                            .OrderByDescending(i => i.CreatedAt)
+                            .Take(successfulPartIds.Count)
+                            .Select(i => i.Id)
+                            .ToListAsync();
+                        
+                        result.SuccessIds = addedItems;
+                    }
+                    
+                    await _unitOfWork.CommitTransactionAsync();
+
+                    return Ok(ApiResponse<BulkOperationResultDto>.SuccessResult(result, 
+                        $"Đã thêm {result.SuccessCount} items thành công" + 
+                        (result.FailureCount > 0 ? $", {result.FailureCount} items thất bại" : "")));
+                }
+                catch
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    throw;
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<BulkOperationResultDto>.ErrorResult("Error adding items", ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// ✅ Phase 4.1 - Advanced Features: Helper method để log audit
+        /// </summary>
+        private async Task LogAuditAsync(string entityName, int? entityId, string action, string? details = null, string severity = "Info")
+        {
+            try
+            {
+                var currentUserId = User.FindFirst("sub")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                var currentUserName = User.FindFirst("name")?.Value ?? User.Identity?.Name ?? "System";
+
+                // ✅ FIX: Truncate Details nếu quá dài (tránh database error)
+                // Details field không có max length constraint, nhưng nên giới hạn để tránh vấn đề
+                var truncatedDetails = details;
+                if (!string.IsNullOrEmpty(details) && details.Length > 4000)
+                {
+                    truncatedDetails = details.Substring(0, 4000) + "... (truncated)";
+                }
+
+                // ✅ FIX: Truncate UserAgent nếu quá dài (max 500)
+                var userAgent = Request.Headers["User-Agent"].ToString();
+                if (userAgent.Length > 500)
+                {
+                    userAgent = userAgent.Substring(0, 500);
+                }
+
+                var auditLog = new Core.Entities.AuditLog
+                {
+                    EntityName = entityName,
+                    EntityId = entityId,
+                    Action = action,
+                    UserId = currentUserId,
+                    UserName = currentUserName,
+                    Timestamp = DateTime.Now,
+                    IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+                    UserAgent = userAgent,
+                    Details = truncatedDetails,
+                    Severity = severity,
+                    CreatedAt = DateTime.Now
+                };
+
+                await _context.AuditLogs.AddAsync(auditLog);
+                await _context.SaveChangesAsync();
+            }
+            catch
+            {
+                // ✅ Không throw exception nếu audit log fail (không ảnh hưởng business logic)
+                // Có thể log vào file hoặc external service sau này
             }
         }
 
@@ -1209,6 +1579,281 @@ namespace GarageManagementSystem.API.Controllers
                 "Cancelled" => "Đã hủy",
                 _ => status ?? "-"
             };
+        }
+
+        /// <summary>
+        /// ✅ Phase 4.1 - Advanced Features: Lấy lịch sử audit cho Inventory Check
+        /// </summary>
+        [HttpGet("{id}/history")]
+        public async Task<ActionResult<ApiResponse<List<AuditLogDto>>>> GetInventoryCheckHistory(
+            int id,
+            [FromQuery] DateTime? startDate = null,
+            [FromQuery] DateTime? endDate = null,
+            [FromQuery] string? action = null)
+        {
+            try
+            {
+                // Verify check exists
+                var check = await _context.InventoryChecks
+                    .Where(ic => !ic.IsDeleted && ic.Id == id)
+                    .FirstOrDefaultAsync();
+                
+                if (check == null)
+                {
+                    return NotFound(ApiResponse<List<AuditLogDto>>.ErrorResult("Inventory check not found"));
+                }
+
+                // ✅ FIX: Build query với filters ở database level để optimize performance
+                var query = _context.AuditLogs
+                    .AsNoTracking()
+                    .Where(al => al.EntityName == "InventoryCheck" && al.EntityId == id);
+
+                // Also include related InventoryCheckItem audit logs
+                var itemIds = await _context.InventoryCheckItems
+                    .Where(i => !i.IsDeleted && i.InventoryCheckId == id)
+                    .Select(i => i.Id)
+                    .ToListAsync();
+
+                IQueryable<AuditLog> itemQuery = _context.AuditLogs.AsNoTracking();
+                
+                // ✅ FIX: Chỉ query item logs nếu có items
+                if (itemIds.Any())
+                {
+                    itemQuery = _context.AuditLogs
+                        .AsNoTracking()
+                        .Where(al => al.EntityName == "InventoryCheckItem" && 
+                            al.EntityId.HasValue && 
+                            itemIds.Contains(al.EntityId.Value));
+                }
+                else
+                {
+                    // ✅ FIX: Nếu không có items, tạo empty query
+                    itemQuery = _context.AuditLogs
+                        .AsNoTracking()
+                        .Where(al => false); // Empty query
+                }
+
+                // ✅ FIX: Apply filters ở database level trước khi Union
+                if (startDate.HasValue)
+                {
+                    query = query.Where(al => al.Timestamp >= startDate.Value);
+                    itemQuery = itemQuery.Where(al => al.Timestamp >= startDate.Value);
+                }
+                if (endDate.HasValue)
+                {
+                    query = query.Where(al => al.Timestamp <= endDate.Value);
+                    itemQuery = itemQuery.Where(al => al.Timestamp <= endDate.Value);
+                }
+                if (!string.IsNullOrEmpty(action))
+                {
+                    query = query.Where(al => al.Action == action);
+                    itemQuery = itemQuery.Where(al => al.Action == action);
+                }
+
+                // Combine queries và order
+                var allLogs = await query
+                    .Union(itemQuery)
+                    .OrderByDescending(al => al.Timestamp)
+                    .ToListAsync();
+
+                var dtos = allLogs.Select(al => new AuditLogDto
+                {
+                    Id = al.Id,
+                    EntityName = al.EntityName,
+                    EntityId = al.EntityId,
+                    Action = al.Action,
+                    UserId = al.UserId,
+                    UserName = al.UserName,
+                    Timestamp = al.Timestamp,
+                    IpAddress = al.IpAddress,
+                    UserAgent = al.UserAgent,
+                    Details = al.Details,
+                    Severity = al.Severity,
+                    CreatedAt = al.CreatedAt,
+                    UpdatedAt = al.UpdatedAt
+                }).ToList();
+
+                return Ok(ApiResponse<List<AuditLogDto>>.SuccessResult(dtos));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<List<AuditLogDto>>.ErrorResult("Error getting audit history", ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// ✅ Phase 4.1 - Advanced Features: Thêm comment vào Inventory Check
+        /// </summary>
+        [HttpPost("{id}/comments")]
+        public async Task<ActionResult<ApiResponse<InventoryCheckCommentDto>>> AddComment(int id, [FromBody] CreateInventoryCheckCommentDto dto)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ApiResponse<InventoryCheckCommentDto>.ErrorResult("Invalid data", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage).ToList()));
+                }
+
+                if (id != dto.InventoryCheckId)
+                {
+                    return BadRequest(ApiResponse<InventoryCheckCommentDto>.ErrorResult("ID mismatch"));
+                }
+
+                // Verify check exists
+                var check = await _context.InventoryChecks
+                    .Where(ic => !ic.IsDeleted && ic.Id == id)
+                    .FirstOrDefaultAsync();
+                
+                if (check == null)
+                {
+                    return NotFound(ApiResponse<InventoryCheckCommentDto>.ErrorResult("Inventory check not found"));
+                }
+
+                // ✅ FIX: Validate CommentText không được empty sau khi trim
+                var commentText = dto.CommentText?.Trim() ?? string.Empty;
+                if (string.IsNullOrWhiteSpace(commentText))
+                {
+                    return BadRequest(ApiResponse<InventoryCheckCommentDto>.ErrorResult("Comment không được để trống"));
+                }
+
+                // Get current user
+                var currentUserId = User.FindFirst("sub")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                var currentUserName = User.FindFirst("name")?.Value ?? User.Identity?.Name ?? "System";
+
+                var comment = new Core.Entities.InventoryCheckComment
+                {
+                    InventoryCheckId = id,
+                    CommentText = commentText,
+                    CreatedByUserName = currentUserName,
+                    CreatedAt = DateTime.Now,
+                    IsDeleted = false
+                };
+
+                if (!string.IsNullOrEmpty(currentUserId) && int.TryParse(currentUserId, out var userId))
+                {
+                    comment.CreatedByEmployeeId = userId;
+                }
+
+                await _unitOfWork.InventoryCheckComments.AddAsync(comment);
+                await _unitOfWork.SaveChangesAsync();
+
+                // Reload with employee
+                var savedComment = await _context.InventoryCheckComments
+                    .AsNoTracking()
+                    .Where(c => !c.IsDeleted && c.Id == comment.Id)
+                    .Include(c => c.CreatedByEmployee)
+                    .FirstOrDefaultAsync();
+
+                if (savedComment == null)
+                {
+                    return StatusCode(500, ApiResponse<InventoryCheckCommentDto>.ErrorResult("Không thể tải lại thông tin comment sau khi tạo"));
+                }
+
+                var commentDto = new InventoryCheckCommentDto
+                {
+                    Id = savedComment.Id,
+                    InventoryCheckId = savedComment.InventoryCheckId,
+                    CommentText = savedComment.CommentText,
+                    CreatedByEmployeeId = savedComment.CreatedByEmployeeId,
+                    CreatedByEmployeeName = savedComment.CreatedByEmployee?.Name,
+                    CreatedByUserName = savedComment.CreatedByUserName,
+                    CreatedAt = savedComment.CreatedAt
+                };
+
+                // ✅ Phase 4.1 - Advanced Features: Log audit
+                // ✅ FIX: Check null/empty trước khi Substring
+                var auditCommentPreview = !string.IsNullOrEmpty(savedComment.CommentText) 
+                    ? (savedComment.CommentText.Length > 100 
+                        ? savedComment.CommentText.Substring(0, 100) + "..." 
+                        : savedComment.CommentText)
+                    : "(empty)";
+                await LogAuditAsync("InventoryCheckComment", savedComment.Id, "Create", 
+                    $"Thêm comment vào phiếu kiểm kê {check.Code}: {auditCommentPreview}", 
+                    "Info");
+
+                return CreatedAtAction(nameof(GetComments), new { id = id }, ApiResponse<InventoryCheckCommentDto>.SuccessResult(commentDto));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<InventoryCheckCommentDto>.ErrorResult("Error adding comment", ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// ✅ Phase 4.1 - Advanced Features: Lấy danh sách comments của Inventory Check (timeline)
+        /// </summary>
+        [HttpGet("{id}/comments")]
+        public async Task<ActionResult<ApiResponse<List<InventoryCheckCommentDto>>>> GetComments(int id)
+        {
+            try
+            {
+                // Verify check exists
+                var check = await _context.InventoryChecks
+                    .Where(ic => !ic.IsDeleted && ic.Id == id)
+                    .FirstOrDefaultAsync();
+                
+                if (check == null)
+                {
+                    return NotFound(ApiResponse<List<InventoryCheckCommentDto>>.ErrorResult("Inventory check not found"));
+                }
+
+                var comments = await _context.InventoryCheckComments
+                    .AsNoTracking()
+                    .Where(c => !c.IsDeleted && c.InventoryCheckId == id)
+                    .Include(c => c.CreatedByEmployee)
+                    .OrderByDescending(c => c.CreatedAt) // ✅ FIX: Timeline mới nhất trước (mới → cũ)
+                    .ToListAsync();
+
+                var dtos = comments.Select(c => new InventoryCheckCommentDto
+                {
+                    Id = c.Id,
+                    InventoryCheckId = c.InventoryCheckId,
+                    CommentText = c.CommentText,
+                    CreatedByEmployeeId = c.CreatedByEmployeeId,
+                    CreatedByEmployeeName = c.CreatedByEmployee?.Name,
+                    CreatedByUserName = c.CreatedByUserName,
+                    CreatedAt = c.CreatedAt
+                }).ToList();
+
+                return Ok(ApiResponse<List<InventoryCheckCommentDto>>.SuccessResult(dtos));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<List<InventoryCheckCommentDto>>.ErrorResult("Error getting comments", ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// ✅ Phase 4.1 - Advanced Features: Xóa comment (soft delete)
+        /// </summary>
+        [HttpDelete("{id}/comments/{commentId}")]
+        public async Task<ActionResult<ApiResponse<bool>>> DeleteComment(int id, int commentId)
+        {
+            try
+            {
+                var comment = await _context.InventoryCheckComments
+                    .Where(c => !c.IsDeleted && c.Id == commentId && c.InventoryCheckId == id)
+                    .FirstOrDefaultAsync();
+
+                if (comment == null)
+                {
+                    return NotFound(ApiResponse<bool>.ErrorResult("Comment not found"));
+                }
+
+                await _unitOfWork.InventoryCheckComments.DeleteAsync(comment);
+                await _unitOfWork.SaveChangesAsync();
+
+                // ✅ Phase 4.1 - Advanced Features: Log audit
+                await LogAuditAsync("InventoryCheckComment", commentId, "Delete", 
+                    $"Xóa comment khỏi phiếu kiểm kê ID {id}", 
+                    "Warning");
+
+                return Ok(ApiResponse<bool>.SuccessResult(true));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<bool>.ErrorResult("Error deleting comment", ex.Message));
+            }
         }
     }
 }

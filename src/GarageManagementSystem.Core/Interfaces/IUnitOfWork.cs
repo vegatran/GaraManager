@@ -47,6 +47,9 @@ namespace GarageManagementSystem.Core.Interfaces
         IGenericRepository<InventoryCheckItem> InventoryCheckItems { get; }
         IGenericRepository<InventoryAdjustment> InventoryAdjustments { get; }
         IGenericRepository<InventoryAdjustmentItem> InventoryAdjustmentItems { get; }
+        // ✅ Phase 4.1 - Advanced Features: Comments/Notes Timeline
+        IGenericRepository<InventoryCheckComment> InventoryCheckComments { get; }
+        IGenericRepository<InventoryAdjustmentComment> InventoryAdjustmentComments { get; }
         
         IGenericRepository<T> Repository<T>() where T : BaseEntity;
         Task<int> SaveChangesAsync();

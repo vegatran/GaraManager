@@ -17,3 +17,6 @@ update_duende_schema.sql
 /src/GarageManagementSystem.Infrastructure/Migrations/20251014103414_AddHasInvoiceToQuotationItem.cs
 /src/GarageManagementSystem.Infrastructure/Migrations/20251019153822_AddQuotationAttachmentAndInsurancePricing.cs
 /src/GarageManagementSystem.Infrastructure/Migrations/GarageDbContextModelSnapshot.cs
+src/GarageManagementSystem.Infrastructure/src/obj/
+src/GarageManagementSystem.IntegrationTests/bin/
+src/GarageManagementSystem.IntegrationTests/obj/

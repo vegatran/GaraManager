@@ -23,17 +23,20 @@ namespace GarageManagementSystem.API.Controllers
         private readonly IMapper _mapper;
         private readonly GarageManagementSystem.API.Services.ICacheService _cacheService;
         private readonly GarageDbContext _context;
+        private readonly ILogger<ServiceQuotationsController> _logger;
 
         public ServiceQuotationsController(
             IUnitOfWork unitOfWork, 
             IMapper mapper, 
             GarageManagementSystem.API.Services.ICacheService cacheService,
-            GarageDbContext context)
+            GarageDbContext context,
+            ILogger<ServiceQuotationsController> logger)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _cacheService = cacheService;
             _context = context;
+            _logger = logger;
         }
 
         [HttpGet]
@@ -87,16 +90,47 @@ namespace GarageManagementSystem.API.Controllers
                         .ThenInclude(item => item.Service)
                     .Include(q => q.Items)
                         .ThenInclude(item => item.Part)
+                    .AsNoTracking() // ✅ OPTIMIZED: Use AsNoTracking for read-only queries
                     .ToListAsync();
                 
-                var quotationDtos = pagedQuotations.Select(MapToDto).ToList();
+                // Filter out deleted items after loading
+                foreach (var quotation in pagedQuotations)
+                {
+                    if (quotation.Items != null)
+                    {
+                        quotation.Items = quotation.Items.Where(i => !i.IsDeleted).ToList();
+                    }
+                }
+                
+                var quotationDtos = pagedQuotations.Select(q => 
+                {
+                    try
+                    {
+                        return MapToDto(q);
+                    }
+                    catch (Exception mapEx)
+                    {
+                        _logger?.LogError(mapEx, "Error mapping quotation {QuotationId}: {Message}", q.Id, mapEx.Message);
+                        // Return a basic DTO if mapping fails
+                        return new ServiceQuotationDto
+                        {
+                            Id = q.Id,
+                            QuotationNumber = q.QuotationNumber ?? "N/A",
+                            Status = q.Status ?? "Unknown",
+                            TotalAmount = q.TotalAmount
+                        };
+                    }
+                }).ToList();
                 
                 return Ok(PagedResponse<ServiceQuotationDto>.CreateSuccessResult(
                     quotationDtos, pageNumber, pageSize, totalCount, "Service quotations retrieved successfully"));
             }
             catch (Exception ex)
             {
-                return StatusCode(500, PagedResponse<ServiceQuotationDto>.CreateErrorResult("Lỗi khi lấy danh sách báo giá"));
+                // Log exception details for debugging
+                _logger?.LogError(ex, "Error retrieving service quotations: {Message}", ex.Message);
+                var errorMessage = ex.InnerException != null ? ex.InnerException.Message : ex.Message;
+                return StatusCode(500, PagedResponse<ServiceQuotationDto>.CreateErrorResult($"Lỗi khi lấy danh sách báo giá: {errorMessage}"));
             }
         }
 

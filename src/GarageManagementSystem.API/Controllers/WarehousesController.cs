@@ -308,6 +308,310 @@ namespace GarageManagementSystem.API.Controllers
             return Ok(ApiResponse<WarehouseDto>.SuccessResult(_mapper.Map<WarehouseDto>(warehouse)));
         }
 
+        /// <summary>
+        /// ✅ Phase 4.1 - Advanced Features: Bulk update Warehouses
+        /// </summary>
+        [HttpPost("bulk-update")]
+        public async Task<ActionResult<ApiResponse<BulkOperationResultDto>>> BulkUpdateWarehouses([FromBody] BulkUpdateWarehousesDto dto)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                    return BadRequest(ApiResponse<BulkOperationResultDto>.ErrorResult("Invalid data"));
+
+                if (dto.WarehouseIds == null || !dto.WarehouseIds.Any())
+                    return BadRequest(ApiResponse<BulkOperationResultDto>.ErrorResult("Phải chọn ít nhất 1 kho"));
+
+                var result = new BulkOperationResultDto();
+
+                // Load warehouses cần update (query hiệu quả)
+                var warehouseIds = dto.WarehouseIds.Distinct().ToList();
+                var warehouses = await _context.Warehouses
+                    .Where(w => !w.IsDeleted && warehouseIds.Contains(w.Id))
+                    .ToListAsync();
+
+                if (!warehouses.Any())
+                    return BadRequest(ApiResponse<BulkOperationResultDto>.ErrorResult("Không tìm thấy kho nào"));
+
+                await _unitOfWork.BeginTransactionAsync();
+
+                try
+                {
+                    // ✅ FIX: Optimize - Query các warehouse cần unset IsDefault 1 lần trước loop
+                    // Chỉ query nếu có warehouse nào được set IsDefault = true
+                    var warehousesToUnsetDefault = new List<Core.Entities.Warehouse>();
+                    if (dto.IsDefault.HasValue && dto.IsDefault.Value)
+                    {
+                        warehousesToUnsetDefault = await _context.Warehouses
+                            .Where(w => !w.IsDeleted && !warehouseIds.Contains(w.Id) && w.IsDefault)
+                            .ToListAsync();
+                    }
+
+                    // ✅ FIX: Nếu set IsDefault = true cho nhiều warehouses, chỉ set cho warehouse đầu tiên
+                    // và unset các warehouse khác trong danh sách
+                    var isFirstDefaultWarehouse = true;
+                    
+                    foreach (var warehouse in warehouses)
+                    {
+                        try
+                        {
+                            // Update các fields nếu có giá trị
+                            if (dto.IsActive.HasValue)
+                                warehouse.IsActive = dto.IsActive.Value;
+
+                            if (dto.IsDefault.HasValue)
+                            {
+                                // Nếu set IsDefault = true, unset các warehouse khác (chỉ 1 lần)
+                                if (dto.IsDefault.Value && isFirstDefaultWarehouse)
+                                {
+                                    // Unset các warehouse khác ngoài danh sách
+                                    foreach (var other in warehousesToUnsetDefault)
+                                    {
+                                        other.IsDefault = false;
+                                        await _unitOfWork.Warehouses.UpdateAsync(other);
+                                    }
+                                    
+                                    // Unset các warehouse khác trong danh sách (trừ warehouse đầu tiên)
+                                    foreach (var other in warehouses.Skip(1))
+                                    {
+                                        other.IsDefault = false;
+                                    }
+                                    
+                                    isFirstDefaultWarehouse = false;
+                                }
+                                
+                                // Chỉ set IsDefault = true cho warehouse đầu tiên nếu có nhiều warehouses
+                                warehouse.IsDefault = dto.IsDefault.Value && (warehouses.Count == 1 || warehouse == warehouses.First());
+                            }
+
+                            await _unitOfWork.Warehouses.UpdateAsync(warehouse);
+                            result.SuccessIds.Add(warehouse.Id);
+                            result.SuccessCount++;
+                        }
+                        catch (Exception ex)
+                        {
+                            result.Errors.Add($"Kho {warehouse.Code}: {ex.Message}");
+                            result.FailedIds.Add(warehouse.Id);
+                            result.FailureCount++;
+                        }
+                    }
+
+                    await _unitOfWork.SaveChangesAsync();
+                    await _unitOfWork.CommitTransactionAsync();
+
+                    return Ok(ApiResponse<BulkOperationResultDto>.SuccessResult(result, 
+                        $"Đã cập nhật {result.SuccessCount} kho thành công" + 
+                        (result.FailureCount > 0 ? $", {result.FailureCount} kho thất bại" : "")));
+                }
+                catch
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    throw;
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<BulkOperationResultDto>.ErrorResult("Error updating warehouses", ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// ✅ Phase 4.1 - Advanced Features: Bulk update Warehouse Zones
+        /// </summary>
+        [HttpPost("zones/bulk-update")]
+        public async Task<ActionResult<ApiResponse<BulkOperationResultDto>>> BulkUpdateWarehouseZones([FromBody] BulkUpdateWarehouseZonesDto dto)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                    return BadRequest(ApiResponse<BulkOperationResultDto>.ErrorResult("Invalid data"));
+
+                if (dto.ZoneIds == null || !dto.ZoneIds.Any())
+                    return BadRequest(ApiResponse<BulkOperationResultDto>.ErrorResult("Phải chọn ít nhất 1 khu vực"));
+
+                var result = new BulkOperationResultDto();
+
+                // Load zones cần update (query hiệu quả)
+                var zoneIds = dto.ZoneIds.Distinct().ToList();
+                var zones = await _context.WarehouseZones
+                    .Where(z => !z.IsDeleted && zoneIds.Contains(z.Id))
+                    .ToListAsync();
+
+                if (!zones.Any())
+                    return BadRequest(ApiResponse<BulkOperationResultDto>.ErrorResult("Không tìm thấy khu vực nào"));
+
+                await _unitOfWork.BeginTransactionAsync();
+
+                try
+                {
+                    foreach (var zone in zones)
+                    {
+                        try
+                        {
+                            // Update các fields nếu có giá trị
+                            if (dto.IsActive.HasValue)
+                                zone.IsActive = dto.IsActive.Value;
+
+                            await _unitOfWork.WarehouseZones.UpdateAsync(zone);
+                            result.SuccessIds.Add(zone.Id);
+                            result.SuccessCount++;
+                        }
+                        catch (Exception ex)
+                        {
+                            result.Errors.Add($"Khu vực {zone.Code}: {ex.Message}");
+                            result.FailedIds.Add(zone.Id);
+                            result.FailureCount++;
+                        }
+                    }
+
+                    await _unitOfWork.SaveChangesAsync();
+                    await _unitOfWork.CommitTransactionAsync();
+
+                    return Ok(ApiResponse<BulkOperationResultDto>.SuccessResult(result, 
+                        $"Đã cập nhật {result.SuccessCount} khu vực thành công" + 
+                        (result.FailureCount > 0 ? $", {result.FailureCount} khu vực thất bại" : "")));
+                }
+                catch
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    throw;
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<BulkOperationResultDto>.ErrorResult("Error updating zones", ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// ✅ Phase 4.1 - Advanced Features: Bulk update Warehouse Bins
+        /// </summary>
+        [HttpPost("bins/bulk-update")]
+        public async Task<ActionResult<ApiResponse<BulkOperationResultDto>>> BulkUpdateWarehouseBins([FromBody] BulkUpdateWarehouseBinsDto dto)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                    return BadRequest(ApiResponse<BulkOperationResultDto>.ErrorResult("Invalid data"));
+
+                if (dto.BinIds == null || !dto.BinIds.Any())
+                    return BadRequest(ApiResponse<BulkOperationResultDto>.ErrorResult("Phải chọn ít nhất 1 kệ"));
+
+                var result = new BulkOperationResultDto();
+
+                // Load bins cần update (query hiệu quả)
+                var binIds = dto.BinIds.Distinct().ToList();
+                var bins = await _context.WarehouseBins
+                    .Where(b => !b.IsDeleted && binIds.Contains(b.Id))
+                    .ToListAsync();
+
+                if (!bins.Any())
+                    return BadRequest(ApiResponse<BulkOperationResultDto>.ErrorResult("Không tìm thấy kệ nào"));
+
+                await _unitOfWork.BeginTransactionAsync();
+
+                try
+                {
+                    // ✅ FIX: Batch load các bins cần unset IsDefault để tránh N+1 query
+                    var binsToUnsetDefault = new Dictionary<(int WarehouseId, int? WarehouseZoneId), List<Core.Entities.WarehouseBin>>();
+                    if (dto.IsDefault.HasValue && dto.IsDefault.Value)
+                    {
+                        // Group bins by (WarehouseId, ZoneId) để query hiệu quả
+                        var binGroups = bins.GroupBy(b => (b.WarehouseId, b.WarehouseZoneId)).ToList();
+                        foreach (var group in binGroups)
+                        {
+                            var otherBins = await _context.WarehouseBins
+                                .Where(b => !b.IsDeleted && 
+                                    b.WarehouseId == group.Key.WarehouseId &&
+                                    (group.Key.WarehouseZoneId == null ? b.WarehouseZoneId == null : b.WarehouseZoneId == group.Key.WarehouseZoneId) &&
+                                    !binIds.Contains(b.Id) &&
+                                    b.IsDefault)
+                                .ToListAsync();
+                            
+                            if (otherBins.Any())
+                            {
+                                binsToUnsetDefault[group.Key] = otherBins;
+                            }
+                        }
+                    }
+
+                    foreach (var bin in bins)
+                    {
+                        try
+                        {
+                            // Update các fields nếu có giá trị
+                            if (dto.IsActive.HasValue)
+                                bin.IsActive = dto.IsActive.Value;
+
+                            if (dto.IsDefault.HasValue)
+                            {
+                                // Nếu set IsDefault = true, unset các bin khác trong cùng warehouse/zone
+                                if (dto.IsDefault.Value)
+                                {
+                                    var key = (bin.WarehouseId, bin.WarehouseZoneId);
+                                    if (binsToUnsetDefault.TryGetValue(key, out var otherBins))
+                                    {
+                                        foreach (var other in otherBins)
+                                        {
+                                            other.IsDefault = false;
+                                            await _unitOfWork.WarehouseBins.UpdateAsync(other);
+                                        }
+                                    }
+                                    
+                                    // Unset các bin khác trong danh sách (trừ bin đầu tiên trong group)
+                                    var sameGroupBins = bins.Where(b => 
+                                        b.WarehouseId == bin.WarehouseId &&
+                                        (bin.WarehouseZoneId == null ? b.WarehouseZoneId == null : b.WarehouseZoneId == bin.WarehouseZoneId) &&
+                                        b.Id != bin.Id).ToList();
+                                    
+                                    foreach (var other in sameGroupBins)
+                                    {
+                                        other.IsDefault = false;
+                                    }
+                                }
+                                
+                                // Chỉ set IsDefault = true cho bin đầu tiên trong group nếu có nhiều bins
+                                var sameGroupBinsList = bins.Where(b => 
+                                    b.WarehouseId == bin.WarehouseId &&
+                                    (bin.WarehouseZoneId == null ? b.WarehouseZoneId == null : b.WarehouseZoneId == bin.WarehouseZoneId))
+                                    .ToList();
+                                
+                                var isFirstInGroup = sameGroupBinsList.Any() && sameGroupBinsList.First() == bin;
+                                
+                                bin.IsDefault = dto.IsDefault.Value && isFirstInGroup;
+                            }
+
+                            await _unitOfWork.WarehouseBins.UpdateAsync(bin);
+                            result.SuccessIds.Add(bin.Id);
+                            result.SuccessCount++;
+                        }
+                        catch (Exception ex)
+                        {
+                            result.Errors.Add($"Kệ {bin.Code}: {ex.Message}");
+                            result.FailedIds.Add(bin.Id);
+                            result.FailureCount++;
+                        }
+                    }
+
+                    await _unitOfWork.SaveChangesAsync();
+                    await _unitOfWork.CommitTransactionAsync();
+
+                    return Ok(ApiResponse<BulkOperationResultDto>.SuccessResult(result, 
+                        $"Đã cập nhật {result.SuccessCount} kệ thành công" + 
+                        (result.FailureCount > 0 ? $", {result.FailureCount} kệ thất bại" : "")));
+                }
+                catch
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    throw;
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<BulkOperationResultDto>.ErrorResult("Error updating bins", ex.Message));
+            }
+        }
+
         [HttpDelete("{id}")]
         public async Task<ActionResult<ApiResponse>> DeleteWarehouse(int id)
         {

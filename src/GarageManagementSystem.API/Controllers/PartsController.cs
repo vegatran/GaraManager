@@ -42,6 +42,11 @@ namespace GarageManagementSystem.API.Controllers
         {
             try
             {
+                // ✅ FIX: Validate pagination parameters
+                if (pageSize <= 0) pageSize = 10;
+                if (pageNumber <= 0) pageNumber = 1;
+                if (pageSize > 100) pageSize = 100; // Giới hạn max để tránh performance issues
+                
                 // ✅ OPTIMIZED: Query ở database level thay vì load tất cả vào memory
                 var query = _context.Parts
                     .Include(p => p.PartUnits.Where(u => !u.IsDeleted))
@@ -346,6 +351,256 @@ namespace GarageManagementSystem.API.Controllers
             catch (Exception ex)
             {
                 return StatusCode(500, ApiResponse.ErrorResult("Error", ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// ✅ Phase 4.1 - Advanced Features: Bulk update Parts
+        /// </summary>
+        [HttpPost("bulk-update")]
+        public async Task<ActionResult<ApiResponse<BulkOperationResultDto>>> BulkUpdateParts([FromBody] BulkUpdatePartsDto dto)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                    return BadRequest(ApiResponse<BulkOperationResultDto>.ErrorResult("Invalid data"));
+
+                if (dto.PartIds == null || !dto.PartIds.Any())
+                    return BadRequest(ApiResponse<BulkOperationResultDto>.ErrorResult("Phải chọn ít nhất 1 phụ tùng"));
+
+                var result = new BulkOperationResultDto();
+
+                // Load tất cả parts cần update (query hiệu quả)
+                var partIds = dto.PartIds.Distinct().ToList();
+                var parts = await _context.Parts
+                    .Where(p => !p.IsDeleted && partIds.Contains(p.Id))
+                    .ToListAsync();
+
+                if (!parts.Any())
+                    return BadRequest(ApiResponse<BulkOperationResultDto>.ErrorResult("Không tìm thấy phụ tùng nào"));
+
+                // Validate warehouse nếu có
+                if (dto.WarehouseId.HasValue)
+                {
+                    var warehouseExists = await _context.Warehouses
+                        .AnyAsync(w => !w.IsDeleted && w.Id == dto.WarehouseId.Value);
+                    if (!warehouseExists)
+                        return BadRequest(ApiResponse<BulkOperationResultDto>.ErrorResult("Kho không tồn tại"));
+                }
+
+                // ✅ FIX: Batch load zones và bins để tránh N+1 query problem
+                var zoneIdsToValidate = new HashSet<int>();
+                var binIdsToValidate = new HashSet<int>();
+                
+                // Collect zone và bin IDs cần validate
+                if (dto.WarehouseZoneId.HasValue)
+                    zoneIdsToValidate.Add(dto.WarehouseZoneId.Value);
+                
+                if (dto.WarehouseBinId.HasValue)
+                    binIdsToValidate.Add(dto.WarehouseBinId.Value);
+                
+                // Collect zone và bin IDs từ parts hiện tại (nếu cần validate relationship)
+                // NOTE: Part entity không có WarehouseZoneId và WarehouseBinId properties
+                // foreach (var part in parts)
+                // {
+                //     if (part.WarehouseZoneId.HasValue)
+                //         zoneIdsToValidate.Add(part.WarehouseZoneId.Value);
+                //     if (part.WarehouseBinId.HasValue)
+                //         binIdsToValidate.Add(part.WarehouseBinId.Value);
+                // }
+                
+                // Batch load zones và bins
+                var zonesDict = zoneIdsToValidate.Any()
+                    ? (await _context.WarehouseZones
+                        .Where(z => !z.IsDeleted && zoneIdsToValidate.Contains(z.Id))
+                        .ToListAsync())
+                        .ToDictionary(z => z.Id)
+                    : new Dictionary<int, Core.Entities.WarehouseZone>();
+                
+                var binsDict = binIdsToValidate.Any()
+                    ? (await _context.WarehouseBins
+                        .Where(b => !b.IsDeleted && binIdsToValidate.Contains(b.Id))
+                        .ToListAsync())
+                        .ToDictionary(b => b.Id)
+                    : new Dictionary<int, Core.Entities.WarehouseBin>();
+
+                // Validate zone nếu có
+                if (dto.WarehouseZoneId.HasValue)
+                {
+                    if (!zonesDict.ContainsKey(dto.WarehouseZoneId.Value))
+                        return BadRequest(ApiResponse<BulkOperationResultDto>.ErrorResult("Khu vực không tồn tại"));
+                }
+
+                // Validate bin nếu có
+                if (dto.WarehouseBinId.HasValue)
+                {
+                    if (!binsDict.ContainsKey(dto.WarehouseBinId.Value))
+                        return BadRequest(ApiResponse<BulkOperationResultDto>.ErrorResult("Kệ không tồn tại"));
+                }
+
+                await _unitOfWork.BeginTransactionAsync();
+
+                try
+                {
+                    foreach (var part in parts)
+                    {
+                        try
+                        {
+                            // Update các fields nếu có giá trị
+                            // ✅ FIX: Validate MinimumStock và ReorderLevel cùng lúc để đảm bảo logic đúng
+                            var newMinimumStock = dto.MinimumStock ?? part.MinimumStock;
+                            var newReorderLevel = dto.ReorderLevel ?? part.ReorderLevel;
+
+                            if (dto.MinimumStock.HasValue)
+                            {
+                                if (dto.MinimumStock.Value < 0)
+                                {
+                                    result.Errors.Add($"Phụ tùng {part.PartNumber ?? "N/A"} (ID: {part.Id}): MinimumStock không được âm");
+                                    result.FailedIds.Add(part.Id);
+                                    result.FailureCount++;
+                                    continue;
+                                }
+                                part.MinimumStock = dto.MinimumStock.Value;
+                            }
+
+                            if (dto.ReorderLevel.HasValue)
+                            {
+                                // ✅ FIX: Check với giá trị MinimumStock mới (nếu có update) hoặc giá trị hiện tại
+                                if (dto.ReorderLevel.Value < newMinimumStock)
+                                {
+                                    result.Errors.Add($"Phụ tùng {part.PartNumber ?? "N/A"} (ID: {part.Id}): ReorderLevel ({dto.ReorderLevel.Value}) phải >= MinimumStock ({newMinimumStock})");
+                                    result.FailedIds.Add(part.Id);
+                                    result.FailureCount++;
+                                    continue;
+                                }
+                                part.ReorderLevel = dto.ReorderLevel.Value;
+                            }
+
+                            if (!string.IsNullOrWhiteSpace(dto.Category))
+                                part.Category = dto.Category.Trim();
+
+                            if (!string.IsNullOrWhiteSpace(dto.Brand))
+                                part.Brand = dto.Brand.Trim();
+
+                            // NOTE: Part entity không có WarehouseId, WarehouseZoneId, WarehouseBinId properties
+                            // Warehouse/Zone/Bin information should be stored in StockTransaction or separate PartLocation table
+                            // if (dto.WarehouseId.HasValue)
+                            // {
+                            //     part.WarehouseId = dto.WarehouseId.Value;
+                            //     ...
+                            // }
+
+                            if (dto.IsActive.HasValue)
+                                part.IsActive = dto.IsActive.Value;
+
+                            await _unitOfWork.Parts.UpdateAsync(part);
+                            result.SuccessIds.Add(part.Id);
+                            result.SuccessCount++;
+                        }
+                        catch (Exception ex)
+                        {
+                            result.Errors.Add($"Phụ tùng {part.PartNumber ?? "N/A"} (ID: {part.Id}): {ex.Message}");
+                            result.FailedIds.Add(part.Id);
+                            result.FailureCount++;
+                        }
+                    }
+
+                    await _unitOfWork.SaveChangesAsync();
+                    await _unitOfWork.CommitTransactionAsync();
+
+                    // ✅ FIX: Invalidate cache với try-catch để không ảnh hưởng đến response nếu có lỗi
+                    try
+                    {
+                        await _cacheService.RemoveByPrefixAsync("parts_");
+                    }
+                    catch (Exception cacheEx)
+                    {
+                        // Log cache error nhưng không throw để không ảnh hưởng đến response
+                        // Cache sẽ được invalidate ở lần request tiếp theo hoặc có thể retry sau
+                    }
+
+                    return Ok(ApiResponse<BulkOperationResultDto>.SuccessResult(result, 
+                        $"Đã cập nhật {result.SuccessCount} phụ tùng thành công" + 
+                        (result.FailureCount > 0 ? $", {result.FailureCount} phụ tùng thất bại" : "")));
+                }
+                catch
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    throw;
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<BulkOperationResultDto>.ErrorResult("Error updating parts", ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// ✅ Phase 4.1 - Advanced Features: Bulk delete Parts
+        /// </summary>
+        [HttpPost("bulk-delete")]
+        public async Task<ActionResult<ApiResponse<BulkOperationResultDto>>> BulkDeleteParts([FromBody] BulkDeletePartsDto dto)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                    return BadRequest(ApiResponse<BulkOperationResultDto>.ErrorResult("Invalid data"));
+
+                if (dto.PartIds == null || !dto.PartIds.Any())
+                    return BadRequest(ApiResponse<BulkOperationResultDto>.ErrorResult("Phải chọn ít nhất 1 phụ tùng"));
+
+                var result = new BulkOperationResultDto();
+
+                // Load tất cả parts cần delete (query hiệu quả)
+                var partIds = dto.PartIds.Distinct().ToList();
+                var parts = await _context.Parts
+                    .Where(p => !p.IsDeleted && partIds.Contains(p.Id))
+                    .ToListAsync();
+
+                if (!parts.Any())
+                    return BadRequest(ApiResponse<BulkOperationResultDto>.ErrorResult("Không tìm thấy phụ tùng nào"));
+
+                await _unitOfWork.BeginTransactionAsync();
+
+                try
+                {
+                    foreach (var part in parts)
+                    {
+                        try
+                        {
+                            // Check nếu part đang được sử dụng (có thể check trong ServiceOrderParts, StockTransactions, etc.)
+                            // Tạm thời cho phép delete, có thể thêm validation sau
+                            await _unitOfWork.Parts.DeleteAsync(part);
+                            result.SuccessIds.Add(part.Id);
+                            result.SuccessCount++;
+                        }
+                        catch (Exception ex)
+                        {
+                            result.Errors.Add($"Phụ tùng {part.PartNumber ?? "N/A"} (ID: {part.Id}): {ex.Message}");
+                            result.FailedIds.Add(part.Id);
+                            result.FailureCount++;
+                        }
+                    }
+
+                    await _unitOfWork.SaveChangesAsync();
+                    await _unitOfWork.CommitTransactionAsync();
+
+                    // Invalidate cache
+                    await _cacheService.RemoveByPrefixAsync("parts_");
+
+                    return Ok(ApiResponse<BulkOperationResultDto>.SuccessResult(result, 
+                        $"Đã xóa {result.SuccessCount} phụ tùng thành công" + 
+                        (result.FailureCount > 0 ? $", {result.FailureCount} phụ tùng thất bại" : "")));
+                }
+                catch
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    throw;
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<BulkOperationResultDto>.ErrorResult("Error deleting parts", ex.Message));
             }
         }
 

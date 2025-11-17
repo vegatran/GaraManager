@@ -1,8 +1,10 @@
 using GarageManagementSystem.Core.Entities;
 using GarageManagementSystem.Core.Interfaces;
+using GarageManagementSystem.Infrastructure.Data;
 using GarageManagementSystem.Shared.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.Reflection;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,10 +20,12 @@ namespace GarageManagementSystem.API.Controllers
     public class SetupController : ControllerBase
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly GarageDbContext _context;
 
-        public SetupController(IUnitOfWork unitOfWork)
+        public SetupController(IUnitOfWork unitOfWork, GarageDbContext context)
         {
             _unitOfWork = unitOfWork;
+            _context = context;
         }
 
         /// <summary>
@@ -44,7 +48,12 @@ namespace GarageManagementSystem.API.Controllers
                     quotationCount = await _unitOfWork.ServiceQuotations.CountAsync(),
                     orderCount = await _unitOfWork.ServiceOrders.CountAsync(),
                     paymentCount = await _unitOfWork.PaymentTransactions.CountAsync(),
-                    appointmentCount = await _unitOfWork.Appointments.CountAsync()
+                    appointmentCount = await _unitOfWork.Appointments.CountAsync(),
+                    warehouseCount = await _unitOfWork.Warehouses.CountAsync(),
+                    warehouseZoneCount = await _unitOfWork.WarehouseZones.CountAsync(),
+                    warehouseBinCount = await _unitOfWork.WarehouseBins.CountAsync(),
+                    inventoryCheckCount = await _unitOfWork.InventoryChecks.CountAsync(),
+                    inventoryAdjustmentCount = await _unitOfWork.InventoryAdjustments.CountAsync()
                 };
 
                 return Ok(ApiResponse<object>.SuccessResult(counts));
@@ -71,6 +80,9 @@ namespace GarageManagementSystem.API.Controllers
                     "services" => await CreateServicesAsync(),
                     "parts" => await CreatePartsAsync(),
                     "suppliers" => await CreateSuppliersAsync(),
+                    "warehouses" => await CreateWarehousesAsync(),
+                    "inventorychecks" => await CreateInventoryChecksAsync(),
+                    "inventoryadjustments" => await CreateInventoryAdjustmentsAsync(),
                     "inspections" => await CreateInspectionsAsync(),
                     "quotations" => await CreateQuotationsAsync(),
                     "orders" => await CreateServiceOrdersAsync(),
@@ -140,8 +152,11 @@ namespace GarageManagementSystem.API.Controllers
                 await RunModuleAsync("vehicles", CreateVehiclesAsync);
                 await RunModuleAsync("employees", CreateEmployeesAsync);
                 await RunModuleAsync("services", CreateServicesAsync);
+                await RunModuleAsync("warehouses", CreateWarehousesAsync);
                 await RunModuleAsync("parts", CreatePartsAsync);
                 await RunModuleAsync("suppliers", CreateSuppliersAsync);
+                await RunModuleAsync("inventorychecks", CreateInventoryChecksAsync);
+                await RunModuleAsync("inventoryadjustments", CreateInventoryAdjustmentsAsync);
                 await RunModuleAsync("inspections", CreateInspectionsAsync);
                 await RunModuleAsync("quotations", CreateQuotationsAsync);
                 await RunModuleAsync("orders", CreateServiceOrdersAsync);
@@ -203,6 +218,13 @@ namespace GarageManagementSystem.API.Controllers
             await ClearAsync("Services", _unitOfWork.Services);
             await ClearAsync("Parts", _unitOfWork.Parts);
             await ClearAsync("Suppliers", _unitOfWork.Suppliers);
+            await ClearAsync("InventoryAdjustmentItems", _unitOfWork.InventoryAdjustmentItems);
+            await ClearAsync("InventoryAdjustments", _unitOfWork.InventoryAdjustments);
+            await ClearAsync("InventoryCheckItems", _unitOfWork.InventoryCheckItems);
+            await ClearAsync("InventoryChecks", _unitOfWork.InventoryChecks);
+            await ClearAsync("WarehouseBins", _unitOfWork.WarehouseBins);
+            await ClearAsync("WarehouseZones", _unitOfWork.WarehouseZones);
+            await ClearAsync("Warehouses", _unitOfWork.Warehouses);
 
                 await _unitOfWork.SaveChangesAsync();
             return summary;
@@ -582,6 +604,8 @@ namespace GarageManagementSystem.API.Controllers
                     Description = "Dầu động cơ tổng hợp 5W-30, 4 lít",
                     Category = "Dầu nhớt",
                     Brand = "Castrol",
+                    Sku = "OIL-5W30-001",
+                    Barcode = "1234567890123",
                     CostPrice = 350000,
                     AverageCostPrice = 350000,
                     SellPrice = 450000,
@@ -604,6 +628,8 @@ namespace GarageManagementSystem.API.Controllers
                     Description = "Lọc dầu động cơ chính hãng",
                     Category = "Lọc",
                     Brand = "Bosch",
+                    Sku = "FILTER-OIL-001",
+                    Barcode = "1234567890124",
                     CostPrice = 80000,
                     AverageCostPrice = 80000,
                     SellPrice = 120000,
@@ -626,6 +652,8 @@ namespace GarageManagementSystem.API.Controllers
                     Description = "Má phanh trước chính hãng",
                     Category = "Phanh",
                     Brand = "Brembo",
+                    Sku = "BRAKE-FRONT-001",
+                    Barcode = "1234567890125",
                     CostPrice = 450000,
                     AverageCostPrice = 450000,
                     SellPrice = 650000,
@@ -648,6 +676,8 @@ namespace GarageManagementSystem.API.Controllers
                     Description = "Bugi đánh lửa iridium",
                     Category = "Bugi",
                     Brand = "NGK",
+                    Sku = "SPARK-IRIDIUM-001",
+                    Barcode = "1234567890126",
                     CostPrice = 120000,
                     AverageCostPrice = 120000,
                     SellPrice = 180000,
@@ -670,6 +700,8 @@ namespace GarageManagementSystem.API.Controllers
                     Description = "Lọc gió động cơ cao cấp",
                     Category = "Lọc",
                     Brand = "Mann",
+                    Sku = "AIR-FILTER-001",
+                    Barcode = "1234567890127",
                     CostPrice = 95000,
                     AverageCostPrice = 95000,
                     SellPrice = 140000,
@@ -692,6 +724,8 @@ namespace GarageManagementSystem.API.Controllers
                     Description = "Lốp xe radial 195/65R15",
                     Category = "Lốp",
                     Brand = "Michelin",
+                    Sku = "TIRE-195-65R15-001",
+                    Barcode = "1234567890128",
                     CostPrice = 1200000,
                     AverageCostPrice = 1200000,
                     SellPrice = 1800000,
@@ -714,6 +748,8 @@ namespace GarageManagementSystem.API.Controllers
                     Description = "Dung dịch làm mát động cơ",
                     Category = "Dung dịch",
                     Brand = "Prestone",
+                    Sku = "COOLANT-4L-001",
+                    Barcode = "1234567890129",
                     CostPrice = 180000,
                     AverageCostPrice = 180000,
                     SellPrice = 250000,
@@ -736,6 +772,8 @@ namespace GarageManagementSystem.API.Controllers
                     Description = "Ắc quy khô 12V 60Ah",
                     Category = "Điện",
                     Brand = "Varta",
+                    Sku = "BATTERY-12V-60AH-001",
+                    Barcode = "1234567890130",
                     CostPrice = 2200000,
                     AverageCostPrice = 2200000,
                     SellPrice = 3200000,
@@ -855,6 +893,336 @@ namespace GarageManagementSystem.API.Controllers
             await _unitOfWork.SaveChangesAsync();
 
             return new { success = true, count = suppliers.Length, message = $"Đã tạo {suppliers.Length} nhà cung cấp" };
+        }
+
+        private async Task<object> CreateWarehousesAsync()
+        {
+            // Select chỉ Code từ database, đưa vào HashSet trong memory
+            var existingWarehouseCodes = (await _context.Warehouses
+                .Where(w => !w.IsDeleted)
+                .Select(w => w.Code)
+                .ToListAsync()).ToHashSet();
+
+            var warehousesToCreate = new List<Core.Entities.Warehouse>();
+
+            // Kiểm tra và tạo WH-001 nếu chưa tồn tại
+            if (!existingWarehouseCodes.Contains("WH-001"))
+            {
+                warehousesToCreate.Add(new Core.Entities.Warehouse
+                {
+                    Code = "WH-001",
+                    Name = "Kho Chính",
+                    Description = "Kho chính của garage, lưu trữ phụ tùng và linh kiện chính",
+                    Address = "123 Đường ABC, Quận 1, TP.HCM",
+                    ManagerName = "Nguyễn Văn A",
+                    PhoneNumber = "0123456789",
+                    IsDefault = true,
+                    IsActive = true
+                });
+            }
+
+            // Kiểm tra và tạo WH-002 nếu chưa tồn tại
+            if (!existingWarehouseCodes.Contains("WH-002"))
+            {
+                warehousesToCreate.Add(new Core.Entities.Warehouse
+                {
+                    Code = "WH-002",
+                    Name = "Kho Phụ",
+                    Description = "Kho phụ lưu trữ phụ tùng dự phòng và hàng tồn kho",
+                    Address = "456 Đường XYZ, Quận 2, TP.HCM",
+                    ManagerName = "Trần Văn B",
+                    PhoneNumber = "0987654321",
+                    IsDefault = false,
+                    IsActive = true
+                });
+            }
+
+            // Nếu tạo warehouse mới với IsDefault = true, set IsDefault = false cho các warehouse khác
+            if (warehousesToCreate.Any(w => w.IsDefault))
+            {
+                // Select chỉ Id và IsDefault để update
+                var defaultWarehouseIds = await _context.Warehouses
+                    .Where(w => !w.IsDeleted && w.IsDefault)
+                    .Select(w => w.Id)
+                    .ToListAsync();
+                
+                foreach (var id in defaultWarehouseIds)
+                {
+                    var wh = await _unitOfWork.Warehouses.GetByIdAsync(id);
+                    if (wh != null)
+                    {
+                        wh.IsDefault = false;
+                        await _unitOfWork.Warehouses.UpdateAsync(wh);
+                    }
+                }
+            }
+
+            // Tạo warehouses mới
+            foreach (var warehouse in warehousesToCreate)
+            {
+                await _unitOfWork.Warehouses.AddAsync(warehouse);
+            }
+            
+            if (warehousesToCreate.Any() || (warehousesToCreate.Any(w => w.IsDefault) && await _context.Warehouses.AnyAsync(w => !w.IsDeleted && w.IsDefault)))
+            {
+                await _unitOfWork.SaveChangesAsync();
+            }
+
+            // Lấy warehouses để có ID (query trực tiếp trong DB)
+            var mainWarehouse = await _unitOfWork.Warehouses.FirstOrDefaultAsync(w => w.Code == "WH-001");
+            var subWarehouse = await _unitOfWork.Warehouses.FirstOrDefaultAsync(w => w.Code == "WH-002");
+
+            // Kiểm tra nếu không tìm thấy warehouses
+            if (mainWarehouse == null && subWarehouse == null)
+            {
+                return new { success = false, message = "Không thể tạo hoặc tìm thấy warehouses" };
+            }
+
+            // Select chỉ WarehouseId và Code từ database, đưa vào HashSet trong memory
+            var existingZoneKeys = (await _context.WarehouseZones
+                .Where(z => !z.IsDeleted)
+                .Select(z => new { z.WarehouseId, z.Code })
+                .ToListAsync())
+                .Select(z => (z.WarehouseId, z.Code))
+                .ToHashSet();
+
+            // Tạo Warehouse Zones
+            var zones = new List<Core.Entities.WarehouseZone>();
+
+            if (mainWarehouse != null)
+            {
+                var zoneData = new[]
+                {
+                    new { Code = "ZONE-A", Name = "Khu A - Phụ Tùng Động Cơ", Description = "Khu vực lưu trữ phụ tùng động cơ", Order = 1 },
+                    new { Code = "ZONE-B", Name = "Khu B - Phụ Tùng Gầm Xe", Description = "Khu vực lưu trữ phụ tùng gầm xe, phanh, lốp", Order = 2 },
+                    new { Code = "ZONE-C", Name = "Khu C - Dầu Nhớt & Hóa Chất", Description = "Khu vực lưu trữ dầu nhớt, hóa chất bảo dưỡng", Order = 3 }
+                };
+
+                foreach (var zoneInfo in zoneData)
+                {
+                    var zoneKey = (mainWarehouse.Id, zoneInfo.Code);
+                    if (!existingZoneKeys.Contains(zoneKey))
+                    {
+                        zones.Add(new Core.Entities.WarehouseZone
+                        {
+                            WarehouseId = mainWarehouse.Id,
+                            Code = zoneInfo.Code,
+                            Name = zoneInfo.Name,
+                            Description = zoneInfo.Description,
+                            DisplayOrder = zoneInfo.Order,
+                            IsActive = true
+                        });
+                    }
+                }
+            }
+
+            if (subWarehouse != null)
+            {
+                var zoneKey = (subWarehouse.Id, "ZONE-1");
+                if (!existingZoneKeys.Contains(zoneKey))
+                {
+                    zones.Add(new Core.Entities.WarehouseZone
+                    {
+                        WarehouseId = subWarehouse.Id,
+                        Code = "ZONE-1",
+                        Name = "Khu 1 - Hàng Tồn Kho",
+                        Description = "Khu vực lưu trữ hàng tồn kho",
+                        DisplayOrder = 1,
+                        IsActive = true
+                    });
+                }
+            }
+
+            if (zones.Any())
+            {
+                foreach (var zone in zones)
+                {
+                    await _unitOfWork.WarehouseZones.AddAsync(zone);
+                }
+                await _unitOfWork.SaveChangesAsync();
+            }
+
+            // Lấy zones để có ID (query trực tiếp trong DB)
+            var zoneA = mainWarehouse != null ? await _unitOfWork.WarehouseZones.FirstOrDefaultAsync(z => z.WarehouseId == mainWarehouse.Id && z.Code == "ZONE-A") : null;
+            var zoneB = mainWarehouse != null ? await _unitOfWork.WarehouseZones.FirstOrDefaultAsync(z => z.WarehouseId == mainWarehouse.Id && z.Code == "ZONE-B") : null;
+            var zoneC = mainWarehouse != null ? await _unitOfWork.WarehouseZones.FirstOrDefaultAsync(z => z.WarehouseId == mainWarehouse.Id && z.Code == "ZONE-C") : null;
+            var zone1 = subWarehouse != null ? await _unitOfWork.WarehouseZones.FirstOrDefaultAsync(z => z.WarehouseId == subWarehouse.Id && z.Code == "ZONE-1") : null;
+
+            // Select chỉ WarehouseId và Code từ database, đưa vào HashSet trong memory
+            var existingBinKeys = (await _context.WarehouseBins
+                .Where(b => !b.IsDeleted)
+                .Select(b => new { b.WarehouseId, b.Code })
+                .ToListAsync())
+                .Select(b => (b.WarehouseId, b.Code))
+                .ToHashSet();
+
+            // Tạo Warehouse Bins
+            var bins = new List<Core.Entities.WarehouseBin>();
+
+            if (mainWarehouse != null)
+            {
+                // Bins trong Khu A
+                if (zoneA != null)
+                {
+                    var binData = new[]
+                    {
+                        new { Code = "BIN-A1", Name = "Kệ A1 - Bugi & Dây Điện", Description = "Kệ A1 lưu trữ bugi và dây điện", Capacity = 100m },
+                        new { Code = "BIN-A2", Name = "Kệ A2 - Lọc Dầu & Lọc Gió", Description = "Kệ A2 lưu trữ lọc dầu và lọc gió", Capacity = 150m }
+                    };
+
+                    foreach (var binInfo in binData)
+                    {
+                        var binKey = (mainWarehouse.Id, binInfo.Code);
+                        if (!existingBinKeys.Contains(binKey))
+                        {
+                            bins.Add(new Core.Entities.WarehouseBin
+                            {
+                                WarehouseId = mainWarehouse.Id,
+                                WarehouseZoneId = zoneA.Id,
+                                Code = binInfo.Code,
+                                Name = binInfo.Name,
+                                Description = binInfo.Description,
+                                Capacity = binInfo.Capacity,
+                                IsDefault = false,
+                                IsActive = true
+                            });
+                        }
+                    }
+                }
+
+                // Bins trong Khu B
+                if (zoneB != null)
+                {
+                    var binData = new[]
+                    {
+                        new { Code = "BIN-B1", Name = "Kệ B1 - Lốp Xe", Description = "Kệ B1 lưu trữ lốp xe các loại", Capacity = 200m },
+                        new { Code = "BIN-B2", Name = "Kệ B2 - Phanh & Đĩa Phanh", Description = "Kệ B2 lưu trữ phanh và đĩa phanh", Capacity = 80m }
+                    };
+
+                    foreach (var binInfo in binData)
+                    {
+                        var binKey = (mainWarehouse.Id, binInfo.Code);
+                        if (!existingBinKeys.Contains(binKey))
+                        {
+                            bins.Add(new Core.Entities.WarehouseBin
+                            {
+                                WarehouseId = mainWarehouse.Id,
+                                WarehouseZoneId = zoneB.Id,
+                                Code = binInfo.Code,
+                                Name = binInfo.Name,
+                                Description = binInfo.Description,
+                                Capacity = binInfo.Capacity,
+                                IsDefault = false,
+                                IsActive = true
+                            });
+                        }
+                    }
+                }
+
+                // Bins trong Khu C
+                if (zoneC != null)
+                {
+                    var binKey = (mainWarehouse.Id, "BIN-C1");
+                    if (!existingBinKeys.Contains(binKey))
+                    {
+                        bins.Add(new Core.Entities.WarehouseBin
+                        {
+                            WarehouseId = mainWarehouse.Id,
+                            WarehouseZoneId = zoneC.Id,
+                            Code = "BIN-C1",
+                            Name = "Kệ C1 - Dầu Nhớt",
+                            Description = "Kệ C1 lưu trữ dầu nhớt các loại",
+                            Capacity = 300,
+                            IsDefault = false,
+                            IsActive = true
+                        });
+                    }
+                }
+
+                // Bins trực thuộc Kho Chính (không qua Zone)
+                var mainBinData = new[]
+                {
+                    new { Code = "BIN-MAIN-1", Name = "Kệ Chính 1 - Hàng Nhanh", Description = "Kệ chính lưu trữ hàng bán nhanh", Capacity = 100m, IsDefault = true },
+                    new { Code = "BIN-MAIN-2", Name = "Kệ Chính 2 - Hàng Tồn", Description = "Kệ chính lưu trữ hàng tồn kho", Capacity = 150m, IsDefault = false }
+                };
+
+                foreach (var binInfo in mainBinData)
+                {
+                    var binKey = (mainWarehouse.Id, binInfo.Code);
+                    if (!existingBinKeys.Contains(binKey))
+                    {
+                        bins.Add(new Core.Entities.WarehouseBin
+                        {
+                            WarehouseId = mainWarehouse.Id,
+                            WarehouseZoneId = null,
+                            Code = binInfo.Code,
+                            Name = binInfo.Name,
+                            Description = binInfo.Description,
+                            Capacity = binInfo.Capacity,
+                            IsDefault = binInfo.IsDefault,
+                            IsActive = true
+                        });
+                    }
+                }
+            }
+
+            if (subWarehouse != null)
+            {
+                // Bins trong Khu 1
+                if (zone1 != null)
+                {
+                    var binKey = (subWarehouse.Id, "BIN-P1");
+                    if (!existingBinKeys.Contains(binKey))
+                    {
+                        bins.Add(new Core.Entities.WarehouseBin
+                        {
+                            WarehouseId = subWarehouse.Id,
+                            WarehouseZoneId = zone1.Id,
+                            Code = "BIN-P1",
+                            Name = "Kệ Phụ 1",
+                            Description = "Kệ phụ 1 trong kho phụ",
+                            Capacity = 100,
+                            IsDefault = false,
+                            IsActive = true
+                        });
+                    }
+                }
+
+                // Bins trực thuộc Kho Phụ (không qua Zone)
+                var binKeyMain = (subWarehouse.Id, "BIN-P-MAIN");
+                if (!existingBinKeys.Contains(binKeyMain))
+                {
+                    bins.Add(new Core.Entities.WarehouseBin
+                    {
+                        WarehouseId = subWarehouse.Id,
+                        WarehouseZoneId = null,
+                        Code = "BIN-P-MAIN",
+                        Name = "Kệ Chính Kho Phụ",
+                        Description = "Kệ chính trong kho phụ",
+                        Capacity = 120,
+                        IsDefault = true,
+                        IsActive = true
+                    });
+                }
+            }
+
+            if (bins.Any())
+            {
+                foreach (var bin in bins)
+                {
+                    await _unitOfWork.WarehouseBins.AddAsync(bin);
+                }
+                await _unitOfWork.SaveChangesAsync();
+            }
+
+            return new 
+            { 
+                success = true, 
+                count = warehousesToCreate.Count, 
+                zoneCount = zones.Count,
+                binCount = bins.Count,
+                message = $"Đã tạo {warehousesToCreate.Count} kho, {zones.Count} khu vực, {bins.Count} kệ" 
+            };
         }
 
         private async Task<object> CreateInspectionsAsync()
@@ -1045,6 +1413,13 @@ namespace GarageManagementSystem.API.Controllers
 
             // Tạo QuotationItems cho từng quotation
             var quotationsList = quotations.ToList();
+            
+            // ✅ FIX: Check bounds trước khi access array index
+            if (quotationsList.Count < 3)
+            {
+                return new { success = false, message = "Không đủ quotations để tạo items (cần ít nhất 3)" };
+            }
+            
             var quotationItems = new List<Core.Entities.QuotationItem>();
 
             // Quotation 1 - Personal
@@ -1224,6 +1599,13 @@ namespace GarageManagementSystem.API.Controllers
 
             // Tạo ServiceOrderItems và ServiceOrderParts cho từng order
             var ordersList = serviceOrders.ToList();
+            
+            // ✅ FIX: Check bounds trước khi access array index
+            if (ordersList.Count < 3)
+            {
+                return new { success = false, message = "Không đủ service orders để tạo items (cần ít nhất 3)" };
+            }
+            
             var orderItems = new List<Core.Entities.ServiceOrderItem>();
             var orderParts = new List<Core.Entities.ServiceOrderPart>();
 
@@ -1519,6 +1901,724 @@ namespace GarageManagementSystem.API.Controllers
             await _unitOfWork.SaveChangesAsync();
 
             return new { success = true, count = appointments.Length, message = $"Đã tạo {appointments.Length} lịch hẹn" };
+        }
+
+        /// <summary>
+        /// ✅ Phase 4.1: Tạo demo data cho Inventory Checks
+        /// </summary>
+        private async Task<object> CreateInventoryChecksAsync()
+        {
+            // Lấy dữ liệu cần thiết
+            var warehouses = await _context.Warehouses
+                .Where(w => !w.IsDeleted)
+                .Include(w => w.Zones.Where(z => !z.IsDeleted))
+                .Include(w => w.Bins.Where(b => !b.IsDeleted && b.WarehouseZoneId == null))
+                .ToListAsync();
+
+            var parts = await _context.Parts
+                .Where(p => !p.IsDeleted && p.IsActive)
+                .Take(20) // Lấy 20 parts đầu tiên
+                .ToListAsync();
+
+            var employees = await _context.Employees
+                .Where(e => !e.IsDeleted && e.Status == "Active")
+                .Take(3)
+                .ToListAsync();
+
+            if (!warehouses.Any() || !parts.Any() || !employees.Any())
+            {
+                return new { success = false, message = "Cần có warehouses, parts và employees trước khi tạo inventory checks" };
+            }
+
+            // ✅ FIX: Safe access với FirstOrDefault và null check
+            var mainWarehouse = warehouses.FirstOrDefault(w => w.IsDefault) ?? warehouses.FirstOrDefault();
+            if (mainWarehouse == null)
+            {
+                return new { success = false, message = "Không tìm thấy warehouse nào" };
+            }
+            var zoneA = mainWarehouse.Zones?.FirstOrDefault(z => z.Code == "ZONE-A");
+            var bin1 = zoneA?.Bins?.FirstOrDefault() ?? mainWarehouse.Bins?.FirstOrDefault();
+
+            // Kiểm tra existing codes để tránh duplicate
+            var existingCodes = (await _context.InventoryChecks
+                .Where(ic => !ic.IsDeleted)
+                .Select(ic => ic.Code)
+                .ToListAsync()).ToHashSet();
+
+            var year = DateTime.Now.Year;
+            var checks = new List<Core.Entities.InventoryCheck>();
+
+            // 1. Inventory Check - Draft (nháp, chưa bắt đầu)
+            var check0Code = $"IK-{year}-001";
+            if (!existingCodes.Contains(check0Code))
+            {
+                var check0 = new Core.Entities.InventoryCheck
+                {
+                    Code = check0Code,
+                    Name = "Kiểm kê kho chính - Dự kiến tháng sau",
+                    WarehouseId = mainWarehouse.Id,
+                    WarehouseZoneId = zoneA?.Id,
+                    CheckDate = DateTime.Now.AddDays(7),
+                    Status = "Draft",
+                    Notes = "Phiếu kiểm kê dự kiến, chưa bắt đầu"
+                };
+                checks.Add(check0);
+            }
+
+            // 2. Inventory Check - InProgress (đang kiểm kê)
+            var check1Code = $"IK-{year}-002";
+            if (!existingCodes.Contains(check1Code))
+            {
+                var check1 = new Core.Entities.InventoryCheck
+                {
+                    Code = check1Code,
+                    Name = "Kiểm kê kho chính - Tháng 1",
+                    WarehouseId = mainWarehouse.Id,
+                    WarehouseZoneId = zoneA?.Id,
+                    WarehouseBinId = bin1?.Id,
+                    CheckDate = DateTime.Now.AddDays(-2),
+                    Status = "InProgress",
+                    StartedByEmployeeId = employees.FirstOrDefault()?.Id ?? throw new InvalidOperationException("Không có employees để tạo inventory check"),
+                    StartedDate = DateTime.Now.AddDays(-2).AddHours(9),
+                    Notes = "Kiểm kê định kỳ tháng 1, đang trong quá trình kiểm kê"
+                };
+                checks.Add(check1);
+            }
+
+            // 3. Inventory Check - Completed (có discrepancies)
+            var check2Code = $"IK-{year}-003";
+            if (!existingCodes.Contains(check2Code))
+            {
+                var check2 = new Core.Entities.InventoryCheck
+                {
+                    Code = check2Code,
+                    Name = "Kiểm kê kho chính - Tháng 12",
+                    WarehouseId = mainWarehouse.Id,
+                    WarehouseZoneId = zoneA?.Id,
+                    CheckDate = DateTime.Now.AddDays(-10),
+                    Status = "Completed",
+                    StartedByEmployeeId = employees.FirstOrDefault()?.Id ?? throw new InvalidOperationException("Không có employees để tạo inventory check"),
+                    StartedDate = DateTime.Now.AddDays(-10).AddHours(9),
+                    CompletedByEmployeeId = employees.Count > 1 ? employees[1].Id : employees.FirstOrDefault()?.Id,
+                    CompletedDate = DateTime.Now.AddDays(-10).AddHours(15),
+                    Notes = "Kiểm kê tháng 12, phát hiện một số chênh lệch"
+                };
+                checks.Add(check2);
+            }
+
+            // 4. Inventory Check - Completed (không có discrepancies)
+            var check3Code = $"IK-{year}-004";
+            if (!existingCodes.Contains(check3Code))
+            {
+                var check3 = new Core.Entities.InventoryCheck
+                {
+                    Code = check3Code,
+                    Name = "Kiểm kê kho phụ",
+                    WarehouseId = warehouses.Count > 1 ? warehouses[1].Id : mainWarehouse.Id,
+                    CheckDate = DateTime.Now.AddDays(-5),
+                    Status = "Completed",
+                    StartedByEmployeeId = employees.Count > 1 ? employees[1].Id : employees.FirstOrDefault()?.Id,
+                    StartedDate = DateTime.Now.AddDays(-5).AddHours(8),
+                    CompletedByEmployeeId = employees.Count > 1 ? employees[1].Id : employees.FirstOrDefault()?.Id,
+                    CompletedDate = DateTime.Now.AddDays(-5).AddHours(12),
+                    Notes = "Kiểm kê kho phụ, không có chênh lệch"
+                };
+                checks.Add(check3);
+            }
+
+            // 5. Inventory Check - InProgress (mới bắt đầu)
+            var check4Code = $"IK-{year}-005";
+            if (!existingCodes.Contains(check4Code))
+            {
+                var check4 = new Core.Entities.InventoryCheck
+                {
+                    Code = check4Code,
+                    Name = "Kiểm kê kho chính - Tháng hiện tại",
+                    WarehouseId = mainWarehouse.Id,
+                    WarehouseZoneId = zoneA?.Id,
+                    WarehouseBinId = bin1?.Id,
+                    CheckDate = DateTime.Now,
+                    Status = "InProgress",
+                    StartedByEmployeeId = employees.FirstOrDefault()?.Id ?? throw new InvalidOperationException("Không có employees để tạo inventory check"),
+                    StartedDate = DateTime.Now.AddHours(-2),
+                    Notes = "Kiểm kê tháng hiện tại, đang tiến hành"
+                };
+                checks.Add(check4);
+            }
+
+            // Tạo checks
+            foreach (var check in checks)
+            {
+                await _unitOfWork.InventoryChecks.AddAsync(check);
+            }
+            await _unitOfWork.SaveChangesAsync();
+
+            // Reload checks để có IDs
+            var createdChecks = await _context.InventoryChecks
+                .Where(ic => checks.Select(c => c.Code).Contains(ic.Code))
+                .ToListAsync();
+
+            // Tạo items cho các checks
+            var allItems = new List<Core.Entities.InventoryCheckItem>();
+
+            // Check 0 (Draft) - chưa có items (đúng quy trình)
+            // Không tạo items cho check này
+
+            // Check 1 (InProgress) - một số items đã kiểm
+            var check1ForItems = createdChecks.FirstOrDefault(c => c.Code == check1Code);
+            if (check1ForItems != null && parts.Count >= 5)
+            {
+                for (int i = 0; i < 5; i++)
+                {
+                    var part = parts[i];
+                    var systemQty = part.QuantityInStock;
+                    var actualQty = systemQty + (i % 2 == 0 ? 0 : (i == 1 ? -2 : 1)); // Một số có chênh lệch
+                    allItems.Add(new Core.Entities.InventoryCheckItem
+                    {
+                        InventoryCheckId = check1ForItems.Id,
+                        PartId = part.Id,
+                        SystemQuantity = systemQty,
+                        ActualQuantity = actualQty,
+                        DiscrepancyQuantity = actualQty - systemQty,
+                        IsDiscrepancy = actualQty != systemQty,
+                        Notes = actualQty != systemQty ? "Phát hiện chênh lệch" : null
+                    });
+                }
+            }
+
+            // Check 2 (Completed với discrepancies) - nhiều items có chênh lệch
+            // ✅ FIX: Tạo 10 items để đủ cho 3 adjustments (adj1: 5, adj2: 3, adj3: 2)
+            var check2ForItems = createdChecks.FirstOrDefault(c => c.Code == check2Code);
+            if (check2ForItems != null && parts.Count >= 10)
+            {
+                for (int i = 0; i < 10; i++)
+                {
+                    var part = parts[i];
+                    var systemQty = part.QuantityInStock;
+                    // Tạo các scenarios khác nhau: thiếu, thừa, đúng
+                    // ✅ FIX: Đảm bảo có đủ 10 items có discrepancy để chia cho 3 adjustments
+                    var actualQtyRaw = i switch
+                    {
+                        0 => systemQty - 5,  // Thiếu 5
+                        1 => systemQty + 3,  // Thừa 3
+                        2 => systemQty - 2,  // Thiếu 2
+                        3 => systemQty + 1,  // Thừa 1 (thay vì đúng)
+                        4 => systemQty + 1,  // Thừa 1
+                        5 => systemQty - 10, // Thiếu nhiều
+                        6 => systemQty - 3,  // Thiếu 3 (thay vì đúng)
+                        7 => systemQty + 2,  // Thừa 2
+                        8 => systemQty - 4,  // Thiếu 4 (cho adj3)
+                        9 => systemQty + 5,  // Thừa 5 (cho adj3)
+                        _ => systemQty       // Default: không chênh lệch
+                    };
+                    // ✅ FIX: Đảm bảo ActualQuantity không âm (tối thiểu = 0)
+                    var actualQty = Math.Max(0, actualQtyRaw);
+                    allItems.Add(new Core.Entities.InventoryCheckItem
+                    {
+                        InventoryCheckId = check2ForItems.Id,
+                        PartId = part.Id,
+                        SystemQuantity = systemQty,
+                        ActualQuantity = actualQty,
+                        DiscrepancyQuantity = actualQty - systemQty,
+                        IsDiscrepancy = actualQty != systemQty,
+                        Notes = actualQty != systemQty 
+                            ? (actualQty < systemQty ? $"Thiếu {systemQty - actualQty} sản phẩm" : $"Thừa {actualQty - systemQty} sản phẩm")
+                            : null
+                    });
+                }
+            }
+
+            // Check 3 (Completed không có discrepancies)
+            var check3ForItems = createdChecks.FirstOrDefault(c => c.Code == check3Code);
+            if (check3ForItems != null && parts.Count >= 5)
+            {
+                for (int i = 5; i < Math.Min(10, parts.Count); i++)
+                {
+                    var part = parts[i];
+                    var systemQty = part.QuantityInStock;
+                    allItems.Add(new Core.Entities.InventoryCheckItem
+                    {
+                        InventoryCheckId = check3ForItems.Id,
+                        PartId = part.Id,
+                        SystemQuantity = systemQty,
+                        ActualQuantity = systemQty,
+                        DiscrepancyQuantity = 0,
+                        IsDiscrepancy = false,
+                        Notes = "Không có chênh lệch"
+                    });
+                }
+            }
+
+            // Check 4 (InProgress mới bắt đầu) - chưa có items
+            // Không tạo items cho check này để demo trạng thái mới bắt đầu
+
+            // Tạo items
+            foreach (var item in allItems)
+            {
+                await _unitOfWork.InventoryCheckItems.AddAsync(item);
+            }
+            await _unitOfWork.SaveChangesAsync();
+
+            return new 
+            { 
+                success = true, 
+                checkCount = checks.Count, 
+                itemCount = allItems.Count,
+                message = $"Đã tạo {checks.Count} phiếu kiểm kê với {allItems.Count} items" 
+            };
+        }
+
+        /// <summary>
+        /// ✅ Phase 4.1: Tạo demo data cho Inventory Adjustments
+        /// </summary>
+        private async Task<object> CreateInventoryAdjustmentsAsync()
+        {
+            // Lấy completed inventory checks có discrepancies
+            var completedChecks = await _context.InventoryChecks
+                .Where(ic => !ic.IsDeleted && ic.Status == "Completed")
+                .Include(ic => ic.Items.Where(i => !i.IsDeleted && i.IsDiscrepancy && !i.IsAdjusted))
+                .ThenInclude(i => i.Part)
+                .ToListAsync();
+
+            if (!completedChecks.Any())
+            {
+                return new { success = false, message = "Không có inventory checks completed với discrepancies để tạo adjustments" };
+            }
+
+            var employees = await _context.Employees
+                .Where(e => !e.IsDeleted && e.Status == "Active")
+                .Take(2)
+                .ToListAsync();
+
+            if (!employees.Any())
+            {
+                return new { success = false, message = "Cần có employees để tạo adjustments" };
+            }
+
+            // Kiểm tra existing codes
+            var existingCodes = (await _context.InventoryAdjustments
+                .Where(ia => !ia.IsDeleted)
+                .Select(ia => ia.AdjustmentNumber)
+                .ToListAsync()).ToHashSet();
+
+            var year = DateTime.Now.Year;
+            var adjustments = new List<Core.Entities.InventoryAdjustment>();
+            var allAdjustmentItems = new List<Core.Entities.InventoryAdjustmentItem>();
+
+            // 1. Adjustment từ check 2 (Pending - chờ duyệt)
+            // ✅ FIX: Tìm check2 bằng code "003" (check2Code = IK-YYYY-003)
+            var yearForCheck = DateTime.Now.Year;
+            var check2Code = $"IK-{yearForCheck}-003";
+            var check2 = completedChecks.FirstOrDefault(c => c.Code == check2Code);
+            if (check2 != null)
+            {
+                var discrepancyItems = check2.Items.Where(i => i.IsDiscrepancy && !i.IsAdjusted).Take(5).ToList();
+                if (discrepancyItems.Any())
+                {
+                    var adj1Code = $"ADJ-{year}-001";
+                    if (!existingCodes.Contains(adj1Code))
+                    {
+                        var adjustment1 = new Core.Entities.InventoryAdjustment
+                        {
+                            AdjustmentNumber = adj1Code,
+                            InventoryCheckId = check2.Id,
+                            WarehouseId = check2.WarehouseId,
+                            WarehouseZoneId = check2.WarehouseZoneId,
+                            WarehouseBinId = check2.WarehouseBinId,
+                            AdjustmentDate = DateTime.Now.AddDays(-8),
+                            Status = "Pending",
+                            Reason = "Điều chỉnh tồn kho sau kiểm kê tháng 12",
+                            Notes = "Phát hiện một số chênh lệch trong quá trình kiểm kê"
+                        };
+                        adjustments.Add(adjustment1);
+                    }
+                }
+            }
+
+            // 2. Adjustment từ check 2 (Approved - đã duyệt)
+            if (check2 != null)
+            {
+                var remainingItems = check2.Items.Where(i => i.IsDiscrepancy && !i.IsAdjusted).Skip(5).Take(3).ToList();
+                if (remainingItems.Any())
+                {
+                    var adj2Code = $"ADJ-{year}-002";
+                    if (!existingCodes.Contains(adj2Code))
+                    {
+                        var adjustment2 = new Core.Entities.InventoryAdjustment
+                        {
+                            AdjustmentNumber = adj2Code,
+                            InventoryCheckId = check2.Id,
+                            WarehouseId = check2.WarehouseId,
+                            WarehouseZoneId = check2.WarehouseZoneId,
+                            WarehouseBinId = check2.WarehouseBinId,
+                            AdjustmentDate = DateTime.Now.AddDays(-7),
+                            Status = "Approved",
+                            Reason = "Điều chỉnh tồn kho - đã được duyệt",
+                            Notes = "Điều chỉnh các items còn lại",
+                            ApprovedByEmployeeId = employees.First().Id,
+                            ApprovedAt = DateTime.Now.AddDays(-7).AddHours(2)
+                        };
+                        adjustments.Add(adjustment2);
+                    }
+                }
+            }
+
+            // 3. Adjustment từ check 2 (Rejected - bị từ chối)
+            // ✅ FIX: check2 có 8 items (0-7), adj1 lấy 5 items (0-4), adj2 lấy 3 items (5-7)
+            // Không còn items nào cho adj3, nên sẽ không tạo adj3 nếu không đủ items
+            if (check2 != null)
+            {
+                // Reload check2 với items để đảm bảo có đủ items
+                var check2WithItems = await _context.InventoryChecks
+                    .Where(ic => ic.Id == check2.Id)
+                    .Include(ic => ic.Items.Where(i => !i.IsDeleted && i.IsDiscrepancy && !i.IsAdjusted))
+                    .ThenInclude(i => i.Part)
+                    .FirstOrDefaultAsync();
+                
+                if (check2WithItems != null)
+                {
+                    check2 = check2WithItems;
+                }
+                
+                var remainingItemsForReject = check2.Items.Where(i => i.IsDiscrepancy && !i.IsAdjusted).Skip(8).Take(2).ToList();
+                if (remainingItemsForReject.Any())
+                {
+                    var adj3Code = $"ADJ-{year}-003";
+                    if (!existingCodes.Contains(adj3Code))
+                    {
+                        var adjustment3 = new Core.Entities.InventoryAdjustment
+                        {
+                            AdjustmentNumber = adj3Code,
+                            InventoryCheckId = check2.Id,
+                            WarehouseId = check2.WarehouseId,
+                            WarehouseZoneId = check2.WarehouseZoneId,
+                            WarehouseBinId = check2.WarehouseBinId,
+                            AdjustmentDate = DateTime.Now.AddDays(-6),
+                            Status = "Rejected",
+                            Reason = "Điều chỉnh tồn kho - bị từ chối",
+                            Notes = "Điều chỉnh không hợp lý, cần kiểm tra lại",
+                            RejectionReason = "Số lượng chênh lệch quá lớn, cần kiểm tra lại thực tế"
+                        };
+                        adjustments.Add(adjustment3);
+                    }
+                }
+            }
+
+            // 4. Manual Adjustment (không từ check)
+            var adj4Code = $"ADJ-{year}-004";
+            if (!existingCodes.Contains(adj4Code))
+            {
+                var mainWarehouse = await _context.Warehouses
+                    .Where(w => !w.IsDeleted && w.IsDefault)
+                    .FirstOrDefaultAsync() ?? await _context.Warehouses.Where(w => !w.IsDeleted).FirstOrDefaultAsync();
+
+                if (mainWarehouse != null)
+                {
+                    var parts = await _context.Parts
+                        .Where(p => !p.IsDeleted && p.IsActive && p.QuantityInStock > 0)
+                        .Take(3)
+                        .ToListAsync();
+
+                    if (parts.Any())
+                    {
+                        var adjustment4 = new Core.Entities.InventoryAdjustment
+                        {
+                            AdjustmentNumber = adj4Code,
+                            InventoryCheckId = null,
+                            WarehouseId = mainWarehouse.Id,
+                            AdjustmentDate = DateTime.Now.AddDays(-3),
+                            Status = "Pending",
+                            Reason = "Điều chỉnh thủ công - hàng hỏng",
+                            Notes = "Phát hiện hàng hỏng trong kho, cần điều chỉnh"
+                        };
+                        adjustments.Add(adjustment4);
+                    }
+                }
+            }
+
+            // Tạo adjustments
+            foreach (var adjustment in adjustments)
+            {
+                await _unitOfWork.InventoryAdjustments.AddAsync(adjustment);
+            }
+            await _unitOfWork.SaveChangesAsync();
+
+            // Reload adjustments để có IDs
+            var createdAdjustments = await _context.InventoryAdjustments
+                .Where(ia => adjustments.Select(a => a.AdjustmentNumber).Contains(ia.AdjustmentNumber))
+                .ToListAsync();
+
+            // ✅ FIX: Reload check2 với items để đảm bảo có đủ items và Part data
+            if (check2 != null)
+            {
+                check2 = await _context.InventoryChecks
+                    .Where(ic => ic.Id == check2.Id)
+                    .Include(ic => ic.Items.Where(i => !i.IsDeleted && i.IsDiscrepancy && !i.IsAdjusted))
+                    .ThenInclude(i => i.Part)
+                    .FirstOrDefaultAsync();
+            }
+
+            // Tạo items cho adjustments
+            var adj1 = createdAdjustments.FirstOrDefault(a => a.AdjustmentNumber.Contains("001"));
+            if (adj1 != null && check2 != null)
+            {
+                var itemsForAdj1 = check2.Items.Where(i => i.IsDiscrepancy && !i.IsAdjusted).Take(5).ToList();
+                foreach (var checkItem in itemsForAdj1)
+                {
+                    var part = checkItem.Part;
+                    if (part == null) continue;
+
+                    // ✅ FIX: Sử dụng SystemQuantity từ check item (giá trị tại thời điểm check)
+                    var qtyChange = checkItem.DiscrepancyQuantity;
+                    var systemQtyBefore = checkItem.SystemQuantity;
+                    var systemQtyAfter = Math.Max(0, checkItem.ActualQuantity); // ✅ FIX: Đảm bảo không âm
+
+                    var adjItem = new Core.Entities.InventoryAdjustmentItem
+                    {
+                        InventoryAdjustmentId = adj1.Id,
+                        PartId = part.Id,
+                        InventoryCheckItemId = checkItem.Id,
+                        QuantityChange = qtyChange,
+                        SystemQuantityBefore = systemQtyBefore,
+                        SystemQuantityAfter = systemQtyAfter,
+                        Notes = $"Điều chỉnh từ kiểm kê {check2.Code}"
+                    };
+                    allAdjustmentItems.Add(adjItem);
+                }
+            }
+
+            var adj2 = createdAdjustments.FirstOrDefault(a => a.AdjustmentNumber.Contains("002"));
+            if (adj2 != null && check2 != null)
+            {
+                var itemsForAdj2 = check2.Items.Where(i => i.IsDiscrepancy && !i.IsAdjusted).Skip(5).Take(3).ToList();
+                foreach (var checkItem in itemsForAdj2)
+                {
+                    var part = checkItem.Part;
+                    if (part == null) continue;
+
+                    // ✅ FIX: Sử dụng SystemQuantity từ check item (giá trị tại thời điểm check)
+                    var qtyChange = checkItem.DiscrepancyQuantity;
+                    var systemQtyBefore = checkItem.SystemQuantity;
+                    var systemQtyAfter = Math.Max(0, checkItem.ActualQuantity); // ✅ FIX: Đảm bảo không âm
+
+                    var adjItem = new Core.Entities.InventoryAdjustmentItem
+                    {
+                        InventoryAdjustmentId = adj2.Id,
+                        PartId = part.Id,
+                        InventoryCheckItemId = checkItem.Id,
+                        QuantityChange = qtyChange,
+                        SystemQuantityBefore = systemQtyBefore,
+                        SystemQuantityAfter = systemQtyAfter,
+                        Notes = $"Điều chỉnh từ kiểm kê {check2.Code} - đã duyệt"
+                    };
+                    allAdjustmentItems.Add(adjItem);
+                }
+            }
+
+            var adj3 = createdAdjustments.FirstOrDefault(a => a.AdjustmentNumber.Contains("003"));
+            if (adj3 != null && check2 != null)
+            {
+                var itemsForAdj3 = check2.Items.Where(i => i.IsDiscrepancy && !i.IsAdjusted).Skip(8).Take(2).ToList();
+                foreach (var checkItem in itemsForAdj3)
+                {
+                    var part = checkItem.Part;
+                    if (part == null) continue;
+
+                    var qtyChange = checkItem.DiscrepancyQuantity;
+                    var systemQtyBefore = checkItem.SystemQuantity;
+                    var systemQtyAfter = Math.Max(0, checkItem.ActualQuantity); // ✅ FIX: Đảm bảo không âm
+
+                    var adjItem = new Core.Entities.InventoryAdjustmentItem
+                    {
+                        InventoryAdjustmentId = adj3.Id,
+                        PartId = part.Id,
+                        InventoryCheckItemId = checkItem.Id,
+                        QuantityChange = qtyChange,
+                        SystemQuantityBefore = systemQtyBefore,
+                        SystemQuantityAfter = systemQtyAfter,
+                        Notes = $"Điều chỉnh từ kiểm kê {check2.Code} - bị từ chối"
+                    };
+                    allAdjustmentItems.Add(adjItem);
+                }
+            }
+
+            var adj4 = createdAdjustments.FirstOrDefault(a => a.AdjustmentNumber.Contains("004"));
+            if (adj4 != null)
+            {
+                var parts = await _context.Parts
+                    .Where(p => !p.IsDeleted && p.IsActive && p.QuantityInStock > 0)
+                    .Take(3)
+                    .ToListAsync();
+
+                foreach (var part in parts)
+                {
+                    var qtyChange = -2; // Giảm 2 do hỏng
+                    var systemQtyBefore = part.QuantityInStock;
+                    var systemQtyAfter = Math.Max(0, systemQtyBefore + qtyChange);
+
+                    var adjItem = new Core.Entities.InventoryAdjustmentItem
+                    {
+                        InventoryAdjustmentId = adj3.Id,
+                        PartId = part.Id,
+                        InventoryCheckItemId = null, // Manual adjustment
+                        QuantityChange = qtyChange,
+                        SystemQuantityBefore = systemQtyBefore,
+                        SystemQuantityAfter = systemQtyAfter,
+                        Notes = "Hàng hỏng, cần loại bỏ"
+                    };
+                    allAdjustmentItems.Add(adjItem);
+                }
+            }
+
+            // Tạo adjustment items
+            foreach (var item in allAdjustmentItems)
+            {
+                await _unitOfWork.InventoryAdjustmentItems.AddAsync(item);
+            }
+            await _unitOfWork.SaveChangesAsync();
+
+            // Update check items để link với adjustment items
+            // ✅ Lưu ý: Chỉ mark IsAdjusted = true cho Pending và Approved, không mark cho Rejected
+            if (adj1 != null && check2 != null)
+            {
+                var adj1Items = await _context.InventoryAdjustmentItems
+                    .Where(iai => iai.InventoryAdjustmentId == adj1.Id)
+                    .ToListAsync();
+                
+                foreach (var adjItem in adj1Items)
+                {
+                    if (adjItem.InventoryCheckItemId.HasValue)
+                    {
+                        var checkItem = await _unitOfWork.InventoryCheckItems.GetByIdAsync(adjItem.InventoryCheckItemId.Value);
+                        if (checkItem != null)
+                        {
+                            checkItem.InventoryAdjustmentItemId = adjItem.Id;
+                            // ✅ Pending adjustment: Không mark IsAdjusted = true (chờ duyệt)
+                            // checkItem.IsAdjusted = false; // Giữ nguyên false
+                            await _unitOfWork.InventoryCheckItems.UpdateAsync(checkItem);
+                        }
+                    }
+                }
+            }
+
+            if (adj2 != null && check2 != null)
+            {
+                var adj2Items = await _context.InventoryAdjustmentItems
+                    .Where(iai => iai.InventoryAdjustmentId == adj2.Id)
+                    .ToListAsync();
+                
+                foreach (var adjItem in adj2Items)
+                {
+                    if (adjItem.InventoryCheckItemId.HasValue)
+                    {
+                        var checkItem = await _unitOfWork.InventoryCheckItems.GetByIdAsync(adjItem.InventoryCheckItemId.Value);
+                        if (checkItem != null)
+                        {
+                            checkItem.InventoryAdjustmentItemId = adjItem.Id;
+                            checkItem.IsAdjusted = true; // ✅ Approved: Mark IsAdjusted = true
+                            await _unitOfWork.InventoryCheckItems.UpdateAsync(checkItem);
+                        }
+                    }
+                }
+            }
+
+            // ✅ Rejected adjustment: Link nhưng không mark IsAdjusted = true (vì bị reject)
+            if (adj3 != null && check2 != null)
+            {
+                var adj3Items = await _context.InventoryAdjustmentItems
+                    .Where(iai => iai.InventoryAdjustmentId == adj3.Id)
+                    .ToListAsync();
+                
+                foreach (var adjItem in adj3Items)
+                {
+                    if (adjItem.InventoryCheckItemId.HasValue)
+                    {
+                        var checkItem = await _unitOfWork.InventoryCheckItems.GetByIdAsync(adjItem.InventoryCheckItemId.Value);
+                        if (checkItem != null)
+                        {
+                            checkItem.InventoryAdjustmentItemId = adjItem.Id;
+                            // ✅ Rejected: Không mark IsAdjusted = true (có thể tạo adjustment mới)
+                            // checkItem.IsAdjusted = false; // Giữ nguyên false
+                            await _unitOfWork.InventoryCheckItems.UpdateAsync(checkItem);
+                        }
+                    }
+                }
+            }
+
+            // Update stock và tạo StockTransaction cho approved adjustment (adj2)
+            if (adj2 != null && adj2.Status == "Approved")
+            {
+                var adj2Items = await _context.InventoryAdjustmentItems
+                    .Where(iai => iai.InventoryAdjustmentId == adj2.Id)
+                    .Include(iai => iai.Part)
+                    .ToListAsync();
+
+                // Generate transaction number prefix
+                var yearForTransaction = DateTime.Now.Year;
+                var transactionPrefix = $"STK-{yearForTransaction}";
+                var lastTransaction = await _context.StockTransactions
+                    .Where(st => st.TransactionNumber.StartsWith(transactionPrefix))
+                    .OrderByDescending(st => st.TransactionNumber)
+                    .FirstOrDefaultAsync();
+
+                int nextTransactionNumber = 1;
+                if (lastTransaction != null)
+                {
+                    var parts = lastTransaction.TransactionNumber.Split('-');
+                    if (parts.Length >= 3 && int.TryParse(parts[2], out var lastNumber))
+                    {
+                        nextTransactionNumber = lastNumber + 1;
+                    }
+                }
+
+                foreach (var adjItem in adj2Items)
+                {
+                    if (adjItem.Part != null)
+                    {
+                        // Update part stock
+                        adjItem.Part.QuantityInStock = adjItem.SystemQuantityAfter;
+                        adjItem.Part.UpdatedAt = DateTime.Now;
+                        await _unitOfWork.Parts.UpdateAsync(adjItem.Part);
+
+                        // Create StockTransaction
+                        var transaction = new Core.Entities.StockTransaction
+                        {
+                            TransactionNumber = $"{transactionPrefix}-{nextTransactionNumber:D3}",
+                            PartId = adjItem.PartId,
+                            TransactionType = adjItem.QuantityChange > 0 
+                                ? Core.Enums.StockTransactionType.NhapKho 
+                                : Core.Enums.StockTransactionType.XuatKho,
+                            Quantity = Math.Abs(adjItem.QuantityChange),
+                            UnitCost = adjItem.Part.CostPrice,
+                            UnitPrice = adjItem.Part.SellPrice,
+                            TotalCost = Math.Abs(adjItem.QuantityChange) * adjItem.Part.CostPrice,
+                            TotalAmount = Math.Abs(adjItem.QuantityChange) * adjItem.Part.SellPrice,
+                            TransactionDate = adj2.ApprovedAt ?? DateTime.Now,
+                            ReferenceNumber = adj2.AdjustmentNumber,
+                            RelatedEntity = "InventoryAdjustment",
+                            RelatedEntityId = adj2.Id,
+                            Notes = $"Điều chỉnh tồn kho: {(adjItem.QuantityChange > 0 ? "Tăng" : "Giảm")} {Math.Abs(adjItem.QuantityChange)}. {adjItem.Notes ?? ""}",
+                            QuantityBefore = adjItem.SystemQuantityBefore,
+                            QuantityAfter = adjItem.SystemQuantityAfter,
+                            StockAfter = adjItem.SystemQuantityAfter,
+                            ProcessedById = adj2.ApprovedByEmployeeId
+                        };
+
+                        await _unitOfWork.StockTransactions.AddAsync(transaction);
+                        nextTransactionNumber++;
+                    }
+                }
+            }
+
+            await _unitOfWork.SaveChangesAsync();
+
+            return new 
+            { 
+                success = true, 
+                adjustmentCount = adjustments.Count, 
+                itemCount = allAdjustmentItems.Count,
+                message = $"Đã tạo {adjustments.Count} phiếu điều chỉnh với {allAdjustmentItems.Count} items" 
+            };
         }
 
         #endregion

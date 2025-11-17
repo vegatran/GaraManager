@@ -367,14 +367,14 @@ namespace GarageManagementSystem.API.Controllers
                 row++;
                 foreach (var alert in alerts)
                 {
-                    var alertType = alert.GetType();
-                    worksheet.Cells[row, 1].Value = alertType.GetProperty("Type")?.GetValue(alert)?.ToString() ?? "";
-                    worksheet.Cells[row, 2].Value = alertType.GetProperty("PartNumber")?.GetValue(alert)?.ToString() ?? "";
-                    worksheet.Cells[row, 3].Value = alertType.GetProperty("PartName")?.GetValue(alert)?.ToString() ?? "";
-                    worksheet.Cells[row, 4].Value = Convert.ToInt32(alertType.GetProperty("CurrentStock")?.GetValue(alert) ?? 0);
-                    worksheet.Cells[row, 5].Value = Convert.ToInt32(alertType.GetProperty("MinStock")?.GetValue(alert) ?? 0);
-                    worksheet.Cells[row, 6].Value = Convert.ToInt32(alertType.GetProperty("Deficit")?.GetValue(alert) ?? 0);
-                    worksheet.Cells[row, 7].Value = alertType.GetProperty("Location")?.GetValue(alert)?.ToString() ?? "";
+                    var alertObjType = alert.GetType();
+                    worksheet.Cells[row, 1].Value = alertObjType.GetProperty("Type")?.GetValue(alert)?.ToString() ?? "";
+                    worksheet.Cells[row, 2].Value = alertObjType.GetProperty("PartNumber")?.GetValue(alert)?.ToString() ?? "";
+                    worksheet.Cells[row, 3].Value = alertObjType.GetProperty("PartName")?.GetValue(alert)?.ToString() ?? "";
+                    worksheet.Cells[row, 4].Value = Convert.ToInt32(alertObjType.GetProperty("CurrentStock")?.GetValue(alert) ?? 0);
+                    worksheet.Cells[row, 5].Value = Convert.ToInt32(alertObjType.GetProperty("MinStock")?.GetValue(alert) ?? 0);
+                    worksheet.Cells[row, 6].Value = Convert.ToInt32(alertObjType.GetProperty("Deficit")?.GetValue(alert) ?? 0);
+                    worksheet.Cells[row, 7].Value = alertObjType.GetProperty("Location")?.GetValue(alert)?.ToString() ?? "";
                     row++;
                 }
 
