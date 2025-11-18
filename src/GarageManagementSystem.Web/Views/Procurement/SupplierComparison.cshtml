@@ -1,0 +1,117 @@
+@{
+    ViewData["Title"] = "So Sánh Nhà Cung Cấp";
+}
+
+@Html.AntiForgeryToken()
+
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1 class="m-0">So Sánh Nhà Cung Cấp</h1>
+            </div>
+            <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-right">
+                    <li class="breadcrumb-item"><a href="@Url.Action("Index", "Home")">Trang chủ</a></li>
+                    <li class="breadcrumb-item"><a href="@Url.Action("DemandAnalysis", "Procurement")">Mua Hàng</a></li>
+                    <li class="breadcrumb-item active">So Sánh Nhà Cung Cấp</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+
+<section class="content">
+    <div class="container-fluid">
+        <!-- Search Form -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Tìm Kiếm Phụ Tùng</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label>Phụ Tùng <span class="text-danger">*</span></label>
+                                    <select id="partSelect" class="form-control select2" style="width: 100%;" required>
+                                        <option value="">-- Chọn phụ tùng --</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>Số Lượng <span class="text-danger">*</span></label>
+                                    <input type="number" id="quantityInput" class="form-control" value="1" min="1" required />
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>&nbsp;</label>
+                                    <button type="button" class="btn btn-primary btn-block" id="btnSearch">
+                                        <i class="fas fa-search"></i> So Sánh
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="form-group">
+                                    <label>&nbsp;</label>
+                                    <button type="button" class="btn btn-info btn-block" id="btnGetRecommendation">
+                                        <i class="fas fa-star"></i> Đề Xuất
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Comparison Results -->
+        <div class="row" id="comparisonResults" style="display: none;">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Kết Quả So Sánh</h3>
+                        <div class="card-tools">
+                            <button type="button" class="btn btn-success btn-sm" id="btnCreatePO">
+                                <i class="fas fa-shopping-cart"></i> Tạo PO
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="partInfo" class="mb-3">
+                            <h5 id="partName"></h5>
+                            <p class="text-muted mb-0">Số lượng: <span id="partQuantity"></span></p>
+                        </div>
+                        <div class="table-responsive">
+                            <table id="comparisonTable" class="table table-bordered table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Nhà Cung Cấp</th>
+                                        <th>Giá Đơn Vị</th>
+                                        <th>Tổng Giá</th>
+                                        <th>Đánh Giá</th>
+                                        <th>Giao Hàng Đúng Hạn</th>
+                                        <th>Tỷ Lệ Lỗi</th>
+                                        <th>Thời Gian Giao</th>
+                                        <th>Điểm Tổng Thể</th>
+                                        <th>Thao Tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="comparisonTableBody">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script src="~/js/supplier-comparison.js" asp-append-version="true"></script>
+}
+

@@ -38,6 +38,14 @@ window.InventoryAlertsManagement = {
                             badgeClass = 'badge-danger';
                             text = 'Hết Hàng';
                             break;
+                        case 'Overstock':
+                            badgeClass = 'badge-success';
+                            text = 'Tồn Kho Cao';
+                            break;
+                        case 'ExpiringSoon':
+                            badgeClass = 'badge-info';
+                            text = 'Sắp Hết Hạn';
+                            break;
                         case 'Expired':
                             badgeClass = 'badge-dark';
                             text = 'Hết Hạn';
@@ -91,8 +99,16 @@ window.InventoryAlertsManagement = {
                 width: '8%',
                 render: function(data, type, row) {
                     var html = `<strong>${data}</strong>`;
-                    if (row.minimumQuantity) {
+                    if (row.alertType === 'Overstock' && row.maxStock) {
+                        html += `<br><small class="text-muted">Max: ${row.maxStock}</small>`;
+                        if (row.excess) {
+                            html += `<br><small class="text-warning">Dư: ${row.excess}</small>`;
+                        }
+                    } else if (row.minimumQuantity) {
                         html += `<br><small class="text-muted">Min: ${row.minimumQuantity}</small>`;
+                    }
+                    if (row.alertType === 'ExpiringSoon' && row.daysUntilExpiry !== undefined) {
+                        html += `<br><small class="text-info">Còn ${row.daysUntilExpiry} ngày</small>`;
                     }
                     return html;
                 }
@@ -117,11 +133,17 @@ window.InventoryAlertsManagement = {
             },
             { 
                 data: 'deficit', 
-                title: 'Thiếu', 
+                title: 'Thiếu/Dư', 
                 width: '8%',
                 render: function(data, type, row) {
+                    if (row.alertType === 'Overstock' && row.excess) {
+                        return `<span class="text-warning">+${row.excess}</span>`;
+                    }
                     if (data && data > 0) {
                         return `<span class="text-danger">-${data}</span>`;
+                    }
+                    if (row.alertType === 'ExpiringSoon' && row.daysUntilExpiry !== undefined) {
+                        return `<span class="text-info">${row.daysUntilExpiry} ngày</span>`;
                     }
                     return data || '-';
                 }
@@ -234,8 +256,7 @@ window.InventoryAlertsManagement = {
     loadSummaryCards: function() {
         var self = this;
         
-        // This would typically come from a separate API endpoint
-        // For now, we'll calculate from the current table data
+        // Load all alerts to calculate summary
         $.ajax({
             url: '/InventoryAlerts/GetAlerts?pageSize=1000',
             type: 'GET',

@@ -20,3 +20,4 @@ update_duende_schema.sql
 src/GarageManagementSystem.Infrastructure/src/obj/
 src/GarageManagementSystem.IntegrationTests/bin/
 src/GarageManagementSystem.IntegrationTests/obj/
+src/GarageManagementSystem.UnitTests/bin/

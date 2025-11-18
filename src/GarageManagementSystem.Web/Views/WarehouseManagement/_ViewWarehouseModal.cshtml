@@ -1,0 +1,167 @@
+<!-- View Warehouse Modal -->
+<div class="modal fade" id="viewWarehouseModal" tabindex="-1" role="dialog" data-backdrop="static" data-keyboard="false">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h4 class="modal-title"><i class="fas fa-eye"></i> Chi Tiết Kho</h4>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <!-- Tab Navigation -->
+                <ul class="nav nav-tabs" id="viewWarehouseTabs" role="tablist">
+                    <li class="nav-item">
+                        <a class="nav-link active" id="view-basic-tab" data-toggle="tab" href="#viewBasicInfo" role="tab">
+                            <i class="fas fa-info-circle"></i> Thông Tin Cơ Bản
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="view-zones-tab" data-toggle="tab" href="#viewZones" role="tab">
+                            <i class="fas fa-th-large"></i> Khu Vực
+                            <span class="badge badge-info ml-1" id="viewZonesCount">0</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="view-bins-tab" data-toggle="tab" href="#viewBins" role="tab">
+                            <i class="fas fa-box"></i> Kệ/Ngăn
+                            <span class="badge badge-info ml-1" id="viewBinsCount">0</span>
+                        </a>
+                    </li>
+                </ul>
+
+                <!-- Tab Content -->
+                <div class="tab-content mt-3" id="viewWarehouseTabContent">
+                    <!-- Tab 1: Thông Tin Cơ Bản -->
+                    <div class="tab-pane fade show active" id="viewBasicInfo" role="tabpanel">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label class="font-weight-bold text-muted small">Mã Kho:</label>
+                                    <p id="viewCode" class="form-control-plaintext font-weight-bold text-primary mb-0"></p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label class="font-weight-bold text-muted small">Tên Kho:</label>
+                                    <p id="viewName" class="form-control-plaintext font-weight-bold text-dark mb-0"></p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="form-group mb-3">
+                                    <label class="font-weight-bold text-muted small">Mô Tả:</label>
+                                    <p id="viewDescription" class="form-control-plaintext mb-0"></p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="form-group mb-3">
+                                    <label class="font-weight-bold text-muted small">Địa Chỉ:</label>
+                                    <p id="viewAddress" class="form-control-plaintext mb-0"></p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label class="font-weight-bold text-muted small">Người Quản Lý:</label>
+                                    <p id="viewManagerName" class="form-control-plaintext mb-0"></p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label class="font-weight-bold text-muted small">Số Điện Thoại:</label>
+                                    <p id="viewPhoneNumber" class="form-control-plaintext mb-0"></p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label class="font-weight-bold text-muted small">Kho Mặc Định:</label>
+                                    <p id="viewIsDefault" class="form-control-plaintext mb-0"></p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label class="font-weight-bold text-muted small">Trạng Thái:</label>
+                                    <p id="viewIsActive" class="form-control-plaintext mb-0"></p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label class="font-weight-bold text-muted small">Ngày Tạo:</label>
+                                    <p id="viewCreatedAt" class="form-control-plaintext mb-0"></p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label class="font-weight-bold text-muted small">Ngày Cập Nhật:</label>
+                                    <p id="viewUpdatedAt" class="form-control-plaintext mb-0"></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab 2: Khu Vực -->
+                    <div class="tab-pane fade" id="viewZones" role="tabpanel">
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-striped table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Mã</th>
+                                        <th>Tên</th>
+                                        <th>Mô Tả</th>
+                                        <th>Thứ Tự</th>
+                                        <th>Số Kệ/Ngăn</th>
+                                        <th>Trạng Thái</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="viewZonesTableBody">
+                                    <tr class="text-muted">
+                                        <td colspan="6" class="text-center">Đang tải...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Tab 3: Kệ/Ngăn -->
+                    <div class="tab-pane fade" id="viewBins" role="tabpanel">
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-striped table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Mã</th>
+                                        <th>Tên</th>
+                                        <th>Khu Vực</th>
+                                        <th>Mô Tả</th>
+                                        <th>Sức Chứa</th>
+                                        <th>Mặc Định</th>
+                                        <th>Trạng Thái</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="viewBinsTableBody">
+                                    <tr class="text-muted">
+                                        <td colspan="7" class="text-center">Đang tải...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal" data-title="Đóng">
+                    <i class="fas fa-times"></i> Đóng
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+

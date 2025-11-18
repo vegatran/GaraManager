@@ -1,0 +1,79 @@
+<!-- Modal Add/Edit Item for Create Manual Adjustment -->
+<div class="modal fade" id="createItemModal" tabindex="-1" role="dialog" aria-hidden="true" data-backdrop="static" data-keyboard="false">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-primary">
+                <h5 class="modal-title" id="createItemModalTitle">Thêm Item</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form id="createItemForm">
+                <div class="modal-body">
+                    <input type="hidden" id="createItemIndex" />
+                    <input type="hidden" id="createItemPartId" />
+
+                    <!-- Part Selection -->
+                    <div class="form-group">
+                        <label for="createItemPartSearch">Phụ Tùng <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="createItemPartSearch" placeholder="Tìm kiếm phụ tùng..." autocomplete="off" required>
+                        <small class="form-text text-muted">Nhập tên hoặc mã phụ tùng để tìm kiếm</small>
+                    </div>
+
+                    <!-- Part Info Display -->
+                    <div id="createItemPartInfo" class="alert alert-info" style="display: none;">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <strong>Mã:</strong> <span id="createItemPartNumber">-</span><br>
+                                <strong>Tên:</strong> <span id="createItemPartName">-</span>
+                            </div>
+                            <div class="col-md-6">
+                                <strong>SKU:</strong> <span id="createItemPartSku">-</span><br>
+                                <strong>Tồn Kho:</strong> <span id="createItemPartStock">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- System Quantity Before (Read-only) -->
+                    <div class="form-group">
+                        <label for="createItemSystemQuantityBefore">Tồn Kho Hiện Tại</label>
+                        <input type="number" class="form-control" id="createItemSystemQuantityBefore" readonly>
+                        <small class="form-text text-muted">Số lượng trong hệ thống (tự động lấy từ tồn kho)</small>
+                    </div>
+
+                    <!-- Quantity Change -->
+                    <div class="form-group">
+                        <label for="createItemQuantityChange">Số Lượng Thay Đổi <span class="text-danger">*</span></label>
+                        <input type="number" class="form-control" id="createItemQuantityChange" required>
+                        <small class="form-text text-muted">
+                            Nhập số dương để tăng, số âm để giảm (VD: +10 để tăng 10, -5 để giảm 5)
+                        </small>
+                    </div>
+
+                    <!-- System Quantity After (Read-only, auto-calculated) -->
+                    <div class="form-group">
+                        <label for="createItemSystemQuantityAfter">Tồn Kho Sau Điều Chỉnh</label>
+                        <input type="number" class="form-control" id="createItemSystemQuantityAfter" readonly>
+                        <small class="form-text text-muted" id="createItemQuantityAfterHint">
+                            Tồn kho sau = Tồn kho hiện tại + Thay đổi (tự động tính)
+                        </small>
+                        <div id="createItemQuantityAfterError" class="text-danger mt-1" style="display: none;">
+                            <i class="fas fa-exclamation-triangle"></i> Tồn kho sau điều chỉnh không được âm!
+                        </div>
+                    </div>
+
+                    <!-- Notes -->
+                    <div class="form-group">
+                        <label for="createItemNotes">Ghi Chú</label>
+                        <textarea class="form-control" id="createItemNotes" rows="3" placeholder="Nhập ghi chú (nếu có)"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Lưu</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+

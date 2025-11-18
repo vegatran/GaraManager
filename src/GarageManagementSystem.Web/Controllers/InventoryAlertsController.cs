@@ -19,6 +19,8 @@ namespace GarageManagementSystem.Web.Controllers
         }
 
         // GET: InventoryAlerts
+        [HttpGet]
+        [HttpGet("Index")]
         public IActionResult Index()
         {
             return View();
@@ -99,6 +101,92 @@ namespace GarageManagementSystem.Web.Controllers
                     }
                 }
 
+                // ✅ THÊM: Get Overstock alerts
+                if (string.IsNullOrEmpty(alertType) || alertType == "Overstock")
+                {
+                    var overstockResponse = await _apiService.GetAsync<dynamic>("api/inventory-alerts/overstock");
+                    if (overstockResponse.Success && overstockResponse.Data != null)
+                    {
+                        var jsonString = JsonSerializer.Serialize(overstockResponse.Data);
+                        using (var jsonDoc = JsonDocument.Parse(jsonString))
+                        {
+                            var root = jsonDoc.RootElement;
+                            if (root.TryGetProperty("data", out JsonElement dataProp) && dataProp.ValueKind == JsonValueKind.Array)
+                            {
+                                foreach (var item in dataProp.EnumerateArray())
+                                {
+                                    var currentStock = item.TryGetProperty("CurrentStock", out var stockProp) ? stockProp.GetInt32() : 0;
+                                    var maxStock = item.TryGetProperty("MaxStock", out var maxProp) ? maxProp.GetDecimal() : 0;
+                                    var excess = item.TryGetProperty("Excess", out var excessProp) ? excessProp.GetDecimal() : 0;
+                                    
+                                    alerts.Add(new
+                                    {
+                                        id = item.TryGetProperty("Id", out var idProp) ? idProp.GetInt32() : 0,
+                                        partName = item.TryGetProperty("PartName", out var nameProp) ? nameProp.GetString() : "",
+                                        partNumber = item.TryGetProperty("PartNumber", out var numProp) ? numProp.GetString() : "",
+                                        alertType = "Overstock",
+                                        severity = "Low", // Overstock là mức độ thấp
+                                        message = $"Tồn kho cao: {currentStock} (Tối đa đề xuất: {maxStock}, Dư thừa: {excess})",
+                                        currentQuantity = currentStock,
+                                        minimumQuantity = 0,
+                                        deficit = 0,
+                                        excess = excess,
+                                        maxStock = maxStock,
+                                        location = item.TryGetProperty("Location", out var locProp) ? locProp.GetString() : "",
+                                        createdAt = DateTime.Now
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // ✅ THÊM: Get Expiring Soon alerts
+                if (string.IsNullOrEmpty(alertType) || alertType == "ExpiringSoon")
+                {
+                    var expiringSoonResponse = await _apiService.GetAsync<dynamic>("api/inventory-alerts/expiring-soon");
+                    if (expiringSoonResponse.Success && expiringSoonResponse.Data != null)
+                    {
+                        var jsonString = JsonSerializer.Serialize(expiringSoonResponse.Data);
+                        using (var jsonDoc = JsonDocument.Parse(jsonString))
+                        {
+                            var root = jsonDoc.RootElement;
+                            if (root.TryGetProperty("data", out JsonElement dataProp) && dataProp.ValueKind == JsonValueKind.Array)
+                            {
+                                foreach (var item in dataProp.EnumerateArray())
+                                {
+                                    var daysUntilExpiry = item.TryGetProperty("DaysUntilExpiry", out var daysProp) ? daysProp.GetInt32() : 0;
+                                    var expiryDate = item.TryGetProperty("ExpiryDate", out var expiryProp) ? expiryProp.GetDateTime() : (DateTime?)null;
+                                    var alertLevel = item.TryGetProperty("AlertLevel", out var levelProp) ? levelProp.GetString() : "Medium";
+                                    var partId = item.TryGetProperty("PartId", out var partIdProp) ? partIdProp.GetInt32() : 0;
+                                    var partName = item.TryGetProperty("PartName", out var partNameProp) ? partNameProp.GetString() : "";
+                                    var partNumber = item.TryGetProperty("PartNumber", out var partNumProp) ? partNumProp.GetString() : "";
+                                    var batchNumber = item.TryGetProperty("BatchNumber", out var batchNumProp) ? batchNumProp.GetString() : "";
+                                    var location = item.TryGetProperty("Location", out var locProp) ? locProp.GetString() : "";
+                                    
+                                    alerts.Add(new
+                                    {
+                                        id = partId,
+                                        partName = partName,
+                                        partNumber = partNumber,
+                                        alertType = "ExpiringSoon",
+                                        severity = alertLevel,
+                                        message = $"Sắp hết hạn: Còn {daysUntilExpiry} ngày (Hết hạn: {expiryDate?.ToString("dd/MM/yyyy") ?? "N/A"}) - Lô: {batchNumber}",
+                                        currentQuantity = item.TryGetProperty("QuantityRemaining", out var qtyProp) ? qtyProp.GetInt32() : 0,
+                                        minimumQuantity = 0,
+                                        deficit = 0,
+                                        daysUntilExpiry = daysUntilExpiry,
+                                        expiryDate = expiryDate,
+                                        batchNumber = batchNumber,
+                                        location = location,
+                                        createdAt = DateTime.Now
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
+
                 return Json(new
                 {
                     draw = Request.Query["draw"].FirstOrDefault(),
@@ -121,7 +209,7 @@ namespace GarageManagementSystem.Web.Controllers
         }
 
         // GET: InventoryAlerts/GetAlertTypes
-        [HttpGet]
+        [HttpGet("GetAlertTypes")]
         public async Task<IActionResult> GetAlertTypes()
         {
             try
@@ -143,7 +231,7 @@ namespace GarageManagementSystem.Web.Controllers
         }
 
         // POST: InventoryAlerts/MarkAsResolved
-        [HttpPost]
+        [HttpPost("MarkAsResolved")]
         public async Task<IActionResult> MarkAsResolved(int alertId)
         {
             try
@@ -165,7 +253,7 @@ namespace GarageManagementSystem.Web.Controllers
         }
 
         // POST: InventoryAlerts/MarkAllAsResolved
-        [HttpPost]
+        [HttpPost("MarkAllAsResolved")]
         public async Task<IActionResult> MarkAllAsResolved(string alertType = "")
         {
             try

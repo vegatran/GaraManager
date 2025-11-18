@@ -317,6 +317,13 @@ namespace GarageManagementSystem.Web.Configuration
             public const string ReceiveOrder = "purchaseorders/{0}/receive";
             public const string GetBySupplier = "purchaseorders?supplierId={0}";
             public const string GetByStatus = "purchaseorders?status={0}";
+            
+            // ✅ Phase 4.2.3: PO Tracking endpoints
+            public const string GetInTransit = "purchaseorders/in-transit";
+            public const string GetTracking = "purchaseorders/{0}/tracking";
+            public const string UpdateTracking = "purchaseorders/{0}/update-tracking";
+            public const string MarkInTransit = "purchaseorders/{0}/mark-in-transit";
+            public const string GetDeliveryAlerts = "purchaseorders/delivery-alerts";
         }
 
         /// <summary>
@@ -520,6 +527,27 @@ namespace GarageManagementSystem.Web.Configuration
             public const string AddComment = "inventoryadjustments/{0}/comments"; // ✅ Phase 4.1 - Advanced Features: Add comment
             public const string GetComments = "inventoryadjustments/{0}/comments"; // ✅ Phase 4.1 - Advanced Features: Get comments timeline
             public const string DeleteComment = "inventoryadjustments/{0}/comments/{1}"; // ✅ Phase 4.1 - Advanced Features: Delete comment
+        }
+
+        /// <summary>
+        /// ✅ Phase 4.2: Procurement Management endpoints
+        /// </summary>
+        public static class Procurement
+        {
+            // Phase 4.2.1: Demand Analysis
+            public const string DemandAnalysis = "procurement/demand-analysis";
+            public const string ReorderSuggestions = "procurement/reorder-suggestions";
+            public const string BulkCreatePO = "procurement/bulk-create-po";
+            
+            // Phase 4.2.2: Supplier Evaluation
+            public const string SupplierComparison = "procurement/supplier-comparison";
+            public const string SupplierRecommendation = "procurement/supplier-recommendation";
+            
+            // Phase 4.2.4: Performance Evaluation
+            public const string SupplierPerformanceReport = "procurement/supplier-performance-report";
+            public const string SupplierRanking = "procurement/supplier-ranking";
+            public const string PerformanceAlerts = "procurement/performance-alerts";
+            public const string CalculatePerformance = "procurement/calculate-performance";
         }
     }
 }

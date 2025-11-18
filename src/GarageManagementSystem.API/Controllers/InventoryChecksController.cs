@@ -635,6 +635,29 @@ namespace GarageManagementSystem.API.Controllers
                     $"Hoàn thành phiếu kiểm kê: {savedCheck.Code}. Tổng items: {savedCheck.Items.Count}, Items có chênh lệch: {discrepancyCount}", 
                     "Info");
 
+                // ✅ NEW: Tự động tạo adjustment nếu có chênh lệch
+                InventoryAdjustment? autoCreatedAdjustment = null;
+                if (discrepancyCount > 0)
+                {
+                    try
+                    {
+                        autoCreatedAdjustment = await CreateAdjustmentFromCheckInternalAsync(savedCheck);
+                        if (autoCreatedAdjustment != null)
+                        {
+                            await LogAuditAsync("InventoryCheck", savedCheck.Id, "AutoCreateAdjustment", 
+                                $"Tự động tạo điều chỉnh: {autoCreatedAdjustment.AdjustmentNumber} từ phiếu kiểm kê {savedCheck.Code}", 
+                                "Info");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // Log error nhưng không fail complete check
+                        await LogAuditAsync("InventoryCheck", savedCheck.Id, "AutoCreateAdjustmentError", 
+                            $"Lỗi khi tự động tạo điều chỉnh: {ex.Message}", 
+                            "Error");
+                    }
+                }
+
                 return Ok(ApiResponse<InventoryCheckDto>.SuccessResult(_mapper.Map<InventoryCheckDto>(savedCheck)));
             }
             catch (Exception ex)
@@ -1821,6 +1844,182 @@ namespace GarageManagementSystem.API.Controllers
             {
                 return StatusCode(500, ApiResponse<List<InventoryCheckCommentDto>>.ErrorResult("Error getting comments", ex.Message));
             }
+        }
+
+        /// <summary>
+        /// ✅ NEW: Helper method để tự động tạo adjustment từ check (internal, không phải API endpoint)
+        /// </summary>
+        private async Task<InventoryAdjustment?> CreateAdjustmentFromCheckInternalAsync(InventoryCheck inventoryCheck)
+        {
+            // Reload check với items có chênh lệch chưa được điều chỉnh
+            var checkWithItems = await _context.InventoryChecks
+                .Where(ic => !ic.IsDeleted && ic.Id == inventoryCheck.Id)
+                .Include(ic => ic.Items.Where(i => !i.IsDeleted && i.IsDiscrepancy && !i.IsAdjusted))
+                .ThenInclude(i => i.Part)
+                .FirstOrDefaultAsync();
+
+            if (checkWithItems == null)
+            {
+                return null;
+            }
+
+            // ✅ FIX: Validate check status - chỉ tạo adjustment khi check đã completed
+            if (checkWithItems.Status != "Completed")
+            {
+                return null; // Check chưa completed, không tạo adjustment
+            }
+
+            var discrepancyItems = checkWithItems.Items.Where(i => i.IsDiscrepancy && !i.IsAdjusted).ToList();
+            if (!discrepancyItems.Any())
+            {
+                return null; // Không có items có chênh lệch chưa được điều chỉnh
+            }
+
+            // ✅ FIX: Check duplicate adjustment trước khi bắt đầu transaction (tránh tạo duplicate nếu có concurrent requests)
+            var existingAdjustment = await _context.InventoryAdjustments
+                .Where(ia => !ia.IsDeleted && ia.InventoryCheckId == inventoryCheck.Id && ia.Status == "Pending")
+                .FirstOrDefaultAsync();
+            
+            if (existingAdjustment != null)
+            {
+                return null; // Đã có adjustment pending cho check này, không tạo duplicate
+            }
+
+            // ✅ FIX: Reload parts từ database để tránh race condition (part quantity có thể đã thay đổi)
+            var partIds = discrepancyItems.Select(i => i.PartId).Distinct().ToList();
+            var partsDict = await _context.Parts
+                .Where(p => partIds.Contains(p.Id) && !p.IsDeleted)
+                .ToDictionaryAsync(p => p.Id);
+
+            // Validate: Kiểm tra tất cả parts trước khi tạo adjustment
+            foreach (var checkItem in discrepancyItems)
+            {
+                if (!partsDict.TryGetValue(checkItem.PartId, out var part) || part == null || part.IsDeleted)
+                {
+                    return null; // Có part không hợp lệ, không tạo adjustment
+                }
+
+                var quantityChange = checkItem.DiscrepancyQuantity;
+                var systemQuantityAfter = part.QuantityInStock + quantityChange;
+
+                // Validate: SystemQuantityAfter không được âm
+                if (systemQuantityAfter < 0)
+                {
+                    return null; // Có item sẽ làm số lượng âm, không tạo adjustment tự động
+                }
+            }
+
+            // Bắt đầu transaction
+            await _unitOfWork.BeginTransactionAsync();
+
+            try
+            {
+                // Generate adjustment number
+                var adjustmentNumber = await GenerateAdjustmentNumberAsync();
+
+                // Create adjustment
+                var adjustment = new InventoryAdjustment
+                {
+                    AdjustmentNumber = adjustmentNumber,
+                    InventoryCheckId = inventoryCheck.Id,
+                    WarehouseId = inventoryCheck.WarehouseId,
+                    WarehouseZoneId = inventoryCheck.WarehouseZoneId,
+                    WarehouseBinId = inventoryCheck.WarehouseBinId,
+                    AdjustmentDate = DateTime.Now,
+                    Status = "Pending",
+                    Reason = $"Tự động tạo từ phiếu kiểm kê {inventoryCheck.Code ?? "N/A"}",
+                    Notes = $"Tự động tạo khi hoàn thành kiểm kê: {inventoryCheck.Name ?? "N/A"}"
+                };
+
+                await _unitOfWork.Repository<InventoryAdjustment>().AddAsync(adjustment);
+                await _unitOfWork.SaveChangesAsync();
+
+                // Create adjustment items
+                var adjustmentItems = new List<InventoryAdjustmentItem>();
+                foreach (var checkItem in discrepancyItems)
+                {
+                    // ✅ FIX: Sử dụng part từ dictionary (đã reload từ database) thay vì từ checkItem.Part
+                    if (!partsDict.TryGetValue(checkItem.PartId, out var part) || part == null)
+                    {
+                        await _unitOfWork.RollbackTransactionAsync();
+                        return null; // Part không tồn tại, rollback
+                    }
+                    
+                    var quantityChange = checkItem.DiscrepancyQuantity;
+                    var systemQuantityBefore = part.QuantityInStock;
+                    var systemQuantityAfter = systemQuantityBefore + quantityChange;
+                    
+                    // ✅ FIX: Re-validate systemQuantityAfter (defensive check)
+                    if (systemQuantityAfter < 0)
+                    {
+                        await _unitOfWork.RollbackTransactionAsync();
+                        return null; // Số lượng sau điều chỉnh sẽ âm, rollback
+                    }
+
+                    var adjustmentItem = new InventoryAdjustmentItem
+                    {
+                        InventoryAdjustmentId = adjustment.Id,
+                        PartId = checkItem.PartId,
+                        InventoryCheckItemId = checkItem.Id,
+                        QuantityChange = quantityChange,
+                        SystemQuantityBefore = systemQuantityBefore,
+                        SystemQuantityAfter = systemQuantityAfter,
+                        Notes = checkItem.Notes
+                    };
+
+                    await _unitOfWork.Repository<InventoryAdjustmentItem>().AddAsync(adjustmentItem);
+                    adjustmentItems.Add(adjustmentItem);
+                }
+
+                // Save to get IDs
+                await _unitOfWork.SaveChangesAsync();
+
+                // Update check items with adjustment item IDs
+                for (int i = 0; i < discrepancyItems.Count; i++)
+                {
+                    var checkItem = discrepancyItems[i];
+                    var adjustmentItem = adjustmentItems[i];
+                    checkItem.IsAdjusted = true;
+                    checkItem.InventoryAdjustmentItemId = adjustmentItem.Id;
+                    await _unitOfWork.InventoryCheckItems.UpdateAsync(checkItem);
+                }
+
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitTransactionAsync();
+
+                return adjustment;
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// ✅ NEW: Helper method để generate adjustment number
+        /// </summary>
+        private async Task<string> GenerateAdjustmentNumberAsync()
+        {
+            var year = DateTime.Now.Year;
+            var prefix = $"ADJ-{year}";
+
+            var lastAdjustment = await _context.InventoryAdjustments
+                .Where(ia => ia.AdjustmentNumber.StartsWith(prefix))
+                .OrderByDescending(ia => ia.AdjustmentNumber)
+                .FirstOrDefaultAsync();
+
+            int nextNumber = 1;
+            if (lastAdjustment != null)
+            {
+                var parts = lastAdjustment.AdjustmentNumber.Split('-');
+                if (parts.Length >= 3 && int.TryParse(parts[2], out var lastNumber))
+                {
+                    nextNumber = lastNumber + 1;
+                }
+            }
+
+            return $"{prefix}-{nextNumber:D3}";
         }
 
         /// <summary>

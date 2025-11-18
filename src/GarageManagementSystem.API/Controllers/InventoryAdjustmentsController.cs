@@ -23,12 +23,21 @@ namespace GarageManagementSystem.API.Controllers
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly GarageDbContext _context;
+        private readonly Services.INotificationService? _notificationService;
+        private readonly ILogger<InventoryAdjustmentsController>? _logger;
 
-        public InventoryAdjustmentsController(IUnitOfWork unitOfWork, IMapper mapper, GarageDbContext context)
+        public InventoryAdjustmentsController(
+            IUnitOfWork unitOfWork, 
+            IMapper mapper, 
+            GarageDbContext context,
+            Services.INotificationService? notificationService = null,
+            ILogger<InventoryAdjustmentsController>? logger = null)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _context = context;
+            _notificationService = notificationService;
+            _logger = logger;
         }
 
         /// <summary>
@@ -504,6 +513,10 @@ namespace GarageManagementSystem.API.Controllers
                     // ✅ FIX: Process items first, then update adjustment status
                     // This ensures data consistency: only mark as Approved if all items are processed successfully
                     
+                    // ✅ FIX: Collect parts to update (tránh update nhiều lần cùng part nếu có nhiều items)
+                    var partsToUpdate = new Dictionary<int, Part>();
+                    var stockTransactions = new List<StockTransaction>();
+
                     // Update part quantities and create stock transactions
                     foreach (var item in adjustment.Items)
                     {
@@ -519,6 +532,19 @@ namespace GarageManagementSystem.API.Controllers
                             return BadRequest(ApiResponse<InventoryAdjustmentDto>.ErrorResult($"Phụ tùng với ID {item.PartId} không tồn tại hoặc đã bị xóa"));
                         }
 
+                        // ✅ FIX: Reload part từ database để lấy quantity mới nhất (tránh race condition)
+                        if (!partsToUpdate.ContainsKey(part.Id))
+                        {
+                            var freshPart = await _unitOfWork.Parts.GetByIdAsync(part.Id);
+                            if (freshPart == null || freshPart.IsDeleted)
+                            {
+                                await _unitOfWork.RollbackTransactionAsync();
+                                return BadRequest(ApiResponse<InventoryAdjustmentDto>.ErrorResult($"Phụ tùng với ID {item.PartId} không tồn tại hoặc đã bị xóa"));
+                            }
+                            partsToUpdate[part.Id] = freshPart;
+                        }
+                        part = partsToUpdate[part.Id];
+
                         // Validate: SystemQuantityAfter không được âm
                         if (item.SystemQuantityAfter < 0)
                         {
@@ -526,27 +552,21 @@ namespace GarageManagementSystem.API.Controllers
                             return BadRequest(ApiResponse<InventoryAdjustmentDto>.ErrorResult($"Số lượng sau điều chỉnh không được âm cho phụ tùng {part.PartNumber}"));
                         }
 
-                        // Validate: SystemQuantityBefore phải match với Part.QuantityInStock hiện tại
-                        // Lưu ý: Quantity có thể đã thay đổi từ khi tạo adjustment, nên chỉ validate nếu chênh lệch quá lớn
-                        var currentQuantity = part.QuantityInStock;
-                        var expectedQuantityAfter = currentQuantity + item.QuantityChange;
-                        if (Math.Abs(expectedQuantityAfter - item.SystemQuantityAfter) > 0)
-                        {
-                            // Cảnh báo: Quantity đã thay đổi, nhưng vẫn cho phép điều chỉnh với SystemQuantityAfter đã định
-                            // Vì adjustment có thể đã được tạo từ lâu và stock đã thay đổi
-                        }
-
-                        // Update part quantity
+                        // ✅ FIX: Update part quantity (nếu có nhiều items cùng part, chỉ update 1 lần với giá trị cuối cùng)
                         part.QuantityInStock = item.SystemQuantityAfter;
-                        await _unitOfWork.Parts.UpdateAsync(part);
 
-                        // Create stock transaction
+                        // ✅ FIX: Create stock transaction với đầy đủ thông tin QuantityBefore, QuantityAfter, StockAfter
+                        var quantityBefore = item.SystemQuantityBefore;
+                        var quantityAfter = item.SystemQuantityAfter;
                         var transaction = new StockTransaction
                         {
                             PartId = item.PartId,
                             TransactionNumber = await GenerateTransactionNumberAsync(),
                             TransactionType = item.QuantityChange > 0 ? StockTransactionType.NhapKho : StockTransactionType.XuatKho,
                             Quantity = Math.Abs(item.QuantityChange),
+                            QuantityBefore = quantityBefore,
+                            QuantityAfter = quantityAfter,
+                            StockAfter = quantityAfter, // ✅ FIX: Set StockAfter
                             UnitCost = part.CostPrice,
                             UnitPrice = part.SellPrice,
                             TotalCost = Math.Abs(item.QuantityChange) * part.CostPrice,
@@ -555,9 +575,22 @@ namespace GarageManagementSystem.API.Controllers
                             ReferenceNumber = adjustment.AdjustmentNumber,
                             RelatedEntity = "InventoryAdjustment",
                             RelatedEntityId = adjustment.Id,
-                            Notes = $"Điều chỉnh tồn kho: {(item.QuantityChange > 0 ? "Tăng" : "Giảm")} {Math.Abs(item.QuantityChange)}. {item.Notes ?? ""}"
+                            Notes = $"Điều chỉnh tồn kho: {(item.QuantityChange > 0 ? "Tăng" : "Giảm")} {Math.Abs(item.QuantityChange)}. {item.Notes ?? ""}",
+                            ProcessedById = userId
                         };
 
+                        stockTransactions.Add(transaction);
+                    }
+
+                    // ✅ FIX: Update parts một lần (tránh update nhiều lần cùng part)
+                    foreach (var part in partsToUpdate.Values)
+                    {
+                        await _unitOfWork.Parts.UpdateAsync(part);
+                    }
+
+                    // ✅ FIX: Add stock transactions
+                    foreach (var transaction in stockTransactions)
+                    {
                         await _unitOfWork.StockTransactions.AddAsync(transaction);
                     }
 
@@ -600,6 +633,22 @@ namespace GarageManagementSystem.API.Controllers
                     await LogAuditAsync("InventoryAdjustment", updatedAdjustment.Id, "Approve", 
                         $"Duyệt điều chỉnh: {updatedAdjustment.AdjustmentNumber}, Items: {itemsCount}, Tổng thay đổi: {totalQtyChange}, Notes: {notesText}", 
                         "Info");
+
+                    // ✅ Real-time: Push notification for inventory alert count update
+                    if (_notificationService != null)
+                    {
+                        try
+                        {
+                            // ✅ Performance: Use CountAsync instead of loading all alerts
+                            var totalUnresolvedCount = await _unitOfWork.Repository<Core.Entities.InventoryAlert>()
+                                .CountAsync(a => !a.IsResolved);
+                            await _notificationService.NotifyInventoryAlertUpdatedAsync(totalUnresolvedCount);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger?.LogError(ex, "Error sending inventory alert notification after approve");
+                        }
+                    }
 
                     return Ok(ApiResponse<InventoryAdjustmentDto>.SuccessResult(resultDto));
                 }
@@ -1361,6 +1410,22 @@ namespace GarageManagementSystem.API.Controllers
                         catch
                         {
                             // ✅ Không throw exception nếu audit log fail (không ảnh hưởng business logic)
+                        }
+                    }
+
+                    // ✅ Real-time: Push notification for inventory alert count update
+                    if (_notificationService != null && result.SuccessCount > 0)
+                    {
+                        try
+                        {
+                            // ✅ Performance: Use CountAsync instead of loading all alerts
+                            var totalUnresolvedCount = await _unitOfWork.Repository<Core.Entities.InventoryAlert>()
+                                .CountAsync(a => !a.IsResolved);
+                            await _notificationService.NotifyInventoryAlertUpdatedAsync(totalUnresolvedCount);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger?.LogError(ex, "Error sending inventory alert notification after bulk approve");
                         }
                     }
 

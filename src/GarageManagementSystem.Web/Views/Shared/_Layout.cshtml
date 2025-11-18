@@ -1,3 +1,4 @@
+@inject IConfiguration Configuration
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -127,6 +128,8 @@
     <script src="~/lib/inputmask/jquery.inputmask.min.js"></script>
     <!-- SweetAlert2 -->
     <script src="~/lib/sweetalert2/sweetalert2.min.js"></script>
+    <!-- SignalR -->
+    <script src="~/lib/signalr/dist/browser/signalr.min.js"></script>
     <!-- Chart.js -->
     <script src="~/lib/chart.js/dist/chart.umd.min.js"></script>
     <!-- Custom JS - Load utilities first -->
@@ -146,6 +149,9 @@
 
     <!-- Dynamic menu activation script -->
     <script>
+        // ✅ Real-time: Set API base URL for SignalR connection
+        window.apiBaseUrl = '@(Configuration["ApiConfiguration:BaseUrl"]?.Replace("/api/", "") ?? "https://localhost:5001")';
+        
         $(document).ready(function() {
             // Don't clear active classes - let Razor handle it
             // The server-side logic in _SidebarMenu.cshtml already sets the correct active state

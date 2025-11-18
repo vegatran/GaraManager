@@ -1,0 +1,104 @@
+<div class="modal fade" id="createCheckModal" tabindex="-1" role="dialog" aria-hidden="true" data-backdrop="static" data-keyboard="false">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-primary">
+                <h5 class="modal-title">Tạo Phiếu Kiểm Kê Mới</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form id="createCheckForm">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createCode">Mã Phiếu <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control form-control-sm" id="createCode" name="Code" maxlength="50" placeholder="Để trống để tự động tạo">
+                                    <div class="input-group-append">
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" id="btnAutoGenerateCode" title="Tự động tạo mã">
+                                            <i class="fas fa-magic"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <small class="form-text text-muted">Để trống để hệ thống tự động tạo mã (IK-YYYY-NNN)</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createCheckDate">Ngày Kiểm Kê <span class="text-danger">*</span></label>
+                                <input type="date" class="form-control form-control-sm" id="createCheckDate" name="CheckDate" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label for="createName">Tên Phiếu Kiểm Kê <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control form-control-sm" id="createName" name="Name" maxlength="200" required placeholder="VD: Kiểm kê kho chính tháng 1/2024">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label for="createDescription">Mô Tả</label>
+                                <textarea class="form-control form-control-sm" id="createDescription" name="Description" rows="2" maxlength="500" placeholder="Mô tả về phiếu kiểm kê (tùy chọn)"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="createWarehouseSelect">Kho</label>
+                                <select class="form-control form-control-sm" id="createWarehouseSelect">
+                                    <option value="">-- Chọn kho --</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="createWarehouseZoneSelect">Khu Vực</label>
+                                <select class="form-control form-control-sm" id="createWarehouseZoneSelect" disabled>
+                                    <option value="">-- Chọn khu vực --</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="createWarehouseBinSelect">Kệ/Ngăn</label>
+                                <select class="form-control form-control-sm" id="createWarehouseBinSelect" disabled>
+                                    <option value="">-- Chọn kệ/ngăn --</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createStatus">Trạng Thái</label>
+                                <select class="form-control form-control-sm" id="createStatus" name="Status">
+                                    <option value="Draft" selected>Nháp</option>
+                                    <option value="InProgress">Đang thực hiện</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label for="createNotes">Ghi Chú</label>
+                                <textarea class="form-control form-control-sm" id="createNotes" name="Notes" rows="2" maxlength="500" placeholder="Ghi chú về phiếu kiểm kê (tùy chọn)"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary btn-sm">Tạo Phiếu</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+

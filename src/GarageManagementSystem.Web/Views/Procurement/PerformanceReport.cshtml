@@ -1,0 +1,247 @@
+@{
+    ViewData["Title"] = "Báo Cáo Hiệu Suất Nhà Cung Cấp";
+}
+
+@Html.AntiForgeryToken()
+
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1 class="m-0">Báo Cáo Hiệu Suất Nhà Cung Cấp</h1>
+            </div>
+            <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-right">
+                    <li class="breadcrumb-item"><a href="@Url.Action("Index", "Home")">Trang chủ</a></li>
+                    <li class="breadcrumb-item"><a href="@Url.Action("DemandAnalysis", "Procurement")">Mua Hàng</a></li>
+                    <li class="breadcrumb-item active">Báo Cáo Hiệu Suất</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+
+<section class="content">
+    <div class="container-fluid">
+        <!-- Summary Cards -->
+        <div class="row">
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-success">
+                    <div class="inner">
+                        <h3 id="excellentCount">0</h3>
+                        <p>Xuất Sắc</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-star"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-info">
+                    <div class="inner">
+                        <h3 id="goodCount">0</h3>
+                        <p>Tốt</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-thumbs-up"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-warning">
+                    <div class="inner">
+                        <h3 id="averageCount">0</h3>
+                        <p>Trung Bình</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-danger">
+                    <div class="inner">
+                        <h3 id="poorCount">0</h3>
+                        <p>Kém</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-exclamation-circle"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter Panel -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Bộ Lọc</h3>
+                        <div class="card-tools">
+                            <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>Nhà Cung Cấp</label>
+                                    <select id="supplierFilter" class="form-control select2" style="width: 100%;">
+                                        <option value="">-- Tất cả --</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="form-group">
+                                    <label>Từ Ngày</label>
+                                    <input type="date" id="startDateFilter" class="form-control" />
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="form-group">
+                                    <label>Đến Ngày</label>
+                                    <input type="date" id="endDateFilter" class="form-control" />
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>&nbsp;</label>
+                                    <button type="button" class="btn btn-primary btn-block" id="btnSearch">
+                                        <i class="fas fa-search"></i> Tìm Kiếm
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="form-group">
+                                    <label>&nbsp;</label>
+                                    <button type="button" class="btn btn-success btn-block" id="btnCalculate">
+                                        <i class="fas fa-calculator"></i> Tính Toán
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Top 10 Nhà Cung Cấp Tốt Nhất</h3>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="topSuppliersChart" style="height: 300px;"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Phân Bố Hiệu Suất</h3>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="performanceDistributionChart" style="height: 300px;"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ranking Table -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Bảng Xếp Hạng</h3>
+                        <div class="card-tools">
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-sm btn-default" id="btnSortByScore">Theo Điểm</button>
+                                <button type="button" class="btn btn-sm btn-default" id="btnSortByOnTime">Giao Hàng</button>
+                                <button type="button" class="btn btn-sm btn-default" id="btnSortByDefect">Tỷ Lệ Lỗi</button>
+                            </div>
+                            <button type="button" class="btn btn-success btn-sm ml-2" id="btnRefresh">
+                                <i class="fas fa-sync-alt"></i> Làm Mới
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <table id="rankingTable" class="table table-bordered table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Hạng</th>
+                                    <th>Nhà Cung Cấp</th>
+                                    <th>Điểm Tổng Thể</th>
+                                    <th>Giao Hàng Đúng Hạn</th>
+                                    <th>Tỷ Lệ Lỗi</th>
+                                    <th>Giá Trung Bình</th>
+                                    <th>Thời Gian Giao</th>
+                                    <th>Tổng Đơn</th>
+                                    <th>Phân Loại</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Performance Report Table -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Chi Tiết Báo Cáo</h3>
+                    </div>
+                    <div class="card-body">
+                        <table id="performanceTable" class="table table-bordered table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Nhà Cung Cấp</th>
+                                    <th>Tổng Đơn</th>
+                                    <th>Giao Đúng Hạn</th>
+                                    <th>Tỷ Lệ Đúng Hạn</th>
+                                    <th>Thời Gian Giao TB</th>
+                                    <th>Tỷ Lệ Lỗi</th>
+                                    <th>Giá TB</th>
+                                    <th>Ổn Định Giá</th>
+                                    <th>Điểm Tổng Thể</th>
+                                    <th>Ngày Tính</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Performance Alerts -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card card-danger">
+                    <div class="card-header">
+                        <h3 class="card-title">Cảnh Báo Hiệu Suất</h3>
+                    </div>
+                    <div class="card-body">
+                        <div id="alertsContainer">
+                            <!-- Alerts will be rendered here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script src="~/js/supplier-performance-report.js"></script>
+}
+

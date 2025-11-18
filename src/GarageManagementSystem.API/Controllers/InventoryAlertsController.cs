@@ -249,7 +249,14 @@ namespace GarageManagementSystem.API.Controllers
         {
             try
             {
-                var batches = await _unitOfWork.Repository<PartInventoryBatch>().GetAllAsync();
+                // ✅ FIX: Include Part để lấy PartName và PartNumber
+                var batches = await _unitOfWork.Repository<PartInventoryBatch>()
+                    .GetAllAsync();
+                
+                // Load Parts separately để có PartName
+                var parts = await _unitOfWork.Parts.GetAllAsync();
+                var partsDict = parts.ToDictionary(p => p.Id, p => new { p.PartName, p.PartNumber, p.Location });
+                
                 var expiringDate = DateTime.Now.AddDays(daysAhead);
                 
                 var expiringBatches = batches
@@ -261,6 +268,9 @@ namespace GarageManagementSystem.API.Controllers
                         b.Id,
                         b.BatchNumber,
                         b.PartId,
+                        PartName = partsDict.ContainsKey(b.PartId) ? partsDict[b.PartId].PartName : "",
+                        PartNumber = partsDict.ContainsKey(b.PartId) ? partsDict[b.PartId].PartNumber : "",
+                        Location = partsDict.ContainsKey(b.PartId) ? partsDict[b.PartId].Location : b.Location,
                         b.ExpiryDate,
                         DaysUntilExpiry = (b.ExpiryDate!.Value - DateTime.Now).Days,
                         b.QuantityRemaining,

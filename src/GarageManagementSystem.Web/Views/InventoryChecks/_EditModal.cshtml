@@ -1,0 +1,99 @@
+<div class="modal fade" id="editCheckModal" tabindex="-1" role="dialog" aria-hidden="true" data-backdrop="static" data-keyboard="false">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title">Chỉnh Sửa Phiếu Kiểm Kê</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form id="editCheckForm">
+                <input type="hidden" id="editId" name="Id">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="editCode">Mã Phiếu <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control form-control-sm" id="editCode" name="Code" maxlength="50" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="editCheckDate">Ngày Kiểm Kê <span class="text-danger">*</span></label>
+                                <input type="date" class="form-control form-control-sm" id="editCheckDate" name="CheckDate" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label for="editName">Tên Phiếu Kiểm Kê <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control form-control-sm" id="editName" name="Name" maxlength="200" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label for="editDescription">Mô Tả</label>
+                                <textarea class="form-control form-control-sm" id="editDescription" name="Description" rows="2" maxlength="500"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="editWarehouseSelect">Kho</label>
+                                <select class="form-control form-control-sm" id="editWarehouseSelect">
+                                    <option value="">-- Chọn kho --</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="editWarehouseZoneSelect">Khu Vực</label>
+                                <select class="form-control form-control-sm" id="editWarehouseZoneSelect" disabled>
+                                    <option value="">-- Chọn khu vực --</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="editWarehouseBinSelect">Kệ/Ngăn</label>
+                                <select class="form-control form-control-sm" id="editWarehouseBinSelect" disabled>
+                                    <option value="">-- Chọn kệ/ngăn --</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="editStatus">Trạng Thái</label>
+                                <select class="form-control form-control-sm" id="editStatus" name="Status">
+                                    <option value="Draft">Nháp</option>
+                                    <option value="InProgress">Đang thực hiện</option>
+                                    <option value="Completed">Hoàn thành</option>
+                                    <option value="Cancelled">Đã hủy</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label for="editNotes">Ghi Chú</label>
+                                <textarea class="form-control form-control-sm" id="editNotes" name="Notes" rows="2" maxlength="500"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-warning btn-sm">Cập Nhật</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+

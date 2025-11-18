@@ -1,0 +1,236 @@
+@{
+    ViewData["Title"] = "Phân Tích Nhu Cầu";
+}
+
+@Html.AntiForgeryToken()
+
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1 class="m-0">Phân Tích Nhu Cầu</h1>
+            </div>
+            <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-right">
+                    <li class="breadcrumb-item"><a href="@Url.Action("Index", "Home")">Trang chủ</a></li>
+                    <li class="breadcrumb-item active">Mua Hàng</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+
+<section class="content">
+    <div class="container-fluid">
+        <!-- Summary Cards -->
+        <div class="row">
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-danger">
+                    <div class="inner">
+                        <h3 id="highPriorityCount">0</h3>
+                        <p>Ưu Tiên Cao</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-warning">
+                    <div class="inner">
+                        <h3 id="mediumPriorityCount">0</h3>
+                        <p>Ưu Tiên Trung Bình</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-info-circle"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-info">
+                    <div class="inner">
+                        <h3 id="lowPriorityCount">0</h3>
+                        <p>Ưu Tiên Thấp</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-success">
+                    <div class="inner">
+                        <h3 id="totalEstimatedCost">0</h3>
+                        <p>Tổng Chi Phí Dự Kiến</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-dollar-sign"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Bộ Lọc</h3>
+                        <div class="card-tools">
+                            <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>Ưu Tiên</label>
+                                    <select id="filterPriority" class="form-control">
+                                        <option value="">Tất cả</option>
+                                        <option value="High">Cao</option>
+                                        <option value="Medium">Trung Bình</option>
+                                        <option value="Low">Thấp</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>Nguồn</label>
+                                    <select id="filterSource" class="form-control">
+                                        <option value="">Tất cả</option>
+                                        <option value="InventoryAlert">Cảnh Báo Tồn Kho</option>
+                                        <option value="ServiceOrder">Đơn Hàng Sửa Chữa</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>&nbsp;</label>
+                                    <button type="button" class="btn btn-primary btn-block" id="btnApplyFilters">
+                                        <i class="fas fa-filter"></i> Áp Dụng Bộ Lọc
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>&nbsp;</label>
+                                    <button type="button" class="btn btn-secondary btn-block" id="btnResetFilters">
+                                        <i class="fas fa-redo"></i> Đặt Lại
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Table -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Danh Sách Nhu Cầu</h3>
+                        <div class="card-tools">
+                            <button type="button" class="btn btn-success btn-sm" id="btnBulkCreatePO" disabled>
+                                <i class="fas fa-shopping-cart"></i> Tạo PO Từ Đã Chọn
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table id="demandAnalysisTable" class="table table-bordered table-striped dt-responsive nowrap" width="100%">
+                                <thead>
+                                    <tr>
+                                        <th>
+                                            <input type="checkbox" id="selectAll" />
+                                        </th>
+                                        <th>Mã Phụ Tùng</th>
+                                        <th>Tên Phụ Tùng</th>
+                                        <th>Tồn Kho</th>
+                                        <th>Tồn TT</th>
+                                        <th>Số Lượng Đề Xuất</th>
+                                        <th>Ưu Tiên</th>
+                                        <th>Nguồn</th>
+                                        <th>Ngày Cần</th>
+                                        <th>Chi Phí Dự Kiến</th>
+                                        <th>Thao Tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Bulk Create PO Modal -->
+<div class="modal fade" id="bulkCreatePOModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">Tạo PO Từ Danh Sách Đã Chọn</h4>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="bulkCreatePOForm">
+                    <div class="form-group">
+                        <label>Nhà Cung Cấp <span class="text-danger">*</span></label>
+                        <select id="supplierSelect" class="form-control" required>
+                            <option value="">-- Chọn nhà cung cấp --</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Ngày Đặt Hàng</label>
+                        <input type="date" id="orderDate" class="form-control" />
+                    </div>
+                    <div class="form-group">
+                        <label>Ngày Giao Hàng Dự Kiến</label>
+                        <input type="date" id="expectedDeliveryDate" class="form-control" />
+                    </div>
+                    <div class="form-group">
+                        <label>Ghi Chú</label>
+                        <textarea id="notes" class="form-control" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Danh Sách Phụ Tùng Đã Chọn:</label>
+                        <div id="selectedItemsList" class="table-responsive">
+                            <table class="table table-sm table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>Mã</th>
+                                        <th>Tên</th>
+                                        <th>Số Lượng</th>
+                                        <th>Giá Đơn Vị</th>
+                                        <th>Thành Tiền</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="selectedItemsTableBody">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Đóng</button>
+                <button type="button" class="btn btn-primary" id="btnConfirmCreatePO">
+                    <i class="fas fa-check"></i> Tạo PO
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/demand-analysis.js" asp-append-version="true"></script>
+}
+

@@ -6,6 +6,7 @@ using GarageManagementSystem.Web.Services;
 using GarageManagementSystem.Web.Configuration;
 using AutoMapper;
 using GarageManagementSystem.Web.Models;
+using POTrackingDtos = GarageManagementSystem.Shared.DTOs;
 
 namespace GarageManagementSystem.Web.Controllers
 {
@@ -297,6 +298,214 @@ namespace GarageManagementSystem.Web.Controllers
             
             return Json(new { success = true, message = "Đã hủy phiếu nhập hàng thành công" });
         }
+
+        #region Phase 4.2.3: PO Tracking
+
+        /// <summary>
+        /// Hiển thị trang Theo dõi PO (PO Tracking)
+        /// </summary>
+        [HttpGet("Tracking")]
+        public IActionResult Tracking()
+        {
+            return View();
+        }
+
+        /// <summary>
+        /// Lấy danh sách PO đang chờ giao hàng (In-Transit)
+        /// </summary>
+        [HttpGet("GetInTransitOrders")]
+        public async Task<IActionResult> GetInTransitOrders(
+            int pageNumber = 1,
+            int pageSize = 20,
+            int? supplierId = null,
+            string? deliveryStatus = null,
+            int? daysUntilDelivery = null)
+        {
+            try
+            {
+                var queryParams = new List<string>
+                {
+                    $"pageNumber={pageNumber}",
+                    $"pageSize={pageSize}"
+                };
+
+                if (supplierId.HasValue)
+                    queryParams.Add($"supplierId={supplierId.Value}");
+                if (!string.IsNullOrEmpty(deliveryStatus))
+                    queryParams.Add($"deliveryStatus={Uri.EscapeDataString(deliveryStatus)}");
+                if (daysUntilDelivery.HasValue)
+                    queryParams.Add($"daysUntilDelivery={daysUntilDelivery.Value}");
+
+                var endpoint = ApiEndpoints.PurchaseOrders.GetInTransit + "?" + string.Join("&", queryParams);
+                var response = await _apiService.GetAsync<PagedResponse<PurchaseOrderDto>>(endpoint);
+
+                if (response.Success && response.Data != null)
+                {
+                    return Json(response.Data);
+                }
+                else
+                {
+                    return Json(new PagedResponse<PurchaseOrderDto>
+                    {
+                        Data = new List<PurchaseOrderDto>(),
+                        TotalCount = 0,
+                        PageNumber = pageNumber,
+                        PageSize = pageSize,
+                        Success = false,
+                        Message = response.ErrorMessage ?? "Lỗi khi lấy danh sách PO đang chờ giao hàng"
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                return Json(new PagedResponse<PurchaseOrderDto>
+                {
+                    Data = new List<PurchaseOrderDto>(),
+                    TotalCount = 0,
+                    PageNumber = pageNumber,
+                    PageSize = pageSize,
+                    Success = false,
+                    Message = $"Lỗi: {ex.Message}"
+                });
+            }
+        }
+
+        /// <summary>
+        /// Lấy thông tin tracking của PO
+        /// </summary>
+        [HttpGet("GetTrackingInfo/{id}")]
+        public async Task<IActionResult> GetTrackingInfo(int id)
+        {
+            try
+            {
+                var endpoint = ApiEndpoints.PurchaseOrders.GetTracking.Replace("{0}", id.ToString());
+                var response = await _apiService.GetAsync<ApiResponse<POTrackingDtos.PurchaseOrderTrackingDto>>(endpoint);
+
+                if (response.Success && response.Data != null)
+                {
+                    return Json(response);
+                }
+                else
+                {
+                    return Json(new ApiResponse<POTrackingDtos.PurchaseOrderTrackingDto>
+                    {
+                        Success = false,
+                        ErrorMessage = response.ErrorMessage ?? "Lỗi khi lấy thông tin tracking"
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                return Json(new ApiResponse<POTrackingDtos.PurchaseOrderTrackingDto>
+                {
+                    Success = false,
+                    ErrorMessage = $"Lỗi: {ex.Message}"
+                });
+            }
+        }
+
+        /// <summary>
+        /// Cập nhật thông tin tracking của PO
+        /// </summary>
+        [HttpPut("UpdateTracking/{id}")]
+        public async Task<IActionResult> UpdateTracking(int id, [FromBody] POTrackingDtos.UpdateTrackingDto dto)
+        {
+            try
+            {
+                var endpoint = ApiEndpoints.PurchaseOrders.UpdateTracking.Replace("{0}", id.ToString());
+                var response = await _apiService.PutAsync<ApiResponse<PurchaseOrderDto>>(endpoint, dto);
+
+                if (response.Success && response.Data != null)
+                {
+                    return Json(response);
+                }
+                else
+                {
+                    return Json(new ApiResponse<PurchaseOrderDto>
+                    {
+                        Success = false,
+                        ErrorMessage = response.ErrorMessage ?? "Lỗi khi cập nhật thông tin tracking"
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                return Json(new ApiResponse<PurchaseOrderDto>
+                {
+                    Success = false,
+                    ErrorMessage = $"Lỗi: {ex.Message}"
+                });
+            }
+        }
+
+        /// <summary>
+        /// Đánh dấu PO đã gửi hàng (chuyển sang InTransit)
+        /// </summary>
+        [HttpPut("MarkAsInTransit/{id}")]
+        public async Task<IActionResult> MarkAsInTransit(int id, [FromBody] POTrackingDtos.MarkInTransitDto dto)
+        {
+            try
+            {
+                var endpoint = ApiEndpoints.PurchaseOrders.MarkInTransit.Replace("{0}", id.ToString());
+                var response = await _apiService.PutAsync<ApiResponse<PurchaseOrderDto>>(endpoint, dto);
+
+                if (response.Success && response.Data != null)
+                {
+                    return Json(response);
+                }
+                else
+                {
+                    return Json(new ApiResponse<PurchaseOrderDto>
+                    {
+                        Success = false,
+                        ErrorMessage = response.ErrorMessage ?? "Lỗi khi đánh dấu PO đã gửi hàng"
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                return Json(new ApiResponse<PurchaseOrderDto>
+                {
+                    Success = false,
+                    ErrorMessage = $"Lỗi: {ex.Message}"
+                });
+            }
+        }
+
+        /// <summary>
+        /// Lấy danh sách PO cần cảnh báo (sắp đến hạn, quá hạn)
+        /// </summary>
+        [HttpGet("GetDeliveryAlerts")]
+        public async Task<IActionResult> GetDeliveryAlerts()
+        {
+            try
+            {
+                var response = await _apiService.GetAsync<ApiResponse<POTrackingDtos.DeliveryAlertsDto>>(ApiEndpoints.PurchaseOrders.GetDeliveryAlerts);
+
+                if (response.Success && response.Data != null)
+                {
+                    return Json(response);
+                }
+                else
+                {
+                    return Json(new ApiResponse<POTrackingDtos.DeliveryAlertsDto>
+                    {
+                        Success = false,
+                        ErrorMessage = response.ErrorMessage ?? "Lỗi khi lấy danh sách cảnh báo"
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                return Json(new ApiResponse<POTrackingDtos.DeliveryAlertsDto>
+                {
+                    Success = false,
+                    ErrorMessage = $"Lỗi: {ex.Message}"
+                });
+            }
+        }
+
+        #endregion
 
         /// <summary>
         /// Convert status từ API sang display name

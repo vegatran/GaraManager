@@ -59,6 +59,14 @@ namespace GarageManagementSystem.Infrastructure.Repositories
             // ✅ Phase 4.1 - Advanced Features: Comments/Notes Timeline
             InventoryCheckComments = new GenericRepository<InventoryCheckComment>(_context);
             InventoryAdjustmentComments = new GenericRepository<InventoryAdjustmentComment>(_context);
+            
+            // ✅ Phase 4.2 - Procurement Management
+            ReorderSuggestions = new GenericRepository<ReorderSuggestion>(_context);
+            SupplierQuotations = new GenericRepository<SupplierQuotation>(_context);
+            SupplierRatings = new GenericRepository<SupplierRating>(_context);
+            SupplierPerformances = new GenericRepository<SupplierPerformance>(_context);
+            SupplierPerformanceHistories = new GenericRepository<SupplierPerformanceHistory>(_context);
+            PurchaseOrderStatusHistories = new GenericRepository<PurchaseOrderStatusHistory>(_context);
         }
 
         public ICustomerRepository Customers { get; private set; }
@@ -107,6 +115,14 @@ namespace GarageManagementSystem.Infrastructure.Repositories
         // ✅ Phase 4.1 - Advanced Features: Comments/Notes Timeline
         public IGenericRepository<InventoryCheckComment> InventoryCheckComments { get; private set; }
         public IGenericRepository<InventoryAdjustmentComment> InventoryAdjustmentComments { get; private set; }
+        
+        // ✅ Phase 4.2 - Procurement Management
+        public IGenericRepository<ReorderSuggestion> ReorderSuggestions { get; private set; }
+        public IGenericRepository<SupplierQuotation> SupplierQuotations { get; private set; }
+        public IGenericRepository<SupplierRating> SupplierRatings { get; private set; }
+        public IGenericRepository<SupplierPerformance> SupplierPerformances { get; private set; }
+        public IGenericRepository<SupplierPerformanceHistory> SupplierPerformanceHistories { get; private set; }
+        public IGenericRepository<PurchaseOrderStatusHistory> PurchaseOrderStatusHistories { get; private set; }
 
         public IGenericRepository<T> Repository<T>() where T : BaseEntity
         {

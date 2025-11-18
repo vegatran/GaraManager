@@ -1,0 +1,107 @@
+<!-- Modal Create Manual Inventory Adjustment -->
+<div class="modal fade" id="createAdjustmentModal" tabindex="-1" role="dialog" aria-hidden="true" data-backdrop="static" data-keyboard="false">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-primary">
+                <h5 class="modal-title">Tạo Phiếu Điều Chỉnh Tồn Kho</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form id="createAdjustmentForm">
+                <div class="modal-body">
+                    <!-- Basic Information -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Ngày Điều Chỉnh <span class="text-danger">*</span></label>
+                                <input type="date" id="createAdjustmentDate" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Kho</label>
+                                <select id="createWarehouse" class="form-control">
+                                    <option value="">-- Chọn kho --</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Khu Vực</label>
+                                <select id="createWarehouseZone" class="form-control" disabled>
+                                    <option value="">-- Chọn khu vực --</option>
+                                </select>
+                                <small class="form-text text-muted">Vui lòng chọn kho trước</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Kệ/Ngăn</label>
+                                <select id="createWarehouseBin" class="form-control" disabled>
+                                    <option value="">-- Chọn kệ/ngăn --</option>
+                                </select>
+                                <small class="form-text text-muted">Vui lòng chọn khu vực trước</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Lý Do Điều Chỉnh <span class="text-danger">*</span></label>
+                        <textarea id="createReason" class="form-control" rows="2" required placeholder="Nhập lý do điều chỉnh tồn kho"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Ghi Chú</label>
+                        <textarea id="createNotes" class="form-control" rows="2" placeholder="Nhập ghi chú (nếu có)"></textarea>
+                    </div>
+
+                    <hr>
+
+                    <!-- Items Management -->
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="mb-0">Danh Sách Items</h6>
+                        <button type="button" class="btn btn-sm btn-primary" id="addItemToCreateBtn">
+                            <i class="fas fa-plus"></i> Thêm Item
+                        </button>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table id="createItemsTable" class="table table-sm table-bordered">
+                            <thead>
+                                <tr>
+                                    <th width="5%">STT</th>
+                                    <th width="15%">Mã Phụ Tùng</th>
+                                    <th width="20%">Tên Phụ Tùng</th>
+                                    <th width="10%">SKU</th>
+                                    <th width="12%">Tồn Kho Hiện Tại</th>
+                                    <th width="12%">Thay Đổi</th>
+                                    <th width="12%">Tồn Kho Sau</th>
+                                    <th width="10%">Ghi Chú</th>
+                                    <th width="4%">Thao Tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="createItemsTableBody">
+                                <tr id="createItemsEmptyRow">
+                                    <td colspan="9" class="text-center text-muted py-3">
+                                        <i class="fas fa-info-circle"></i> Chưa có item nào. Vui lòng thêm item.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary" id="submitCreateAdjustmentBtn">
+                        <i class="fas fa-save"></i> Tạo Phiếu Điều Chỉnh
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+

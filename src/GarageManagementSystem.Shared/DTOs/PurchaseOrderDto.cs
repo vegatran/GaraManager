@@ -83,6 +83,23 @@ namespace GarageManagementSystem.Shared.DTOs
         
         public bool IsApproved { get; set; } = false;
         
+        // ✅ Phase 4.2.3: PO Tracking fields
+        [StringLength(100)]
+        public string? TrackingNumber { get; set; } // Mã vận đơn
+        
+        [StringLength(100)]
+        public string? ShippingMethod { get; set; } // Phương thức vận chuyển
+        
+        public DateTime? InTransitDate { get; set; } // Ngày supplier gửi hàng
+        
+        [StringLength(20)]
+        public string? DeliveryStatus { get; set; } // "OnTime", "Delayed", "AtRisk"
+        
+        [StringLength(500)]
+        public string? DeliveryNotes { get; set; } // Ghi chú về giao hàng
+        
+        public int? DaysUntilDelivery { get; set; } // Số ngày còn lại đến ngày giao (có thể âm nếu quá hạn)
+        
         // Additional properties for display
         public string? SupplierName { get; set; }
         public string? EmployeeName { get; set; }

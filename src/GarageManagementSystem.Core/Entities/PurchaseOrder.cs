@@ -81,9 +81,28 @@ namespace GarageManagementSystem.Core.Entities
         
         public bool IsApproved { get; set; } = false; // Đã được phê duyệt
         
+        // ✅ Phase 4.2.3: PO Tracking fields
+        [StringLength(100)]
+        public string? TrackingNumber { get; set; } // Mã vận đơn
+        
+        [StringLength(100)]
+        public string? ShippingMethod { get; set; } // Phương thức vận chuyển
+        
+        public DateTime? InTransitDate { get; set; } // Ngày supplier gửi hàng
+        
+        // Note: ExpectedDeliveryDate đã có sẵn ở trên, nhưng có thể cập nhật
+        // public DateTime? EstimatedDeliveryDate { get; set; } // Đã có ở trên
+        
+        [StringLength(20)]
+        public string? DeliveryStatus { get; set; } // "OnTime", "Delayed", "AtRisk"
+        
+        [StringLength(500)]
+        public string? DeliveryNotes { get; set; } // Ghi chú về giao hàng
+        
         // Navigation properties
         public virtual Supplier Supplier { get; set; } = null!;
         public virtual Employee? Employee { get; set; }
         public virtual ICollection<PurchaseOrderItem> PurchaseOrderItems { get; set; } = new List<PurchaseOrderItem>();
+        public virtual ICollection<PurchaseOrderStatusHistory> StatusHistory { get; set; } = new List<PurchaseOrderStatusHistory>();
     }
 }

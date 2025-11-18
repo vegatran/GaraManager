@@ -150,6 +150,12 @@ builder.Services.AddSingleton<GarageManagementSystem.Core.Services.ICacheService
 // Audit Log Service
 builder.Services.AddScoped<GarageManagementSystem.Core.Services.IAuditLogService, GarageManagementSystem.Core.Services.AuditLogService>();
 
+// SignalR
+builder.Services.AddSignalR();
+
+// Notification Service
+builder.Services.AddScoped<GarageManagementSystem.API.Services.INotificationService, GarageManagementSystem.API.Services.NotificationService>();
+
 // Background Jobs
 builder.Services.AddHostedService<GarageManagementSystem.API.Services.BackgroundJobService>();
 
@@ -205,6 +211,9 @@ app.UseCors("AllowWebApp");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+
+// SignalR Hub
+app.MapHub<GarageManagementSystem.API.Hubs.NotificationHub>("/hubs/notifications");
 
 // Ensure database is created
 //using (var scope = app.Services.CreateScope())

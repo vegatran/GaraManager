@@ -117,6 +117,14 @@ namespace GarageManagementSystem.Infrastructure.Data
         public DbSet<InventoryAdjustmentItem> InventoryAdjustmentItems { get; set; }
         // ✅ Phase 4.1 - Advanced Features: Comments/Notes Timeline
         public DbSet<InventoryCheckComment> InventoryCheckComments { get; set; }
+        
+        // ✅ Phase 4.2 - Procurement Management
+        public DbSet<ReorderSuggestion> ReorderSuggestions { get; set; }
+        public DbSet<SupplierQuotation> SupplierQuotations { get; set; }
+        public DbSet<SupplierRating> SupplierRatings { get; set; }
+        public DbSet<SupplierPerformance> SupplierPerformances { get; set; }
+        public DbSet<SupplierPerformanceHistory> SupplierPerformanceHistories { get; set; }
+        public DbSet<PurchaseOrderStatusHistory> PurchaseOrderStatusHistories { get; set; }
         public DbSet<InventoryAdjustmentComment> InventoryAdjustmentComments { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -718,6 +726,7 @@ namespace GarageManagementSystem.Infrastructure.Data
                 entity.Property(e => e.InsuranceApprovedAmount).HasColumnType("decimal(18,2)");
                 entity.Property(e => e.InsuranceApprovalNotes).HasMaxLength(1000);
                 entity.Property(e => e.InsuranceAdjusterContact).HasMaxLength(200);
+                entity.Property(e => e.InsuranceFilePath).HasMaxLength(500); // ✅ THÊM: Đường dẫn file bảo hiểm
                 
                 // Company specific fields
                 entity.Property(e => e.PONumber).HasMaxLength(50);
@@ -1351,6 +1360,128 @@ namespace GarageManagementSystem.Infrastructure.Data
                     .WithMany(so => so.AdditionalServiceOrders)
                     .HasForeignKey(e => e.ParentServiceOrderId)
                     .OnDelete(DeleteBehavior.Restrict); // Prevent cascade delete
+            });
+
+            // ✅ Phase 4.2: Procurement Management Entities Configuration
+            modelBuilder.Entity<ReorderSuggestion>(entity =>
+            {
+                entity.HasIndex(e => new { e.PartId, e.IsProcessed });
+                entity.HasIndex(e => e.Priority);
+                entity.HasIndex(e => e.SuggestedDate);
+                entity.Property(e => e.EstimatedCost).HasColumnType("decimal(18,2)");
+                
+                entity.HasOne(e => e.Part)
+                    .WithMany()
+                    .HasForeignKey(e => e.PartId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                    
+                entity.HasOne(e => e.PurchaseOrder)
+                    .WithMany()
+                    .HasForeignKey(e => e.PurchaseOrderId)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            modelBuilder.Entity<SupplierQuotation>(entity =>
+            {
+                entity.HasIndex(e => new { e.SupplierId, e.PartId });
+                entity.HasIndex(e => e.Status);
+                entity.HasIndex(e => e.QuotationDate);
+                entity.Property(e => e.UnitPrice).HasColumnType("decimal(18,2)");
+                
+                entity.HasOne(e => e.Supplier)
+                    .WithMany()
+                    .HasForeignKey(e => e.SupplierId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                    
+                entity.HasOne(e => e.Part)
+                    .WithMany()
+                    .HasForeignKey(e => e.PartId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<SupplierRating>(entity =>
+            {
+                entity.HasIndex(e => new { e.SupplierId, e.PartId });
+                entity.HasIndex(e => e.RatedAt);
+                
+                entity.HasOne(e => e.Supplier)
+                    .WithMany()
+                    .HasForeignKey(e => e.SupplierId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                    
+                entity.HasOne(e => e.Part)
+                    .WithMany()
+                    .HasForeignKey(e => e.PartId)
+                    .OnDelete(DeleteBehavior.SetNull);
+                    
+                entity.HasOne(e => e.RatedByEmployee)
+                    .WithMany()
+                    .HasForeignKey(e => e.RatedByEmployeeId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<SupplierPerformance>(entity =>
+            {
+                entity.HasIndex(e => new { e.SupplierId, e.PartId });
+                entity.HasIndex(e => e.OverallScore);
+                entity.HasIndex(e => e.CalculatedAt);
+                entity.Property(e => e.OnTimeDeliveryRate).HasColumnType("decimal(5,2)");
+                entity.Property(e => e.DefectRate).HasColumnType("decimal(5,2)");
+                entity.Property(e => e.AveragePrice).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.PriceStability).HasColumnType("decimal(5,2)");
+                entity.Property(e => e.OverallScore).HasColumnType("decimal(5,2)");
+                
+                entity.HasOne(e => e.Supplier)
+                    .WithMany()
+                    .HasForeignKey(e => e.SupplierId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                    
+                entity.HasOne(e => e.Part)
+                    .WithMany()
+                    .HasForeignKey(e => e.PartId)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            modelBuilder.Entity<SupplierPerformanceHistory>(entity =>
+            {
+                entity.HasIndex(e => new { e.SupplierId, e.PartId, e.PeriodStart });
+                entity.Property(e => e.OnTimeDeliveryRate).HasColumnType("decimal(5,2)");
+                entity.Property(e => e.AverageDelayDays).HasColumnType("decimal(5,2)");
+                entity.Property(e => e.DefectRate).HasColumnType("decimal(5,2)");
+                entity.Property(e => e.OverallScore).HasColumnType("decimal(5,2)");
+                
+                entity.HasOne(e => e.Supplier)
+                    .WithMany()
+                    .HasForeignKey(e => e.SupplierId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                    
+                entity.HasOne(e => e.Part)
+                    .WithMany()
+                    .HasForeignKey(e => e.PartId)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            modelBuilder.Entity<PurchaseOrderStatusHistory>(entity =>
+            {
+                entity.HasIndex(e => new { e.PurchaseOrderId, e.StatusDate });
+                entity.HasIndex(e => e.Status);
+                
+                entity.HasOne(e => e.PurchaseOrder)
+                    .WithMany(po => po.StatusHistory)
+                    .HasForeignKey(e => e.PurchaseOrderId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                    
+                entity.HasOne(e => e.UpdatedByEmployee)
+                    .WithMany()
+                    .HasForeignKey(e => e.UpdatedByEmployeeId)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            // ✅ Phase 4.2: Update PurchaseOrder with tracking fields indexes
+            modelBuilder.Entity<PurchaseOrder>(entity =>
+            {
+                entity.HasIndex(e => new { e.DeliveryStatus, e.Status });
+                entity.HasIndex(e => new { e.ExpectedDeliveryDate, e.Status });
             });
 
             // InvoiceItem Configuration - Use TEXT for long fields

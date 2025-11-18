@@ -46,7 +46,97 @@ window.PurchaseOrderManagement = {
         this.loadSuppliers();
         this.loadParts();
         
+        // ✅ Phase 4.2.2: Check URL params for pre-filling PO form
+        this.checkUrlParams();
+        
         this.initialized = true;
+    },
+
+    // ✅ Phase 4.2.2: Check URL params and pre-fill form if needed
+    checkUrlParams: function() {
+        var urlParams = new URLSearchParams(window.location.search);
+        var partId = urlParams.get('partId');
+        var supplierId = urlParams.get('supplierId');
+        var quantity = urlParams.get('quantity');
+        var unitPrice = urlParams.get('unitPrice');
+
+        if (partId || supplierId) {
+            // Auto-open create modal and pre-fill data
+            var self = this;
+            setTimeout(function() {
+                self.showCreateModal();
+                
+                // Pre-fill supplier if provided
+                if (supplierId) {
+                    $('#createSupplierId').val(supplierId).trigger('change');
+                }
+                
+                // Pre-fill part and quantity if provided
+                if (partId) {
+                    // Wait for parts to load, then add item
+                    setTimeout(function() {
+                        self.addPreFilledItem(partId, quantity, unitPrice);
+                    }, 500);
+                }
+            }, 300);
+        }
+    },
+
+    // ✅ Phase 4.2.2: Add pre-filled item to PO form
+    addPreFilledItem: function(partId, quantity, unitPrice) {
+        var self = this;
+        
+        // Find part in allParts cache
+        var part = this.allParts.find(function(p) {
+            return p.id.toString() === partId.toString();
+        });
+        
+        if (!part) {
+            // If part not in cache, try to load it
+            $.ajax({
+                url: '/PartsManagement/GetPart/' + partId,
+                type: 'GET',
+                success: function(response) {
+                    if (response && response.success && response.data) {
+                        var loadedPart = response.data;
+                        self.addItemToForm(loadedPart, quantity, unitPrice);
+                    }
+                }
+            });
+            return;
+        }
+        
+        this.addItemToForm(part, quantity, unitPrice);
+    },
+
+    // ✅ Phase 4.2.2: Add item to PO form
+    addItemToForm: function(part, quantity, unitPrice) {
+        var itemRow = `
+            <tr class="purchase-order-item-row">
+                <td>
+                    <select class="form-control part-select" required>
+                        <option value="${part.id}" selected>${part.partName} (${part.partNumber})</option>
+                    </select>
+                    <input type="hidden" class="part-id-input" value="${part.id}">
+                </td>
+                <td>
+                    <input type="number" class="form-control quantity-input" value="${quantity || 1}" min="1" required>
+                </td>
+                <td>
+                    <input type="number" class="form-control unit-price-input" value="${unitPrice || part.costPrice || 0}" min="0" step="0.01" required>
+                </td>
+                <td class="total-price-cell text-right">0</td>
+                <td>
+                    <button type="button" class="btn btn-danger btn-sm remove-item-btn">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+        
+        $('#createPurchaseOrderItemsTable tbody').append(itemRow);
+        this.updateItemTotal($('#createPurchaseOrderItemsTable tbody tr').last());
+        this.updateTotalAmount();
     },
 
     // Initialize DataTable
