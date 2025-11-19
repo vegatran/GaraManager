@@ -1,6 +1,10 @@
 using GarageManagementSystem.Core.Interfaces;
+using GarageManagementSystem.Core.Services;
 using GarageManagementSystem.Infrastructure.Data;
+using GarageManagementSystem.Infrastructure.Extensions;
 using GarageManagementSystem.Infrastructure.Repositories;
+using GarageManagementSystem.Infrastructure.Services;
+using GarageManagementSystem.Shared.Services;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -111,60 +115,22 @@ builder.Services.AddDbContext<GarageDbContext>((serviceProvider, options) =>
            .AddInterceptors(auditInterceptor);
 });
 
-// Repositories
-builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
-builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
-builder.Services.AddScoped<IVehicleRepository, VehicleRepository>();
-builder.Services.AddScoped<IServiceRepository, ServiceRepository>();
-builder.Services.AddScoped<IServiceOrderRepository, ServiceOrderRepository>();
-builder.Services.AddScoped<IEmployeeRepository, EmployeeRepository>();
-builder.Services.AddScoped<IVehicleInspectionRepository, VehicleInspectionRepository>();
-builder.Services.AddScoped<IServiceQuotationRepository, ServiceQuotationRepository>();
-builder.Services.AddScoped<IPartRepository, PartRepository>();
-builder.Services.AddScoped<ISupplierRepository, SupplierRepository>();
-builder.Services.AddScoped<IStockTransactionRepository, StockTransactionRepository>();
-builder.Services.AddScoped<IPaymentTransactionRepository, PaymentTransactionRepository>();
-builder.Services.AddScoped<IAppointmentRepository, AppointmentRepository>();
-builder.Services.AddScoped<IPrintTemplateRepository, PrintTemplateRepository>();
-builder.Services.AddScoped<ICustomerReceptionRepository, CustomerReceptionRepository>();
+// ✅ Tự động đăng ký tất cả Repositories và Services
+// Sử dụng extension method để tự động quét và đăng ký I{Name}Repository -> {Name}Repository
+// và I{Name}Service -> {Name}Service
+builder.Services.AddApplicationServices();
 
-// Services
-builder.Services.AddScoped<GarageManagementSystem.Core.Interfaces.IPrintTemplateService, GarageManagementSystem.Core.Services.PrintTemplateService>();
-
-// Excel Import Service
-builder.Services.AddScoped<GarageManagementSystem.Core.Services.IExcelImportService, GarageManagementSystem.Infrastructure.Services.ExcelImportService>();
-
-// Invoice Service
-builder.Services.AddScoped<GarageManagementSystem.Shared.Services.IInvoiceService, GarageManagementSystem.Infrastructure.Services.InvoiceService>();
-
-// ✅ 3.1: COGS Calculation Service
-builder.Services.AddScoped<GarageManagementSystem.Core.Interfaces.ICOGSCalculationService, GarageManagementSystem.Infrastructure.Services.COGSCalculationService>();
-builder.Services.AddScoped<GarageManagementSystem.Core.Interfaces.IWarrantyService, GarageManagementSystem.Infrastructure.Services.WarrantyService>();
-
-// ✅ 4.3.1: Financial Transaction Service
-builder.Services.AddScoped<GarageManagementSystem.Core.Interfaces.IFinancialTransactionService, GarageManagementSystem.Infrastructure.Services.FinancialTransactionService>();
-
-// ✅ 4.3.3.1: Profit Report Service
-builder.Services.AddScoped<GarageManagementSystem.Core.Interfaces.IProfitReportService, GarageManagementSystem.Infrastructure.Services.ProfitReportService>();
-
-// Configuration Service
-builder.Services.AddScoped<GarageManagementSystem.Core.Services.IConfigurationService, GarageManagementSystem.Core.Services.ConfigurationService>();
-
-// Cache Service
+// Cache Service (Singleton - đăng ký riêng vì cần Singleton)
 builder.Services.AddMemoryCache();
-builder.Services.AddSingleton<GarageManagementSystem.Core.Services.ICacheService, GarageManagementSystem.Core.Services.CacheService>();
-// Audit Log Service
-builder.Services.AddScoped<GarageManagementSystem.Core.Services.IAuditLogService, GarageManagementSystem.Core.Services.AuditLogService>();
+builder.Services.AddSingleton<ICacheService, CacheService>();
 
 // SignalR
 builder.Services.AddSignalR();
 
-// Notification Service
+// API Services (đăng ký riêng vì nằm trong API project)
 builder.Services.AddScoped<GarageManagementSystem.API.Services.INotificationService, GarageManagementSystem.API.Services.NotificationService>();
-
 // Background Jobs
 builder.Services.AddHostedService<GarageManagementSystem.API.Services.BackgroundJobService>();
-
 // CORS
 builder.Services.AddCors(options =>
 {
@@ -188,13 +154,10 @@ builder.Services.AddCors(options =>
               .AllowAnyHeader();
     });
 });
-
 // Add AutoMapper
 builder.Services.AddAutoMapper(typeof(Program));
-
 // Add Memory Cache
 builder.Services.AddMemoryCache();
-
 // Add Cache Service
 builder.Services.AddScoped<GarageManagementSystem.API.Services.ICacheService, GarageManagementSystem.API.Services.CacheService>();
 
@@ -220,12 +183,5 @@ app.MapControllers();
 
 // SignalR Hub
 app.MapHub<GarageManagementSystem.API.Hubs.NotificationHub>("/hubs/notifications");
-
-// Ensure database is created
-//using (var scope = app.Services.CreateScope())
-//{
-//    var context = scope.ServiceProvider.GetRequiredService<GarageDbContext>();
-//    context.Database.EnsureCreated();
-//}
 
 app.Run();
