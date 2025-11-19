@@ -50,6 +50,11 @@ namespace GarageManagementSystem.Shared.DTOs
         public string Status { get; set; } = "Pending";
         
         public DateTime CreatedAt { get; set; }
+        
+        /// <summary>
+        /// ✅ 4.3.1.9: Danh sách chứng từ đính kèm
+        /// </summary>
+        public List<FinancialTransactionAttachmentDto> Attachments { get; set; } = new();
     }
 
     /// <summary>

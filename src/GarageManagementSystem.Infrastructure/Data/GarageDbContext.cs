@@ -1005,6 +1005,54 @@ namespace GarageManagementSystem.Infrastructure.Data
                     .OnDelete(DeleteBehavior.SetNull);
             });
 
+            // ✅ 4.3.1: FinancialTransaction configuration
+            modelBuilder.Entity<FinancialTransaction>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.TransactionNumber).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.TransactionType).IsRequired().HasMaxLength(20);
+                entity.Property(e => e.Category).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.SubCategory).HasMaxLength(100);
+                entity.Property(e => e.Amount).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.Currency).HasMaxLength(3).HasDefaultValue("VND");
+                entity.Property(e => e.PaymentMethod).HasMaxLength(50);
+                entity.Property(e => e.ReferenceNumber).HasMaxLength(100);
+                entity.Property(e => e.Description).HasMaxLength(500);
+                entity.Property(e => e.RelatedEntity).HasMaxLength(100);
+                entity.Property(e => e.ApprovedBy).HasMaxLength(100);
+                entity.Property(e => e.Notes).HasMaxLength(500);
+                entity.Property(e => e.Status).HasMaxLength(20).HasDefaultValue("Pending");
+                
+                // ✅ Unique index cho TransactionNumber (chỉ áp dụng cho bản ghi chưa xóa)
+                entity.HasIndex(e => e.TransactionNumber)
+                    .IsUnique();
+                
+                // ✅ 4.3.2.3: Index for Accounts Payable queries (TransactionType, RelatedEntity, RelatedEntityId)
+                entity.HasIndex(e => new { e.TransactionType, e.RelatedEntity, e.RelatedEntityId, e.IsDeleted });
+                
+                entity.HasOne(e => e.Employee)
+                    .WithMany(emp => emp.FinancialTransactions)
+                    .HasForeignKey(e => e.EmployeeId)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            // FinancialTransactionAttachment configuration
+            modelBuilder.Entity<FinancialTransactionAttachment>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.FileName).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.FilePath).IsRequired().HasMaxLength(500);
+                entity.Property(e => e.FileType).HasMaxLength(100);
+                entity.Property(e => e.MimeType).HasMaxLength(100);
+                entity.Property(e => e.Description).HasMaxLength(500);
+                entity.Property(e => e.UploadedBy).HasMaxLength(100);
+
+                entity.HasOne(e => e.FinancialTransaction)
+                    .WithMany(ft => ft.Attachments)
+                    .HasForeignKey(e => e.FinancialTransactionId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
             // Appointment configuration
             modelBuilder.Entity<Appointment>(entity =>
             {
@@ -1397,6 +1445,11 @@ namespace GarageManagementSystem.Infrastructure.Data
                     .WithMany()
                     .HasForeignKey(e => e.PartId)
                     .OnDelete(DeleteBehavior.Restrict);
+                    
+                entity.HasOne(e => e.RequestedBy)
+                    .WithMany()
+                    .HasForeignKey(e => e.RequestedById)
+                    .OnDelete(DeleteBehavior.SetNull);
             });
 
             modelBuilder.Entity<SupplierRating>(entity =>

@@ -47,5 +47,6 @@ namespace GarageManagementSystem.Core.Entities
         public virtual ICollection<PaymentTransaction> ReceivedPayments { get; set; } = new List<PaymentTransaction>();
         public virtual ICollection<StockTransaction> ProcessedStockTransactions { get; set; } = new List<StockTransaction>();
         public virtual ICollection<Appointment> AssignedAppointments { get; set; } = new List<Appointment>();
+        public virtual ICollection<FinancialTransaction> FinancialTransactions { get; set; } = new List<FinancialTransaction>();
     }
 }

@@ -159,5 +159,68 @@ namespace GarageManagementSystem.Shared.DTOs
         public DateTime? EndDate { get; set; }
         public bool ForceRecalculate { get; set; } = false;
     }
+
+    /// <summary>
+    /// ✅ Phase 4.2.2 Optional: Request Quotation DTOs
+    /// </summary>
+    public class RequestQuotationDto
+    {
+        public int PartId { get; set; }
+        public List<int> SupplierIds { get; set; } = new();
+        public int RequestedQuantity { get; set; }
+        public string? RequestNotes { get; set; }
+        public DateTime? RequiredByDate { get; set; }
+    }
+
+    public class RequestQuotationResponseDto
+    {
+        public int RequestedCount { get; set; }
+        public List<SupplierQuotationDto> Quotations { get; set; } = new();
+    }
+
+    public class SupplierQuotationDto
+    {
+        public int Id { get; set; }
+        public string QuotationNumber { get; set; } = string.Empty;
+        public int SupplierId { get; set; }
+        public string SupplierName { get; set; } = string.Empty;
+        public string SupplierCode { get; set; } = string.Empty;
+        public int PartId { get; set; }
+        public string PartNumber { get; set; } = string.Empty;
+        public string PartName { get; set; } = string.Empty;
+        public DateTime QuotationDate { get; set; }
+        public DateTime? ValidUntil { get; set; }
+        public decimal UnitPrice { get; set; }
+        public int MinimumOrderQuantity { get; set; }
+        public int? LeadTimeDays { get; set; }
+        public string? WarrantyPeriod { get; set; }
+        public string? WarrantyTerms { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public int? RequestedById { get; set; }
+        public string? RequestedByName { get; set; }
+        public DateTime? RequestedDate { get; set; }
+        public DateTime? ResponseDate { get; set; }
+        public int? RequestedQuantity { get; set; }
+        public string? RequestNotes { get; set; }
+        public string? ResponseNotes { get; set; }
+        public string? Notes { get; set; }
+    }
+
+    public class UpdateQuotationDto
+    {
+        public decimal UnitPrice { get; set; }
+        public int MinimumOrderQuantity { get; set; }
+        public int? LeadTimeDays { get; set; }
+        public DateTime? ValidUntil { get; set; }
+        public string? WarrantyPeriod { get; set; }
+        public string? WarrantyTerms { get; set; }
+        public string? ResponseNotes { get; set; }
+        public string Status { get; set; } = "Pending";
+    }
+
+    public class AcceptRejectQuotationDto
+    {
+        public string? Notes { get; set; }
+    }
 }
 

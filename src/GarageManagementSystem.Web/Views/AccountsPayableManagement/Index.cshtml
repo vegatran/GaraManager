@@ -1,0 +1,219 @@
+@{
+    ViewData["Title"] = "Quản Lý Công Nợ Phải Trả";
+}
+
+@Html.AntiForgeryToken()
+
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1 class="m-0">Quản Lý Công Nợ Phải Trả</h1>
+            </div>
+            <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-right">
+                    <li class="breadcrumb-item"><a href="@Url.Action("Index", "Home")">Trang Chủ</a></li>
+                    <li class="breadcrumb-item"><a href="#">Tài Chính</a></li>
+                    <li class="breadcrumb-item active">Công Nợ Phải Trả</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+
+<section class="content">
+    <div class="container-fluid">
+        <!-- Summary Cards -->
+        <div class="row mb-3">
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-primary">
+                    <div class="inner">
+                        <h3 id="totalPayable">0</h3>
+                        <p>Tổng Công Nợ</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-money-bill-wave"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-danger">
+                    <div class="inner">
+                        <h3 id="overduePayable">0</h3>
+                        <p>Công Nợ Quá Hạn</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-warning">
+                    <div class="inner">
+                        <h3 id="overdue30Days">0</h3>
+                        <p>Quá Hạn ≤ 30 Ngày</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-info">
+                    <div class="inner">
+                        <h3 id="overdue60Days">0</h3>
+                        <p>Quá Hạn 30-60 Ngày</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-hourglass-half"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-3">
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-dark">
+                    <div class="inner">
+                        <h3 id="overdue90Days">0</h3>
+                        <p>Quá Hạn > 60 Ngày</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-exclamation-circle"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-secondary">
+                    <div class="inner">
+                        <h3 id="totalCount">0</h3>
+                        <p>Tổng Số Phiếu</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-file-invoice"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-warning">
+                    <div class="inner">
+                        <h3 id="overdueCount">0</h3>
+                        <p>Số Phiếu Quá Hạn</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-calendar-times"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Supplier Breakdown Card -->
+        <div class="row mb-3">
+            <div class="col-12">
+                <div class="card card-primary card-outline">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-chart-pie mr-1"></i>Công Nợ Theo Nhà Cung Cấp
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="row" id="supplierBreakdown">
+                            <!-- Supplier breakdown sẽ được load từ JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Table -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Danh Sách Công Nợ Phải Trả</h3>
+                        <div class="card-tools">
+                            <button type="button" class="btn btn-success btn-sm mr-1" id="exportExcelBtn">
+                                <i class="fas fa-file-excel"></i> Xuất Excel
+                            </button>
+                            <button type="button" class="btn btn-info btn-sm" id="exportPdfBtn">
+                                <i class="fas fa-file-pdf"></i> Xuất PDF
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <!-- Filters -->
+                        <div class="row mb-3">
+                            <div class="col-md-2">
+                                <label for="supplierFilter">Nhà Cung Cấp:</label>
+                                <select class="form-control form-control-sm" id="supplierFilter">
+                                    <option value="">Tất cả</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="paymentStatusFilter">Trạng Thái:</label>
+                                <select class="form-control form-control-sm" id="paymentStatusFilter">
+                                    <option value="">Tất cả</option>
+                                    <option value="Unpaid">Chưa Trả</option>
+                                    <option value="Partial">Trả Một Phần</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="overdueDaysFilter">Quá Hạn (ngày):</label>
+                                <select class="form-control form-control-sm" id="overdueDaysFilter">
+                                    <option value="">Tất cả</option>
+                                    <option value="1">Quá hạn ≥ 1 ngày</option>
+                                    <option value="30">Quá hạn ≥ 30 ngày</option>
+                                    <option value="60">Quá hạn ≥ 60 ngày</option>
+                                    <option value="90">Quá hạn ≥ 90 ngày</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="fromDateFilter">Từ Ngày:</label>
+                                <input type="date" class="form-control form-control-sm" id="fromDateFilter" />
+                            </div>
+                            <div class="col-md-2">
+                                <label for="toDateFilter">Đến Ngày:</label>
+                                <input type="date" class="form-control form-control-sm" id="toDateFilter" />
+                            </div>
+                            <div class="col-md-2">
+                                <label>&nbsp;</label>
+                                <button type="button" class="btn btn-secondary btn-sm btn-block" id="clearFiltersBtn">
+                                    <i class="fas fa-times"></i> Xóa Bộ Lọc
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table id="payablesTable" class="table table-bordered table-striped dt-responsive nowrap" width="100%">
+                                <thead>
+                                    <tr>
+                                        <th>Số Phiếu</th>
+                                        <th>Nhà Cung Cấp</th>
+                                        <th>Điện Thoại</th>
+                                        <th>Email</th>
+                                        <th>Tổng Tiền</th>
+                                        <th>Đã Trả</th>
+                                        <th>Còn Nợ</th>
+                                        <th>Trạng Thái</th>
+                                        <th>Quá Hạn</th>
+                                        <th>Ngày Đặt Hàng</th>
+                                        <th>Ngày Nhận Hàng</th>
+                                        <th>Hạn Thanh Toán</th>
+                                        <th>Thao Tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script src="~/js/accounts-payable-management.js" asp-append-version="true"></script>
+}
+

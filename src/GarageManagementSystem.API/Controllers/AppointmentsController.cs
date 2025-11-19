@@ -4,8 +4,10 @@ using GarageManagementSystem.Core.Extensions;
 using GarageManagementSystem.Shared.DTOs;
 using GarageManagementSystem.Shared.Models;
 using GarageManagementSystem.API.Services;
+using GarageManagementSystem.Infrastructure.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace GarageManagementSystem.API.Controllers
 {
@@ -17,12 +19,14 @@ namespace GarageManagementSystem.API.Controllers
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
         private readonly ICacheService _cacheService;
+        private readonly GarageDbContext _context;
 
-        public AppointmentsController(IUnitOfWork unitOfWork, IMapper mapper, ICacheService cacheService)
+        public AppointmentsController(IUnitOfWork unitOfWork, IMapper mapper, ICacheService cacheService, GarageDbContext context)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _cacheService = cacheService;
+            _context = context;
         }
 
         [HttpGet]
@@ -59,11 +63,8 @@ namespace GarageManagementSystem.API.Controllers
 
                 query = query.OrderByDescending(a => a.ScheduledDateTime);
 
-                // Get total count
-                var totalCount = await query.GetTotalCountAsync();
-                
-                // Apply pagination
-                var pagedAppointments = query.ApplyPagination(pageNumber, pageSize).ToList();
+                // ✅ OPTIMIZED: Get paged results with total count - automatically chooses best method
+                var (pagedAppointments, totalCount) = await query.ToPagedListWithCountAsync(pageNumber, pageSize, _context);
                 var appointmentDtos = pagedAppointments.Select(MapToDto).ToList();
                 
                 return Ok(PagedResponse<AppointmentDto>.CreateSuccessResult(

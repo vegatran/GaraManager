@@ -205,5 +205,213 @@ namespace GarageManagementSystem.Web.Controllers
                 });
             }
         }
+
+        /// <summary>
+        /// Tạo Financial Transaction mới
+        /// </summary>
+        [HttpPost("Create")]
+        public async Task<IActionResult> Create([FromBody] CreateFinancialTransactionDto dto)
+        {
+            try
+            {
+                var endpoint = ApiEndpoints.FinancialTransactions.Create;
+                var response = await _apiService.PostAsync<FinancialTransactionDto>(endpoint, dto);
+                
+                if (response.Success && response.Data != null)
+                {
+                    return Json(new { success = true, data = response.Data, message = "Tạo phiếu tài chính thành công" });
+                }
+                else
+                {
+                    return Json(new { success = false, error = response.ErrorMessage ?? "Lỗi khi tạo phiếu tài chính" });
+                }
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, error = "Lỗi khi tạo phiếu tài chính: " + ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Cập nhật Financial Transaction
+        /// </summary>
+        [HttpPut("Update/{id}")]
+        public async Task<IActionResult> Update(int id, [FromBody] CreateFinancialTransactionDto dto)
+        {
+            try
+            {
+                var endpoint = string.Format(ApiEndpoints.FinancialTransactions.Update, id);
+                var response = await _apiService.PutAsync<FinancialTransactionDto>(endpoint, dto);
+                
+                if (response.Success && response.Data != null)
+                {
+                    return Json(new { success = true, data = response.Data, message = "Cập nhật phiếu tài chính thành công" });
+                }
+                else
+                {
+                    return Json(new { success = false, error = response.ErrorMessage ?? "Lỗi khi cập nhật phiếu tài chính" });
+                }
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, error = "Lỗi khi cập nhật phiếu tài chính: " + ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Xóa Financial Transaction
+        /// </summary>
+        [HttpDelete("Delete/{id}")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            try
+            {
+                var endpoint = string.Format(ApiEndpoints.FinancialTransactions.Delete, id);
+                var response = await _apiService.DeleteAsync<ApiResponse<bool>>(endpoint);
+                
+                if (response.Success)
+                {
+                    return Json(new { success = true, message = "Xóa phiếu tài chính thành công" });
+                }
+                else
+                {
+                    return Json(new { success = false, error = response.ErrorMessage ?? "Lỗi khi xóa phiếu tài chính" });
+                }
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, error = "Lỗi khi xóa phiếu tài chính: " + ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Lấy danh sách Employees cho dropdown
+        /// </summary>
+        [HttpGet("GetAvailableEmployees")]
+        public async Task<IActionResult> GetAvailableEmployees()
+        {
+            try
+            {
+                var response = await _apiService.GetAsync<PagedResponse<EmployeeDto>>(ApiEndpoints.Employees.GetAll + "?pageNumber=1&pageSize=1000");
+                
+                if (response != null && response.Success && response.Data != null && response.Data.Data != null && response.Data.Data.Any())
+                {
+                    var employees = response.Data.Data.Select(e => new
+                    {
+                        value = e.Id.ToString(),
+                        text = e.Name
+                    }).Cast<object>().ToList();
+                    
+                    return Json(employees);
+                }
+
+                return Json(new List<object>());
+            }
+            catch (Exception ex)
+            {
+                return Json(new List<object>());
+            }
+        }
+
+        /// <summary>
+        /// ✅ 4.3.1.6: Hiển thị trang Sổ Quỹ Tiền Mặt/Ngân Hàng
+        /// </summary>
+        [HttpGet("CashRegister")]
+        public IActionResult CashRegister()
+        {
+            return View();
+        }
+
+        /// <summary>
+        /// ✅ 4.3.1.6: Lấy sổ quỹ tiền mặt
+        /// </summary>
+        [HttpGet("GetCashRegister")]
+        public async Task<IActionResult> GetCashRegister(
+            [FromQuery] DateTime? fromDate = null,
+            [FromQuery] DateTime? toDate = null,
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 100)
+        {
+            try
+            {
+                var queryParams = new List<string>
+                {
+                    $"pageNumber={pageNumber}",
+                    $"pageSize={pageSize}"
+                };
+
+                if (fromDate.HasValue)
+                {
+                    queryParams.Add($"fromDate={fromDate.Value:yyyy-MM-dd}");
+                }
+
+                if (toDate.HasValue)
+                {
+                    queryParams.Add($"toDate={toDate.Value:yyyy-MM-dd}");
+                }
+
+                var endpoint = ApiEndpoints.FinancialTransactions.GetCashRegister + "?" + string.Join("&", queryParams);
+                var response = await _apiService.GetAsync<ApiResponse<PaymentMethodRegisterDto>>(endpoint);
+
+                if (response != null && response.Success && response.Data != null)
+                {
+                    return Json(new { success = true, data = response.Data });
+                }
+                else
+                {
+                    return Json(new { success = false, error = response?.ErrorMessage ?? "Lỗi khi lấy sổ quỹ tiền mặt" });
+                }
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, error = "Lỗi khi lấy sổ quỹ tiền mặt: " + ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// ✅ 4.3.1.6: Lấy sổ quỹ ngân hàng
+        /// </summary>
+        [HttpGet("GetBankRegister")]
+        public async Task<IActionResult> GetBankRegister(
+            [FromQuery] DateTime? fromDate = null,
+            [FromQuery] DateTime? toDate = null,
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 100)
+        {
+            try
+            {
+                var queryParams = new List<string>
+                {
+                    $"pageNumber={pageNumber}",
+                    $"pageSize={pageSize}"
+                };
+
+                if (fromDate.HasValue)
+                {
+                    queryParams.Add($"fromDate={fromDate.Value:yyyy-MM-dd}");
+                }
+
+                if (toDate.HasValue)
+                {
+                    queryParams.Add($"toDate={toDate.Value:yyyy-MM-dd}");
+                }
+
+                var endpoint = ApiEndpoints.FinancialTransactions.GetBankRegister + "?" + string.Join("&", queryParams);
+                var response = await _apiService.GetAsync<ApiResponse<PaymentMethodRegisterDto>>(endpoint);
+
+                if (response != null && response.Success && response.Data != null)
+                {
+                    return Json(new { success = true, data = response.Data });
+                }
+                else
+                {
+                    return Json(new { success = false, error = response?.ErrorMessage ?? "Lỗi khi lấy sổ quỹ ngân hàng" });
+                }
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, error = "Lỗi khi lấy sổ quỹ ngân hàng: " + ex.Message });
+            }
+        }
     }
 }

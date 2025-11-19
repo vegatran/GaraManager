@@ -1,0 +1,124 @@
+<!-- View Financial Transaction Modal -->
+<div class="modal fade" id="viewTransactionModal" tabindex="-1" role="dialog" data-backdrop="static" data-keyboard="false">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-info">
+                <h4 class="modal-title"><i class="fas fa-eye mr-2"></i>Chi Tiết Phiếu Tài Chính</h4>
+                <button type="button" class="close text-white" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label><strong>Mã Phiếu:</strong></label>
+                            <p id="viewTransactionNumber" class="form-control-static"></p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label><strong>Loại Giao Dịch:</strong></label>
+                            <p id="viewTransactionType" class="form-control-static"></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label><strong>Danh Mục:</strong></label>
+                            <p id="viewCategory" class="form-control-static"></p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label><strong>Danh Mục Phụ:</strong></label>
+                            <p id="viewSubCategory" class="form-control-static"></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label><strong>Số Tiền:</strong></label>
+                            <p id="viewAmount" class="form-control-static text-primary font-weight-bold"></p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label><strong>Ngày Giao Dịch:</strong></label>
+                            <p id="viewTransactionDate" class="form-control-static"></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label><strong>Phương Thức Thanh Toán:</strong></label>
+                            <p id="viewPaymentMethod" class="form-control-static"></p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label><strong>Số Tham Chiếu:</strong></label>
+                            <p id="viewReferenceNumber" class="form-control-static"></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label><strong>Người Tạo:</strong></label>
+                            <p id="viewEmployeeName" class="form-control-static"></p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label><strong>Trạng Thái:</strong></label>
+                            <p id="viewStatus" class="form-control-static"></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="form-group">
+                            <label><strong>Mô Tả:</strong></label>
+                            <p id="viewDescription" class="form-control-static"></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="form-group">
+                            <label><strong>Ghi Chú:</strong></label>
+                            <p id="viewNotes" class="form-control-static"></p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- ✅ 4.3.1.9: Chứng từ đính kèm -->
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="form-group">
+                            <label><strong>Chứng Từ Đính Kèm:</strong></label>
+                            <div id="viewAttachments" class="mt-2">
+                                <p class="text-muted">Đang tải...</p>
+                            </div>
+                            <div class="mt-2">
+                                <button type="button" class="btn btn-sm btn-primary" id="uploadAttachmentBtn" style="display: none;">
+                                    <i class="fas fa-upload mr-1"></i> Upload Chứng Từ
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">
+                    <i class="fas fa-times mr-1"></i> Đóng
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+

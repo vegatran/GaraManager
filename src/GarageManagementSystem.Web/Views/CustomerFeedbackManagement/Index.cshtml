@@ -1,0 +1,189 @@
+@{
+    ViewData["Title"] = "Quản Lý Phản Hồi Khách Hàng";
+}
+
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1 class="m-0"><i class="fas fa-comments mr-2"></i>Quản Lý Phản Hồi Khách Hàng</h1>
+            </div>
+            <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-right">
+                    <li class="breadcrumb-item"><a href="@Url.Action("Index", "Home")">Trang chủ</a></li>
+                    <li class="breadcrumb-item active">Phản Hồi Khách Hàng</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+
+<section class="content">
+    <div class="container-fluid">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-filter mr-2"></i>Bộ lọc</h3>
+            </div>
+            <div class="card-body">
+                <div class="form-row align-items-end">
+                    <div class="form-group col-md-2">
+                        <label for="filterStatus">Trạng thái</label>
+                        <select id="filterStatus" class="form-control form-control-sm">
+                            <option value="">Tất cả</option>
+                            <option value="New">Mới</option>
+                            <option value="InProgress">Đang xử lý</option>
+                            <option value="Responded">Đã phản hồi</option>
+                            <option value="Resolved">Đã giải quyết</option>
+                            <option value="Closed">Đã đóng</option>
+                        </select>
+                    </div>
+                    <div class="form-group col-md-2">
+                        <label for="filterRating">Đánh giá</label>
+                        <select id="filterRating" class="form-control form-control-sm">
+                            <option value="">Tất cả</option>
+                            <option value="Excellent">Xuất sắc</option>
+                            <option value="Good">Tốt</option>
+                            <option value="Neutral">Bình thường</option>
+                            <option value="Poor">Kém</option>
+                            <option value="VeryPoor">Rất kém</option>
+                        </select>
+                    </div>
+                    <div class="form-group col-md-2">
+                        <label for="filterSource">Nguồn</label>
+                        <select id="filterSource" class="form-control form-control-sm">
+                            <option value="">Tất cả</option>
+                            <option value="Phone">Điện thoại</option>
+                            <option value="Email">Email</option>
+                            <option value="Website">Website</option>
+                            <option value="SocialMedia">Mạng xã hội</option>
+                            <option value="InPerson">Trực tiếp</option>
+                            <option value="Other">Khác</option>
+                        </select>
+                    </div>
+                    <div class="form-group col-md-2">
+                        <label for="filterStartDate">Từ ngày</label>
+                        <input type="date" id="filterStartDate" class="form-control form-control-sm" />
+                    </div>
+                    <div class="form-group col-md-2">
+                        <label for="filterEndDate">Đến ngày</label>
+                        <input type="date" id="filterEndDate" class="form-control form-control-sm" />
+                    </div>
+                    <div class="form-group col-md-2">
+                        <button type="button" class="btn btn-primary btn-sm" id="btnFilter">
+                            <i class="fas fa-search mr-1"></i>Lọc
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-sm ml-1" id="btnResetFilter">
+                            <i class="fas fa-redo mr-1"></i>Reset
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h3 class="card-title"><i class="fas fa-list mr-2"></i>Danh sách phản hồi</h3>
+                    <button type="button" class="btn btn-primary btn-sm" id="btnCreateFeedback">
+                        <i class="fas fa-plus mr-1"></i>Tạo Phản Hồi
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-striped table-hover" id="feedbackTable" width="100%">
+                        <thead class="thead-light">
+                            <tr>
+                                <th>ID</th>
+                                <th>Khách hàng</th>
+                                <th>Số phiếu</th>
+                                <th>Kênh</th>
+                                <th>Đánh giá</th>
+                                <th>Nội dung</th>
+                                <th>Trạng thái</th>
+                                <th>Ngày tạo</th>
+                                <th>Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Include Modal Partial Views -->
+@await Html.PartialAsync("_CreateFeedbackModal")
+@await Html.PartialAsync("_EditFeedbackModal")
+
+<!-- View Feedback Modal -->
+<div class="modal fade" id="viewFeedbackModal" tabindex="-1" role="dialog" data-backdrop="static" data-keyboard="false">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-info">
+                <h4 class="modal-title"><i class="fas fa-eye mr-2"></i>Chi Tiết Phản Hồi</h4>
+                <button type="button" class="close text-white" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label class="font-weight-bold">Khách hàng:</label>
+                            <p id="viewCustomerName" class="form-control-static">-</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label class="font-weight-bold">Số phiếu:</label>
+                            <p id="viewOrderNumber" class="form-control-static">-</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label class="font-weight-bold">Kênh phản hồi:</label>
+                            <p id="viewChannel" class="form-control-static">-</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label class="font-weight-bold">Đánh giá:</label>
+                            <p id="viewRating" class="form-control-static">-</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="font-weight-bold">Chủ đề:</label>
+                    <p id="viewTopic" class="form-control-static">-</p>
+                </div>
+                <div class="form-group">
+                    <label class="font-weight-bold">Nội dung:</label>
+                    <p id="viewContent" class="form-control-static">-</p>
+                </div>
+                <div class="form-group">
+                    <label class="font-weight-bold">Trạng thái:</label>
+                    <p id="viewStatus" class="form-control-static">-</p>
+                </div>
+                <div class="form-group">
+                    <label class="font-weight-bold">Ghi chú:</label>
+                    <p id="viewNotes" class="form-control-static">-</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">
+                    <i class="fas fa-times"></i> Đóng
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/customer-feedback-management.js" asp-append-version="true"></script>
+}
+

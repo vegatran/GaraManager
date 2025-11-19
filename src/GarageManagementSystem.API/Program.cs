@@ -141,6 +141,12 @@ builder.Services.AddScoped<GarageManagementSystem.Shared.Services.IInvoiceServic
 builder.Services.AddScoped<GarageManagementSystem.Core.Interfaces.ICOGSCalculationService, GarageManagementSystem.Infrastructure.Services.COGSCalculationService>();
 builder.Services.AddScoped<GarageManagementSystem.Core.Interfaces.IWarrantyService, GarageManagementSystem.Infrastructure.Services.WarrantyService>();
 
+// ✅ 4.3.1: Financial Transaction Service
+builder.Services.AddScoped<GarageManagementSystem.Core.Interfaces.IFinancialTransactionService, GarageManagementSystem.Infrastructure.Services.FinancialTransactionService>();
+
+// ✅ 4.3.3.1: Profit Report Service
+builder.Services.AddScoped<GarageManagementSystem.Core.Interfaces.IProfitReportService, GarageManagementSystem.Infrastructure.Services.ProfitReportService>();
+
 // Configuration Service
 builder.Services.AddScoped<GarageManagementSystem.Core.Services.IConfigurationService, GarageManagementSystem.Core.Services.ConfigurationService>();
 

@@ -333,6 +333,11 @@ window.DataTablesUtility = {
             });
         }
         return actions;
+    },
+
+    // ✅ THÊM: Get Vietnamese language configuration for DataTables
+    getVietnameseLanguage: function() {
+        return this.defaultConfig.language;
     }
 };
 

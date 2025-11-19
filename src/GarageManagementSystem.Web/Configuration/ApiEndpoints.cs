@@ -301,6 +301,46 @@ namespace GarageManagementSystem.Web.Configuration
             public const string Delete = "financialtransactions/{0}";
             public const string GetCategories = "financialtransactions/categories";
             public const string GetByDateRange = "financialtransactions/date-range";
+            public const string GetSummary = "financialtransactions/summary";
+            public const string GetCashRegister = "financialtransactions/cash-register";
+            public const string GetBankRegister = "financialtransactions/bank-register";
+        }
+
+        /// <summary>
+        /// ✅ 4.3.1.9: Financial Transaction Attachments endpoints
+        /// </summary>
+        public static class FinancialTransactionAttachments
+        {
+            public const string GetByTransaction = "financialtransactionattachments/transaction/{0}";
+            public const string Upload = "financialtransactionattachments/upload";
+            public const string Download = "financialtransactionattachments/{0}/download";
+            public const string Delete = "financialtransactionattachments/{0}";
+        }
+
+        /// <summary>
+        /// ✅ 4.3.2.1: Accounts Receivable endpoints
+        /// </summary>
+        public static class AccountsReceivable
+        {
+            public const string GetAll = "accountsreceivable";
+            public const string GetSummary = "accountsreceivable/summary";
+        }
+
+        /// <summary>
+        /// ✅ 4.3.2.3: Accounts Payable endpoints
+        /// </summary>
+        public static class AccountsPayable
+        {
+            public const string GetAll = "accountspayable";
+            public const string GetSummary = "accountspayable/summary";
+        }
+
+        /// <summary>
+        /// ✅ 4.3.3.1: Profit Report endpoints
+        /// </summary>
+        public static class ProfitReports
+        {
+            public const string GetIncomeStatement = "profit-reports/income-statement";
         }
 
         /// <summary>
@@ -430,6 +470,11 @@ namespace GarageManagementSystem.Web.Configuration
             public const string GetCounts = "setup/counts";
             public const string CreateDemoData = "setup/create/{0}"; // setup/create/{module}
             public const string ClearAllData = "setup/clear-all";
+            public const string CreateAll = "setup/create-all";
+            public const string CreatePhase1 = "setup/create-phase-1";
+            public const string CreatePhase2 = "setup/create-phase-2";
+            public const string CreatePhase3 = "setup/create-phase-3";
+            public const string CreatePhase4 = "setup/create-phase-4";
         }
 
         /// <summary>
@@ -548,6 +593,14 @@ namespace GarageManagementSystem.Web.Configuration
             public const string SupplierRanking = "procurement/supplier-ranking";
             public const string PerformanceAlerts = "procurement/performance-alerts";
             public const string CalculatePerformance = "procurement/calculate-performance";
+            
+            // Phase 4.2.2 Optional: Request Quotation
+            public const string RequestQuotation = "procurement/request-quotation";
+            public const string GetQuotations = "procurement/quotations";
+            public const string GetQuotationById = "procurement/quotations/{0}";
+            public const string UpdateQuotation = "procurement/quotations/{0}";
+            public const string AcceptQuotation = "procurement/quotations/{0}/accept";
+            public const string RejectQuotation = "procurement/quotations/{0}/reject";
         }
     }
 }

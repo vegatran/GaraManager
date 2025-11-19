@@ -130,6 +130,9 @@ namespace GarageManagementSystem.API.Controllers
             List<object> cleared = new();
             var seeded = new List<object>();
 
+            // ✅ Sử dụng transaction để đảm bảo tính toàn vẹn dữ liệu
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+
             try
             {
                 cleared = await ClearAllDataInternalAsync();
@@ -155,13 +158,25 @@ namespace GarageManagementSystem.API.Controllers
                 await RunModuleAsync("warehouses", CreateWarehousesAsync);
                 await RunModuleAsync("parts", CreatePartsAsync);
                 await RunModuleAsync("suppliers", CreateSuppliersAsync);
+                await RunModuleAsync("laborCategories", CreateLaborCategoriesAsync);
+                await RunModuleAsync("laborItems", CreateLaborItemsAsync);
                 await RunModuleAsync("inventorychecks", CreateInventoryChecksAsync);
                 await RunModuleAsync("inventoryadjustments", CreateInventoryAdjustmentsAsync);
                 await RunModuleAsync("inspections", CreateInspectionsAsync);
                 await RunModuleAsync("quotations", CreateQuotationsAsync);
                 await RunModuleAsync("orders", CreateServiceOrdersAsync);
+                await RunModuleAsync("serviceOrderLabors", CreateServiceOrderLaborsAsync);
+                await RunModuleAsync("materialRequests", CreateMaterialRequestsAsync);
                 await RunModuleAsync("payments", CreatePaymentsAsync);
+                await RunModuleAsync("serviceFeeTypes", CreateServiceFeeTypesAsync);
+                await RunModuleAsync("serviceOrderFees", CreateServiceOrderFeesAsync);
+                await RunModuleAsync("warranties", CreateWarrantiesAsync);
+                await RunModuleAsync("feedbackChannels", CreateFeedbackChannelsAsync);
+                await RunModuleAsync("customerFeedbacks", CreateCustomerFeedbacksAsync);
                 await RunModuleAsync("appointments", CreateAppointmentsAsync);
+
+                // ✅ Commit transaction nếu tất cả thành công
+                await transaction.CommitAsync();
 
                 return Ok(ApiResponse<object>.SuccessResult(new
                 {
@@ -172,13 +187,282 @@ namespace GarageManagementSystem.API.Controllers
             }
             catch (InvalidOperationException ex)
             {
+                // ✅ Rollback transaction nếu có lỗi
+                await transaction.RollbackAsync();
                 var errorResponse = ApiResponse<object>.ErrorResult(ex.Message);
                 errorResponse.Data = new { message = ex.Message, cleared = cleared, seeded };
                 return BadRequest(errorResponse);
             }
             catch (Exception ex)
             {
+                // ✅ Rollback transaction nếu có exception
+                await transaction.RollbackAsync();
                 return StatusCode(500, ApiResponse<object>.ErrorResult("Lỗi khi khởi tạo dữ liệu demo", ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// Tạo demo data cho Giai đoạn 1: Tiếp nhận &amp; Báo giá
+        /// </summary>
+        [HttpPost("create-phase-1")]
+        public async Task<ActionResult<ApiResponse<object>>> CreatePhase1DemoData()
+        {
+            var seeded = new List<object>();
+
+            // ✅ Sử dụng transaction để đảm bảo tính toàn vẹn dữ liệu
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+            
+            try
+            {
+                async Task RunModuleAsync(string moduleName, Func<Task<object>> moduleFactory)
+                {
+                    var (success, result, message) = await ExecuteSeedAsync(moduleFactory);
+                    seeded.Add(new { module = moduleName, success, message, result });
+
+                    if (!success)
+                    {
+                        throw new InvalidOperationException(
+                            string.IsNullOrWhiteSpace(message)
+                                ? $"Tạo dữ liệu cho module {moduleName} thất bại."
+                                : message);
+                    }
+                }
+
+                // Giai đoạn 1: Tiếp nhận & Báo giá
+                await RunModuleAsync("customers", CreateCustomersAsync);
+                await RunModuleAsync("vehicles", CreateVehiclesAsync);
+                await RunModuleAsync("employees", CreateEmployeesAsync);
+                await RunModuleAsync("services", CreateServicesAsync);
+                await RunModuleAsync("parts", CreatePartsAsync);
+                await RunModuleAsync("suppliers", CreateSuppliersAsync);
+                await RunModuleAsync("laborCategories", CreateLaborCategoriesAsync);
+                await RunModuleAsync("laborItems", CreateLaborItemsAsync);
+                await RunModuleAsync("inspections", CreateInspectionsAsync);
+                await RunModuleAsync("quotations", CreateQuotationsAsync);
+                await RunModuleAsync("appointments", CreateAppointmentsAsync);
+
+                // ✅ Commit transaction nếu tất cả thành công
+                await transaction.CommitAsync();
+
+                return Ok(ApiResponse<object>.SuccessResult(new
+                {
+                    message = "Đã tạo demo data cho Giai đoạn 1: Tiếp nhận & Báo giá thành công",
+                    phase = "Phase 1",
+                    phaseName = "Tiếp nhận & Báo giá",
+                    seeded
+                }));
+            }
+            catch (InvalidOperationException ex)
+            {
+                // ✅ Rollback transaction nếu có lỗi
+                await transaction.RollbackAsync();
+                var errorResponse = ApiResponse<object>.ErrorResult(ex.Message);
+                errorResponse.Data = new { message = ex.Message, seeded };
+                return BadRequest(errorResponse);
+            }
+            catch (Exception ex)
+            {
+                // ✅ Rollback transaction nếu có exception
+                await transaction.RollbackAsync();
+                return StatusCode(500, ApiResponse<object>.ErrorResult("Lỗi khi tạo demo data cho Giai đoạn 1", ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// Tạo demo data cho Giai đoạn 2: Sửa chữa &amp; Quản lý xuất kho
+        /// </summary>
+        [HttpPost("create-phase-2")]
+        public async Task<ActionResult<ApiResponse<object>>> CreatePhase2DemoData()
+        {
+            var seeded = new List<object>();
+
+            // ✅ Sử dụng transaction để đảm bảo tính toàn vẹn dữ liệu
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+
+            try
+            {
+                // Kiểm tra dữ liệu giai đoạn 1 có tồn tại không
+                var hasPhase1Data = await _unitOfWork.ServiceQuotations.CountAsync() > 0;
+                if (!hasPhase1Data)
+                {
+                    await transaction.RollbackAsync();
+                    return BadRequest(ApiResponse<object>.ErrorResult(
+                        "Cần tạo demo data cho Giai đoạn 1 trước (Tiếp nhận & Báo giá)"));
+                }
+
+                async Task RunModuleAsync(string moduleName, Func<Task<object>> moduleFactory)
+                {
+                    var (success, result, message) = await ExecuteSeedAsync(moduleFactory);
+                    seeded.Add(new { module = moduleName, success, message, result });
+
+                    if (!success)
+                    {
+                        throw new InvalidOperationException(
+                            string.IsNullOrWhiteSpace(message)
+                                ? $"Tạo dữ liệu cho module {moduleName} thất bại."
+                                : message);
+                    }
+                }
+
+                // Giai đoạn 2: Sửa chữa & Quản lý xuất kho
+                await RunModuleAsync("orders", CreateServiceOrdersAsync);
+                await RunModuleAsync("serviceOrderLabors", CreateServiceOrderLaborsAsync);
+                await RunModuleAsync("materialRequests", CreateMaterialRequestsAsync);
+
+                // ✅ Commit transaction nếu tất cả thành công
+                await transaction.CommitAsync();
+
+                return Ok(ApiResponse<object>.SuccessResult(new
+                {
+                    message = "Đã tạo demo data cho Giai đoạn 2: Sửa chữa & Quản lý xuất kho thành công",
+                    phase = "Phase 2",
+                    phaseName = "Sửa chữa & Quản lý xuất kho",
+                    seeded
+                }));
+            }
+            catch (InvalidOperationException ex)
+            {
+                // ✅ Rollback transaction nếu có lỗi
+                await transaction.RollbackAsync();
+                var errorResponse = ApiResponse<object>.ErrorResult(ex.Message);
+                errorResponse.Data = new { message = ex.Message, seeded };
+                return BadRequest(errorResponse);
+            }
+            catch (Exception ex)
+            {
+                // ✅ Rollback transaction nếu có exception
+                await transaction.RollbackAsync();
+                return StatusCode(500, ApiResponse<object>.ErrorResult("Lỗi khi tạo demo data cho Giai đoạn 2", ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// Tạo demo data cho Giai đoạn 3: Quyết toán &amp; Chăm sóc hậu mãi
+        /// </summary>
+        [HttpPost("create-phase-3")]
+        public async Task<ActionResult<ApiResponse<object>>> CreatePhase3DemoData()
+        {
+            var seeded = new List<object>();
+
+            // ✅ Sử dụng transaction để đảm bảo tính toàn vẹn dữ liệu
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+
+            try
+            {
+                // Kiểm tra dữ liệu giai đoạn 2 có tồn tại không
+                var hasPhase2Data = await _unitOfWork.ServiceOrders.CountAsync() > 0;
+                if (!hasPhase2Data)
+                {
+                    await transaction.RollbackAsync();
+                    return BadRequest(ApiResponse<object>.ErrorResult(
+                        "Cần tạo demo data cho Giai đoạn 2 trước (Sửa chữa & Quản lý xuất kho)"));
+                }
+
+                async Task RunModuleAsync(string moduleName, Func<Task<object>> moduleFactory)
+                {
+                    var (success, result, message) = await ExecuteSeedAsync(moduleFactory);
+                    seeded.Add(new { module = moduleName, success, message, result });
+
+                    if (!success)
+                    {
+                        throw new InvalidOperationException(
+                            string.IsNullOrWhiteSpace(message)
+                                ? $"Tạo dữ liệu cho module {moduleName} thất bại."
+                                : message);
+                    }
+                }
+
+                // Giai đoạn 3: Quyết toán & Chăm sóc hậu mãi
+                await RunModuleAsync("payments", CreatePaymentsAsync);
+                await RunModuleAsync("serviceFeeTypes", CreateServiceFeeTypesAsync);
+                await RunModuleAsync("serviceOrderFees", CreateServiceOrderFeesAsync);
+                await RunModuleAsync("warranties", CreateWarrantiesAsync);
+                await RunModuleAsync("feedbackChannels", CreateFeedbackChannelsAsync);
+                await RunModuleAsync("customerFeedbacks", CreateCustomerFeedbacksAsync);
+
+                // ✅ Commit transaction nếu tất cả thành công
+                await transaction.CommitAsync();
+
+                return Ok(ApiResponse<object>.SuccessResult(new
+                {
+                    message = "Đã tạo demo data cho Giai đoạn 3: Quyết toán & Chăm sóc hậu mãi thành công",
+                    phase = "Phase 3",
+                    phaseName = "Quyết toán & Chăm sóc hậu mãi",
+                    seeded
+                }));
+            }
+            catch (InvalidOperationException ex)
+            {
+                // ✅ Rollback transaction nếu có lỗi
+                await transaction.RollbackAsync();
+                var errorResponse = ApiResponse<object>.ErrorResult(ex.Message);
+                errorResponse.Data = new { message = ex.Message, seeded };
+                return BadRequest(errorResponse);
+            }
+            catch (Exception ex)
+            {
+                // ✅ Rollback transaction nếu có exception
+                await transaction.RollbackAsync();
+                return StatusCode(500, ApiResponse<object>.ErrorResult("Lỗi khi tạo demo data cho Giai đoạn 3", ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// Tạo demo data cho Giai đoạn 4: Chuẩn hóa quản lý phụ tùng &amp; Procurement
+        /// </summary>
+        [HttpPost("create-phase-4")]
+        public async Task<ActionResult<ApiResponse<object>>> CreatePhase4DemoData()
+        {
+            var seeded = new List<object>();
+
+            // ✅ Sử dụng transaction để đảm bảo tính toàn vẹn dữ liệu
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+
+            try
+            {
+                async Task RunModuleAsync(string moduleName, Func<Task<object>> moduleFactory)
+                {
+                    var (success, result, message) = await ExecuteSeedAsync(moduleFactory);
+                    seeded.Add(new { module = moduleName, success, message, result });
+
+                    if (!success)
+                    {
+                        throw new InvalidOperationException(
+                            string.IsNullOrWhiteSpace(message)
+                                ? $"Tạo dữ liệu cho module {moduleName} thất bại."
+                                : message);
+                    }
+                }
+
+                // Giai đoạn 4: Chuẩn hóa quản lý phụ tùng & Procurement
+                await RunModuleAsync("warehouses", CreateWarehousesAsync);
+                await RunModuleAsync("inventorychecks", CreateInventoryChecksAsync);
+                await RunModuleAsync("inventoryadjustments", CreateInventoryAdjustmentsAsync);
+
+                // ✅ Commit transaction nếu tất cả thành công
+                await transaction.CommitAsync();
+
+                return Ok(ApiResponse<object>.SuccessResult(new
+                {
+                    message = "Đã tạo demo data cho Giai đoạn 4: Chuẩn hóa quản lý phụ tùng & Procurement thành công",
+                    phase = "Phase 4",
+                    phaseName = "Chuẩn hóa quản lý phụ tùng & Procurement",
+                    seeded
+                }));
+            }
+            catch (InvalidOperationException ex)
+            {
+                // ✅ Rollback transaction nếu có lỗi
+                await transaction.RollbackAsync();
+                var errorResponse = ApiResponse<object>.ErrorResult(ex.Message);
+                errorResponse.Data = new { message = ex.Message, seeded };
+                return BadRequest(errorResponse);
+            }
+            catch (Exception ex)
+            {
+                // ✅ Rollback transaction nếu có exception
+                await transaction.RollbackAsync();
+                return StatusCode(500, ApiResponse<object>.ErrorResult("Lỗi khi tạo demo data cho Giai đoạn 4", ex.Message));
             }
         }
 
@@ -2619,6 +2903,646 @@ namespace GarageManagementSystem.API.Controllers
                 itemCount = allAdjustmentItems.Count,
                 message = $"Đã tạo {adjustments.Count} phiếu điều chỉnh với {allAdjustmentItems.Count} items" 
             };
+        }
+
+        private async Task<object> CreateLaborCategoriesAsync()
+        {
+            var existingCategories = await _context.Set<Core.Entities.LaborCategory>()
+                .Where(c => !c.IsDeleted)
+                .Select(c => c.CategoryCode)
+                .ToListAsync();
+
+            var categoriesToCreate = new List<Core.Entities.LaborCategory>();
+
+            var categories = new[]
+            {
+                new { Code = "REMOVE_INSTALL", Name = "Công tháo lắp", BaseRate = 50000m },
+                new { Code = "REPAIR", Name = "Công sửa chữa", BaseRate = 80000m },
+                new { Code = "PAINT", Name = "Công sơn", BaseRate = 100000m },
+                new { Code = "DIAGNOSIS", Name = "Công chẩn đoán", BaseRate = 60000m },
+                new { Code = "MAINTENANCE", Name = "Công bảo dưỡng", BaseRate = 40000m }
+            };
+
+            foreach (var cat in categories)
+            {
+                if (!existingCategories.Contains(cat.Code))
+                {
+                    categoriesToCreate.Add(new Core.Entities.LaborCategory
+                    {
+                        CategoryCode = cat.Code,
+                        CategoryName = cat.Name,
+                        BaseRate = cat.BaseRate,
+                        StandardRate = cat.BaseRate,
+                        Description = $"Danh mục công lao động: {cat.Name}",
+                        IsActive = true
+                    });
+                }
+            }
+
+            if (categoriesToCreate.Any())
+            {
+                foreach (var category in categoriesToCreate)
+                {
+                    await _unitOfWork.Repository<Core.Entities.LaborCategory>().AddAsync(category);
+                }
+                await _unitOfWork.SaveChangesAsync();
+            }
+
+            return new { success = true, count = categoriesToCreate.Count, message = $"Đã tạo {categoriesToCreate.Count} danh mục công lao động" };
+        }
+
+        private async Task<object> CreateLaborItemsAsync()
+        {
+            var laborCategories = (await _unitOfWork.Repository<Core.Entities.LaborCategory>().GetAllAsync()).ToList();
+            if (!laborCategories.Any())
+            {
+                return new { success = false, message = "Cần tạo LaborCategories trước khi tạo LaborItems" };
+            }
+
+            var existingItems = await _context.Set<Core.Entities.LaborItem>()
+                .Where(i => !i.IsDeleted)
+                .Select(i => i.LaborCode)
+                .ToListAsync();
+
+            var itemsToCreate = new List<Core.Entities.LaborItem>();
+
+            var removeInstallCategory = laborCategories.FirstOrDefault(c => c.CategoryCode == "REMOVE_INSTALL") ?? laborCategories.First();
+            var repairCategory = laborCategories.FirstOrDefault(c => c.CategoryCode == "REPAIR") ?? laborCategories.First();
+            var paintCategory = laborCategories.FirstOrDefault(c => c.CategoryCode == "PAINT") ?? laborCategories.First();
+            var diagnosisCategory = laborCategories.FirstOrDefault(c => c.CategoryCode == "DIAGNOSIS") ?? laborCategories.First();
+            var maintenanceCategory = laborCategories.FirstOrDefault(c => c.CategoryCode == "MAINTENANCE") ?? laborCategories.First();
+
+            var laborItems = new[]
+            {
+                new { Code = "LAB-001", Name = "Công tháo đèn pha", Category = removeInstallCategory, Hours = 1.5m, Rate = 50000m, PartName = "Đèn pha" },
+                new { Code = "LAB-002", Name = "Công thay nhớt", Category = maintenanceCategory, Hours = 0.5m, Rate = 40000m, PartName = "Nhớt động cơ" },
+                new { Code = "LAB-003", Name = "Công sửa chữa phanh", Category = repairCategory, Hours = 2.0m, Rate = 80000m, PartName = "Hệ thống phanh" },
+                new { Code = "LAB-004", Name = "Công sơn cản", Category = paintCategory, Hours = 3.0m, Rate = 100000m, PartName = "Cản xe" },
+                new { Code = "LAB-005", Name = "Công chẩn đoán lỗi động cơ", Category = diagnosisCategory, Hours = 1.0m, Rate = 60000m, PartName = "Động cơ" },
+                new { Code = "LAB-006", Name = "Công thay lốp", Category = removeInstallCategory, Hours = 0.5m, Rate = 50000m, PartName = "Lốp xe" },
+                new { Code = "LAB-007", Name = "Công sửa chữa điều hòa", Category = repairCategory, Hours = 2.5m, Rate = 80000m, PartName = "Hệ thống điều hòa" }
+            };
+
+            foreach (var item in laborItems)
+            {
+                if (!existingItems.Contains(item.Code))
+                {
+                    var totalCost = item.Hours * item.Rate;
+                    itemsToCreate.Add(new Core.Entities.LaborItem
+                    {
+                        LaborCode = item.Code,
+                        ItemName = item.Name,
+                        LaborName = item.Name,
+                        PartName = item.PartName,
+                        LaborCategoryId = item.Category.Id,
+                        CategoryId = item.Category.Id,
+                        StandardHours = item.Hours,
+                        LaborRate = item.Rate,
+                        TotalLaborCost = totalCost,
+                        SkillLevel = "Trung bình",
+                        Difficulty = "Trung bình",
+                        IsActive = true
+                    });
+                }
+            }
+
+            if (itemsToCreate.Any())
+            {
+                foreach (var item in itemsToCreate)
+                {
+                    await _unitOfWork.Repository<Core.Entities.LaborItem>().AddAsync(item);
+                }
+                await _unitOfWork.SaveChangesAsync();
+            }
+
+            return new { success = true, count = itemsToCreate.Count, message = $"Đã tạo {itemsToCreate.Count} công lao động" };
+        }
+
+        private async Task<object> CreateServiceOrderLaborsAsync()
+        {
+            var serviceOrders = (await _unitOfWork.ServiceOrders.GetAllAsync()).ToList();
+            var laborItems = (await _unitOfWork.Repository<Core.Entities.LaborItem>().GetAllAsync()).ToList();
+            var employees = (await _unitOfWork.Employees.GetAllAsync()).ToList();
+
+            if (!serviceOrders.Any() || !laborItems.Any() || !employees.Any())
+            {
+                return new { success = false, message = "Cần tạo ServiceOrders, LaborItems và Employees trước khi tạo ServiceOrderLabors" };
+            }
+
+            var existingLabors = await _context.Set<Core.Entities.ServiceOrderLabor>()
+                .Where(l => !l.IsDeleted)
+                .CountAsync();
+
+            if (existingLabors > 0)
+            {
+                return new { success = true, count = 0, message = "Đã có ServiceOrderLabors, bỏ qua" };
+            }
+
+            var labors = new List<Core.Entities.ServiceOrderLabor>();
+
+            // Tạo labors cho từng service order
+            foreach (var order in serviceOrders.Take(3))
+            {
+                var laborItem = laborItems[labors.Count % laborItems.Count];
+                var employee = employees[labors.Count % employees.Count];
+                var statuses = new[] { "Completed", "InProgress", "Pending" };
+                var status = statuses[labors.Count % statuses.Length];
+
+                var labor = new Core.Entities.ServiceOrderLabor
+                {
+                    ServiceOrderId = order.Id,
+                    LaborItemId = laborItem.Id,
+                    EmployeeId = employee.Id,
+                    EstimatedHours = laborItem.StandardHours,
+                    ActualHours = laborItem.StandardHours + (decimal)(new Random().NextDouble() * 0.5 - 0.25), // ±0.25 hours
+                    LaborRate = laborItem.LaborRate,
+                    TotalLaborCost = laborItem.StandardHours * laborItem.LaborRate,
+                    Status = status,
+                    Notes = $"Công lao động: {laborItem.ItemName}",
+                    StartTime = status != "Pending" ? DateTime.Now.AddHours(-(labors.Count + 1) * 2) : null,
+                    EndTime = status == "Completed" ? DateTime.Now.AddHours(-labors.Count) : null,
+                    CompletedTime = status == "Completed" ? DateTime.Now.AddHours(-labors.Count) : null
+                };
+
+                // Recalculate total cost based on actual hours
+                labor.TotalLaborCost = labor.ActualHours * labor.LaborRate;
+
+                labors.Add(labor);
+            }
+
+            foreach (var labor in labors)
+            {
+                await _unitOfWork.Repository<Core.Entities.ServiceOrderLabor>().AddAsync(labor);
+            }
+            await _unitOfWork.SaveChangesAsync();
+
+            return new { success = true, count = labors.Count, message = $"Đã tạo {labors.Count} công lao động cho service orders" };
+        }
+
+        private async Task<object> CreateMaterialRequestsAsync()
+        {
+            var serviceOrders = (await _unitOfWork.ServiceOrders.GetAllAsync()).ToList();
+            var employees = (await _unitOfWork.Employees.GetAllAsync()).ToList();
+            var parts = (await _unitOfWork.Parts.GetAllAsync()).ToList();
+
+            if (!serviceOrders.Any() || !employees.Any() || !parts.Any())
+            {
+                return new { success = false, message = "Cần tạo ServiceOrders, Employees và Parts trước khi tạo MaterialRequests" };
+            }
+
+            var existingRequests = await _context.Set<Core.Entities.MaterialRequest>()
+                .Where(mr => !mr.IsDeleted)
+                .CountAsync();
+
+            if (existingRequests > 0)
+            {
+                return new { success = true, count = 0, message = "Đã có MaterialRequests, bỏ qua" };
+            }
+
+            var materialRequests = new List<Core.Entities.MaterialRequest>();
+            var requestItems = new List<Core.Entities.MaterialRequestItem>();
+            var today = DateTime.Now;
+            var mrCounter = 1;
+
+            foreach (var order in serviceOrders.Take(2))
+            {
+                var requestedBy = employees[new Random().Next(employees.Count)];
+                var approvedBy = employees.Count > 1 ? employees[new Random().Next(employees.Count)] : requestedBy;
+                var issuedBy = employees.Count > 2 ? employees[new Random().Next(employees.Count)] : approvedBy;
+
+                var mrNumber = $"MR-{today:yyyyMMdd}-{mrCounter:D4}";
+                mrCounter++;
+
+                var statuses = new[] { 
+                    Core.Enums.MaterialRequestStatus.Approved, 
+                    Core.Enums.MaterialRequestStatus.PendingApproval 
+                };
+                var status = statuses[new Random().Next(statuses.Length)];
+
+                var materialRequest = new Core.Entities.MaterialRequest
+                {
+                    MRNumber = mrNumber,
+                    ServiceOrderId = order.Id,
+                    RequestedById = requestedBy.Id,
+                    ApprovedById = status == Core.Enums.MaterialRequestStatus.Approved ? approvedBy.Id : null,
+                    IssuedById = status == Core.Enums.MaterialRequestStatus.Approved ? issuedBy.Id : null,
+                    Status = status,
+                    ApprovedAt = status == Core.Enums.MaterialRequestStatus.Approved ? today.AddHours(-2) : null,
+                    IssuedAt = status == Core.Enums.MaterialRequestStatus.Approved ? today.AddHours(-1) : null,
+                    Notes = $"Yêu cầu vật tư cho đơn hàng {order.OrderNumber}"
+                };
+
+                materialRequests.Add(materialRequest);
+            }
+
+            // Save material requests first to get IDs
+            foreach (var mr in materialRequests)
+            {
+                await _unitOfWork.Repository<Core.Entities.MaterialRequest>().AddAsync(mr);
+            }
+            await _unitOfWork.SaveChangesAsync();
+
+            // Create items for each material request
+            foreach (var mr in materialRequests)
+            {
+                var selectedParts = parts.Take(2).ToList();
+                foreach (var part in selectedParts)
+                {
+                    var quantity = new Random().Next(1, 4);
+                    var item = new Core.Entities.MaterialRequestItem
+                    {
+                        MaterialRequestId = mr.Id,
+                        PartId = part.Id,
+                        QuantityRequested = quantity,
+                        QuantityApproved = mr.Status == Core.Enums.MaterialRequestStatus.Approved ? quantity : 0,
+                        QuantityPicked = mr.Status == Core.Enums.MaterialRequestStatus.Approved ? quantity : 0,
+                        QuantityIssued = mr.Status == Core.Enums.MaterialRequestStatus.Approved ? quantity : 0,
+                        PartName = part.PartName,
+                        Notes = $"Yêu cầu {quantity} {part.DefaultUnit}"
+                    };
+                    requestItems.Add(item);
+                }
+            }
+
+            foreach (var item in requestItems)
+            {
+                await _unitOfWork.Repository<Core.Entities.MaterialRequestItem>().AddAsync(item);
+            }
+            await _unitOfWork.SaveChangesAsync();
+
+            return new { success = true, requestCount = materialRequests.Count, itemCount = requestItems.Count, message = $"Đã tạo {materialRequests.Count} yêu cầu vật tư với {requestItems.Count} items" };
+        }
+
+        private async Task<object> CreateServiceFeeTypesAsync()
+        {
+            var existingTypes = await _context.Set<Core.Entities.ServiceFeeType>()
+                .Where(t => !t.IsDeleted)
+                .Select(t => t.Code)
+                .ToListAsync();
+
+            var typesToCreate = new List<Core.Entities.ServiceFeeType>();
+
+            var feeTypes = new[]
+            {
+                new { Code = "LABOR", Name = "Phí lao động", Description = "Phí công lao động sửa chữa", Order = 1 },
+                new { Code = "PARTS", Name = "Phí phụ tùng", Description = "Phí phụ tùng thay thế", Order = 2 },
+                new { Code = "SURCHARGE", Name = "Phụ phí", Description = "Phụ phí khác", Order = 3 },
+                new { Code = "DISCOUNT", Name = "Giảm giá", Description = "Giảm giá dịch vụ", Order = 4 },
+                new { Code = "VAT", Name = "VAT", Description = "Thuế giá trị gia tăng", Order = 5 }
+            };
+
+            foreach (var type in feeTypes)
+            {
+                if (!existingTypes.Contains(type.Code))
+                {
+                    typesToCreate.Add(new Core.Entities.ServiceFeeType
+                    {
+                        Code = type.Code,
+                        Name = type.Name,
+                        Description = type.Description,
+                        DisplayOrder = type.Order,
+                        IsActive = true,
+                        IsSystem = type.Code == "VAT" || type.Code == "DISCOUNT"
+                    });
+                }
+            }
+
+            if (typesToCreate.Any())
+            {
+                foreach (var type in typesToCreate)
+                {
+                    await _unitOfWork.ServiceFeeTypes.AddAsync(type);
+                }
+                await _unitOfWork.SaveChangesAsync();
+            }
+
+            return new { success = true, count = typesToCreate.Count, message = $"Đã tạo {typesToCreate.Count} loại phí dịch vụ" };
+        }
+
+        private async Task<object> CreateServiceOrderFeesAsync()
+        {
+            var serviceOrders = (await _unitOfWork.ServiceOrders.GetAllAsync()).ToList();
+            var feeTypes = (await _unitOfWork.ServiceFeeTypes.GetAllAsync()).ToList();
+
+            if (!serviceOrders.Any() || !feeTypes.Any())
+            {
+                return new { success = false, message = "Cần tạo ServiceOrders và ServiceFeeTypes trước khi tạo ServiceOrderFees" };
+            }
+
+            var existingFees = await _context.Set<Core.Entities.ServiceOrderFee>()
+                .Where(f => !f.IsDeleted)
+                .CountAsync();
+
+            if (existingFees > 0)
+            {
+                return new { success = true, count = 0, message = "Đã có ServiceOrderFees, bỏ qua" };
+            }
+
+            var fees = new List<Core.Entities.ServiceOrderFee>();
+
+            var laborFeeType = feeTypes.FirstOrDefault(t => t.Code == "LABOR") ?? feeTypes.First();
+            var partsFeeType = feeTypes.FirstOrDefault(t => t.Code == "PARTS") ?? feeTypes.First();
+            var surchargeFeeType = feeTypes.FirstOrDefault(t => t.Code == "SURCHARGE") ?? feeTypes.First();
+
+            foreach (var order in serviceOrders.Take(3))
+            {
+                // Labor fee
+                fees.Add(new Core.Entities.ServiceOrderFee
+                {
+                    ServiceOrderId = order.Id,
+                    ServiceFeeTypeId = laborFeeType.Id,
+                    Amount = order.ServiceTotal,
+                    VatAmount = 0,
+                    DiscountAmount = 0,
+                    Notes = "Phí lao động",
+                    IsManual = false
+                });
+
+                // Parts fee
+                fees.Add(new Core.Entities.ServiceOrderFee
+                {
+                    ServiceOrderId = order.Id,
+                    ServiceFeeTypeId = partsFeeType.Id,
+                    Amount = order.PartsTotal,
+                    VatAmount = 0,
+                    DiscountAmount = 0,
+                    Notes = "Phí phụ tùng",
+                    IsManual = false
+                });
+
+                // Surcharge (optional, only for some orders)
+                if (order.Id % 2 == 0)
+                {
+                    fees.Add(new Core.Entities.ServiceOrderFee
+                    {
+                        ServiceOrderId = order.Id,
+                        ServiceFeeTypeId = surchargeFeeType.Id,
+                        Amount = 50000,
+                        VatAmount = 0,
+                        DiscountAmount = 0,
+                        Notes = "Phụ phí khẩn cấp",
+                        IsManual = true
+                    });
+                }
+            }
+
+            foreach (var fee in fees)
+            {
+                await _unitOfWork.ServiceOrderFees.AddAsync(fee);
+            }
+            await _unitOfWork.SaveChangesAsync();
+
+            return new { success = true, count = fees.Count, message = $"Đã tạo {fees.Count} phí dịch vụ cho service orders" };
+        }
+
+        private async Task<object> CreateWarrantiesAsync()
+        {
+            var serviceOrders = (await _unitOfWork.ServiceOrders.GetAllAsync()).ToList();
+            var customers = (await _unitOfWork.Customers.GetAllAsync()).ToList();
+            var vehicles = (await _unitOfWork.Vehicles.GetAllAsync()).ToList();
+            var serviceOrderParts = await _context.Set<Core.Entities.ServiceOrderPart>()
+                .Where(sop => !sop.IsDeleted)
+                .ToListAsync();
+
+            if (!serviceOrders.Any() || !customers.Any() || !vehicles.Any())
+            {
+                return new { success = false, message = "Cần tạo ServiceOrders, Customers và Vehicles trước khi tạo Warranties" };
+            }
+
+            var existingWarranties = await _unitOfWork.Warranties.CountAsync();
+            if (existingWarranties > 0)
+            {
+                return new { success = true, count = 0, message = "Đã có Warranties, bỏ qua" };
+            }
+
+            var warranties = new List<Core.Entities.Warranty>();
+            var warrantyItems = new List<Core.Entities.WarrantyItem>();
+            var warrantyCounter = 1;
+            var today = DateTime.Now;
+
+            foreach (var order in serviceOrders.Where(o => o.Status == "Completed").Take(2))
+            {
+                var customer = customers.FirstOrDefault(c => c.Id == order.CustomerId) ?? customers.First();
+                var vehicle = vehicles.FirstOrDefault(v => v.Id == order.VehicleId) ?? vehicles.First();
+                var warrantyCode = $"WR-{today:yyyyMMdd}-{warrantyCounter:D4}";
+                warrantyCounter++;
+
+                var warrantyMonths = 12; // 12 months warranty
+                var warrantyStartDate = order.CompletedDate ?? today.AddDays(-30);
+                var warrantyEndDate = warrantyStartDate.AddMonths(warrantyMonths);
+
+                var warranty = new Core.Entities.Warranty
+                {
+                    WarrantyCode = warrantyCode,
+                    ServiceOrderId = order.Id,
+                    CustomerId = customer.Id,
+                    VehicleId = vehicle.Id,
+                    WarrantyStartDate = warrantyStartDate,
+                    WarrantyEndDate = warrantyEndDate,
+                    Status = warrantyEndDate > today ? "Active" : "Expired",
+                    Notes = $"Bảo hành cho đơn hàng {order.OrderNumber}",
+                    HandoverBy = "Nhân viên bảo hành",
+                    HandoverLocation = "Garage chính"
+                };
+
+                warranties.Add(warranty);
+            }
+
+            // Save warranties first to get IDs
+            foreach (var warranty in warranties)
+            {
+                await _unitOfWork.Warranties.AddAsync(warranty);
+            }
+            await _unitOfWork.SaveChangesAsync();
+
+            // Create warranty items for each warranty
+            foreach (var warranty in warranties)
+            {
+                var orderParts = serviceOrderParts.Where(sop => sop.ServiceOrderId == warranty.ServiceOrderId).Take(2).ToList();
+                if (!orderParts.Any())
+                {
+                    // Create warranty items without ServiceOrderPart reference
+                    var parts = (await _unitOfWork.Parts.GetAllAsync()).Take(2).ToList();
+                    foreach (var part in parts)
+                    {
+                        var warrantyItem = new Core.Entities.WarrantyItem
+                        {
+                            WarrantyId = warranty.Id,
+                            PartId = part.Id,
+                            PartName = part.PartName,
+                            PartNumber = part.PartNumber,
+                            WarrantyMonths = 12,
+                            WarrantyStartDate = warranty.WarrantyStartDate,
+                            WarrantyEndDate = warranty.WarrantyEndDate,
+                            Status = "Active",
+                            Notes = $"Bảo hành {part.PartName}"
+                        };
+                        warrantyItems.Add(warrantyItem);
+                    }
+                }
+                else
+                {
+                    foreach (var orderPart in orderParts)
+                    {
+                        var warrantyItem = new Core.Entities.WarrantyItem
+                        {
+                            WarrantyId = warranty.Id,
+                            ServiceOrderPartId = orderPart.Id,
+                            PartId = orderPart.PartId,
+                            PartName = orderPart.PartName,
+                            WarrantyMonths = 12,
+                            WarrantyStartDate = warranty.WarrantyStartDate,
+                            WarrantyEndDate = warranty.WarrantyEndDate,
+                            Status = "Active",
+                            Notes = $"Bảo hành {orderPart.PartName}"
+                        };
+                        warrantyItems.Add(warrantyItem);
+                    }
+                }
+            }
+
+            foreach (var item in warrantyItems)
+            {
+                await _unitOfWork.WarrantyItems.AddAsync(item);
+            }
+            await _unitOfWork.SaveChangesAsync();
+
+            return new { success = true, warrantyCount = warranties.Count, itemCount = warrantyItems.Count, message = $"Đã tạo {warranties.Count} bảo hành với {warrantyItems.Count} items" };
+        }
+
+        private async Task<object> CreateFeedbackChannelsAsync()
+        {
+            var existingChannels = await _unitOfWork.FeedbackChannels.GetAllAsync();
+            var existingCodes = existingChannels.Select(c => c.Code).ToList();
+
+            var channelsToCreate = new List<Core.Entities.FeedbackChannel>();
+
+            var channels = new[]
+            {
+                new { Code = "HOTLINE", Name = "Hotline", Description = "Phản hồi qua điện thoại", Order = 1 },
+                new { Code = "EMAIL", Name = "Email", Description = "Phản hồi qua email", Order = 2 },
+                new { Code = "IN_PERSON", Name = "Trực tiếp", Description = "Phản hồi trực tiếp tại garage", Order = 3 },
+                new { Code = "MOBILE_APP", Name = "Ứng dụng di động", Description = "Phản hồi qua ứng dụng", Order = 4 },
+                new { Code = "WEBSITE", Name = "Website", Description = "Phản hồi qua website", Order = 5 },
+                new { Code = "SOCIAL_MEDIA", Name = "Mạng xã hội", Description = "Phản hồi qua mạng xã hội", Order = 6 }
+            };
+
+            foreach (var channel in channels)
+            {
+                if (!existingCodes.Contains(channel.Code))
+                {
+                    channelsToCreate.Add(new Core.Entities.FeedbackChannel
+                    {
+                        Code = channel.Code,
+                        Name = channel.Name,
+                        Description = channel.Description,
+                        DisplayOrder = channel.Order,
+                        IsActive = true,
+                        IsSystem = true
+                    });
+                }
+            }
+
+            if (channelsToCreate.Any())
+            {
+                foreach (var channel in channelsToCreate)
+                {
+                    await _unitOfWork.FeedbackChannels.AddAsync(channel);
+                }
+                await _unitOfWork.SaveChangesAsync();
+            }
+
+            return new { success = true, count = channelsToCreate.Count, message = $"Đã tạo {channelsToCreate.Count} kênh phản hồi" };
+        }
+
+        private async Task<object> CreateCustomerFeedbacksAsync()
+        {
+            var customers = (await _unitOfWork.Customers.GetAllAsync()).ToList();
+            var serviceOrders = (await _unitOfWork.ServiceOrders.GetAllAsync()).ToList();
+            var feedbackChannels = (await _unitOfWork.FeedbackChannels.GetAllAsync()).ToList();
+            var employees = (await _unitOfWork.Employees.GetAllAsync()).ToList();
+
+            if (!customers.Any() || !serviceOrders.Any())
+            {
+                return new { success = false, message = "Cần tạo Customers và ServiceOrders trước khi tạo CustomerFeedbacks" };
+            }
+
+            var existingFeedbacks = await _unitOfWork.CustomerFeedbacks.CountAsync();
+            if (existingFeedbacks > 0)
+            {
+                return new { success = true, count = 0, message = "Đã có CustomerFeedbacks, bỏ qua" };
+            }
+
+            var feedbacks = new List<Core.Entities.CustomerFeedback>();
+
+            var sources = new[] { 
+                Core.Enums.FeedbackSources.Hotline, 
+                Core.Enums.FeedbackSources.Email, 
+                Core.Enums.FeedbackSources.InPerson,
+                Core.Enums.FeedbackSources.MobileApp
+            };
+            var ratings = new[] { 
+                Core.Enums.FeedbackRatings.VerySatisfied, 
+                Core.Enums.FeedbackRatings.Satisfied, 
+                Core.Enums.FeedbackRatings.Neutral 
+            };
+            var statuses = new[] { 
+                Core.Enums.FeedbackStatuses.New, 
+                Core.Enums.FeedbackStatuses.InProgress, 
+                Core.Enums.FeedbackStatuses.Resolved 
+            };
+
+            var feedbackTopics = new[]
+            {
+                "Chất lượng dịch vụ",
+                "Thái độ nhân viên",
+                "Thời gian hoàn thành",
+                "Giá cả",
+                "Môi trường garage"
+            };
+
+            var feedbackContents = new[]
+            {
+                "Dịch vụ rất tốt, nhân viên chuyên nghiệp",
+                "Thời gian hoàn thành đúng hẹn, rất hài lòng",
+                "Giá cả hợp lý, chất lượng tốt",
+                "Nhân viên nhiệt tình, tư vấn rõ ràng",
+                "Garage sạch sẽ, thiết bị hiện đại"
+            };
+
+            for (int i = 0; i < Math.Min(5, serviceOrders.Count); i++)
+            {
+                var order = serviceOrders[i];
+                var customer = customers.FirstOrDefault(c => c.Id == order.CustomerId) ?? customers[i % customers.Count];
+                var channel = feedbackChannels.Any() ? feedbackChannels[i % feedbackChannels.Count] : null;
+                var followUpBy = employees.Any() ? employees[i % employees.Count] : null;
+
+                var feedback = new Core.Entities.CustomerFeedback
+                {
+                    CustomerId = customer.Id,
+                    ServiceOrderId = order.Id,
+                    Source = sources[i % sources.Length],
+                    Rating = ratings[i % ratings.Length],
+                    Topic = feedbackTopics[i % feedbackTopics.Length],
+                    Content = feedbackContents[i % feedbackContents.Length],
+                    Status = statuses[i % statuses.Length],
+                    FollowUpDate = statuses[i % statuses.Length] == Core.Enums.FeedbackStatuses.New ? null : DateTime.Now.AddDays(1),
+                    FollowUpById = followUpBy?.Id,
+                    FeedbackChannelId = channel?.Id,
+                    Score = ratings[i % ratings.Length] == Core.Enums.FeedbackRatings.VerySatisfied ? 5 : 
+                            ratings[i % ratings.Length] == Core.Enums.FeedbackRatings.Satisfied ? 4 : 3
+                };
+
+                feedbacks.Add(feedback);
+            }
+
+            foreach (var feedback in feedbacks)
+            {
+                await _unitOfWork.CustomerFeedbacks.AddAsync(feedback);
+            }
+            await _unitOfWork.SaveChangesAsync();
+
+            return new { success = true, count = feedbacks.Count, message = $"Đã tạo {feedbacks.Count} phản hồi khách hàng" };
         }
 
         #endregion

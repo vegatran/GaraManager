@@ -1,6 +1,7 @@
 using GarageManagementSystem.Core.Entities;
 using GarageManagementSystem.Core.Interfaces;
 using GarageManagementSystem.Core.Services;
+using Microsoft.EntityFrameworkCore;
 
 namespace GarageManagementSystem.API.Services
 {
@@ -16,7 +17,11 @@ namespace GarageManagementSystem.API.Services
         private Timer? _rateLimitCleanupTimer;
         private Timer? _cacheCleanupTimer;
         private Timer? _inventoryAlertsCheckTimer;
+        private Timer? _supplierPerformanceCalculationTimer;
+        private Timer? _poDeliveryAlertsCheckTimer;
         private readonly SemaphoreSlim _inventoryAlertsCheckLock = new SemaphoreSlim(1, 1); // ✅ FIX: Prevent concurrent execution
+        private readonly SemaphoreSlim _supplierPerformanceLock = new SemaphoreSlim(1, 1); // ✅ Phase 4.2.4: Prevent concurrent execution
+        private readonly SemaphoreSlim _poDeliveryAlertsLock = new SemaphoreSlim(1, 1); // ✅ Phase 4.2.4: Prevent concurrent execution
 
         public BackgroundJobService(IServiceProvider serviceProvider, ILogger<BackgroundJobService> logger)
         {
@@ -54,6 +59,12 @@ namespace GarageManagementSystem.API.Services
                 null,
                 TimeSpan.Zero, // Start immediately
                 TimeSpan.FromMinutes(15));
+
+            // ✅ Phase 4.2.4: Supplier Performance Calculation - Run daily at 2:00 AM (off-peak)
+            ScheduleDailyTask(() => CalculateSupplierPerformance(), 2, 0, ref _supplierPerformanceCalculationTimer);
+
+            // ✅ Phase 4.2.4: PO Delivery Alerts Check - Run daily at 8:00 AM (before work hours)
+            ScheduleDailyTask(() => CheckPODeliveryAlerts(), 8, 0, ref _poDeliveryAlertsCheckTimer);
 
             return Task.CompletedTask;
         }
@@ -461,6 +472,338 @@ namespace GarageManagementSystem.API.Services
             }
         }
 
+        #region Phase 4.2.4: Supplier Performance Calculation
+
+        /// <summary>
+        /// ✅ Phase 4.2.4: Calculate supplier performance metrics
+        /// Runs daily at 2:00 AM (off-peak hours)
+        /// </summary>
+        private async void CalculateSupplierPerformance()
+        {
+            // ✅ Prevent concurrent execution
+            if (!await _supplierPerformanceLock.WaitAsync(0))
+            {
+                _logger.LogWarning("Supplier performance calculation job is already running, skipping this execution");
+                return;
+            }
+
+            using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(30)); // Max 30 minutes timeout
+
+            try
+            {
+                _logger.LogInformation("Starting supplier performance calculation job");
+
+                using var scope = _serviceProvider.CreateScope();
+                var context = scope.ServiceProvider.GetRequiredService<Infrastructure.Data.GarageDbContext>();
+                var notificationService = scope.ServiceProvider.GetRequiredService<INotificationService>();
+
+                var startDate = DateTime.Now.AddMonths(-6);
+                var endDate = DateTime.Now;
+
+                // ✅ OPTIMIZED: Only get suppliers with recent POs (smart filtering)
+                var suppliersWithPOs = await context.Suppliers
+                    .AsNoTracking()
+                    .Where(s => s.IsActive && !s.IsDeleted)
+                    .Where(s => context.PurchaseOrders.Any(po =>
+                        !po.IsDeleted &&
+                        po.SupplierId == s.Id &&
+                        po.OrderDate >= startDate &&
+                        (po.Status == "Received" || po.Status == "PartiallyReceived")))
+                    .Select(s => new { s.Id, s.SupplierName })
+                    .ToListAsync(cts.Token);
+
+                if (!suppliersWithPOs.Any())
+                {
+                    _logger.LogInformation("No suppliers with recent POs found, skipping calculation");
+                    return;
+                }
+
+                _logger.LogInformation("Found {Count} suppliers with recent POs to calculate", suppliersWithPOs.Count);
+
+                // ✅ OPTIMIZED: Load all existing performances once (avoid N+1 queries)
+                var supplierIds = suppliersWithPOs.Select(s => s.Id).ToList();
+                var existingPerformances = await context.Set<SupplierPerformance>()
+                    .AsNoTracking()
+                    .Where(sp => supplierIds.Contains(sp.SupplierId) && sp.PartId == null)
+                    .ToDictionaryAsync(sp => sp.SupplierId, sp => sp, cts.Token);
+
+                // ✅ OPTIMIZED: Load all purchase orders once (avoid N+1 queries)
+                var allPOData = await context.PurchaseOrders
+                    .AsNoTracking()
+                    .Where(po => !po.IsDeleted &&
+                               supplierIds.Contains(po.SupplierId) &&
+                               po.OrderDate >= startDate &&
+                               po.OrderDate <= endDate &&
+                               (po.Status == "Received" || po.Status == "PartiallyReceived"))
+                    .Select(po => new
+                    {
+                        po.SupplierId,
+                        po.ExpectedDeliveryDate,
+                        po.ReceivedDate,
+                        po.SentDate,
+                        ItemPrices = po.PurchaseOrderItems
+                            .Where(item => !item.IsDeleted)
+                            .Select(item => item.UnitPrice)
+                            .ToList()
+                    })
+                    .ToListAsync(cts.Token);
+
+                // ✅ OPTIMIZED: Group by supplier ID for efficient lookup
+                var poDataBySupplier = allPOData
+                    .GroupBy(po => po.SupplierId)
+                    .ToDictionary(g => g.Key, g => g.ToList());
+
+                // ✅ OPTIMIZED: Batch processing - process 50 suppliers at a time
+                const int batchSize = 50;
+                int processed = 0;
+                int calculatedCount = 0;
+                int skippedCount = 0;
+
+                for (int i = 0; i < suppliersWithPOs.Count; i += batchSize)
+                {
+                    if (cts.Token.IsCancellationRequested)
+                    {
+                        _logger.LogWarning("Supplier performance calculation cancelled due to timeout");
+                        break;
+                    }
+
+                    var batch = suppliersWithPOs.Skip(i).Take(batchSize).ToList();
+
+                    foreach (var supplierInfo in batch)
+                    {
+                        try
+                        {
+                            // ✅ OPTIMIZED: Check if already calculated recently (within 24h) - from dictionary
+                            if (existingPerformances.TryGetValue(supplierInfo.Id, out var existingPerformance) &&
+                                existingPerformance.CalculatedAt > DateTime.Now.AddHours(-24))
+                            {
+                                skippedCount++;
+                                continue;
+                            }
+
+                            // ✅ OPTIMIZED: Get PO data from dictionary (no query in loop)
+                            if (!poDataBySupplier.TryGetValue(supplierInfo.Id, out var poData) || poData == null || !poData.Any())
+                            {
+                                skippedCount++;
+                                continue;
+                            }
+
+                            // Calculate metrics
+                            var totalOrders = poData.Count;
+                            var onTimeDeliveries = poData.Count(po =>
+                                po.ExpectedDeliveryDate.HasValue &&
+                                po.ReceivedDate.HasValue &&
+                                po.ReceivedDate.Value <= po.ExpectedDeliveryDate.Value.AddDays(1));
+
+                            var onTimeDeliveryRate = totalOrders > 0
+                                ? (decimal)onTimeDeliveries / totalOrders * 100
+                                : 0;
+
+                            var leadTimes = poData
+                                .Where(po => po.SentDate.HasValue && po.ReceivedDate.HasValue)
+                                .Select(po => (po.ReceivedDate!.Value - po.SentDate!.Value).Days)
+                                .ToList();
+
+                            var averageLeadTimeDays = leadTimes.Any()
+                                ? (int)leadTimes.Average()
+                                : 0;
+
+                            // Calculate average price
+                            var allPrices = poData
+                                .SelectMany(po => po.ItemPrices)
+                                .ToList();
+
+                            var averagePrice = allPrices.Any()
+                                ? allPrices.Average()
+                                : 0;
+
+                            // Calculate price stability (coefficient of variation)
+                            var priceStability = 0m;
+                            if (allPrices.Count > 1)
+                            {
+                                var prices = allPrices.Select(p => (double)p).ToList();
+                                var mean = prices.Average();
+                                var variance = prices.Sum(p => Math.Pow(p - mean, 2)) / prices.Count;
+                                var stdDev = Math.Sqrt(variance);
+                                priceStability = mean > 0 ? (decimal)(stdDev / mean * 100) : 0;
+                            }
+
+                            // Calculate overall score
+                            var defectRate = 0m; // TODO: Calculate from QC data if available
+                            var overallScore = (onTimeDeliveryRate * 0.4m) +
+                                             ((100 - defectRate) * 0.3m) +
+                                             (Math.Max(0, 100 - priceStability) * 0.2m) +
+                                             (Math.Max(0, 100 - averageLeadTimeDays * 2) * 0.1m);
+                            overallScore = Math.Min(100, Math.Max(0, overallScore));
+
+                            // Get or create SupplierPerformance record
+                            var performance = await context.Set<SupplierPerformance>()
+                                .Where(sp => sp.SupplierId == supplierInfo.Id && sp.PartId == null)
+                                .FirstOrDefaultAsync(cts.Token);
+
+                            if (performance == null)
+                            {
+                                performance = new SupplierPerformance
+                                {
+                                    SupplierId = supplierInfo.Id,
+                                    PartId = null,
+                                    CalculatedAt = DateTime.Now
+                                };
+                                context.Set<SupplierPerformance>().Add(performance);
+                            }
+
+                            // Update performance data
+                            performance.TotalOrders = totalOrders;
+                            performance.OnTimeDeliveries = onTimeDeliveries;
+                            performance.OnTimeDeliveryRate = onTimeDeliveryRate;
+                            performance.AverageLeadTimeDays = averageLeadTimeDays;
+                            performance.DefectRate = defectRate;
+                            performance.AveragePrice = averagePrice;
+                            performance.PriceStability = priceStability;
+                            performance.OverallScore = overallScore;
+                            performance.CalculatedAt = DateTime.Now;
+
+                            calculatedCount++;
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Error calculating performance for supplier {SupplierId}", supplierInfo.Id);
+                        }
+                    }
+
+                    // ✅ Save changes after each batch
+                    await context.SaveChangesAsync(cts.Token);
+                    processed += batch.Count;
+
+                    // ✅ Log progress
+                    _logger.LogInformation("Supplier performance calculation progress: {Processed}/{Total} ({Percent}%)",
+                        processed, suppliersWithPOs.Count, (processed * 100 / suppliersWithPOs.Count));
+
+                    // ✅ Delay between batches to reduce database load
+                    if (i + batchSize < suppliersWithPOs.Count)
+                    {
+                        await Task.Delay(1000, cts.Token); // 1 second delay
+                    }
+                }
+
+                _logger.LogInformation("Supplier performance calculation completed. Calculated: {Calculated}, Skipped: {Skipped}, Total: {Total}",
+                    calculatedCount, skippedCount, suppliersWithPOs.Count);
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogWarning("Supplier performance calculation cancelled due to timeout");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in supplier performance calculation job");
+            }
+            finally
+            {
+                _supplierPerformanceLock.Release();
+            }
+        }
+
+        #endregion
+
+        #region Phase 4.2.4: PO Delivery Alerts Check
+
+        /// <summary>
+        /// ✅ Phase 4.2.4: Check PO delivery alerts (At Risk, Delayed)
+        /// Runs daily at 8:00 AM (before work hours)
+        /// </summary>
+        private async void CheckPODeliveryAlerts()
+        {
+            // ✅ Prevent concurrent execution
+            if (!await _poDeliveryAlertsLock.WaitAsync(0))
+            {
+                _logger.LogWarning("PO delivery alerts check job is already running, skipping this execution");
+                return;
+            }
+
+            try
+            {
+                _logger.LogInformation("Starting PO delivery alerts check job");
+
+                using var scope = _serviceProvider.CreateScope();
+                var context = scope.ServiceProvider.GetRequiredService<Infrastructure.Data.GarageDbContext>();
+                var notificationService = scope.ServiceProvider.GetRequiredService<INotificationService>();
+
+                var today = DateTime.Now.Date;
+
+                // ✅ OPTIMIZED: Only get POs that are in-transit and have expected delivery date
+                var inTransitOrders = await context.PurchaseOrders
+                    .AsNoTracking()
+                    .Include(po => po.Supplier)
+                    .Where(po => !po.IsDeleted &&
+                               (po.Status == "Sent" || po.Status == "InTransit") &&
+                               po.ExpectedDeliveryDate.HasValue)
+                    .Select(po => new
+                    {
+                        po.Id,
+                        po.OrderNumber,
+                        po.SupplierId,
+                        SupplierName = po.Supplier != null ? po.Supplier.SupplierName : "",
+                        po.ExpectedDeliveryDate
+                    })
+                    .ToListAsync();
+
+                var atRiskCount = 0;
+                var delayedCount = 0;
+
+                foreach (var order in inTransitOrders)
+                {
+                    if (!order.ExpectedDeliveryDate.HasValue) continue;
+
+                    var deliveryDate = order.ExpectedDeliveryDate.Value.Date;
+                    var daysDiff = (deliveryDate - today).Days;
+
+                    string deliveryStatus;
+                    if (daysDiff < 0)
+                    {
+                        deliveryStatus = "Delayed";
+                        delayedCount++;
+                    }
+                    else if (daysDiff <= 3)
+                    {
+                        deliveryStatus = "AtRisk";
+                        atRiskCount++;
+                    }
+                    else
+                    {
+                        continue; // On time, no alert needed
+                    }
+
+                    // ✅ Send notification via SignalR
+                    try
+                    {
+                        await notificationService.NotifyPODeliveryAlertAsync(
+                            order.Id,
+                            order.OrderNumber ?? "",
+                            order.SupplierName,
+                            deliveryStatus,
+                            daysDiff);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error sending notification for PO {OrderId}", order.Id);
+                    }
+                }
+
+                _logger.LogInformation("PO delivery alerts check completed. At Risk: {AtRiskCount}, Delayed: {DelayedCount}, Total: {TotalCount}",
+                    atRiskCount, delayedCount, atRiskCount + delayedCount);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in PO delivery alerts check job");
+            }
+            finally
+            {
+                _poDeliveryAlertsLock.Release();
+            }
+        }
+
+        #endregion
+
         public override void Dispose()
         {
             _maintenanceReminderTimer?.Dispose();
@@ -468,7 +811,11 @@ namespace GarageManagementSystem.API.Services
             _rateLimitCleanupTimer?.Dispose();
             _cacheCleanupTimer?.Dispose();
             _inventoryAlertsCheckTimer?.Dispose();
-            _inventoryAlertsCheckLock?.Dispose(); // ✅ FIX: Dispose lock
+            _supplierPerformanceCalculationTimer?.Dispose();
+            _poDeliveryAlertsCheckTimer?.Dispose();
+            _inventoryAlertsCheckLock?.Dispose();
+            _supplierPerformanceLock?.Dispose();
+            _poDeliveryAlertsLock?.Dispose();
             base.Dispose();
         }
     }

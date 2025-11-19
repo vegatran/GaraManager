@@ -58,14 +58,8 @@ namespace GarageManagementSystem.API.Controllers
 
                 query = query.OrderBy(s => s.SupplierName);
 
-                // ✅ OPTIMIZED: Get total count ở database level (trước khi paginate)
-                var totalCount = await query.CountAsync();
-                
-                // ✅ OPTIMIZED: Apply pagination ở database level với Skip/Take
-                var pagedSuppliers = await query
-                    .Skip((pageNumber - 1) * pageSize)
-                    .Take(pageSize)
-                    .ToListAsync();
+                // ✅ OPTIMIZED: Get paged results with total count - automatically chooses best method
+                var (pagedSuppliers, totalCount) = await query.ToPagedListWithCountAsync(pageNumber, pageSize, _context);
                 
                 var supplierDtos = pagedSuppliers.Select(MapToDto).ToList();
                 

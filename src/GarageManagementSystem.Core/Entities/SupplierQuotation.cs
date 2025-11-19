@@ -37,14 +37,25 @@ namespace GarageManagementSystem.Core.Entities
         
         [Required]
         [StringLength(20)]
-        public string Status { get; set; } = "Pending"; // "Pending", "Accepted", "Rejected", "Expired"
+        public string Status { get; set; } = "Pending"; // "Requested", "Pending", "Accepted", "Rejected", "Expired"
         
         [StringLength(500)]
         public string? Notes { get; set; }
         
+        // ✅ Phase 4.2.2 Optional: Request Quotation fields
+        public int? RequestedById { get; set; } // Employee ID who requested
+        public DateTime? RequestedDate { get; set; } // When request was sent
+        public DateTime? ResponseDate { get; set; } // When supplier responded
+        [StringLength(1000)]
+        public string? RequestNotes { get; set; } // Notes from requester
+        public int? RequestedQuantity { get; set; } // Quantity requested
+        [StringLength(1000)]
+        public string? ResponseNotes { get; set; } // Notes from supplier
+        
         // Navigation properties
         public virtual Supplier Supplier { get; set; } = null!;
         public virtual Part Part { get; set; } = null!;
+        public virtual Employee? RequestedBy { get; set; }
     }
 }
 

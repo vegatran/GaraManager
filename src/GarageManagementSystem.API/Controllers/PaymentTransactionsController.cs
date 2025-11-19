@@ -8,6 +8,7 @@ using GarageManagementSystem.Infrastructure.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace GarageManagementSystem.API.Controllers
 {
@@ -20,13 +21,23 @@ namespace GarageManagementSystem.API.Controllers
         private readonly IMapper _mapper;
         private readonly ICacheService _cacheService;
         private readonly GarageDbContext _context;
+        private readonly IFinancialTransactionService _financialTransactionService;
+        private readonly ILogger<PaymentTransactionsController> _logger;
 
-        public PaymentTransactionsController(IUnitOfWork unitOfWork, IMapper mapper, ICacheService cacheService, GarageDbContext context)
+        public PaymentTransactionsController(
+            IUnitOfWork unitOfWork, 
+            IMapper mapper, 
+            ICacheService cacheService, 
+            GarageDbContext context,
+            IFinancialTransactionService financialTransactionService,
+            ILogger<PaymentTransactionsController> logger)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _cacheService = cacheService;
             _context = context;
+            _financialTransactionService = financialTransactionService;
+            _logger = logger;
         }
 
         [HttpGet]
@@ -62,14 +73,8 @@ namespace GarageManagementSystem.API.Controllers
 
                 query = query.OrderByDescending(p => p.CreatedAt);
 
-                // ✅ OPTIMIZED: Get total count ở database level (trước khi paginate)
-                var totalCount = await query.CountAsync();
-                
-                // ✅ OPTIMIZED: Apply pagination ở database level với Skip/Take
-                var pagedPayments = await query
-                    .Skip((pageNumber - 1) * pageSize)
-                    .Take(pageSize)
-                    .ToListAsync();
+                // ✅ OPTIMIZED: Get paged results with total count - automatically chooses best method
+                var (pagedPayments, totalCount) = await query.ToPagedListWithCountAsync(pageNumber, pageSize, _context);
                 
                 var paymentDtos = pagedPayments.Select(p => _mapper.Map<PaymentTransactionDto>(p)).ToList();
                 
@@ -154,6 +159,25 @@ namespace GarageManagementSystem.API.Controllers
                     
                     await _unitOfWork.ServiceOrders.UpdateAsync(order);
                     await _unitOfWork.SaveChangesAsync();
+
+                    // ✅ 4.3.1: Tự động tạo FinancialTransaction (Income) từ PaymentTransaction
+                    try
+                    {
+                        var financialTransaction = await _financialTransactionService.CreateIncomeFromPaymentTransactionAsync(payment);
+                        if (financialTransaction != null)
+                        {
+                            _logger.LogInformation($"Đã tạo FinancialTransaction (Income) {financialTransaction.TransactionNumber} từ PaymentTransaction {payment.Id}");
+                        }
+                        else
+                        {
+                            _logger.LogWarning($"Không thể tạo FinancialTransaction cho PaymentTransaction {payment.Id} (có thể đã tồn tại)");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // Không throw exception để không ảnh hưởng đến PaymentTransaction creation
+                        _logger.LogError(ex, $"Lỗi khi tạo FinancialTransaction từ PaymentTransaction {payment.Id}");
+                    }
 
                     // Commit transaction nếu thành công
                     await _unitOfWork.CommitTransactionAsync();

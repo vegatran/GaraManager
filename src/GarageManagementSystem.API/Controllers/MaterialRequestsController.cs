@@ -131,16 +131,13 @@ namespace GarageManagementSystem.API.Controllers
 
                 query = query.OrderByDescending(m => m.CreatedAt);
 
-                // ✅ OPTIMIZED: Get total count ở database level (trước khi paginate)
-                var totalCount = await query.CountAsync();
-                
-                // ✅ OPTIMIZED: Apply pagination ở database level với Skip/Take
-                var data = await query
-                    .Skip((pageNumber - 1) * pageSize)
-                    .Take(pageSize)
+                // ✅ OPTIMIZED: Apply Include before pagination
+                query = query
                     .Include(m => m.ServiceOrder)
-                    .Include(m => m.Items)
-                    .ToListAsync();
+                    .Include(m => m.Items);
+                
+                // ✅ OPTIMIZED: Get paged results with total count - automatically chooses best method
+                var (data, totalCount) = await query.ToPagedListWithCountAsync(pageNumber, pageSize, _context);
                 
                 var dtos = _mapper.Map<List<MaterialRequestDto>>(data);
 

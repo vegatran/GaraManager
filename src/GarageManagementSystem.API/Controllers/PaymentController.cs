@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using GarageManagementSystem.Core.Entities;
 using GarageManagementSystem.Core.Interfaces;
+using Microsoft.Extensions.Logging;
 
 namespace GarageManagementSystem.API.Controllers
 {
@@ -12,13 +13,16 @@ namespace GarageManagementSystem.API.Controllers
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<PaymentController> _logger;
+        private readonly IFinancialTransactionService _financialTransactionService;
 
         public PaymentController(
             IUnitOfWork unitOfWork,
-            ILogger<PaymentController> logger)
+            ILogger<PaymentController> logger,
+            IFinancialTransactionService financialTransactionService)
         {
             _unitOfWork = unitOfWork;
             _logger = logger;
+            _financialTransactionService = financialTransactionService;
         }
 
         /// <summary>
@@ -154,31 +158,62 @@ namespace GarageManagementSystem.API.Controllers
                     CreatedAt = DateTime.Now
                 };
 
-                await _unitOfWork.Payments.AddAsync(payment);
-
-                // Check if invoice is fully paid
-                var allPayments = await _unitOfWork.Payments.GetAllAsync();
-                var totalPaid = allPayments
-                    .Where(p => p.InvoiceId == invoiceId && p.Status == "Completed")
-                    .Sum(p => p.Amount);
-
-                totalPaid += payment.Amount;
-
-                if (totalPaid >= invoice.TotalAmount)
+                // ✅ SỬA: Thêm transaction wrapper để đảm bảo tính toàn vẹn dữ liệu
+                await _unitOfWork.BeginTransactionAsync();
+                
+                try
                 {
-                    invoice.Status = "Paid";
-                    invoice.PaidDate = DateTime.Now;
-                    invoice.UpdatedAt = DateTime.Now;
-                    await _unitOfWork.Invoices.UpdateAsync(invoice);
+                    await _unitOfWork.Payments.AddAsync(payment);
+
+                    // Check if invoice is fully paid
+                    var allPayments = await _unitOfWork.Payments.GetAllAsync();
+                    var totalPaid = allPayments
+                        .Where(p => p.InvoiceId == invoiceId && p.Status == "Completed")
+                        .Sum(p => p.Amount);
+
+                    totalPaid += payment.Amount;
+
+                    if (totalPaid >= invoice.TotalAmount)
+                    {
+                        invoice.Status = "Paid";
+                        invoice.PaidDate = DateTime.Now;
+                        invoice.UpdatedAt = DateTime.Now;
+                        await _unitOfWork.Invoices.UpdateAsync(invoice);
+                    }
+                    else
+                    {
+                        invoice.Status = "Partially Paid";
+                        invoice.UpdatedAt = DateTime.Now;
+                        await _unitOfWork.Invoices.UpdateAsync(invoice);
+                    }
+
+                    await _unitOfWork.SaveChangesAsync();
+                    await _unitOfWork.CommitTransactionAsync();
                 }
-                else
+                catch
                 {
-                    invoice.Status = "Partially Paid";
-                    invoice.UpdatedAt = DateTime.Now;
-                    await _unitOfWork.Invoices.UpdateAsync(invoice);
+                    await _unitOfWork.RollbackTransactionAsync();
+                    throw;
                 }
 
-                await _unitOfWork.SaveChangesAsync();
+                // ✅ 4.3.1: Tự động tạo FinancialTransaction (Income) từ Payment (sau commit để tránh rollback)
+                try
+                {
+                    var financialTransaction = await _financialTransactionService.CreateIncomeFromPaymentAsync(payment);
+                    if (financialTransaction != null)
+                    {
+                        _logger.LogInformation($"Đã tạo FinancialTransaction (Income) {financialTransaction.TransactionNumber} từ Payment {payment.Id}");
+                    }
+                    else
+                    {
+                        _logger.LogWarning($"Không thể tạo FinancialTransaction cho Payment {payment.Id} (có thể đã tồn tại)");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Không throw exception để không ảnh hưởng đến Payment creation
+                    _logger.LogError(ex, $"Lỗi khi tạo FinancialTransaction từ Payment {payment.Id}");
+                }
 
                 _logger.LogInformation($"Created payment for invoice {invoiceId}. Amount: {payment.Amount}, Method: {payment.PaymentMethod}");
 
@@ -229,8 +264,39 @@ namespace GarageManagementSystem.API.Controllers
                     CreatedAt = DateTime.Now
                 };
 
-                await _unitOfWork.Payments.AddAsync(payment);
-                await _unitOfWork.SaveChangesAsync();
+                // ✅ SỬA: Thêm transaction wrapper để đảm bảo tính toàn vẹn dữ liệu
+                await _unitOfWork.BeginTransactionAsync();
+                
+                try
+                {
+                    await _unitOfWork.Payments.AddAsync(payment);
+                    await _unitOfWork.SaveChangesAsync();
+                    await _unitOfWork.CommitTransactionAsync();
+                }
+                catch
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
+                    throw;
+                }
+
+                // ✅ 4.3.1: Tự động tạo FinancialTransaction (Income) từ Payment (sau commit để tránh rollback)
+                try
+                {
+                    var financialTransaction = await _financialTransactionService.CreateIncomeFromPaymentAsync(payment);
+                    if (financialTransaction != null)
+                    {
+                        _logger.LogInformation($"Đã tạo FinancialTransaction (Income) {financialTransaction.TransactionNumber} từ Payment {payment.Id}");
+                    }
+                    else
+                    {
+                        _logger.LogWarning($"Không thể tạo FinancialTransaction cho Payment {payment.Id} (có thể đã tồn tại)");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Không throw exception để không ảnh hưởng đến Payment creation
+                    _logger.LogError(ex, $"Lỗi khi tạo FinancialTransaction từ Payment {payment.Id}");
+                }
 
                 _logger.LogInformation($"Created manual payment for customer {customer.Name}. Amount: {payment.Amount}");
 

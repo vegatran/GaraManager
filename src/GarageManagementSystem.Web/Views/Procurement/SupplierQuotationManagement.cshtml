@@ -1,0 +1,263 @@
+@{
+    ViewData["Title"] = "Quản Lý Báo Giá Nhà Cung Cấp";
+}
+
+@Html.AntiForgeryToken()
+
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1 class="m-0">Quản Lý Báo Giá Nhà Cung Cấp</h1>
+            </div>
+            <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-right">
+                    <li class="breadcrumb-item"><a href="@Url.Action("Index", "Home")">Trang chủ</a></li>
+                    <li class="breadcrumb-item"><a href="@Url.Action("DemandAnalysis", "Procurement")">Mua Hàng</a></li>
+                    <li class="breadcrumb-item active">Báo Giá Nhà Cung Cấp</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+
+<section class="content">
+    <div class="container-fluid">
+        <!-- Filters -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Bộ Lọc</h3>
+                        <div class="card-tools">
+                            <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>Phụ Tùng</label>
+                                    <select id="filterPartId" class="form-control select2" style="width: 100%;">
+                                        <option value="">Tất cả</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>Nhà Cung Cấp</label>
+                                    <select id="filterSupplierId" class="form-control select2" style="width: 100%;">
+                                        <option value="">Tất cả</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>Trạng Thái</label>
+                                    <select id="filterStatus" class="form-control">
+                                        <option value="">Tất cả</option>
+                                        <option value="Requested">Đã Yêu Cầu</option>
+                                        <option value="Pending">Chờ Xem Xét</option>
+                                        <option value="Accepted">Đã Chấp Nhận</option>
+                                        <option value="Rejected">Đã Từ Chối</option>
+                                        <option value="Expired">Hết Hạn</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>&nbsp;</label>
+                                    <div>
+                                        <button type="button" class="btn btn-primary" id="applyFiltersBtn">
+                                            <i class="fas fa-filter"></i> Áp Dụng
+                                        </button>
+                                        <button type="button" class="btn btn-secondary" id="resetFiltersBtn">
+                                            <i class="fas fa-redo"></i> Đặt Lại
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Table -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Danh Sách Báo Giá</h3>
+                        <div class="card-tools">
+                            <button type="button" class="btn btn-primary btn-sm" id="requestQuotationBtn">
+                                <i class="fas fa-plus"></i> Yêu Cầu Báo Giá
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <table id="quotationTable" class="table table-bordered table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Số Báo Giá</th>
+                                    <th>Nhà Cung Cấp</th>
+                                    <th>Phụ Tùng</th>
+                                    <th>Giá Đơn Vị</th>
+                                    <th>Số Lượng Yêu Cầu</th>
+                                    <th>Ngày Yêu Cầu</th>
+                                    <th>Ngày Phản Hồi</th>
+                                    <th>Trạng Thái</th>
+                                    <th>Thao Tác</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Request Quotation Modal -->
+<div class="modal fade" id="requestQuotationModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">Yêu Cầu Báo Giá</h4>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form id="requestQuotationForm">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Phụ Tùng <span class="text-danger">*</span></label>
+                        <select id="requestPartId" class="form-control select2" style="width: 100%;" required>
+                            <option value="">Chọn phụ tùng</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Nhà Cung Cấp <span class="text-danger">*</span></label>
+                        <select id="requestSupplierIds" class="form-control select2" multiple="multiple" style="width: 100%;" required>
+                        </select>
+                        <small class="form-text text-muted">Có thể chọn nhiều nhà cung cấp</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Số Lượng Yêu Cầu <span class="text-danger">*</span></label>
+                        <input type="number" id="requestQuantity" class="form-control" min="1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Ghi Chú</label>
+                        <textarea id="requestNotes" class="form-control" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Ngày Cần Hàng</label>
+                        <input type="date" id="requiredByDate" class="form-control">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Đóng</button>
+                    <button type="submit" class="btn btn-primary">Gửi Yêu Cầu</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Update Quotation Modal (for supplier response) -->
+<div class="modal fade" id="updateQuotationModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">Cập Nhật Báo Giá</h4>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form id="updateQuotationForm">
+                <input type="hidden" id="updateQuotationId">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Giá Đơn Vị (VND) <span class="text-danger">*</span></label>
+                                <input type="number" id="updateUnitPrice" class="form-control" min="0" step="0.01" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Số Lượng Tối Thiểu <span class="text-danger">*</span></label>
+                                <input type="number" id="updateMinOrderQty" class="form-control" min="1" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Thời Gian Giao Hàng (ngày)</label>
+                                <input type="number" id="updateLeadTime" class="form-control" min="0">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Ngày Hết Hạn</label>
+                                <input type="date" id="updateValidUntil" class="form-control">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Thời Gian Bảo Hành</label>
+                        <input type="text" id="updateWarrantyPeriod" class="form-control" placeholder="VD: 12 tháng">
+                    </div>
+                    <div class="form-group">
+                        <label>Điều Khoản Bảo Hành</label>
+                        <textarea id="updateWarrantyTerms" class="form-control" rows="2"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Ghi Chú Phản Hồi</label>
+                        <textarea id="updateResponseNotes" class="form-control" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Đóng</button>
+                    <button type="submit" class="btn btn-primary">Cập Nhật</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- View Quotation Modal -->
+<div class="modal fade" id="viewQuotationModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">Chi Tiết Báo Giá</h4>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" id="viewQuotationContent">
+                <!-- Content will be loaded dynamically -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/supplier-quotation-management.js" asp-append-version="true"></script>
+    <script>
+        $(document).ready(function() {
+            SupplierQuotationManagement.init();
+        });
+    </script>
+}
+

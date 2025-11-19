@@ -2,6 +2,7 @@ using AutoMapper;
 using GarageManagementSystem.Core.Entities;
 using GarageManagementSystem.Core.Enums;
 using GarageManagementSystem.Core.Interfaces;
+using GarageManagementSystem.Core.Extensions;
 using GarageManagementSystem.Shared.DTOs;
 using GarageManagementSystem.Shared.Models;
 using GarageManagementSystem.Infrastructure.Data;
@@ -100,11 +101,8 @@ namespace GarageManagementSystem.API.Controllers
                 var pageNumber = Math.Max(filter.PageNumber, 1);
                 var pageSize = Math.Clamp(filter.PageSize, 1, 100);
 
-                var totalCount = await query.CountAsync();
-                var items = await query
-                    .Skip((pageNumber - 1) * pageSize)
-                    .Take(pageSize)
-                    .ToListAsync();
+                // ✅ OPTIMIZED: Get paged results with total count - automatically chooses best method
+                var (items, totalCount) = await query.ToPagedListWithCountAsync(pageNumber, pageSize, _context);
 
                 var dtoList = _mapper.Map<List<CustomerFeedbackDto>>(items);
 
@@ -160,6 +158,12 @@ namespace GarageManagementSystem.API.Controllers
 
             try
             {
+                // ✅ SỬA: Validate Content không được để trống
+                if (string.IsNullOrWhiteSpace(request.Content))
+                {
+                    return BadRequest(ApiResponse<CustomerFeedbackDto>.ErrorResult("Nội dung phản hồi không được để trống"));
+                }
+
                 var feedback = _mapper.Map<CustomerFeedback>(request);
 
                 if (string.IsNullOrWhiteSpace(feedback.Source))
@@ -271,14 +275,12 @@ namespace GarageManagementSystem.API.Controllers
                     feedback.Status = request.Status;
                 }
 
+                // ✅ SỬA: Chỉ update FollowUpDate nếu có value, không clear existing value
                 if (request.FollowUpDate.HasValue)
                 {
                     feedback.FollowUpDate = request.FollowUpDate;
                 }
-                else if (request.FollowUpDate == null && feedback.FollowUpDate != null)
-                {
-                    feedback.FollowUpDate = null;
-                }
+                // Note: Không clear FollowUpDate nếu request không gửi field này (PATCH pattern)
 
                 if (request.FollowUpById.HasValue)
                 {
@@ -336,7 +338,9 @@ namespace GarageManagementSystem.API.Controllers
         {
             try
             {
-                var feedback = await _unitOfWork.CustomerFeedbacks.GetByIdAsync(id);
+                // ✅ SỬA: Check IsDeleted để nhất quán với các methods khác
+                var feedback = await _context.CustomerFeedbacks
+                    .FirstOrDefaultAsync(f => f.Id == id && !f.IsDeleted);
                 if (feedback == null)
                 {
                     return NotFound(ApiResponse<bool>.ErrorResult("Không tìm thấy phản hồi"));

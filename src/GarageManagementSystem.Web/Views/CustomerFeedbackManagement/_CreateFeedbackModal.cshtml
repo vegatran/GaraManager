@@ -1,0 +1,131 @@
+<!-- Create Feedback Modal -->
+<div class="modal fade" id="createFeedbackModal" tabindex="-1" role="dialog" data-backdrop="static" data-keyboard="false">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-primary">
+                <h4 class="modal-title"><i class="fas fa-plus mr-2"></i>Tạo Phản Hồi Mới</h4>
+                <button type="button" class="close text-white" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <form id="createFeedbackForm">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createCustomerId">Khách Hàng</label>
+                                <select class="form-control form-control-sm select2" id="createCustomerId" name="CustomerId" style="width: 100%;">
+                                    <option value="">-- Chọn Khách Hàng --</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createServiceOrderId">Số Phiếu</label>
+                                <select class="form-control form-control-sm select2" id="createServiceOrderId" name="ServiceOrderId" style="width: 100%;">
+                                    <option value="">-- Chọn Phiếu Sửa Chữa --</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createSource">Nguồn <span class="text-danger">*</span></label>
+                                <select class="form-control form-control-sm" id="createSource" name="Source" required>
+                                    <option value="Phone">Điện thoại</option>
+                                    <option value="Email">Email</option>
+                                    <option value="Website">Website</option>
+                                    <option value="SocialMedia">Mạng xã hội</option>
+                                    <option value="InPerson">Trực tiếp</option>
+                                    <option value="Other" selected>Khác</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createFeedbackChannelId">Kênh Phản Hồi</label>
+                                <select class="form-control form-control-sm select2" id="createFeedbackChannelId" name="FeedbackChannelId" style="width: 100%;">
+                                    <option value="">-- Chọn Kênh --</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createRating">Đánh Giá <span class="text-danger">*</span></label>
+                                <select class="form-control form-control-sm" id="createRating" name="Rating" required>
+                                    <option value="Excellent">Xuất sắc</option>
+                                    <option value="Good">Tốt</option>
+                                    <option value="Neutral" selected>Bình thường</option>
+                                    <option value="Poor">Kém</option>
+                                    <option value="VeryPoor">Rất kém</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createStatus">Trạng Thái <span class="text-danger">*</span></label>
+                                <select class="form-control form-control-sm" id="createStatus" name="Status" required>
+                                    <option value="New" selected>Mới</option>
+                                    <option value="InProgress">Đang xử lý</option>
+                                    <option value="Responded">Đã phản hồi</option>
+                                    <option value="Resolved">Đã giải quyết</option>
+                                    <option value="Closed">Đã đóng</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="createTopic">Chủ Đề</label>
+                        <input type="text" class="form-control form-control-sm" id="createTopic" name="Topic" maxlength="200" placeholder="Nhập chủ đề phản hồi">
+                    </div>
+                    <div class="form-group">
+                        <label for="createContent">Nội Dung <span class="text-danger">*</span></label>
+                        <textarea class="form-control form-control-sm" id="createContent" name="Content" rows="4" required maxlength="2000" placeholder="Nhập nội dung phản hồi"></textarea>
+                        <small class="form-text text-muted">Tối đa 2000 ký tự</small>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createFollowUpById">Nhân Viên Follow-up</label>
+                                <select class="form-control form-control-sm select2" id="createFollowUpById" name="FollowUpById" style="width: 100%;">
+                                    <option value="">-- Chọn Nhân Viên --</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createFollowUpDate">Ngày Follow-up</label>
+                                <input type="datetime-local" class="form-control form-control-sm" id="createFollowUpDate" name="FollowUpDate">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="createScore">Điểm Số (NPS)</label>
+                                <input type="number" class="form-control form-control-sm" id="createScore" name="Score" min="0" max="10" placeholder="0-10">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="createNotes">Ghi Chú</label>
+                        <textarea class="form-control form-control-sm" id="createNotes" name="Notes" rows="3" maxlength="1000" placeholder="Ghi chú nội bộ"></textarea>
+                        <small class="form-text text-muted">Tối đa 1000 ký tự</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">
+                        <i class="fas fa-times"></i> Đóng
+                    </button>
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <i class="fas fa-save"></i> Lưu
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+

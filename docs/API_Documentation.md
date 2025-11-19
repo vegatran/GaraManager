@@ -12,7 +12,13 @@
 5. [Parts & Inventory APIs](#parts--inventory-apis)
 6. [Financial Management APIs](#financial-management-apis)
 7. [Reporting APIs](#reporting-apis)
-8. [Error Handling](#error-handling)
+8. [🛒 Procurement Management APIs](#-procurement-management-apis-phase-42)
+   - [Demand Analysis](#phase-421-demand-analysis)
+   - [Supplier Evaluation](#phase-422-supplier-evaluation)
+   - [Request Quotation](#phase-422-optional-request-quotation)
+   - [PO Tracking](#phase-423-po-tracking)
+   - [Performance Evaluation](#phase-424-performance-evaluation)
+9. [Error Handling](#error-handling)
 
 ---
 
@@ -1210,6 +1216,846 @@ Authorization: Bearer {access_token}
 ```http
 GET /api/reports/customers
 Authorization: Bearer {access_token}
+```
+
+---
+
+## 🛒 PROCUREMENT MANAGEMENT APIs (Phase 4.2)
+
+**Base Endpoint:** `/api/procurement`
+
+### **Phase 4.2.1: Demand Analysis**
+
+#### **1. Get Demand Analysis**
+```http
+GET /api/procurement/demand-analysis?warehouseId={id}&priority={priority}&source={source}&pageNumber={page}&pageSize={size}
+Authorization: Bearer {access_token}
+```
+
+**Query Parameters:**
+- `warehouseId` (optional): Filter by warehouse ID
+- `priority` (optional): Filter by priority ("High", "Medium", "Low")
+- `source` (optional): Filter by source ("InventoryAlert", "ServiceOrder", "All")
+- `pageNumber` (default: 1): Page number
+- `pageSize` (default: 20, max: 100): Items per page
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "data": [
+      {
+        "partId": 1,
+        "partNumber": "PT001",
+        "partName": "Lọc dầu động cơ",
+        "currentStock": 5,
+        "minimumStock": 10,
+        "suggestedQuantity": 15,
+        "priority": "High",
+        "source": "InventoryAlert",
+        "sourceEntityId": 123,
+        "requiredByDate": null,
+        "estimatedCost": 1500000,
+        "suggestedDate": "2025-01-15T10:30:00Z"
+      }
+    ],
+    "totalCount": 50,
+    "pageNumber": 1,
+    "pageSize": 20,
+    "totalPages": 3
+  },
+  "message": "Demand analysis retrieved successfully"
+}
+```
+
+#### **2. Get Reorder Suggestions**
+```http
+GET /api/procurement/reorder-suggestions?warehouseId={id}&priority={priority}&source={source}&isProcessed={bool}&pageNumber={page}&pageSize={size}
+Authorization: Bearer {access_token}
+```
+
+**Query Parameters:**
+- `warehouseId` (optional): Filter by warehouse ID
+- `priority` (optional): Filter by priority
+- `source` (optional): Filter by source
+- `isProcessed` (optional): Filter by processed status
+- `pageNumber` (default: 1)
+- `pageSize` (default: 20, max: 100)
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "data": [
+      {
+        "id": 1,
+        "partId": 1,
+        "partNumber": "PT001",
+        "partName": "Lọc dầu động cơ",
+        "currentStock": 5,
+        "minimumStock": 10,
+        "suggestedQuantity": 15,
+        "estimatedCost": 1500000,
+        "priority": "High",
+        "source": "InventoryAlert",
+        "sourceEntityId": 123,
+        "suggestedDate": "2025-01-15T10:30:00Z",
+        "requiredByDate": null,
+        "isProcessed": false,
+        "purchaseOrderId": null
+      }
+    ],
+    "totalCount": 30,
+    "pageNumber": 1,
+    "pageSize": 20
+  }
+}
+```
+
+#### **3. Bulk Create Purchase Order**
+```http
+POST /api/procurement/bulk-create-po
+Authorization: Bearer {access_token}
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "suggestions": [
+    {
+      "suggestionId": 1,
+      "partId": 1,
+      "quantity": 15,
+      "supplierId": 5,
+      "unitPrice": 100000,
+      "expectedDeliveryDate": "2025-01-25T00:00:00Z"
+    }
+  ],
+  "supplierId": 5,
+  "orderDate": "2025-01-15T10:30:00Z",
+  "expectedDeliveryDate": "2025-01-25T00:00:00Z",
+  "notes": "Đặt hàng tháng 1/2025"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": 100,
+    "orderNumber": "PO-2025-00100",
+    "supplierId": 5,
+    "supplierName": "Nhà cung cấp ABC",
+    "orderDate": "2025-01-15T10:30:00Z",
+    "status": "Draft",
+    "totalAmount": 2500000,
+    "items": [...]
+  },
+  "message": "Purchase order created successfully"
+}
+```
+
+### **Phase 4.2.2: Supplier Evaluation**
+
+#### **4. Get Supplier Comparison**
+```http
+GET /api/procurement/supplier-comparison?partId={id}&quantity={qty}
+Authorization: Bearer {access_token}
+```
+
+**Query Parameters:**
+- `partId` (required): Part ID to compare
+- `quantity` (default: 1): Quantity needed
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "supplierId": 5,
+      "supplierName": "Nhà cung cấp ABC",
+      "unitPrice": 100000,
+      "minimumOrderQuantity": 10,
+      "leadTimeDays": 7,
+      "totalPrice": 1000000,
+      "averageRating": 4.5,
+      "onTimeDeliveryRate": 95.5,
+      "defectRate": 1.2,
+      "overallScore": 85.0,
+      "isPreferred": true
+    }
+  ],
+  "message": "Supplier comparison retrieved successfully"
+}
+```
+
+#### **5. Get Supplier Recommendation**
+```http
+GET /api/procurement/supplier-recommendation?partId={id}&quantity={qty}
+Authorization: Bearer {access_token}
+```
+
+**Query Parameters:**
+- `partId` (required): Part ID
+- `quantity` (default: 1): Quantity needed
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "partId": 1,
+    "recommendedSupplier": {
+      "supplierId": 5,
+      "supplierName": "Nhà cung cấp ABC",
+      "unitPrice": 100000,
+      "calculatedScore": 88.5
+    },
+    "recommendationReason": "Điểm số tổng thể cao, Đánh giá tốt từ người dùng",
+    "recommendedAt": "2025-01-15T10:30:00Z"
+  },
+  "message": "Supplier recommendation retrieved successfully"
+}
+```
+
+### **Phase 4.2.3: PO Tracking**
+
+#### **6. Get In-Transit Orders**
+```http
+GET /api/purchase-orders/in-transit?supplierId={id}&deliveryStatus={status}&daysUntilDelivery={days}&pageNumber={page}&pageSize={size}
+Authorization: Bearer {access_token}
+```
+
+**Query Parameters:**
+- `supplierId` (optional): Filter by supplier ID
+- `deliveryStatus` (optional): Filter by status ("OnTime", "AtRisk", "Delayed")
+- `daysUntilDelivery` (optional): Filter by days until delivery
+- `pageNumber` (default: 1)
+- `pageSize` (default: 20, max: 100)
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "data": [
+      {
+        "id": 100,
+        "orderNumber": "PO-2025-00100",
+        "supplierName": "Nhà cung cấp ABC",
+        "expectedDeliveryDate": "2025-01-20T00:00:00Z",
+        "trackingNumber": "VN123456789",
+        "deliveryStatus": "OnTime",
+        "daysUntilDelivery": 5
+      }
+    ],
+    "totalCount": 25,
+    "pageNumber": 1,
+    "pageSize": 20
+  }
+}
+```
+
+#### **7. Get Tracking Info**
+```http
+GET /api/purchase-orders/{id}/tracking
+Authorization: Bearer {access_token}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "purchaseOrderId": 100,
+    "orderNumber": "PO-2025-00100",
+    "trackingNumber": "VN123456789",
+    "expectedDeliveryDate": "2025-01-20T00:00:00Z",
+    "deliveryStatus": "OnTime",
+    "statusHistory": [...]
+  }
+}
+```
+
+#### **8. Update Tracking**
+```http
+PUT /api/purchase-orders/{id}/update-tracking
+Authorization: Bearer {access_token}
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "trackingNumber": "VN123456789",
+  "shippingMethod": "Express",
+  "expectedDeliveryDate": "2025-01-20T00:00:00Z",
+  "inTransitDate": "2025-01-13T00:00:00Z",
+  "deliveryNotes": "Đang vận chuyển"
+}
+```
+
+#### **9. Mark as In-Transit**
+```http
+PUT /api/purchase-orders/{id}/mark-in-transit
+Authorization: Bearer {access_token}
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "trackingNumber": "VN123456789",
+  "shippingMethod": "Express",
+  "inTransitDate": "2025-01-13T00:00:00Z",
+  "deliveryNotes": "Đã xuất kho"
+}
+```
+
+#### **10. Get Delivery Alerts**
+```http
+GET /api/purchase-orders/delivery-alerts
+Authorization: Bearer {access_token}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "atRiskCount": 5,
+    "delayedCount": 2,
+    "atRiskOrders": [...],
+    "delayedOrders": [...]
+  }
+}
+```
+
+### **Phase 4.2.4: Performance Evaluation**
+
+#### **11. Get Supplier Performance Report**
+```http
+GET /api/procurement/supplier-performance-report?supplierId={id}&partId={id}&startDate={date}&endDate={date}&pageNumber={page}&pageSize={size}
+Authorization: Bearer {access_token}
+```
+
+**Query Parameters:**
+- `supplierId` (optional): Filter by supplier ID
+- `partId` (optional): Filter by part ID
+- `startDate` (optional): Start date
+- `endDate` (optional): End date
+- `pageNumber` (default: 1)
+- `pageSize` (default: 20, max: 100)
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "data": [
+      {
+        "supplierId": 5,
+        "supplierName": "Nhà cung cấp ABC",
+        "totalOrders": 50,
+        "onTimeDeliveryRate": 96.0,
+        "averageLeadTimeDays": 7,
+        "defectRate": 1.2,
+        "overallScore": 88.5
+      }
+    ],
+    "totalCount": 10,
+    "pageNumber": 1,
+    "pageSize": 20
+  }
+}
+```
+
+#### **12. Get Supplier Ranking**
+```http
+GET /api/procurement/supplier-ranking?sortBy={field}&topN={n}&worstPerformers={bool}
+Authorization: Bearer {access_token}
+```
+
+**Query Parameters:**
+- `sortBy` (default: "OverallScore"): Sort field
+- `topN` (optional): Limit to top N suppliers
+- `worstPerformers` (default: false): Return worst performers
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "rank": 1,
+      "supplierId": 5,
+      "supplierName": "Nhà cung cấp ABC",
+      "overallScore": 88.5,
+      "onTimeDeliveryRate": 96.0,
+      "defectRate": 1.2
+    }
+  ]
+}
+```
+
+#### **13. Get Performance Alerts**
+```http
+GET /api/procurement/performance-alerts?severity={severity}
+Authorization: Bearer {access_token}
+```
+
+**Query Parameters:**
+- `severity` (optional): Filter by severity ("High", "Medium", "Low")
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "supplierId": 10,
+      "supplierName": "Nhà cung cấp XYZ",
+      "alertType": "LowOnTimeDelivery",
+      "alertMessage": "Tỷ lệ giao hàng đúng hạn thấp: 65.5%",
+      "severity": "Medium"
+    }
+  ]
+}
+```
+
+#### **14. Calculate Performance**
+```http
+POST /api/procurement/calculate-performance
+Authorization: Bearer {access_token}
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "supplierId": 5,
+  "partId": null,
+  "startDate": "2024-07-15T00:00:00Z",
+  "endDate": "2025-01-15T00:00:00Z",
+  "forceRecalculate": false
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "calculatedCount": 10,
+    "message": "Performance calculation completed successfully"
+  }
+}
+```
+
+---
+
+### **Phase 4.2.2 Optional: Request Quotation**
+
+#### **15. Request Quotation**
+
+**Endpoint:** `POST /api/procurement/request-quotation`
+
+**Description:** Gửi yêu cầu báo giá cho một hoặc nhiều nhà cung cấp về phụ tùng cụ thể
+
+**Authorization:** Required
+
+**Request Body:**
+```json
+{
+  "partId": 123,
+  "supplierIds": [45, 46, 47],
+  "requestedQuantity": 50,
+  "requestNotes": "Cần gấp cho dự án quan trọng",
+  "requiredByDate": "2025-02-15T00:00:00Z"
+}
+```
+
+**Request Parameters:**
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `partId` | integer | Yes | ID của phụ tùng cần báo giá |
+| `supplierIds` | array[integer] | Yes | Danh sách ID nhà cung cấp (ít nhất 1) |
+| `requestedQuantity` | integer | Yes | Số lượng yêu cầu (phải > 0) |
+| `requestNotes` | string | No | Ghi chú yêu cầu |
+| `requiredByDate` | datetime | No | Ngày cần hàng (ISO 8601) |
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "requestedCount": 3,
+    "quotations": [
+      {
+        "id": 1001,
+        "quotationNumber": "RQ-2025-00001",
+        "supplierId": 45,
+        "supplierName": "Nhà Cung Cấp A",
+        "supplierCode": "NCC-A",
+        "partId": 123,
+        "partNumber": "PT-001",
+        "partName": "Phụ Tùng 001",
+        "status": "Requested",
+        "requestedDate": "2025-01-15T10:30:00Z",
+        "requestedQuantity": 50,
+        "requestNotes": "Cần gấp cho dự án quan trọng",
+        "requestedById": 10
+      }
+    ]
+  },
+  "message": "Quotation requests sent successfully"
+}
+```
+
+**Status Codes:**
+- `200 OK` - Request created successfully
+- `400 Bad Request` - Invalid input (missing required fields, invalid IDs, duplicate request)
+- `401 Unauthorized` - Not authenticated
+- `404 Not Found` - Part or supplier not found
+- `500 Internal Server Error` - Server error
+
+**Error Examples:**
+
+**Missing Required Fields:**
+```json
+{
+  "success": false,
+  "errorMessage": "At least one supplier is required"
+}
+```
+
+**Invalid Quantity:**
+```json
+{
+  "success": false,
+  "errorMessage": "Requested quantity must be greater than 0"
+}
+```
+
+**Duplicate Request:**
+```json
+{
+  "success": false,
+  "errorMessage": "All selected suppliers already have pending or requested quotations for this part"
+}
+```
+
+---
+
+#### **16. Get Quotations**
+
+**Endpoint:** `GET /api/procurement/quotations`
+
+**Description:** Lấy danh sách báo giá từ suppliers với pagination và filters
+
+**Authorization:** Required
+
+**Query Parameters:**
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `partId` | integer | No | Filter theo Part ID |
+| `supplierId` | integer | No | Filter theo Supplier ID |
+| `status` | string | No | Filter theo status (Requested, Pending, Accepted, Rejected, Expired) |
+| `pageNumber` | integer | No | Số trang (default: 1) |
+| `pageSize` | integer | No | Số records mỗi trang (default: 20, max: 100) |
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1001,
+      "quotationNumber": "RQ-2025-00001",
+      "supplierId": 45,
+      "supplierName": "Nhà Cung Cấp A",
+      "supplierCode": "NCC-A",
+      "partId": 123,
+      "partNumber": "PT-001",
+      "partName": "Phụ Tùng 001",
+      "quotationDate": "2025-01-15T10:30:00Z",
+      "validUntil": "2025-02-15T00:00:00Z",
+      "unitPrice": 50000.00,
+      "minimumOrderQuantity": 10,
+      "leadTimeDays": 7,
+      "warrantyPeriod": "12 tháng",
+      "warrantyTerms": "Bảo hành chính hãng",
+      "status": "Pending",
+      "requestedById": 10,
+      "requestedByName": "Nguyễn Văn A",
+      "requestedDate": "2025-01-15T10:30:00Z",
+      "responseDate": "2025-01-16T14:20:00Z",
+      "requestedQuantity": 50,
+      "requestNotes": "Cần gấp",
+      "responseNotes": "Có sẵn hàng, giao trong 7 ngày",
+      "notes": null
+    }
+  ],
+  "pageNumber": 1,
+  "pageSize": 20,
+  "totalCount": 45,
+  "totalPages": 3,
+  "message": "Quotations retrieved successfully"
+}
+```
+
+**Status Codes:**
+- `200 OK` - Success
+- `401 Unauthorized` - Not authenticated
+- `500 Internal Server Error` - Server error
+
+---
+
+#### **17. Get Quotation By ID**
+
+**Endpoint:** `GET /api/procurement/quotations/{id}`
+
+**Description:** Lấy chi tiết báo giá theo ID
+
+**Authorization:** Required
+
+**Path Parameters:**
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | integer | Yes | ID của quotation |
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1001,
+    "quotationNumber": "RQ-2025-00001",
+    "supplierId": 45,
+    "supplierName": "Nhà Cung Cấp A",
+    "supplierCode": "NCC-A",
+    "partId": 123,
+    "partNumber": "PT-001",
+    "partName": "Phụ Tùng 001",
+    "quotationDate": "2025-01-15T10:30:00Z",
+    "validUntil": "2025-02-15T00:00:00Z",
+    "unitPrice": 50000.00,
+    "minimumOrderQuantity": 10,
+    "leadTimeDays": 7,
+    "warrantyPeriod": "12 tháng",
+    "warrantyTerms": "Bảo hành chính hãng",
+    "status": "Pending",
+    "requestedById": 10,
+    "requestedByName": "Nguyễn Văn A",
+    "requestedDate": "2025-01-15T10:30:00Z",
+    "responseDate": "2025-01-16T14:20:00Z",
+    "requestedQuantity": 50,
+    "requestNotes": "Cần gấp",
+    "responseNotes": "Có sẵn hàng, giao trong 7 ngày",
+    "notes": null
+  },
+  "message": "Quotation retrieved successfully"
+}
+```
+
+**Status Codes:**
+- `200 OK` - Success
+- `401 Unauthorized` - Not authenticated
+- `404 Not Found` - Quotation not found
+- `500 Internal Server Error` - Server error
+
+---
+
+#### **18. Update Quotation**
+
+**Endpoint:** `PUT /api/procurement/quotations/{id}`
+
+**Description:** Cập nhật báo giá (supplier response). Chỉ cho phép update quotation có status = "Requested"
+
+**Authorization:** Required
+
+**Path Parameters:**
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | integer | Yes | ID của quotation |
+
+**Request Body:**
+```json
+{
+  "unitPrice": 50000.00,
+  "minimumOrderQuantity": 10,
+  "leadTimeDays": 7,
+  "validUntil": "2025-02-15T00:00:00Z",
+  "warrantyPeriod": "12 tháng",
+  "warrantyTerms": "Bảo hành chính hãng",
+  "responseNotes": "Có sẵn hàng, giao trong 7 ngày",
+  "status": "Pending"
+}
+```
+
+**Request Parameters:**
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `unitPrice` | decimal | Yes | Giá đơn vị (phải > 0) |
+| `minimumOrderQuantity` | integer | Yes | Số lượng tối thiểu (phải > 0) |
+| `leadTimeDays` | integer | No | Thời gian giao hàng (ngày) |
+| `validUntil` | datetime | No | Ngày hết hạn báo giá (ISO 8601) |
+| `warrantyPeriod` | string | No | Thời gian bảo hành |
+| `warrantyTerms` | string | No | Điều khoản bảo hành |
+| `responseNotes` | string | No | Ghi chú phản hồi |
+| `status` | string | Yes | Phải là "Pending" |
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1001,
+    "quotationNumber": "RQ-2025-00001",
+    "status": "Pending",
+    "unitPrice": 50000.00,
+    "responseDate": "2025-01-16T14:20:00Z"
+  },
+  "message": "Quotation updated successfully"
+}
+```
+
+**Status Codes:**
+- `200 OK` - Update successful
+- `400 Bad Request` - Invalid input or status validation failed
+- `401 Unauthorized` - Not authenticated
+- `404 Not Found` - Quotation not found
+- `500 Internal Server Error` - Server error
+
+**Error Examples:**
+
+**Invalid Status:**
+```json
+{
+  "success": false,
+  "errorMessage": "Cannot update quotation with status 'Pending'. Only 'Requested' quotations can be updated."
+}
+```
+
+---
+
+#### **19. Accept Quotation**
+
+**Endpoint:** `PUT /api/procurement/quotations/{id}/accept`
+
+**Description:** Chấp nhận báo giá. Chỉ cho phép accept quotation có status = "Pending"
+
+**Authorization:** Required
+
+**Path Parameters:**
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | integer | Yes | ID của quotation |
+
+**Request Body:**
+```json
+{
+  "notes": "Chấp nhận báo giá này để tạo PO"
+}
+```
+
+**Request Parameters:**
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `notes` | string | No | Ghi chú khi chấp nhận |
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1001,
+    "quotationNumber": "RQ-2025-00001",
+    "status": "Accepted",
+    "notes": "Chấp nhận báo giá này để tạo PO"
+  },
+  "message": "Quotation accepted successfully"
+}
+```
+
+**Status Codes:**
+- `200 OK` - Accept successful
+- `400 Bad Request` - Status validation failed
+- `401 Unauthorized` - Not authenticated
+- `404 Not Found` - Quotation not found
+- `500 Internal Server Error` - Server error
+
+**Error Examples:**
+
+**Invalid Status:**
+```json
+{
+  "success": false,
+  "errorMessage": "Cannot accept quotation with status 'Requested'. Only 'Pending' quotations can be accepted."
+}
+```
+
+---
+
+#### **20. Reject Quotation**
+
+**Endpoint:** `PUT /api/procurement/quotations/{id}/reject`
+
+**Description:** Từ chối báo giá. Chỉ cho phép reject quotation có status = "Pending"
+
+**Authorization:** Required
+
+**Path Parameters:**
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | integer | Yes | ID của quotation |
+
+**Request Body:**
+```json
+{
+  "notes": "Giá quá cao so với thị trường"
+}
+```
+
+**Request Parameters:**
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `notes` | string | No | Lý do từ chối |
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1001,
+    "quotationNumber": "RQ-2025-00001",
+    "status": "Rejected",
+    "notes": "Giá quá cao so với thị trường"
+  },
+  "message": "Quotation rejected successfully"
+}
+```
+
+**Status Codes:**
+- `200 OK` - Reject successful
+- `400 Bad Request` - Status validation failed
+- `401 Unauthorized` - Not authenticated
+- `404 Not Found` - Quotation not found
+- `500 Internal Server Error` - Server error
+
+**Error Examples:**
+
+**Invalid Status:**
+```json
+{
+  "success": false,
+  "errorMessage": "Cannot reject quotation with status 'Requested'. Only 'Pending' quotations can be rejected."
+}
 ```
 
 ---

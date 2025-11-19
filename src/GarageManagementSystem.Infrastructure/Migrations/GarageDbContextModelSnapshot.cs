@@ -791,7 +791,7 @@ namespace GarageManagementSystem.Infrastructure.Migrations
                         new
                         {
                             Id = 1,
-                            CreatedAt = new DateTime(2025, 11, 18, 11, 33, 23, 372, DateTimeKind.Local).AddTicks(803),
+                            CreatedAt = new DateTime(2025, 11, 19, 15, 5, 33, 970, DateTimeKind.Local).AddTicks(7555),
                             Description = "Bộ phận dịch vụ sửa chữa và bảo dưỡng xe",
                             IsActive = true,
                             IsDeleted = false,
@@ -800,7 +800,7 @@ namespace GarageManagementSystem.Infrastructure.Migrations
                         new
                         {
                             Id = 2,
-                            CreatedAt = new DateTime(2025, 11, 18, 11, 33, 23, 372, DateTimeKind.Local).AddTicks(805),
+                            CreatedAt = new DateTime(2025, 11, 19, 15, 5, 33, 970, DateTimeKind.Local).AddTicks(7557),
                             Description = "Bộ phận quản lý phụ tùng và linh kiện",
                             IsActive = true,
                             IsDeleted = false,
@@ -809,7 +809,7 @@ namespace GarageManagementSystem.Infrastructure.Migrations
                         new
                         {
                             Id = 3,
-                            CreatedAt = new DateTime(2025, 11, 18, 11, 33, 23, 372, DateTimeKind.Local).AddTicks(807),
+                            CreatedAt = new DateTime(2025, 11, 19, 15, 5, 33, 970, DateTimeKind.Local).AddTicks(7559),
                             Description = "Bộ phận hành chính và quản lý",
                             IsActive = true,
                             IsDeleted = false,
@@ -818,7 +818,7 @@ namespace GarageManagementSystem.Infrastructure.Migrations
                         new
                         {
                             Id = 4,
-                            CreatedAt = new DateTime(2025, 11, 18, 11, 33, 23, 372, DateTimeKind.Local).AddTicks(808),
+                            CreatedAt = new DateTime(2025, 11, 19, 15, 5, 33, 970, DateTimeKind.Local).AddTicks(7561),
                             Description = "Bộ phận kế toán và tài chính",
                             IsActive = true,
                             IsDeleted = false,
@@ -827,7 +827,7 @@ namespace GarageManagementSystem.Infrastructure.Migrations
                         new
                         {
                             Id = 5,
-                            CreatedAt = new DateTime(2025, 11, 18, 11, 33, 23, 372, DateTimeKind.Local).AddTicks(810),
+                            CreatedAt = new DateTime(2025, 11, 19, 15, 5, 33, 970, DateTimeKind.Local).AddTicks(7562),
                             Description = "Bộ phận chăm sóc và hỗ trợ khách hàng",
                             IsActive = true,
                             IsDeleted = false,
@@ -836,7 +836,7 @@ namespace GarageManagementSystem.Infrastructure.Migrations
                         new
                         {
                             Id = 6,
-                            CreatedAt = new DateTime(2025, 11, 18, 11, 33, 23, 372, DateTimeKind.Local).AddTicks(845),
+                            CreatedAt = new DateTime(2025, 11, 19, 15, 5, 33, 970, DateTimeKind.Local).AddTicks(7602),
                             Description = "Bộ phận quản lý và điều hành",
                             IsActive = true,
                             IsDeleted = false,
@@ -930,10 +930,10 @@ namespace GarageManagementSystem.Infrastructure.Migrations
                         new
                         {
                             Id = 1,
-                            CreatedAt = new DateTime(2025, 11, 18, 11, 33, 23, 372, DateTimeKind.Local).AddTicks(1046),
+                            CreatedAt = new DateTime(2025, 11, 19, 15, 5, 33, 970, DateTimeKind.Local).AddTicks(7861),
                             Department = "Kỹ thuật",
                             Email = "nguyenvana@garage.com",
-                            HireDate = new DateTime(2023, 11, 18, 11, 33, 23, 372, DateTimeKind.Local).AddTicks(964),
+                            HireDate = new DateTime(2023, 11, 19, 15, 5, 33, 970, DateTimeKind.Local).AddTicks(7836),
                             IsDeleted = false,
                             Name = "Nguyễn Văn A",
                             Phone = "0123456789",
@@ -945,10 +945,10 @@ namespace GarageManagementSystem.Infrastructure.Migrations
                         new
                         {
                             Id = 2,
-                            CreatedAt = new DateTime(2025, 11, 18, 11, 33, 23, 372, DateTimeKind.Local).AddTicks(1052),
+                            CreatedAt = new DateTime(2025, 11, 19, 15, 5, 33, 970, DateTimeKind.Local).AddTicks(7866),
                             Department = "Kỹ thuật",
                             Email = "tranthib@garage.com",
-                            HireDate = new DateTime(2024, 11, 18, 11, 33, 23, 372, DateTimeKind.Local).AddTicks(1050),
+                            HireDate = new DateTime(2024, 11, 19, 15, 5, 33, 970, DateTimeKind.Local).AddTicks(7864),
                             IsDeleted = false,
                             Name = "Trần Thị B",
                             Phone = "0987654321",
@@ -1184,7 +1184,7 @@ namespace GarageManagementSystem.Infrastructure.Migrations
                     MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<decimal>("Amount")
-                        .HasColumnType("decimal(65,30)");
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("ApprovedBy")
                         .HasMaxLength(100)
@@ -1206,8 +1206,10 @@ namespace GarageManagementSystem.Infrastructure.Migrations
 
                     b.Property<string>("Currency")
                         .IsRequired()
+                        .ValueGeneratedOnAdd()
                         .HasMaxLength(3)
-                        .HasColumnType("varchar(3)");
+                        .HasColumnType("varchar(3)")
+                        .HasDefaultValue("VND");
 
                     b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("datetime(6)");
@@ -1253,8 +1255,10 @@ namespace GarageManagementSystem.Infrastructure.Migrations
 
                     b.Property<string>("Status")
                         .IsRequired()
+                        .ValueGeneratedOnAdd()
                         .HasMaxLength(20)
-                        .HasColumnType("varchar(20)");
+                        .HasColumnType("varchar(20)")
+                        .HasDefaultValue("Pending");
 
                     b.Property<string>("SubCategory")
                         .HasMaxLength(100)
@@ -1282,6 +1286,11 @@ namespace GarageManagementSystem.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("EmployeeId");
+
+                    b.HasIndex("TransactionNumber")
+                        .IsUnique();
+
+                    b.HasIndex("TransactionType", "RelatedEntity", "RelatedEntityId", "IsDeleted");
 
                     b.ToTable("FinancialTransactions");
                 });
@@ -4135,7 +4144,7 @@ namespace GarageManagementSystem.Infrastructure.Migrations
                         new
                         {
                             Id = 1,
-                            CreatedAt = new DateTime(2025, 11, 18, 11, 33, 23, 372, DateTimeKind.Local).AddTicks(878),
+                            CreatedAt = new DateTime(2025, 11, 19, 15, 5, 33, 970, DateTimeKind.Local).AddTicks(7646),
                             Description = "Thực hiện sửa chữa và bảo dưỡng xe",
                             IsActive = true,
                             IsDeleted = false,
@@ -4144,7 +4153,7 @@ namespace GarageManagementSystem.Infrastructure.Migrations
                         new
                         {
                             Id = 2,
-                            CreatedAt = new DateTime(2025, 11, 18, 11, 33, 23, 372, DateTimeKind.Local).AddTicks(881),
+                            CreatedAt = new DateTime(2025, 11, 19, 15, 5, 33, 970, DateTimeKind.Local).AddTicks(7647),
                             Description = "Kỹ thuật viên có kinh nghiệm cao",
                             IsActive = true,
                             IsDeleted = false,
@@ -4153,7 +4162,7 @@ namespace GarageManagementSystem.Infrastructure.Migrations
                         new
                         {
                             Id = 3,
-                            CreatedAt = new DateTime(2025, 11, 18, 11, 33, 23, 372, DateTimeKind.Local).AddTicks(882),
+                            CreatedAt = new DateTime(2025, 11, 19, 15, 5, 33, 970, DateTimeKind.Local).AddTicks(7649),
                             Description = "Quản lý và tư vấn phụ tùng",
                             IsActive = true,
                             IsDeleted = false,
@@ -4162,7 +4171,7 @@ namespace GarageManagementSystem.Infrastructure.Migrations
                         new
                         {
                             Id = 4,
-                            CreatedAt = new DateTime(2025, 11, 18, 11, 33, 23, 372, DateTimeKind.Local).AddTicks(884),
+                            CreatedAt = new DateTime(2025, 11, 19, 15, 5, 33, 970, DateTimeKind.Local).AddTicks(7651),
                             Description = "Tư vấn và hỗ trợ khách hàng",
                             IsActive = true,
                             IsDeleted = false,
@@ -4171,7 +4180,7 @@ namespace GarageManagementSystem.Infrastructure.Migrations
                         new
                         {
                             Id = 5,
-                            CreatedAt = new DateTime(2025, 11, 18, 11, 33, 23, 372, DateTimeKind.Local).AddTicks(885),
+                            CreatedAt = new DateTime(2025, 11, 19, 15, 5, 33, 970, DateTimeKind.Local).AddTicks(7652),
                             Description = "Tiếp đón và hỗ trợ khách hàng",
                             IsActive = true,
                             IsDeleted = false,
@@ -4180,7 +4189,7 @@ namespace GarageManagementSystem.Infrastructure.Migrations
                         new
                         {
                             Id = 6,
-                            CreatedAt = new DateTime(2025, 11, 18, 11, 33, 23, 372, DateTimeKind.Local).AddTicks(886),
+                            CreatedAt = new DateTime(2025, 11, 19, 15, 5, 33, 970, DateTimeKind.Local).AddTicks(7654),
                             Description = "Xử lý công việc kế toán",
                             IsActive = true,
                             IsDeleted = false,
@@ -4189,7 +4198,7 @@ namespace GarageManagementSystem.Infrastructure.Migrations
                         new
                         {
                             Id = 7,
-                            CreatedAt = new DateTime(2025, 11, 18, 11, 33, 23, 372, DateTimeKind.Local).AddTicks(888),
+                            CreatedAt = new DateTime(2025, 11, 19, 15, 5, 33, 970, DateTimeKind.Local).AddTicks(7656),
                             Description = "Quản lý và điều hành",
                             IsActive = true,
                             IsDeleted = false,
@@ -4198,7 +4207,7 @@ namespace GarageManagementSystem.Infrastructure.Migrations
                         new
                         {
                             Id = 8,
-                            CreatedAt = new DateTime(2025, 11, 18, 11, 33, 23, 372, DateTimeKind.Local).AddTicks(889),
+                            CreatedAt = new DateTime(2025, 11, 19, 15, 5, 33, 970, DateTimeKind.Local).AddTicks(7657),
                             Description = "Hỗ trợ công việc quản lý",
                             IsActive = true,
                             IsDeleted = false,
@@ -4207,7 +4216,7 @@ namespace GarageManagementSystem.Infrastructure.Migrations
                         new
                         {
                             Id = 9,
-                            CreatedAt = new DateTime(2025, 11, 18, 11, 33, 23, 372, DateTimeKind.Local).AddTicks(890),
+                            CreatedAt = new DateTime(2025, 11, 19, 15, 5, 33, 970, DateTimeKind.Local).AddTicks(7659),
                             Description = "Giám sát hoạt động sửa chữa",
                             IsActive = true,
                             IsDeleted = false,
@@ -4346,6 +4355,9 @@ namespace GarageManagementSystem.Infrastructure.Migrations
 
                     b.Property<string>("CreatedBy")
                         .HasColumnType("longtext");
+
+                    b.Property<int?>("CreditDays")
+                        .HasColumnType("int");
 
                     b.Property<string>("Currency")
                         .HasMaxLength(50)
@@ -5304,7 +5316,7 @@ namespace GarageManagementSystem.Infrastructure.Migrations
                         {
                             Id = 1,
                             Category = "Bảo dưỡng",
-                            CreatedAt = new DateTime(2025, 11, 18, 11, 33, 23, 372, DateTimeKind.Local).AddTicks(671),
+                            CreatedAt = new DateTime(2025, 11, 19, 15, 5, 33, 970, DateTimeKind.Local).AddTicks(7477),
                             Description = "Thay dầu động cơ và lọc dầu",
                             Duration = 30,
                             IsActive = true,
@@ -5323,7 +5335,7 @@ namespace GarageManagementSystem.Infrastructure.Migrations
                         {
                             Id = 2,
                             Category = "An toàn",
-                            CreatedAt = new DateTime(2025, 11, 18, 11, 33, 23, 372, DateTimeKind.Local).AddTicks(674),
+                            CreatedAt = new DateTime(2025, 11, 19, 15, 5, 33, 970, DateTimeKind.Local).AddTicks(7481),
                             Description = "Kiểm tra và bảo dưỡng hệ thống phanh",
                             Duration = 45,
                             IsActive = true,
@@ -5342,7 +5354,7 @@ namespace GarageManagementSystem.Infrastructure.Migrations
                         {
                             Id = 3,
                             Category = "Lốp xe",
-                            CreatedAt = new DateTime(2025, 11, 18, 11, 33, 23, 372, DateTimeKind.Local).AddTicks(727),
+                            CreatedAt = new DateTime(2025, 11, 19, 15, 5, 33, 970, DateTimeKind.Local).AddTicks(7484),
                             Description = "Thay lốp xe và cân bằng",
                             Duration = 60,
                             IsActive = true,
@@ -5361,7 +5373,7 @@ namespace GarageManagementSystem.Infrastructure.Migrations
                         {
                             Id = 4,
                             Category = "Sửa chữa",
-                            CreatedAt = new DateTime(2025, 11, 18, 11, 33, 23, 372, DateTimeKind.Local).AddTicks(729),
+                            CreatedAt = new DateTime(2025, 11, 19, 15, 5, 33, 970, DateTimeKind.Local).AddTicks(7486),
                             Description = "Chẩn đoán và sửa chữa động cơ",
                             Duration = 120,
                             IsActive = true,
@@ -6769,6 +6781,26 @@ namespace GarageManagementSystem.Infrastructure.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("varchar(50)");
 
+                    b.Property<string>("RequestNotes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar(1000)");
+
+                    b.Property<int?>("RequestedById")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("RequestedDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int?>("RequestedQuantity")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ResponseDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("ResponseNotes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar(1000)");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -6802,6 +6834,8 @@ namespace GarageManagementSystem.Infrastructure.Migrations
                     b.HasIndex("PartId");
 
                     b.HasIndex("QuotationDate");
+
+                    b.HasIndex("RequestedById");
 
                     b.HasIndex("Status");
 
@@ -8194,8 +8228,9 @@ namespace GarageManagementSystem.Infrastructure.Migrations
             modelBuilder.Entity("GarageManagementSystem.Core.Entities.FinancialTransaction", b =>
                 {
                     b.HasOne("GarageManagementSystem.Core.Entities.Employee", "Employee")
-                        .WithMany()
-                        .HasForeignKey("EmployeeId");
+                        .WithMany("FinancialTransactions")
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Employee");
                 });
@@ -9260,6 +9295,11 @@ namespace GarageManagementSystem.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("GarageManagementSystem.Core.Entities.Employee", "RequestedBy")
+                        .WithMany()
+                        .HasForeignKey("RequestedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("GarageManagementSystem.Core.Entities.Supplier", "Supplier")
                         .WithMany()
                         .HasForeignKey("SupplierId")
@@ -9267,6 +9307,8 @@ namespace GarageManagementSystem.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Part");
+
+                    b.Navigation("RequestedBy");
 
                     b.Navigation("Supplier");
                 });
@@ -9524,6 +9566,8 @@ namespace GarageManagementSystem.Infrastructure.Migrations
                     b.Navigation("AssignedAppointments");
 
                     b.Navigation("AssignedServiceOrders");
+
+                    b.Navigation("FinancialTransactions");
 
                     b.Navigation("PerformedInspections");
 

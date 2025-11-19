@@ -51,23 +51,126 @@
                 </div>
             </div>
 
-            <!-- Setup Modules -->
+            <!-- Setup by Phase -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header bg-primary">
+                            <h3 class="card-title text-white">
+                                <i class="fas fa-layer-group"></i>
+                                Khởi tạo Demo Data theo Giai đoạn
+                            </h3>
+                            <div class="card-tools">
+                                <button type="button" class="btn btn-sm btn-danger" id="clearAll">
+                                    <i class="fas fa-trash"></i>
+                                    Xóa Tất cả Demo Data
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <!-- Phase 1 -->
+                                <div class="col-md-6 col-lg-3 mb-3">
+                                    <div class="card border-primary h-100">
+                                        <div class="card-header bg-primary text-white">
+                                            <h5 class="card-title mb-0">
+                                                <i class="fas fa-1"></i> Giai đoạn 1
+                                            </h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <h6 class="text-primary">Tiếp nhận & Báo giá</h6>
+                                            <p class="card-text small text-muted">
+                                                Khách hàng, Xe, Nhân viên, Dịch vụ, Phụ tùng, Nhà cung cấp, 
+                                                Kiểm tra xe, Báo giá, Lịch hẹn
+                                            </p>
+                                            <button type="button" class="btn btn-primary btn-block" id="btnPhase1">
+                                                <i class="fas fa-play"></i> Tạo Demo Data
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Phase 2 -->
+                                <div class="col-md-6 col-lg-3 mb-3">
+                                    <div class="card border-success h-100">
+                                        <div class="card-header bg-success text-white">
+                                            <h5 class="card-title mb-0">
+                                                <i class="fas fa-2"></i> Giai đoạn 2
+                                            </h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <h6 class="text-success">Sửa chữa & Quản lý xuất kho</h6>
+                                            <p class="card-text small text-muted">
+                                                Đơn hàng sửa chữa, Phân công KTV, Yêu cầu vật tư, 
+                                                Quản lý tiến độ, QC & Bàn giao
+                                            </p>
+                                            <button type="button" class="btn btn-success btn-block" id="btnPhase2">
+                                                <i class="fas fa-play"></i> Tạo Demo Data
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Phase 3 -->
+                                <div class="col-md-6 col-lg-3 mb-3">
+                                    <div class="card border-warning h-100">
+                                        <div class="card-header bg-warning text-white">
+                                            <h5 class="card-title mb-0">
+                                                <i class="fas fa-3"></i> Giai đoạn 3
+                                            </h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <h6 class="text-warning">Quyết toán & Chăm sóc hậu mãi</h6>
+                                            <p class="card-text small text-muted">
+                                                Thanh toán, COGS, Bảo hành, Service Fee, 
+                                                Phản hồi khách hàng
+                                            </p>
+                                            <button type="button" class="btn btn-warning btn-block" id="btnPhase3">
+                                                <i class="fas fa-play"></i> Tạo Demo Data
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Phase 4 -->
+                                <div class="col-md-6 col-lg-3 mb-3">
+                                    <div class="card border-info h-100">
+                                        <div class="card-header bg-info text-white">
+                                            <h5 class="card-title mb-0">
+                                                <i class="fas fa-4"></i> Giai đoạn 4
+                                            </h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <h6 class="text-info">Chuẩn hóa & Procurement</h6>
+                                            <p class="card-text small text-muted">
+                                                Warehouse, SKU/Barcode, Kiểm kê định kỳ, 
+                                                Điều chỉnh tồn kho, Procurement
+                                            </p>
+                                            <button type="button" class="btn btn-info btn-block" id="btnPhase4">
+                                                <i class="fas fa-play"></i> Tạo Demo Data
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Setup Modules (Individual) -->
             <div class="row">
                 <div class="col-12">
                     <div class="card">
                         <div class="card-header">
                             <h3 class="card-title">
                                 <i class="fas fa-cogs"></i>
-                                Modules Khởi tạo Dữ liệu
+                                Modules Khởi tạo Dữ liệu (Chi tiết)
                             </h3>
                             <div class="card-tools">
                                 <button type="button" class="btn btn-sm btn-success" id="setupAll">
                                     <i class="fas fa-database"></i>
                                     Setup Tất cả
-                                </button>
-                                <button type="button" class="btn btn-sm btn-danger" id="clearAll">
-                                    <i class="fas fa-trash"></i>
-                                    Xóa Tất cả
                                 </button>
                             </div>
                         </div>
@@ -211,6 +314,23 @@ $(document).ready(function() {
     
     $('#clearAll').click(function() {
         clearAllData();
+    });
+
+    // Phase buttons
+    $('#btnPhase1').click(function() {
+        createPhaseData(1);
+    });
+
+    $('#btnPhase2').click(function() {
+        createPhaseData(2);
+    });
+
+    $('#btnPhase3').click(function() {
+        createPhaseData(3);
+    });
+
+    $('#btnPhase4').click(function() {
+        createPhaseData(4);
     });
     
     // Load setup modules
@@ -415,47 +535,129 @@ $(document).ready(function() {
         setupNextModule();
     }
     
+    // Create phase data
+    function createPhaseData(phase) {
+        var phaseNames = {
+            1: 'Giai đoạn 1: Tiếp nhận & Báo giá',
+            2: 'Giai đoạn 2: Sửa chữa & Quản lý xuất kho',
+            3: 'Giai đoạn 3: Quyết toán & Chăm sóc hậu mãi',
+            4: 'Giai đoạn 4: Chuẩn hóa quản lý phụ tùng & Procurement'
+        };
+
+        Swal.fire({
+            title: 'Xác nhận',
+            text: 'Bạn có chắc muốn tạo demo data cho ' + phaseNames[phase] + '?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Có, tạo ngay!',
+            cancelButtonText: 'Hủy'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                var btnId = '#btnPhase' + phase;
+                var $btn = $(btnId);
+                var originalHtml = $btn.html();
+                
+                $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Đang tạo...');
+                
+                $.ajax({
+                    url: '/Setup/CreatePhase' + phase,
+                    type: 'POST',
+                    success: function(response) {
+                        if (response.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Thành công!',
+                                html: '<p>' + (response.message || 'Đã tạo demo data thành công') + '</p>',
+                                timer: 3000,
+                                showConfirmButton: false
+                            });
+                            loadDataStatus(); // Refresh status
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Lỗi!',
+                                text: response.message || 'Có lỗi xảy ra khi tạo demo data'
+                            });
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        var errorMsg = 'Lỗi kết nối';
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            errorMsg = xhr.responseJSON.message;
+                        }
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Lỗi!',
+                            text: errorMsg
+                        });
+                    },
+                    complete: function() {
+                        $btn.prop('disabled', false).html(originalHtml);
+                    }
+                });
+            }
+        });
+    }
+
     // Clear all data
     function clearAllData() {
-        if (!confirm('Bạn có chắc muốn XÓA TẤT CẢ dữ liệu? Hành động này không thể hoàn tác!')) {
-            return;
-        }
+        Swal.fire({
+            title: 'Xác nhận xóa',
+            text: 'Bạn có chắc muốn XÓA TẤT CẢ demo data? Hành động này không thể hoàn tác!',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Có, xóa ngay!',
+            cancelButtonText: 'Hủy'
+        }).then((result) => {
+            if (!result.isConfirmed) {
+                return;
+            }
         
-        $.ajax({
-            url: '/Setup/ClearAllData',
-            type: 'POST',
-            beforeSend: function() {
-                $('#clearAll').prop('disabled', true);
-            },
-            success: function(response) {
-                if (response.success) {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Thành công!',
-                        text: 'Đã xóa tất cả dữ liệu thành công!',
-                        timer: 3000,
-                        showConfirmButton: false
-                    });
-                    loadDataStatus();
-                    loadSetupModules();
-                } else {
+            var $btn = $('#clearAll');
+            var originalHtml = $btn.html();
+            $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Đang xóa...');
+            
+            $.ajax({
+                url: '/Setup/ClearAllData',
+                type: 'POST',
+                success: function(response) {
+                    if (response.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Thành công!',
+                            text: 'Đã xóa tất cả demo data thành công!',
+                            timer: 3000,
+                            showConfirmButton: false
+                        });
+                        loadDataStatus();
+                        loadSetupModules();
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Lỗi!',
+                            text: 'Lỗi xóa dữ liệu: ' + (response.message || 'Lỗi không xác định')
+                        });
+                    }
+                },
+                error: function(xhr, status, error) {
+                    var errorMsg = 'Lỗi kết nối';
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        errorMsg = xhr.responseJSON.message;
+                    }
                     Swal.fire({
                         icon: 'error',
                         title: 'Lỗi!',
-                        text: 'Lỗi xóa dữ liệu: ' + response.message
+                        text: errorMsg
                     });
+                },
+                complete: function() {
+                    $btn.prop('disabled', false).html(originalHtml);
                 }
-            },
-            error: function(xhr, status, error) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Lỗi!',
-                    text: 'Lỗi xóa dữ liệu'
-                });
-            },
-            complete: function() {
-                $('#clearAll').prop('disabled', false);
-            }
+            });
         });
     }
 });

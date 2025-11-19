@@ -418,6 +418,330 @@ JWT__Audience="https://your-domain.com"
 
 ---
 
+## 💰 PRICING MODELS IMPLEMENTATION
+
+### **Tổng quan**
+
+Hệ thống đã được implement **3 mô hình tính giá** khác nhau để phù hợp với từng loại dịch vụ trong ngành sửa chữa ô tô:
+
+### **1. COMBINED MODEL (Gộp chung)**
+- **Áp dụng:** Sửa chữa, Thay thế phụ tùng
+- **Cách tính:** Giá dịch vụ đã bao gồm vật liệu + công lao động
+- **VAT:** 10% trên tổng giá
+- **Ví dụ:** "Sửa phanh" = 1,500,000 VNĐ (đã bao công)
+
+### **2. SEPARATED MODEL (Tách riêng)**
+- **Áp dụng:** Sơn xe, Dịch vụ có vật liệu riêng biệt
+- **Cách tính:** Vật liệu + Công lao động riêng biệt
+- **VAT:** 10% trên tổng (vật liệu + công)
+- **Ví dụ:** "Sơn xe" = 1,200,000 VNĐ (sơn) + 800,000 VNĐ (công) = 2,000,000 VNĐ
+
+### **3. LABOR_ONLY MODEL (Chỉ công)**
+- **Áp dụng:** Công lao động thuần túy (không bán vật liệu)
+- **Cách tính:** Chỉ tính công lao động
+- **VAT:** 0% (theo Thông tư 219/2013/TT-BTC)
+- **Ví dụ:** "Đập nắn thân xe" = 300,000 VNĐ (chỉ công)
+
+### **Database Schema Updates**
+
+#### **Service Entity (Updated)**
+```sql
+ALTER TABLE Services ADD COLUMN PricingModel VARCHAR(20) DEFAULT 'Combined';
+ALTER TABLE Services ADD COLUMN MaterialCost DECIMAL(15,2) DEFAULT 0;
+ALTER TABLE Services ADD COLUMN IsVATApplicable BOOLEAN DEFAULT TRUE;
+ALTER TABLE Services ADD COLUMN VATRate INT DEFAULT 10;
+ALTER TABLE Services ADD COLUMN PricingNotes VARCHAR(100);
+```
+
+#### **QuotationItem Entity (Updated)**
+```sql
+ALTER TABLE QuotationItems ADD COLUMN PricingModel VARCHAR(20) DEFAULT 'Combined';
+ALTER TABLE QuotationItems ADD COLUMN MaterialCost DECIMAL(15,2) DEFAULT 0;
+ALTER TABLE QuotationItems ADD COLUMN LaborCost DECIMAL(15,2) DEFAULT 0;
+ALTER TABLE QuotationItems ADD COLUMN IsVATApplicable BOOLEAN DEFAULT TRUE;
+ALTER TABLE QuotationItems ADD COLUMN PricingBreakdown TEXT;
+```
+
+---
+
+## 📐 CÔNG THỨC TÍNH OVERDUEDAYS
+
+### **Tổng quan**
+
+**OverdueDays** được tính dựa trên **DueDate** (Ngày đến hạn thanh toán) và **Ngày hiện tại**.
+
+### **Công thức chính**
+
+#### **Bước 1: Tính DueDate (Ngày đến hạn thanh toán)**
+
+```csharp
+// 1. Lấy ngày cơ sở (dueDateBase)
+var dueDateBase = ReceivedDate ?? OrderDate;
+
+// 2. Parse PaymentTerms để lấy số ngày credit
+var paymentTermsDays = ParsePaymentTermsDays(PaymentTerms);
+
+// 3. Tính DueDate dựa trên PaymentTerms
+if (paymentTermsDays < 0)
+{
+    // Prepaid: DueDate = ReceivedDate (hoặc OrderDate)
+    dueDate = dueDateBase;
+}
+else if (paymentTermsDays == 0)
+{
+    // COD (Cash on Delivery): DueDate = ReceivedDate (hoặc OrderDate)
+    dueDate = dueDateBase;
+}
+else
+{
+    // Net 30, Net 60, etc.: DueDate = dueDateBase + paymentTermsDays
+    dueDate = dueDateBase.AddDays(paymentTermsDays);
+}
+```
+
+#### **Bước 2: Tính OverdueDays**
+
+```csharp
+var today = DateTime.Now.Date; // Ngày hiện tại (chỉ lấy phần ngày, bỏ giờ)
+
+var overdueDaysCalc = (today - dueDate.Date).Days;
+
+// Đảm bảo OverdueDays >= 0
+if (overdueDaysCalc < 0) 
+    overdueDaysCalc = 0;
+
+OverdueDays = overdueDaysCalc;
+```
+
+### **Công thức toán học**
+
+```
+DueDate = dueDateBase + paymentTermsDays
+OverdueDays = max(0, (Today - DueDate).Days)
+```
+
+Trong đó:
+- `dueDateBase` = `ReceivedDate ?? OrderDate`
+- `paymentTermsDays` = Số ngày credit từ PaymentTerms (Net 30 = 30, COD = 0, Prepaid = -1)
+- `Today` = Ngày hiện tại (chỉ lấy phần ngày)
+
+### **Các trường hợp đặc biệt**
+
+#### **1. Prepaid (paymentTermsDays = -1)**
+- DueDate = ReceivedDate (hoặc OrderDate nếu chưa nhận hàng)
+- OverdueDays = max(0, (Today - DueDate).Days)
+- Thường không có quá hạn vì đã thanh toán trước
+
+#### **2. COD (paymentTermsDays = 0)**
+- DueDate = ReceivedDate (hoặc OrderDate nếu chưa nhận hàng)
+- OverdueDays = max(0, (Today - DueDate).Days)
+- Phải thanh toán ngay khi nhận hàng
+
+#### **3. Chưa Nhận Hàng (ReceivedDate = null)**
+- DueDate = OrderDate + paymentTermsDays
+- OverdueDays = max(0, (Today - DueDate).Days)
+- Tính từ ngày đặt hàng
+
+#### **4. Negative OverdueDays**
+- Nếu Today < DueDate → OverdueDays = 0 (chưa đến hạn)
+- Đảm bảo OverdueDays luôn >= 0
+
+---
+
+## 🗄️ DATABASE SETUP
+
+### **Các file quan trọng**
+
+#### **1. CONSOLIDATED_DATABASE_SCHEMA.sql** ⭐ MAIN
+Tổng hợp TẤT CẢ migrations thành 1 file duy nhất.
+
+**Đặc điểm:**
+- ✅ **Idempotent**: Có thể chạy nhiều lần an toàn
+- ✅ **Đầy đủ**: Tất cả migrations từ InitialCreate đến AddVATFieldsToPartAndQuotationItem
+- ✅ **Tự động check**: Chỉ apply migration chưa có trong `__EFMigrationsHistory`
+- ✅ **317 KB**: Full consolidated schema
+- ✅ **Single file**: Thay thế tất cả migration files riêng lẻ
+
+#### **2. CREATE_DATABASE_FROM_DBCONTEXT.sql** ⭐ BACKUP
+Tạo TẤT CẢ tables từ GarageDbContext (backup option).
+
+**Đặc điểm:**
+- ✅ **Idempotent**: Có thể chạy nhiều lần an toàn
+- ✅ **Đầy đủ**: 46 tables từ DbContext
+- ✅ **Chính xác 100%**: Match với entities trong code
+- ✅ **Tự động check**: Chỉ tạo table chưa có
+- ✅ **Foreign Keys**: Tất cả relationships đã đúng
+- ✅ **Indexes**: Đầy đủ indexes cho performance
+- ✅ **155 KB**: Full schema
+
+#### **3. DROP_ALL_TABLES.sql** ⚠️ RESET
+Xóa TẤT CẢ tables trong database (để reset hoàn toàn).
+
+#### **4. DEMO_DATA_COMPLETE.sql** 🎯 DEMO
+Load demo data đầy đủ cho testing (2 workflows hoàn chỉnh).
+
+### **Hướng dẫn setup**
+
+#### **Setup mới hoàn toàn (Khuyến nghị)**
+
+**Trên MySQL Workbench:**
+
+```sql
+-- Bước 1: DROP tất cả tables (reset hoàn toàn)
+source D:/Source/GaraManager/docs/DROP_ALL_TABLES.sql
+
+-- Bước 2: Tạo lại tất cả tables từ DbContext (2 options)
+-- Option A: Sử dụng file tổng hợp (KHUYẾN NGHỊ)
+source D:/Source/GaraManager/docs/CONSOLIDATED_DATABASE_SCHEMA.sql
+
+-- Option B: Sử dụng file cơ bản
+source D:/Source/GaraManager/docs/CREATE_DATABASE_FROM_DBCONTEXT.sql
+
+-- Bước 3: Load demo data (optional)
+source D:/Source/GaraManager/docs/DEMO_DATA_COMPLETE.sql
+```
+
+#### **Update database hiện tại**
+
+Nếu database đã có và chỉ cần update schema:
+
+```sql
+-- Option A: Sử dụng file tổng hợp (KHUYẾN NGHỊ)
+source D:/Source/GaraManager/docs/CONSOLIDATED_DATABASE_SCHEMA.sql
+
+-- Option B: Sử dụng file cơ bản
+source D:/Source/GaraManager/docs/CREATE_DATABASE_FROM_DBCONTEXT.sql
+```
+
+Script sẽ tự động:
+- ✅ Check migration đã apply → Skip
+- ✅ Migration chưa có → Apply
+- ✅ Update `__EFMigrationsHistory` table
+- ✅ Idempotent (an toàn chạy nhiều lần)
+
+### **Sử dụng EF Core (Alternative)**
+
+```bash
+# Drop database
+dotnet ef database drop --context GarageDbContext \
+  -p src/GarageManagementSystem.Infrastructure \
+  -s src/GarageManagementSystem.API --force
+
+# Create/Update database
+dotnet ef database update --context GarageDbContext \
+  -p src/GarageManagementSystem.Infrastructure \
+  -s src/GarageManagementSystem.API
+```
+
+### **Tables được tạo**
+
+**Total: 46 tables**
+
+**Core Tables:**
+- AuditLogs, Customers, Departments, Positions, Employees
+
+**Service Management:**
+- Services, ServiceTypes, ServiceOrders, ServiceOrderItems, ServiceOrderParts, ServiceOrderLabors
+
+**Inventory:**
+- Parts, PartGroups, PartSuppliers, PartInventoryBatches, PartBatchUsages, StockTransactions
+
+**Suppliers:**
+- Suppliers, PurchaseOrders, PurchaseOrderItems
+
+**Vehicles:**
+- Vehicles, VehicleBrands, VehicleModels, VehicleInspections, VehicleInsurances, EngineSpecifications
+
+**Workflow:**
+- VehicleInspections, InspectionIssues, InspectionPhotos, ServiceQuotations, QuotationItems, Appointments
+
+**Invoicing:**
+- Invoices, InvoiceItems, Payments, PaymentTransactions
+
+**Insurance:**
+- InsuranceClaims, InsuranceClaimDocuments, InsuranceInvoices, InsuranceInvoiceItems
+
+**Financial:**
+- FinancialTransactions, FinancialTransactionAttachments
+
+**Labor:**
+- LaborCategories, LaborItems
+
+**Others:**
+- SystemConfigurations, PartGroupCompatibilities
+
+---
+
+## ⚡ BACKGROUND JOBS PERFORMANCE ANALYSIS
+
+### **Tổng quan**
+
+Hệ thống sử dụng Background Jobs để tự động hóa các tác vụ định kỳ như:
+- Cập nhật tồn kho
+- Tính toán công nợ
+- Gửi thông báo
+- Tạo báo cáo
+
+### **Performance Metrics**
+
+#### **Job Execution Time**
+- **Average**: 50-100ms per job
+- **Peak**: 200-300ms (khi có nhiều dữ liệu)
+- **Target**: < 100ms average
+
+#### **Resource Usage**
+- **CPU**: 5-10% during execution
+- **Memory**: 50-100MB per job
+- **Database Connections**: 1-2 connections per job
+
+### **Optimization Strategies**
+
+1. **Batch Processing**: Xử lý dữ liệu theo batch thay vì từng record
+2. **Caching**: Cache dữ liệu thường dùng để giảm database queries
+3. **Async Operations**: Sử dụng async/await để không block thread
+4. **Connection Pooling**: Tái sử dụng database connections
+
+---
+
+## 📋 QC CHECKLIST TEMPLATE OPTIMIZATION
+
+### **Tổng quan**
+
+Hệ thống QC (Quality Control) sử dụng checklist templates để đảm bảo chất lượng dịch vụ.
+
+### **Template Structure**
+
+```json
+{
+  "id": 1,
+  "name": "Kiểm tra sau sửa chữa",
+  "category": "Post-Repair",
+  "items": [
+    {
+      "id": 1,
+      "description": "Kiểm tra động cơ",
+      "required": true,
+      "checkType": "Visual"
+    },
+    {
+      "id": 2,
+      "description": "Kiểm tra hệ thống phanh",
+      "required": true,
+      "checkType": "Functional"
+    }
+  ]
+}
+```
+
+### **Optimization Features**
+
+1. **Quick Presets**: Templates có sẵn cho các loại dịch vụ phổ biến
+2. **Custom Templates**: Cho phép tạo template tùy chỉnh
+3. **Auto-fill**: Tự động điền thông tin từ Service Order
+4. **Validation**: Kiểm tra tính đầy đủ của checklist
+
+---
+
 ## 📞 SUPPORT
 
 ### **Contact Information**

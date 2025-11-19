@@ -27,6 +27,7 @@ namespace GarageManagementSystem.Infrastructure.Repositories
             StockTransactions = new StockTransactionRepository(_context);
             Suppliers = new SupplierRepository(_context);
             PaymentTransactions = new PaymentTransactionRepository(_context);
+            FinancialTransactions = new FinancialTransactionRepository(_context);
             Appointments = new AppointmentRepository(_context);
             PrintTemplates = new PrintTemplateRepository(_context);
             CustomerReceptions = new CustomerReceptionRepository(_context);
@@ -83,6 +84,7 @@ namespace GarageManagementSystem.Infrastructure.Repositories
         public IStockTransactionRepository StockTransactions { get; private set; }
         public ISupplierRepository Suppliers { get; private set; }
         public IPaymentTransactionRepository PaymentTransactions { get; private set; }
+        public IFinancialTransactionRepository FinancialTransactions { get; private set; }
         public IAppointmentRepository Appointments { get; private set; }
         public IPrintTemplateRepository PrintTemplates { get; private set; }
         public ICustomerReceptionRepository CustomerReceptions { get; private set; }

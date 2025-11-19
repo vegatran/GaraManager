@@ -1,0 +1,187 @@
+@{
+    ViewData["Title"] = "Quản Lý Chi Phí";
+}
+
+@Html.AntiForgeryToken()
+
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row mb-2">
+            <div class="col-sm-6">
+                <h1 class="m-0">Quản Lý Chi Phí</h1>
+            </div>
+            <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-right">
+                    <li class="breadcrumb-item"><a href="@Url.Action("Index", "Home")">Trang Chủ</a></li>
+                    <li class="breadcrumb-item"><a href="#">Tài Chính</a></li>
+                    <li class="breadcrumb-item active">Quản Lý Chi</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+
+<section class="content">
+    <div class="container-fluid">
+        <!-- Summary Cards -->
+        <div class="row mb-3">
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-danger">
+                    <div class="inner">
+                        <h3 id="totalExpense">0</h3>
+                        <p>Tổng Chi Trong Kỳ</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-arrow-down"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-warning">
+                    <div class="inner">
+                        <h3 id="pendingExpense">0</h3>
+                        <p>Chi Chờ Duyệt</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-success">
+                    <div class="inner">
+                        <h3 id="approvedExpense">0</h3>
+                        <p>Chi Đã Duyệt</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-6">
+                <div class="small-box bg-info">
+                    <div class="inner">
+                        <h3 id="expenseCount">0</h3>
+                        <p>Tổng Số Phiếu</p>
+                    </div>
+                    <div class="icon">
+                        <i class="fas fa-file-invoice-dollar"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Category Breakdown Card -->
+        <div class="row mb-3">
+            <div class="col-12">
+                <div class="card card-primary card-outline">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-chart-pie mr-1"></i>Chi Phí Theo Danh Mục
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="row" id="categoryBreakdown">
+                            <!-- Category breakdown sẽ được load từ JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Table -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Danh Sách Phiếu Chi</h3>
+                        <div class="card-tools">
+                            <button type="button" class="btn btn-primary btn-sm mr-1" id="createExpenseBtn">
+                                <i class="fas fa-plus"></i> Tạo Phiếu Chi
+                            </button>
+                            <button type="button" class="btn btn-success btn-sm mr-1" id="exportExcelBtn">
+                                <i class="fas fa-file-excel"></i> Xuất Excel
+                            </button>
+                            <button type="button" class="btn btn-info btn-sm" id="exportPdfBtn">
+                                <i class="fas fa-file-pdf"></i> Xuất PDF
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <!-- Filters -->
+                        <div class="row mb-3">
+                            <div class="col-md-2">
+                                <label for="categoryFilter">Danh Mục:</label>
+                                <select class="form-control form-control-sm" id="categoryFilter">
+                                    <option value="">Tất cả</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="statusFilter">Trạng Thái:</label>
+                                <select class="form-control form-control-sm" id="statusFilter">
+                                    <option value="">Tất cả</option>
+                                    <option value="Pending">Chờ Xử Lý</option>
+                                    <option value="Completed">Hoàn Thành</option>
+                                    <option value="Cancelled">Đã Hủy</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="approvedFilter">Duyệt:</label>
+                                <select class="form-control form-control-sm" id="approvedFilter">
+                                    <option value="">Tất cả</option>
+                                    <option value="true">Đã Duyệt</option>
+                                    <option value="false">Chưa Duyệt</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="fromDateFilter">Từ Ngày:</label>
+                                <input type="date" class="form-control form-control-sm" id="fromDateFilter" />
+                            </div>
+                            <div class="col-md-2">
+                                <label for="toDateFilter">Đến Ngày:</label>
+                                <input type="date" class="form-control form-control-sm" id="toDateFilter" />
+                            </div>
+                            <div class="col-md-2">
+                                <label>&nbsp;</label>
+                                <button type="button" class="btn btn-secondary btn-sm btn-block" id="clearFiltersBtn">
+                                    <i class="fas fa-times"></i> Xóa Bộ Lọc
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table id="expensesTable" class="table table-bordered table-striped dt-responsive nowrap" width="100%">
+                                <thead>
+                                    <tr>
+                                        <th>Mã Phiếu</th>
+                                        <th>Danh Mục</th>
+                                        <th>Danh Mục Phụ</th>
+                                        <th>Số Tiền</th>
+                                        <th>Ngày GD</th>
+                                        <th>Phương Thức</th>
+                                        <th>Nhân Viên</th>
+                                        <th>Trạng Thái</th>
+                                        <th>Duyệt</th>
+                                        <th>Ghi Chú</th>
+                                        <th>Thao Tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@await Html.PartialAsync("../FinancialTransactionManagement/_CreateTransactionModal")
+@await Html.PartialAsync("../FinancialTransactionManagement/_EditTransactionModal")
+@await Html.PartialAsync("../FinancialTransactionManagement/_ViewTransactionModal")
+
+@section Scripts {
+    <script src="~/js/expense-management.js" asp-append-version="true"></script>
+}
+

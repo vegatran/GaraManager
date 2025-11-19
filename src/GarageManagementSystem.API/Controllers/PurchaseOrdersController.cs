@@ -2,6 +2,7 @@ using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using GarageManagementSystem.Core.Entities;
+using GarageManagementSystem.Core.Helpers;
 using GarageManagementSystem.Core.Interfaces;
 using GarageManagementSystem.Core.Extensions;
 using GarageManagementSystem.Shared.DTOs;
@@ -55,14 +56,8 @@ namespace GarageManagementSystem.API.Controllers
 
                 query = query.OrderByDescending(o => o.CreatedAt);
 
-                // ✅ OPTIMIZED: Get total count ở database level (trước khi paginate)
-                var totalCount = await query.CountAsync();
-                
-                // ✅ OPTIMIZED: Apply pagination ở database level với Skip/Take
-                var orders = await query
-                    .Skip((pageNumber - 1) * pageSize)
-                    .Take(pageSize)
-                    .ToListAsync();
+                // ✅ OPTIMIZED: Get paged results with total count - automatically chooses best method
+                var (orders, totalCount) = await query.ToPagedListWithCountAsync(pageNumber, pageSize, _context);
                 
                 var purchaseOrderDtos = _mapper.Map<List<PurchaseOrderDto>>(orders);
                 
@@ -263,6 +258,9 @@ namespace GarageManagementSystem.API.Controllers
             {
                 var order = _mapper.Map<PurchaseOrder>(createDto);
                 
+                // ✅ 4.3.2.3: Set CreditDays (ưu tiên CreditDays trực tiếp, nếu không có thì parse từ PaymentTerms)
+                order.CreditDays = PaymentTermsHelper.GetCreditDays(createDto.PaymentTerms, createDto.CreditDays);
+                
                 // ✅ OPTIMIZED: Use CountAsync thay vì GetAllAsync().Count()
                 var count = await _unitOfWork.Repository<PurchaseOrder>().CountAsync();
                 order.OrderNumber = $"PO-{DateTime.Now:yyyyMMdd}-{(count + 1):D4}";
@@ -367,6 +365,8 @@ namespace GarageManagementSystem.API.Controllers
                 order.OrderDate = dto.OrderDate;
                 order.ExpectedDeliveryDate = dto.ExpectedDeliveryDate;
                 order.PaymentTerms = dto.PaymentTerms;
+                // ✅ 4.3.2.3: Update CreditDays (ưu tiên CreditDays trực tiếp, nếu không có thì parse từ PaymentTerms)
+                order.CreditDays = PaymentTermsHelper.GetCreditDays(dto.PaymentTerms, dto.CreditDays);
                 order.DeliveryAddress = dto.DeliveryAddress;
                 order.Notes = dto.Notes;
                 order.UpdatedAt = DateTime.Now;

@@ -13,7 +13,12 @@
 10. [Phiếu Nhập Hàng](#phiếu-nhập-hàng)
 11. [Phiếu Thu/Chi](#phiếu-thu-chi)
 12. [Báo cáo và thống kê](#báo-cáo-và-thống-kê)
-13. [QUY TRÌNH NGHIỆP VỤ](#quy-trình-nghiệp-vụ)
+13. [QUẢN LÝ MUA HÀNG (Phase 4.2)](#quản-lý-mua-hàng-phase-42)
+    - [4.2.1: Phân Tích Nhu Cầu](#421-phân-tích-nhu-cầu)
+    - [4.2.2: Đánh Giá Nhà Cung Cấp](#422-đánh-giá-nhà-cung-cấp)
+    - [4.2.3: Theo Dõi PO](#423-theo-dõi-po)
+    - [4.2.4: Báo Cáo Hiệu Suất](#424-báo-cáo-hiệu-suất)
+14. [QUY TRÌNH NGHIỆP VỤ](#quy-trình-nghiệp-vụ)
     - [Giai đoạn 1: Tiếp Nhận & Báo Giá](#giai-đoạn-1-tiếp-nhận--báo-giá)
     - [Giai đoạn 2: Sửa Chữa & Thanh Toán](#giai-đoạn-2-sửa-chữa--thanh-toán)
       - [2.1: Lập Kế Hoạch & Phân Công](#21-lập-kế-hoạch--phân-công)
@@ -31,7 +36,11 @@
         - [2.4.2: Kiểm tra QC](#242-kiểm-tra-qc)
         - [2.4.3: Xử lý QC Không đạt](#243-xử-lý-qc-không-đạt)
         - [2.4.4: Bàn giao xe](#244-bàn-giao-xe)
-14. [Troubleshooting](#troubleshooting)
+15. [Hướng dẫn chức năng Duyệt/Từ chối Báo giá](#hướng-dẫn-chức-năng-duyệttừ-chối-báo-giá)
+16. [Hướng dẫn tạo dữ liệu QC](#hướng-dẫn-tạo-dữ-liệu-qc)
+17. [Hướng dẫn xử lý thuế VAT](#hướng-dẫn-xử-lý-thuế-vat)
+18. [Hướng dẫn Data Demo](#hướng-dẫn-data-demo)
+19. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -4791,12 +4800,611 @@ Sau khi tạo MR, các bước tiếp theo để hoàn thành workflow:
 
 ---
 
+## 🛒 QUẢN LÝ MUA HÀNG (Phase 4.2)
+
+### **Tổng quan**
+
+Module Quản Lý Mua Hàng giúp:
+- 📊 Phân tích nhu cầu mua hàng từ cảnh báo tồn kho và đơn hàng sửa chữa
+- 🔍 So sánh và đánh giá nhà cung cấp
+- 📦 Tạo đơn đặt hàng (PO) hàng loạt
+- 🚚 Theo dõi trạng thái vận chuyển PO
+- 📈 Đánh giá hiệu suất nhà cung cấp
+
+---
+
+### **4.2.1: Phân Tích Nhu Cầu**
+
+#### **Truy cập:**
+1. Vào menu: `Quản Lý Kho` → `Phân Tích Nhu Cầu`
+
+#### **Chức năng:**
+
+**1. Xem Phân Tích Nhu Cầu:**
+- Hệ thống tự động tổng hợp nhu cầu từ:
+  - ⚠️ Cảnh báo tồn kho (Low Stock, Out of Stock)
+  - 🔧 Đơn hàng sửa chữa sắp tới (trong 7-30 ngày)
+- Hiển thị:
+  - Phụ tùng cần mua
+  - Số lượng đề xuất
+  - Mức độ ưu tiên (Cao/Trung Bình/Thấp)
+  - Chi phí dự kiến
+
+**2. Lọc dữ liệu:**
+- Theo mức độ ưu tiên (High/Medium/Low)
+- Theo nguồn (InventoryAlert/ServiceOrder/All)
+- Theo kho (nếu có nhiều kho)
+
+**3. Tạo Đề Xuất Đặt Hàng:**
+- Chọn các phụ tùng cần mua
+- Click "Tạo Đề Xuất" để lưu vào danh sách đề xuất
+
+**4. Tạo PO Hàng Loạt:**
+- Chọn một hoặc nhiều đề xuất
+- Chọn nhà cung cấp
+- Click "Tạo PO" để tạo đơn đặt hàng
+- Hệ thống tự động tạo PO với tất cả items đã chọn
+
+---
+
+### **4.2.2: Đánh Giá Nhà Cung Cấp**
+
+#### **So Sánh Nhà Cung Cấp:**
+
+**Truy cập:**
+1. Vào menu: `Quản Lý Kho` → `So Sánh Nhà Cung Cấp`
+
+**Cách sử dụng:**
+1. Chọn phụ tùng cần so sánh (tìm kiếm bằng tên hoặc mã)
+2. Nhập số lượng cần mua
+3. Click "So Sánh"
+4. Xem bảng so sánh:
+   - Giá đơn vị
+   - Tổng giá
+   - Thời gian giao hàng
+   - Đánh giá (sao)
+   - Tỷ lệ giao hàng đúng hạn
+   - Tỷ lệ lỗi
+   - Điểm tổng thể
+
+**5. Chọn nhà cung cấp:**
+- Click "Tạo PO" bên cạnh nhà cung cấp muốn chọn
+- Hệ thống tự động mở form tạo PO với thông tin đã điền sẵn
+
+#### **Đề Xuất Nhà Cung Cấp:**
+
+**Truy cập:**
+1. Vào menu: `Quản Lý Kho` → `Đề Xuất Nhà Cung Cấp`
+
+**Cách sử dụng:**
+1. Chọn phụ tùng cần mua
+2. Nhập số lượng
+3. Click "Lấy Đề Xuất"
+4. Xem nhà cung cấp được đề xuất:
+   - Nhà cung cấp tốt nhất được highlight
+   - Lý do đề xuất
+   - So sánh với các nhà cung cấp khác
+
+**5. Tạo PO:**
+- Click "Tạo PO với Nhà Cung Cấp Này"
+- Hệ thống tự động mở form tạo PO
+
+---
+
+### **4.2.3: Theo Dõi PO**
+
+#### **Truy cập:**
+1. Vào menu: `Quản Lý Kho` → `Theo Dõi PO`
+
+#### **Dashboard:**
+- **Summary Cards:**
+  - 🔴 Delayed: Số PO đã quá hạn
+  - 🟡 At Risk: Số PO sắp đến hạn (trong 3 ngày)
+  - 🟢 On Time: Số PO đúng hạn
+  - 📊 Total: Tổng số PO đang vận chuyển
+
+#### **Bảng PO:**
+- Hiển thị tất cả PO có trạng thái "Sent" hoặc "InTransit"
+- Cột:
+  - Số đơn hàng
+  - Nhà cung cấp
+  - Ngày đặt hàng
+  - Ngày gửi
+  - Ngày dự kiến giao
+  - Mã vận đơn
+  - Trạng thái giao hàng (màu sắc)
+  - Số ngày còn lại
+  - Thao tác
+
+#### **Cập nhật Tracking:**
+1. Click "Cập Nhật Tracking" trên PO cần cập nhật
+2. Điền thông tin:
+   - Mã vận đơn (Tracking Number)
+   - Phương thức vận chuyển
+   - Ngày dự kiến giao
+   - Ngày bắt đầu vận chuyển
+   - Ghi chú
+3. Tích "Đánh dấu đang vận chuyển" nếu muốn chuyển trạng thái sang "InTransit"
+4. Click "Lưu"
+
+#### **Xem Timeline:**
+1. Click "Xem Timeline" trên PO
+2. Xem lịch sử thay đổi trạng thái:
+   - Draft → Sent → InTransit → Received
+   - Ngày thay đổi
+   - Người thay đổi
+   - Ghi chú
+
+#### **Lọc:**
+- Theo nhà cung cấp
+- Theo trạng thái giao hàng (OnTime/AtRisk/Delayed)
+- Theo số ngày còn lại
+
+---
+
+### **4.2.4: Báo Cáo Hiệu Suất**
+
+#### **Truy cập:**
+1. Vào menu: `Quản Lý Kho` → `Báo Cáo Hiệu Suất`
+
+#### **Summary Cards:**
+- 🟢 Xuất Sắc: Nhà cung cấp có điểm ≥ 80
+- 🔵 Tốt: Nhà cung cấp có điểm 60-79
+- 🟡 Trung Bình: Nhà cung cấp có điểm 40-59
+- 🔴 Kém: Nhà cung cấp có điểm < 40
+
+#### **Biểu đồ:**
+- **Top 10 Nhà Cung Cấp Tốt Nhất:** Bar chart
+- **Phân Bố Hiệu Suất:** Pie chart
+
+#### **Bảng Xếp Hạng:**
+- Xếp hạng nhà cung cấp theo:
+  - Điểm tổng thể (mặc định)
+  - Tỷ lệ giao hàng đúng hạn
+  - Tỷ lệ lỗi
+- Click các nút sắp xếp để thay đổi tiêu chí
+
+#### **Bảng Chi Tiết:**
+- Hiển thị chi tiết hiệu suất từng nhà cung cấp:
+  - Tổng số đơn
+  - Số đơn giao đúng hạn
+  - Tỷ lệ đúng hạn (%)
+  - Thời gian giao trung bình (ngày)
+  - Tỷ lệ lỗi (%)
+  - Giá trung bình
+  - Ổn định giá (%)
+  - Điểm tổng thể
+  - Ngày tính toán
+
+#### **Cảnh Báo Hiệu Suất:**
+- Hiển thị các nhà cung cấp có vấn đề:
+  - 🔴 Tỷ lệ giao hàng đúng hạn thấp (< 80%)
+  - 🔴 Tỷ lệ lỗi cao (> 5%)
+  - 🔴 Điểm tổng thể thấp (< 50)
+
+#### **Tính Toán Lại:**
+- Click "Tính Toán" để tính toán lại hiệu suất
+- Hệ thống sẽ tính toán dựa trên dữ liệu lịch sử 6 tháng gần đây
+- ⚠️ Quá trình này có thể mất vài phút
+
+#### **Lọc:**
+- Theo nhà cung cấp
+- Theo khoảng thời gian (từ ngày - đến ngày)
+
+---
+
 ### **🔗 Liên Kết Đến Các Tài Liệu Khác:**
 
 - **[Quản Lý Báo Giá (Giai đoạn 1.3)](User_Manual.md#13-báo-giá)** - Tạo JO từ Báo giá
 - **[Quản Lý Thanh Toán (Giai đoạn 3)](User_Manual.md#giai-đoạn-3)** - Thanh toán sau khi bàn giao
 - **[Quản Lý Kho Hàng](User_Manual.md#quản-lý-kho-hàng)** - Thông tin về tồn kho và xuất nhập kho
 - **[Quản Lý Nhân Viên](User_Manual.md#quản-lý-nhân-viên)** - Thông tin về KTV và phân quyền
+- **[Phiếu Nhập Hàng](User_Manual.md#phiếu-nhập-hàng)** - Tạo phiếu nhập hàng từ PO
+
+---
+
+## 📋 HƯỚNG DẪN CHỨC NĂNG DUYỆT/TỪ CHỐI BÁO GIÁ
+
+### **Vị trí chức năng**
+- **Đường dẫn**: Menu Sidebar → Quy Trình Nghiệp Vụ → GIAI ĐOẠN 1 → Bước 3: Báo Giá
+- **URL trực tiếp**: `/QuotationManagement`
+
+### **A. Chức năng Duyệt Báo Giá**
+
+1. **Truy cập trang Quản Lý Báo Giá**
+   - Vào menu: "Báo Giá" (Bước 3 trong Giai đoạn 1)
+
+2. **Tìm báo giá cần duyệt**
+   - Trong bảng "Danh Sách Báo Giá", tìm hàng có trạng thái:
+     - "Nháp" (Draft)
+     - "Đã gửi" (Sent)
+     - "Chờ Duyệt" (Pending)
+
+3. **Bấm nút "Duyệt"**
+   - Ở cột **"Thao Tác"** (cột cuối cùng bên phải)
+   - Nút màu **xanh lá** (btn-success) với icon **✓** (check)
+   - Tooltip: "Duyệt"
+
+4. **Điền form trong modal:**
+   - **Ghi chú khách hàng** (Tùy chọn): Nhập ghi chú từ khách hàng hoặc lý do duyệt
+   - **Tự động tạo phiếu sửa chữa** (Checkbox - mặc định checked): 
+     - ✅ Checked: Tự động tạo phiếu sửa chữa để bắt đầu Giai đoạn 2
+     - ❌ Unchecked: Chỉ duyệt báo giá, không tạo phiếu sửa chữa
+   - **Ngày hẹn sửa chữa** (Tùy chọn): Chọn ngày bắt đầu sửa chữa (chỉ hiện khi checkbox "Tạo phiếu" được check)
+
+5. **Bấm "Xác nhận Duyệt"**
+   - Form sẽ được submit và báo giá chuyển sang trạng thái "Đã Duyệt"
+   - Nếu đã chọn tạo phiếu sửa chữa, hệ thống sẽ tự động tạo ServiceOrder
+
+### **B. Chức năng Từ Chối Báo Giá**
+
+1. **Truy cập trang Quản Lý Báo Giá**
+   - Vào menu: "Báo Giá" (Bước 3 trong Giai đoạn 1)
+
+2. **Tìm báo giá cần từ chối**
+   - Trong bảng "Danh Sách Báo Giá", tìm hàng có trạng thái:
+     - "Nháp" (Draft)
+     - "Đã gửi" (Sent)
+     - "Chờ Duyệt" (Pending)
+
+3. **Bấm nút "Từ chối"**
+   - Ở cột **"Thao Tác"** (cột cuối cùng bên phải)
+   - Nút màu **đỏ** (btn-danger) với icon **✕** (times)
+   - Tooltip: "Từ chối"
+
+4. **Điền form trong modal:**
+   - **Lý do từ chối** (Bắt buộc *): Nhập lý do cụ thể để từ chối báo giá
+   - **Tính phí kiểm tra** (Checkbox - tùy chọn):
+     - ✅ Checked: Hệ thống sẽ tính phí kiểm tra (500.000 VNĐ) và tạo Financial Transaction
+     - ❌ Unchecked: Không tính phí
+
+5. **Bấm "Xác nhận Từ chối"**
+   - Form sẽ được submit và báo giá chuyển sang trạng thái "Đã Từ Chối"
+   - Nếu đã chọn tính phí kiểm tra, hệ thống sẽ tự động tạo giao dịch tài chính
+
+### **Trạng thái & Điều kiện hiển thị**
+
+**Nút "Duyệt" và "Từ chối" chỉ hiển thị khi:**
+- Trạng thái báo giá là một trong các giá trị:
+  - `Draft` / `Nháp`
+  - `Sent` / `Đã gửi`
+  - `Pending` / `Chờ Duyệt`
+
+**Nút sẽ ẨN khi:**
+- Trạng thái đã là `Approved` / `Đã Duyệt`
+- Trạng thái đã là `Rejected` / `Đã Từ Chối`
+- Trạng thái đã là `Completed` / `Hoàn thành`
+- Trạng thái đã là `Cancelled` / `Đã Hủy`
+
+---
+
+## 📋 HƯỚNG DẪN TẠO DỮ LIỆU QC
+
+### **Workflow để có JO chờ QC:**
+
+1. **Tạo Service Order từ Quotation đã Approved**
+   - Vào "Báo Giá" → Duyệt một báo giá
+   - Vào "Phiếu Sửa Chữa" → Tạo mới từ báo giá đã duyệt
+
+2. **Phân công KTV và giờ công**
+   - Xem chi tiết Service Order → Click "Phân công KTV"
+   - Chọn KTV và giờ công cho từng item
+
+3. **KTV bắt đầu làm việc**
+   - Xem chi tiết Service Order → Tab "Chi Tiết Dịch Vụ"
+   - Click "Bắt đầu" cho từng item
+
+4. **KTV hoàn thành từng item**
+   - Click "Hoàn thành" cho từng item sau khi làm xong
+
+5. **Hoàn thành kỹ thuật**
+   - Khi TẤT CẢ items đã Completed hoặc Cancelled
+   - Button "Hoàn Thành Kỹ Thuật" sẽ xuất hiện trong View Order Modal
+   - Click button này → Service Order chuyển sang "WaitingForQC"
+
+6. **Kiểm tra QC Management**
+   - Vào "Kiểm Tra QC" → Sẽ thấy JO chờ QC trong danh sách
+
+### **Script kiểm tra và tạo dữ liệu demo:**
+
+```sql
+-- Bước 1: Kiểm tra Service Orders hiện tại
+SELECT 
+    so.Id,
+    so.OrderNumber,
+    so.Status,
+    COUNT(soi.Id) as TotalItems,
+    SUM(CASE WHEN soi.Status = 'Completed' THEN 1 ELSE 0 END) as CompletedItems,
+    SUM(CASE WHEN soi.Status = 'Cancelled' THEN 1 ELSE 0 END) as CancelledItems,
+    SUM(CASE WHEN soi.Status NOT IN ('Completed', 'Cancelled') THEN 1 ELSE 0 END) as IncompleteItems
+FROM ServiceOrders so
+LEFT JOIN ServiceOrderItems soi ON soi.ServiceOrderId = so.Id AND soi.IsDeleted = 0
+WHERE so.IsDeleted = 0
+GROUP BY so.Id, so.OrderNumber, so.Status
+ORDER BY so.Id DESC;
+
+-- Bước 2: Cập nhật status sang WaitingForQC (thay {ServiceOrderId} bằng ID thực tế)
+-- UPDATE ServiceOrders 
+-- SET Status = 'WaitingForQC',
+--     CompletedDate = NOW(),
+--     TotalActualHours = (
+--         SELECT IFNULL(SUM(ActualHours), 0) 
+--         FROM ServiceOrderItems 
+--         WHERE ServiceOrderId = {ServiceOrderId} 
+--           AND IsDeleted = 0
+--           AND ActualHours IS NOT NULL
+--     )
+-- WHERE Id = {ServiceOrderId} 
+--   AND IsDeleted = 0
+--   AND Status IN ('Completed', 'InProgress');
+
+-- Bước 3: Hoặc cập nhật tất cả items của một Service Order sang Completed
+-- UPDATE ServiceOrderItems 
+-- SET Status = 'Completed',
+--     CompletedTime = NOW(),
+--     ActualHours = IFNULL(EstimatedHours, 0),
+--     EndTime = NOW()
+-- WHERE ServiceOrderId = {ServiceOrderId} 
+--   AND IsDeleted = 0
+--   AND Status != 'Cancelled';
+
+-- Bước 4: Kiểm tra lại danh sách JO chờ QC
+SELECT 
+    so.Id,
+    so.OrderNumber,
+    c.Name as CustomerName,
+    v.LicensePlate as VehiclePlate,
+    so.CompletedDate,
+    so.TotalActualHours,
+    so.QCFailedCount,
+    so.Status
+FROM ServiceOrders so
+LEFT JOIN Customers c ON c.Id = so.CustomerId
+LEFT JOIN Vehicles v ON v.Id = so.VehicleId
+WHERE so.IsDeleted = 0 
+  AND so.Status = 'WaitingForQC'
+ORDER BY so.CompletedDate DESC, so.OrderDate DESC;
+```
+
+---
+
+## 💰 HƯỚNG DẪN XỬ LÝ THUẾ VAT
+
+### **Tổng quan vấn đề**
+
+**Vấn đề hiện tại:**
+- Mỗi phụ tùng chỉ có **1 VATRate duy nhất**
+- Không phân biệt được nguồn gốc từ nhà cung cấp nào
+- Xuất hàng không đúng với thuế thực tế đã nhập
+
+**Giải pháp đã implement:**
+- **VAT Override** trong QuotationItem
+- **Thông tin VAT** chi tiết trong Part entity
+- **Logic tính VAT** linh hoạt theo từng trường hợp
+
+### **Quy trình xử lý VAT**
+
+#### **Bước 1: Nhập hàng từ nhà cung cấp**
+1. Tạo Purchase Order với VATRate tương ứng
+2. Lưu thông tin VAT vào Part entity
+3. Cập nhật tồn kho với thông tin VAT
+
+#### **Bước 2: Xuất hàng cho khách hàng**
+1. Tạo Quotation với phụ tùng
+2. Hệ thống tự động lấy VATRate từ Part (READ-ONLY)
+3. ❌ KHÔNG ĐƯỢC PHÉP Override VAT (tuân thủ quy định thuế)
+4. Tính toán VATAmount chính xác theo VAT đã nhập
+
+#### **Bước 3: Tính toán VAT**
+```
+Công thức:
+- SubTotal = Quantity × UnitPrice
+- VATAmount = SubTotal × EffectiveVATRate (nếu IsVATApplicable = true)
+- TotalAmount = SubTotal + VATAmount - DiscountAmount
+```
+
+### **Các trường hợp sử dụng**
+
+#### **Trường hợp 1: Khách hàng cá nhân**
+- Sử dụng VATRate từ Part (READ-ONLY)
+- ❌ KHÔNG ĐƯỢC PHÉP Override VAT
+- Áp dụng thuế theo VAT đã nhập từ nhà cung cấp
+
+#### **Trường hợp 2: Khách hàng bảo hiểm**
+- Sử dụng VATRate từ Part (READ-ONLY)
+- ❌ KHÔNG ĐƯỢC PHÉP Override VAT
+- Cần có hóa đơn VAT hợp lệ theo VAT đã nhập
+
+#### **Trường hợp 3: Khách hàng công ty**
+- Sử dụng VATRate từ Part (READ-ONLY)
+- ❌ KHÔNG ĐƯỢC PHÉP Override VAT
+- Cần có hóa đơn VAT đầy đủ theo VAT đã nhập
+
+#### **Trường hợp 4: Phụ tùng không có hóa đơn**
+- Set IsVATApplicable = false
+- VATAmount = 0
+- Không áp dụng thuế VAT
+
+### **Quy định VAT ở Việt Nam**
+
+**Thuế suất VAT cho các hạng mục:**
+
+```
+✅ HÀNG HÓA (Chịu thuế VAT 10%):
+   • Phụ tùng ô tô                     → VAT 10%
+   • Vật liệu sơn                      → VAT 10%
+   • Vật liệu sửa chữa (matit, keo...) → VAT 10%
+   • Dầu nhớt, mỡ bôi trơn             → VAT 10%
+
+✅ DỊCH VỤ SỬA CHỮA (Chịu thuế VAT 10%):
+   • Dịch vụ thay phụ tùng             → VAT 10%
+   • Dịch vụ sửa chữa                  → VAT 10%
+   • Dịch vụ bảo dưỡng                 → VAT 10%
+   • Dịch vụ sơn                       → VAT 10%
+   • Dịch vụ kiểm tra, chẩn đoán       → VAT 10%
+
+⚠️ CÔNG LAO ĐỘNG (Tùy cách hạch toán):
+
+CÁCH 1 - GỘP VÀO GIÁ DỊCH VỤ (Phổ biến):
+   • Dịch vụ đã bao gồm công           → VAT 10%
+   • Giá dịch vụ = Vật liệu + Công
+   • Ví dụ: "Thay đèn pha" = PT + Công → VAT 10%
+
+CÁCH 2 - TÁCH RIÊNG CÔNG (Ít dùng):
+   • Công lao động tách riêng          → KHÔNG VAT
+   • Chỉ ghi giá công, không tính VAT
+   • Lưu ý: Phải ghi rõ "Công lao động"
+```
+
+### **Lưu ý quan trọng**
+
+**Tuân thủ quy định thuế (NGUYÊN TẮC BẮT BUỘC):**
+- ❌ KHÔNG ĐƯỢC PHÉP chỉnh sửa VAT khi xuất hàng
+- ✅ VAT phải khớp với hóa đơn nhập hàng từ nhà cung cấp
+- ✅ Đảm bảo tính minh bạch và tuân thủ quy định thuế
+- ✅ Lưu trữ đầy đủ chứng từ thuế để kiểm tra
+- ✅ Luôn kiểm tra quy định thuế hiện hành
+
+---
+
+## 🎯 HƯỚNG DẪN DATA DEMO
+
+### **Giới thiệu Data Demo**
+
+**Mục đích:**
+Data Demo được thiết kế để:
+- ✅ **Làm quen với hệ thống**: Hiểu cách sử dụng các tính năng
+- ✅ **Test đầy đủ quy trình**: Từ khách hàng đến thanh toán
+- ✅ **Demo cho khách hàng**: Thuyết trình tính năng
+- ✅ **Training nhân viên**: Hướng dẫn sử dụng
+
+**Dữ liệu Demo bao gồm:**
+- 👥 **10 khách hàng** với đầy đủ thông tin
+- 🚗 **15 xe** các hãng khác nhau
+- 🔧 **200+ phụ tùng** phân loại theo nhóm
+- ⚙️ **50+ dịch vụ** sửa chữa
+- 👷 **20+ công lao động** chi tiết
+- 💼 **25 đơn hàng** hoàn chỉnh
+- 💰 **Giao dịch tài chính** đầy đủ
+- 📦 **Giao dịch kho** nhập xuất
+
+### **Cài đặt Data Demo**
+
+#### **Bước 1: Backup dữ liệu hiện tại**
+```sql
+-- Backup database hiện tại
+mysqldump -u usergara -p GaraManagement > backup_before_demo.sql
+```
+
+#### **Bước 2: Sử dụng Setup Controller**
+1. Đăng nhập hệ thống
+2. Vào menu **"Setup"** hoặc **"Cài đặt"**
+3. Chọn **"Khởi tạo Demo Data theo Giai đoạn"**
+4. Click nút **"Tạo Demo Data"** cho từng giai đoạn:
+   - **Giai đoạn 1**: Tiếp nhận & Báo giá
+   - **Giai đoạn 2**: Sửa chữa & Quản lý xuất kho
+   - **Giai đoạn 3**: Quyết toán & Chăm sóc hậu mãi
+   - **Giai đoạn 4**: Chuẩn hóa quản lý phụ tùng & Procurement
+
+#### **Bước 3: Xóa Demo Data (nếu cần)**
+1. Vào menu **"Setup"**
+2. Click nút **"Xóa Tất cả"** (màu đỏ)
+3. Xác nhận xóa tất cả dữ liệu demo
+
+### **Quy trình Demo hoàn chỉnh**
+
+#### **Scenario 1: Khách hàng mới - Xe Mercedes C-Class**
+
+**Bước 1: Đăng ký khách hàng**
+- Họ tên: Nguyễn Minh Tuấn
+- SĐT: 0901234567
+- Email: tuan.nguyen@email.com
+- Địa chỉ: 123 Nguyễn Huệ, Quận 1, TP.HCM
+- Loại: Cá nhân
+- Ghi chú: Khách VIP, thường xuyên sửa chữa
+
+**Bước 2: Đăng ký xe**
+- Biển số: 30A-12345
+- Hãng xe: Mercedes-Benz
+- Model: C-Class (W205)
+- Năm sản xuất: 2020
+- Màu sắc: Đen
+- Số khung: WDD2050461A123456
+- Bảo hiểm: Bảo Việt - BV123456789
+
+**Bước 3: Tạo đơn hàng sửa chữa**
+- Số đơn: SO-2024-001
+- Khách hàng: Nguyễn Minh Tuấn
+- Xe: 30A-12345 - Mercedes C-Class 2020
+- Ngày: 15/01/2024
+- Tình trạng: Đèn pha bị mờ, cần thay mới
+
+**Dịch vụ:**
+- Thay đèn pha Mercedes C-Class W205
+
+**Phụ tùng:**
+- Đèn pha Mercedes C-Class W205 (OEM)
+- Bóng đèn H7 55W
+
+**Công lao động:**
+- Công tháo đèn pha (1.5 giờ)
+- Công lắp đèn pha (1.0 giờ)
+- Công điều chỉnh góc chiếu sáng (0.5 giờ)
+
+**Tổng cộng: 2,850,000 VNĐ**
+
+### **Các tình huống Demo**
+
+#### **Tình huống 1: Quản lý tồn kho**
+- Phụ tùng tồn kho thấp:
+  - Dầu phanh DOT4: 2 lít (Cảnh báo: < 5 lít)
+  - Bugi đánh lửa: 5 bộ (Cảnh báo: < 10 bộ)
+  - Lọc nhiên liệu: 3 cái (Cảnh báo: < 5 cái)
+
+**Hành động:**
+- Tạo đơn đặt hàng tự động
+- Gửi email nhắc nhở nhà cung cấp
+- Cập nhật lịch nhập hàng
+
+#### **Tình huống 2: Báo cáo doanh thu**
+- Báo cáo tháng 01/2024:
+  - Doanh thu dịch vụ sửa chữa: 45,500,000 VNĐ
+  - Bán phụ tùng: 23,200,000 VNĐ
+  - Công lao động: 12,800,000 VNĐ
+  - Tổng doanh thu: 81,500,000 VNĐ
+
+**Chi phí:**
+- Chi phí phụ tùng: 52,300,000 VNĐ
+- Chi phí nhân công: 15,600,000 VNĐ
+- Chi phí vận chuyển: 2,400,000 VNĐ
+- Tổng chi phí: 70,300,000 VNĐ
+
+**Lợi nhuận: 11,200,000 VNĐ (13.7%)**
+
+### **Kết quả mong đợi**
+
+**Sau khi hoàn thành Demo, người dùng sẽ:**
+
+**✅ Hiểu được quy trình hoàn chỉnh:**
+1. **Đăng ký khách hàng** → **Đăng ký xe** → **Tạo đơn hàng**
+2. **Quản lý phụ tùng** → **Nhập kho** → **Xuất kho**
+3. **Thực hiện dịch vụ** → **Tính công lao động** → **Thanh toán**
+4. **Tạo báo cáo** → **Quản lý tài chính** → **Theo dõi công nợ**
+
+**✅ Thành thạo các tính năng:**
+- Tìm kiếm và lọc dữ liệu
+- Tạo và chỉnh sửa thông tin
+- Quản lý tồn kho và cảnh báo
+- Tạo báo cáo và xuất dữ liệu
+- Quản lý quyền truy cập
+
+### **Lưu ý quan trọng**
+
+**⚠️ Lưu ý khi sử dụng Data Demo:**
+1. **Backup dữ liệu** trước khi import demo
+2. **Test trên môi trường** development trước
+3. **Không sử dụng** trên production
+4. **Xóa dữ liệu demo** sau khi hoàn thành test
 
 ---
 

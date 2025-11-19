@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using GarageManagementSystem.Core.Entities;
 using GarageManagementSystem.Core.Interfaces;
+using GarageManagementSystem.Core.Extensions;
 using GarageManagementSystem.Shared.Models;
 using GarageManagementSystem.Shared.DTOs;
 using GarageManagementSystem.Infrastructure.Data;
@@ -344,17 +345,14 @@ namespace GarageManagementSystem.API.Controllers
                     };
                 }
 
-                // Get total count
-                var totalCount = await query.CountAsync();
-
                 // ✅ OPTIMIZED: Order by priority using dictionary lookup
                 var priorityOrder = new Dictionary<string, int> { { "High", 3 }, { "Medium", 2 }, { "Low", 1 } };
-                var suggestions = await query
+                var orderedQuery = query
                     .OrderByDescending(rs => priorityOrder.GetValueOrDefault(rs.Priority, 0))
-                    .ThenBy(rs => rs.SuggestedDate)
-                    .Skip((pageNumber - 1) * pageSize)
-                    .Take(pageSize)
-                    .ToListAsync();
+                    .ThenBy(rs => rs.SuggestedDate);
+
+                // ✅ OPTIMIZED: Get paged results with total count - automatically chooses best method
+                var (suggestions, totalCount) = await orderedQuery.ToPagedListWithCountAsync(pageNumber, pageSize, _context);
 
                 var suggestionDtos = suggestions.Select(rs => new ReorderSuggestionDto
                 {
@@ -1340,14 +1338,11 @@ namespace GarageManagementSystem.API.Controllers
                 if (endDate.HasValue)
                     query = query.Where(sp => sp.CalculatedAt <= endDate.Value);
 
-                var totalCount = await query.CountAsync();
-
-                var performances = await query
+                // ✅ OPTIMIZED: Get paged results with total count - automatically chooses best method
+                var orderedQuery = query
                     .OrderByDescending(sp => sp.OverallScore)
-                    .ThenByDescending(sp => sp.CalculatedAt)
-                    .Skip((pageNumber - 1) * pageSize)
-                    .Take(pageSize)
-                    .ToListAsync();
+                    .ThenByDescending(sp => sp.CalculatedAt);
+                var (performances, totalCount) = await orderedQuery.ToPagedListWithCountAsync(pageNumber, pageSize, _context);
 
                 var dtos = performances.Select(sp => new SupplierPerformanceReportDto
                 {
@@ -1554,27 +1549,54 @@ namespace GarageManagementSystem.API.Controllers
 
                 // Get suppliers to calculate
                 var suppliersQuery = _context.Suppliers
+                    .AsNoTracking()
                     .Where(s => !s.IsDeleted && s.IsActive)
                     .AsQueryable();
 
                 if (supplierId.HasValue)
                     suppliersQuery = suppliersQuery.Where(s => s.Id == supplierId.Value);
 
-                var suppliers = await suppliersQuery.ToListAsync();
+                var suppliers = await suppliersQuery.Select(s => new { s.Id }).ToListAsync();
+
+                if (!suppliers.Any())
+                {
+                    return Ok(ApiResponse<object>.SuccessResult(
+                        new { CalculatedCount = 0, Message = "No suppliers found" },
+                        "No suppliers to calculate"));
+                }
+
+                var supplierIds = suppliers.Select(s => s.Id).ToList();
+
+                // ✅ OPTIMIZED: Load all purchase orders once (avoid N+1 queries)
+                var allPurchaseOrders = await _context.PurchaseOrders
+                    .AsNoTracking()
+                    .Include(po => po.PurchaseOrderItems)
+                    .Where(po => !po.IsDeleted && 
+                               supplierIds.Contains(po.SupplierId) &&
+                               po.OrderDate >= startDate &&
+                               po.OrderDate <= endDate &&
+                               (po.Status == "Received" || po.Status == "PartiallyReceived"))
+                    .ToListAsync();
+
+                // ✅ OPTIMIZED: Group by supplier ID for efficient lookup
+                var purchaseOrdersBySupplier = allPurchaseOrders
+                    .GroupBy(po => po.SupplierId)
+                    .ToDictionary(g => g.Key, g => g.ToList());
+
+                // ✅ OPTIMIZED: Load existing performances once
+                var existingPerformances = await _context.Set<SupplierPerformance>()
+                    .Where(sp => supplierIds.Contains(sp.SupplierId) && sp.PartId == partId)
+                    .ToDictionaryAsync(sp => sp.SupplierId, sp => sp);
 
                 var calculatedCount = 0;
 
                 foreach (var supplier in suppliers)
                 {
-                    // Get purchase orders for this supplier
-                    var purchaseOrders = await _context.PurchaseOrders
-                        .Include(po => po.PurchaseOrderItems)
-                        .Where(po => !po.IsDeleted && 
-                                   po.SupplierId == supplier.Id &&
-                                   po.OrderDate >= startDate &&
-                                   po.OrderDate <= endDate &&
-                                   (po.Status == "Received" || po.Status == "PartiallyReceived"))
-                        .ToListAsync();
+                    // ✅ OPTIMIZED: Get purchase orders from dictionary (no query in loop)
+                    if (!purchaseOrdersBySupplier.TryGetValue(supplier.Id, out var purchaseOrders))
+                    {
+                        purchaseOrders = new List<PurchaseOrder>();
+                    }
 
                     if (!purchaseOrders.Any() && !forceRecalculate)
                         continue;
@@ -1631,11 +1653,11 @@ namespace GarageManagementSystem.API.Controllers
                                      (Math.Max(0, 100 - averageLeadTimeDays * 2) * 0.1m);
                     overallScore = Math.Min(100, Math.Max(0, overallScore));
 
-                    // Get or create SupplierPerformance record
-                    var performanceQuery = _context.Set<SupplierPerformance>()
-                        .Where(sp => sp.SupplierId == supplier.Id && sp.PartId == partId);
-
-                    var performance = await performanceQuery.FirstOrDefaultAsync();
+                    // ✅ OPTIMIZED: Get performance from dictionary (no query in loop)
+                    if (!existingPerformances.TryGetValue(supplier.Id, out var performance))
+                    {
+                        performance = null;
+                    }
 
                     if (performance == null)
                     {
@@ -1646,6 +1668,7 @@ namespace GarageManagementSystem.API.Controllers
                             CalculatedAt = DateTime.Now
                         };
                         _context.Set<SupplierPerformance>().Add(performance);
+                        existingPerformances[supplier.Id] = performance; // Add to dictionary
                     }
                     else if (!forceRecalculate && performance.CalculatedAt > endDate.AddDays(-1))
                     {
@@ -1678,6 +1701,624 @@ namespace GarageManagementSystem.API.Controllers
                 _logger.LogError(ex, "Error calculating supplier performance");
                 return StatusCode(500, ApiResponse<object>.ErrorResult("Error calculating supplier performance"));
             }
+        }
+
+        #endregion
+
+        #region Phase 4.2.2 Optional: Request Quotation
+
+        /// <summary>
+        /// POST /api/procurement/request-quotation
+        /// Gửi yêu cầu báo giá cho nhà cung cấp
+        /// </summary>
+        [HttpPost("request-quotation")]
+        public async Task<ActionResult<ApiResponse<RequestQuotationResponseDto>>> RequestQuotation([FromBody] RequestQuotationDto requestDto)
+        {
+            try
+            {
+                // Validation
+                if (requestDto == null)
+                {
+                    return BadRequest(ApiResponse<RequestQuotationResponseDto>.ErrorResult("Request data is required"));
+                }
+
+                if (requestDto.PartId <= 0)
+                {
+                    return BadRequest(ApiResponse<RequestQuotationResponseDto>.ErrorResult("Part ID is required"));
+                }
+
+                // ✅ VALIDATION: Validate supplier IDs
+                if (requestDto.SupplierIds == null || !requestDto.SupplierIds.Any())
+                {
+                    return BadRequest(ApiResponse<RequestQuotationResponseDto>.ErrorResult("At least one supplier is required"));
+                }
+
+                // ✅ VALIDATION: Remove duplicates and validate IDs are positive
+                requestDto.SupplierIds = requestDto.SupplierIds.Distinct().Where(id => id > 0).ToList();
+                if (!requestDto.SupplierIds.Any())
+                {
+                    return BadRequest(ApiResponse<RequestQuotationResponseDto>.ErrorResult("Invalid supplier IDs provided"));
+                }
+
+                if (requestDto.RequestedQuantity <= 0)
+                {
+                    return BadRequest(ApiResponse<RequestQuotationResponseDto>.ErrorResult("Requested quantity must be greater than 0"));
+                }
+
+                // Get current user ID
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var requestedById = int.TryParse(userIdClaim, out var userId) ? userId : (int?)null;
+
+                // Validate part exists
+                var part = await _context.Parts
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(p => p.Id == requestDto.PartId && !p.IsDeleted);
+                
+                if (part == null)
+                {
+                    return NotFound(ApiResponse<RequestQuotationResponseDto>.ErrorResult("Part not found"));
+                }
+
+                // Validate suppliers exist
+                var suppliers = await _context.Suppliers
+                    .AsNoTracking()
+                    .Where(s => requestDto.SupplierIds.Contains(s.Id) && !s.IsDeleted)
+                    .ToListAsync();
+
+                if (suppliers.Count != requestDto.SupplierIds.Count)
+                {
+                    return BadRequest(ApiResponse<RequestQuotationResponseDto>.ErrorResult("One or more suppliers not found"));
+                }
+
+                // Check for existing pending/requested quotations
+                var existingQuotations = await _context.Set<SupplierQuotation>()
+                    .AsNoTracking()
+                    .Where(sq => sq.PartId == requestDto.PartId 
+                        && requestDto.SupplierIds.Contains(sq.SupplierId)
+                        && !sq.IsDeleted
+                        && (sq.Status == "Requested" || sq.Status == "Pending"))
+                    .ToListAsync();
+
+                var createdQuotations = new List<SupplierQuotation>();
+                var responseQuotations = new List<SupplierQuotationDto>();
+
+                using var transaction = await _context.Database.BeginTransactionAsync();
+                try
+                {
+                    // ✅ OPTIMIZED: Generate all quotation numbers upfront to avoid race conditions
+                    var supplierIdsToCreate = requestDto.SupplierIds
+                        .Where(sid => !existingQuotations.Any(eq => eq.SupplierId == sid))
+                        .ToList();
+                    
+                    // ✅ FIX: Check if there are any suppliers to create quotations for
+                    if (!supplierIdsToCreate.Any())
+                    {
+                        return BadRequest(ApiResponse<RequestQuotationResponseDto>.ErrorResult(
+                            "All selected suppliers already have pending or requested quotations for this part"));
+                    }
+                    
+                    // ✅ FIX: Generate quotation numbers only for suppliers that will be created
+                    var quotationNumbers = new List<string>();
+                    for (int i = 0; i < supplierIdsToCreate.Count; i++)
+                    {
+                        quotationNumbers.Add(await GenerateSupplierQuotationNumberAsync());
+                    }
+
+                    // ✅ FIX: Use index-based loop to ensure quotation numbers match suppliers
+                    // Track used indices to handle skipped suppliers
+                    int numberIndex = 0;
+                    foreach (var supplierId in supplierIdsToCreate)
+                    {
+                        // Double check (should not happen, but safety check)
+                        if (existingQuotations.Any(eq => eq.SupplierId == supplierId))
+                        {
+                            _logger.LogWarning($"Quotation request already exists for Part {requestDto.PartId} and Supplier {supplierId}");
+                            numberIndex++; // Skip this quotation number (it won't be used)
+                            continue;
+                        }
+
+                        // Use pre-generated quotation number (increment index only when used)
+                        var quotationNumber = quotationNumbers[numberIndex++];
+
+                        var quotation = new SupplierQuotation
+                        {
+                            SupplierId = supplierId,
+                            PartId = requestDto.PartId,
+                            QuotationNumber = quotationNumber,
+                            QuotationDate = DateTime.Now,
+                            RequestedDate = DateTime.Now,
+                            RequestedById = requestedById,
+                            RequestedQuantity = requestDto.RequestedQuantity,
+                            RequestNotes = requestDto.RequestNotes,
+                            Status = "Requested",
+                            UnitPrice = 0, // Will be filled by supplier
+                            MinimumOrderQuantity = 1,
+                            CreatedAt = DateTime.Now
+                        };
+
+                        _context.Set<SupplierQuotation>().Add(quotation);
+                        createdQuotations.Add(quotation);
+                    }
+
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+
+                    // Map to DTOs
+                    var supplierDict = suppliers.ToDictionary(s => s.Id);
+                    foreach (var quotation in createdQuotations)
+                    {
+                        if (supplierDict.TryGetValue(quotation.SupplierId, out var supplier))
+                        {
+                            responseQuotations.Add(new SupplierQuotationDto
+                            {
+                                Id = quotation.Id,
+                                QuotationNumber = quotation.QuotationNumber,
+                                SupplierId = quotation.SupplierId,
+                                SupplierName = supplier.SupplierName ?? string.Empty,
+                                SupplierCode = supplier.SupplierCode ?? string.Empty,
+                                PartId = quotation.PartId,
+                                PartNumber = part.PartNumber ?? string.Empty,
+                                PartName = part.PartName ?? string.Empty,
+                                QuotationDate = quotation.QuotationDate,
+                                Status = quotation.Status,
+                                RequestedDate = quotation.RequestedDate,
+                                RequestedQuantity = quotation.RequestedQuantity,
+                                RequestNotes = quotation.RequestNotes,
+                                RequestedById = quotation.RequestedById
+                            });
+                        }
+                    }
+
+                    _logger.LogInformation($"Created {createdQuotations.Count} quotation requests for Part {requestDto.PartId}");
+
+                    return Ok(ApiResponse<RequestQuotationResponseDto>.SuccessResult(
+                        new RequestQuotationResponseDto
+                        {
+                            RequestedCount = createdQuotations.Count,
+                            Quotations = responseQuotations
+                        },
+                        "Quotation requests sent successfully"));
+                }
+                catch
+                {
+                    await transaction.RollbackAsync();
+                    throw;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error requesting quotations");
+                return StatusCode(500, ApiResponse<RequestQuotationResponseDto>.ErrorResult("Error requesting quotations", ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// GET /api/procurement/quotations
+        /// Lấy danh sách báo giá từ suppliers
+        /// </summary>
+        [HttpGet("quotations")]
+        public async Task<ActionResult<PagedResponse<SupplierQuotationDto>>> GetQuotations(
+            [FromQuery] int? partId = null,
+            [FromQuery] int? supplierId = null,
+            [FromQuery] string? status = null,
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 20)
+        {
+            try
+            {
+                // Validate pagination
+                if (pageSize <= 0) pageSize = 20;
+                if (pageNumber <= 0) pageNumber = 1;
+                if (pageSize > 100) pageSize = 100;
+
+                // ✅ OPTIMIZED: Build base query without Include for count (faster)
+                var baseQuery = _context.Set<SupplierQuotation>()
+                    .AsNoTracking()
+                    .Where(sq => !sq.IsDeleted)
+                    .AsQueryable();
+
+                // Apply filters
+                if (partId.HasValue)
+                {
+                    baseQuery = baseQuery.Where(sq => sq.PartId == partId.Value);
+                }
+
+                if (supplierId.HasValue)
+                {
+                    baseQuery = baseQuery.Where(sq => sq.SupplierId == supplierId.Value);
+                }
+
+                if (!string.IsNullOrEmpty(status))
+                {
+                    baseQuery = baseQuery.Where(sq => sq.Status == status);
+                }
+
+                // ✅ OPTIMIZED: Build query with Include and ordering
+                var query = baseQuery
+                    .Include(sq => sq.Supplier)
+                    .Include(sq => sq.Part)
+                    .Include(sq => sq.RequestedBy)
+                    .OrderByDescending(sq => sq.RequestedDate ?? sq.QuotationDate);
+
+                // ✅ OPTIMIZED: Get paged results with total count - automatically chooses best method
+                var (quotations, totalCount) = await query.ToPagedListWithCountAsync(pageNumber, pageSize, _context);
+
+                // Map to DTOs
+                var quotationDtos = quotations.Select(sq => new SupplierQuotationDto
+                {
+                    Id = sq.Id,
+                    QuotationNumber = sq.QuotationNumber,
+                    SupplierId = sq.SupplierId,
+                    SupplierName = sq.Supplier?.SupplierName ?? string.Empty,
+                    SupplierCode = sq.Supplier?.SupplierCode ?? string.Empty,
+                    PartId = sq.PartId,
+                    PartNumber = sq.Part?.PartNumber ?? string.Empty,
+                    PartName = sq.Part?.PartName ?? string.Empty,
+                    QuotationDate = sq.QuotationDate,
+                    ValidUntil = sq.ValidUntil,
+                    UnitPrice = sq.UnitPrice,
+                    MinimumOrderQuantity = sq.MinimumOrderQuantity,
+                    LeadTimeDays = sq.LeadTimeDays,
+                    WarrantyPeriod = sq.WarrantyPeriod,
+                    WarrantyTerms = sq.WarrantyTerms,
+                    Status = sq.Status,
+                    RequestedById = sq.RequestedById,
+                    RequestedByName = sq.RequestedBy?.Name,
+                    RequestedDate = sq.RequestedDate,
+                    ResponseDate = sq.ResponseDate,
+                    RequestedQuantity = sq.RequestedQuantity,
+                    RequestNotes = sq.RequestNotes,
+                    ResponseNotes = sq.ResponseNotes,
+                    Notes = sq.Notes
+                }).ToList();
+
+                return Ok(PagedResponse<SupplierQuotationDto>.CreateSuccessResult(
+                    quotationDtos,
+                    pageNumber,
+                    pageSize,
+                    totalCount,
+                    "Quotations retrieved successfully"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving quotations");
+                return StatusCode(500, PagedResponse<SupplierQuotationDto>.CreateErrorResult("Error retrieving quotations", new List<string> { ex.Message }));
+            }
+        }
+
+        /// <summary>
+        /// GET /api/procurement/quotations/{id}
+        /// Lấy chi tiết báo giá theo ID
+        /// </summary>
+        [HttpGet("quotations/{id}")]
+        public async Task<ActionResult<ApiResponse<SupplierQuotationDto>>> GetQuotationById(int id)
+        {
+            try
+            {
+                var quotation = await _context.Set<SupplierQuotation>()
+                    .AsNoTracking()
+                    .Include(sq => sq.Supplier)
+                    .Include(sq => sq.Part)
+                    .Include(sq => sq.RequestedBy)
+                    .FirstOrDefaultAsync(sq => sq.Id == id && !sq.IsDeleted);
+
+                if (quotation == null)
+                {
+                    return NotFound(ApiResponse<SupplierQuotationDto>.ErrorResult("Quotation not found"));
+                }
+
+                var quotationDto = new SupplierQuotationDto
+                {
+                    Id = quotation.Id,
+                    QuotationNumber = quotation.QuotationNumber,
+                    SupplierId = quotation.SupplierId,
+                    SupplierName = quotation.Supplier?.SupplierName ?? string.Empty,
+                    SupplierCode = quotation.Supplier?.SupplierCode ?? string.Empty,
+                    PartId = quotation.PartId,
+                    PartNumber = quotation.Part?.PartNumber ?? string.Empty,
+                    PartName = quotation.Part?.PartName ?? string.Empty,
+                    QuotationDate = quotation.QuotationDate,
+                    ValidUntil = quotation.ValidUntil,
+                    UnitPrice = quotation.UnitPrice,
+                    MinimumOrderQuantity = quotation.MinimumOrderQuantity,
+                    LeadTimeDays = quotation.LeadTimeDays,
+                    WarrantyPeriod = quotation.WarrantyPeriod,
+                    WarrantyTerms = quotation.WarrantyTerms,
+                    Status = quotation.Status,
+                    RequestedById = quotation.RequestedById,
+                    RequestedByName = quotation.RequestedBy?.Name,
+                    RequestedDate = quotation.RequestedDate,
+                    ResponseDate = quotation.ResponseDate,
+                    RequestedQuantity = quotation.RequestedQuantity,
+                    RequestNotes = quotation.RequestNotes,
+                    ResponseNotes = quotation.ResponseNotes,
+                    Notes = quotation.Notes
+                };
+
+                return Ok(ApiResponse<SupplierQuotationDto>.SuccessResult(quotationDto, "Quotation retrieved successfully"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving quotation {Id}", id);
+                return StatusCode(500, ApiResponse<SupplierQuotationDto>.ErrorResult("Error retrieving quotation", ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// PUT /api/procurement/quotations/{id}
+        /// Cập nhật báo giá (supplier response)
+        /// </summary>
+        [HttpPut("quotations/{id}")]
+        public async Task<ActionResult<ApiResponse<SupplierQuotationDto>>> UpdateQuotation(int id, [FromBody] UpdateQuotationDto updateDto)
+        {
+            try
+            {
+                if (updateDto == null)
+                {
+                    return BadRequest(ApiResponse<SupplierQuotationDto>.ErrorResult("Update data is required"));
+                }
+
+                // Load quotation for update (need tracking for SaveChanges)
+                var quotation = await _context.Set<SupplierQuotation>()
+                    .Include(sq => sq.Supplier)
+                    .Include(sq => sq.Part)
+                    .Include(sq => sq.RequestedBy)
+                    .FirstOrDefaultAsync(sq => sq.Id == id && !sq.IsDeleted);
+
+                if (quotation == null)
+                {
+                    return NotFound(ApiResponse<SupplierQuotationDto>.ErrorResult("Quotation not found"));
+                }
+
+                // Validation: Only allow update if status is "Requested"
+                if (quotation.Status != "Requested")
+                {
+                    return BadRequest(ApiResponse<SupplierQuotationDto>.ErrorResult(
+                        $"Cannot update quotation with status '{quotation.Status}'. Only 'Requested' quotations can be updated."));
+                }
+
+                // Update fields
+                quotation.UnitPrice = updateDto.UnitPrice;
+                quotation.MinimumOrderQuantity = updateDto.MinimumOrderQuantity;
+                quotation.LeadTimeDays = updateDto.LeadTimeDays;
+                quotation.ValidUntil = updateDto.ValidUntil;
+                quotation.WarrantyPeriod = updateDto.WarrantyPeriod;
+                quotation.WarrantyTerms = updateDto.WarrantyTerms;
+                quotation.ResponseNotes = updateDto.ResponseNotes;
+                quotation.Status = updateDto.Status; // Should be "Pending"
+                quotation.ResponseDate = DateTime.Now;
+                quotation.UpdatedAt = DateTime.Now;
+
+                await _context.SaveChangesAsync();
+
+                // Map to DTO
+                var quotationDto = new SupplierQuotationDto
+                {
+                    Id = quotation.Id,
+                    QuotationNumber = quotation.QuotationNumber,
+                    SupplierId = quotation.SupplierId,
+                    SupplierName = quotation.Supplier?.SupplierName ?? string.Empty,
+                    SupplierCode = quotation.Supplier?.SupplierCode ?? string.Empty,
+                    PartId = quotation.PartId,
+                    PartNumber = quotation.Part?.PartNumber ?? string.Empty,
+                    PartName = quotation.Part?.PartName ?? string.Empty,
+                    QuotationDate = quotation.QuotationDate,
+                    ValidUntil = quotation.ValidUntil,
+                    UnitPrice = quotation.UnitPrice,
+                    MinimumOrderQuantity = quotation.MinimumOrderQuantity,
+                    LeadTimeDays = quotation.LeadTimeDays,
+                    WarrantyPeriod = quotation.WarrantyPeriod,
+                    WarrantyTerms = quotation.WarrantyTerms,
+                    Status = quotation.Status,
+                    RequestedById = quotation.RequestedById,
+                    RequestedByName = quotation.RequestedBy?.Name,
+                    RequestedDate = quotation.RequestedDate,
+                    ResponseDate = quotation.ResponseDate,
+                    RequestedQuantity = quotation.RequestedQuantity,
+                    RequestNotes = quotation.RequestNotes,
+                    ResponseNotes = quotation.ResponseNotes,
+                    Notes = quotation.Notes
+                };
+
+                _logger.LogInformation($"Updated quotation {id}");
+
+                return Ok(ApiResponse<SupplierQuotationDto>.SuccessResult(quotationDto, "Quotation updated successfully"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating quotation");
+                return StatusCode(500, ApiResponse<SupplierQuotationDto>.ErrorResult("Error updating quotation", ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// PUT /api/procurement/quotations/{id}/accept
+        /// Chấp nhận báo giá
+        /// </summary>
+        [HttpPut("quotations/{id}/accept")]
+        public async Task<ActionResult<ApiResponse<SupplierQuotationDto>>> AcceptQuotation(int id, [FromBody] AcceptRejectQuotationDto acceptDto)
+        {
+            try
+            {
+                var quotation = await _context.Set<SupplierQuotation>()
+                    .Include(sq => sq.Supplier)
+                    .Include(sq => sq.Part)
+                    .Include(sq => sq.RequestedBy)
+                    .FirstOrDefaultAsync(sq => sq.Id == id && !sq.IsDeleted);
+
+                if (quotation == null)
+                {
+                    return NotFound(ApiResponse<SupplierQuotationDto>.ErrorResult("Quotation not found"));
+                }
+
+                // Validation: Only allow accept if status is "Pending"
+                if (quotation.Status != "Pending")
+                {
+                    return BadRequest(ApiResponse<SupplierQuotationDto>.ErrorResult(
+                        $"Cannot accept quotation with status '{quotation.Status}'. Only 'Pending' quotations can be accepted."));
+                }
+
+                // Update status
+                quotation.Status = "Accepted";
+                if (!string.IsNullOrEmpty(acceptDto?.Notes))
+                {
+                    quotation.Notes = acceptDto.Notes;
+                }
+                quotation.UpdatedAt = DateTime.Now;
+
+                await _context.SaveChangesAsync();
+
+                // Map to DTO
+                var quotationDto = new SupplierQuotationDto
+                {
+                    Id = quotation.Id,
+                    QuotationNumber = quotation.QuotationNumber,
+                    SupplierId = quotation.SupplierId,
+                    SupplierName = quotation.Supplier?.SupplierName ?? string.Empty,
+                    SupplierCode = quotation.Supplier?.SupplierCode ?? string.Empty,
+                    PartId = quotation.PartId,
+                    PartNumber = quotation.Part?.PartNumber ?? string.Empty,
+                    PartName = quotation.Part?.PartName ?? string.Empty,
+                    QuotationDate = quotation.QuotationDate,
+                    ValidUntil = quotation.ValidUntil,
+                    UnitPrice = quotation.UnitPrice,
+                    MinimumOrderQuantity = quotation.MinimumOrderQuantity,
+                    LeadTimeDays = quotation.LeadTimeDays,
+                    WarrantyPeriod = quotation.WarrantyPeriod,
+                    WarrantyTerms = quotation.WarrantyTerms,
+                    Status = quotation.Status,
+                    RequestedById = quotation.RequestedById,
+                    RequestedByName = quotation.RequestedBy?.Name,
+                    RequestedDate = quotation.RequestedDate,
+                    ResponseDate = quotation.ResponseDate,
+                    RequestedQuantity = quotation.RequestedQuantity,
+                    RequestNotes = quotation.RequestNotes,
+                    ResponseNotes = quotation.ResponseNotes,
+                    Notes = quotation.Notes
+                };
+
+                _logger.LogInformation($"Accepted quotation {id}");
+
+                return Ok(ApiResponse<SupplierQuotationDto>.SuccessResult(quotationDto, "Quotation accepted successfully"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error accepting quotation");
+                return StatusCode(500, ApiResponse<SupplierQuotationDto>.ErrorResult("Error accepting quotation", ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// PUT /api/procurement/quotations/{id}/reject
+        /// Từ chối báo giá
+        /// </summary>
+        [HttpPut("quotations/{id}/reject")]
+        public async Task<ActionResult<ApiResponse<SupplierQuotationDto>>> RejectQuotation(int id, [FromBody] AcceptRejectQuotationDto rejectDto)
+        {
+            try
+            {
+                var quotation = await _context.Set<SupplierQuotation>()
+                    .Include(sq => sq.Supplier)
+                    .Include(sq => sq.Part)
+                    .Include(sq => sq.RequestedBy)
+                    .FirstOrDefaultAsync(sq => sq.Id == id && !sq.IsDeleted);
+
+                if (quotation == null)
+                {
+                    return NotFound(ApiResponse<SupplierQuotationDto>.ErrorResult("Quotation not found"));
+                }
+
+                // Validation: Only allow reject if status is "Pending"
+                if (quotation.Status != "Pending")
+                {
+                    return BadRequest(ApiResponse<SupplierQuotationDto>.ErrorResult(
+                        $"Cannot reject quotation with status '{quotation.Status}'. Only 'Pending' quotations can be rejected."));
+                }
+
+                // Update status
+                quotation.Status = "Rejected";
+                if (!string.IsNullOrEmpty(rejectDto?.Notes))
+                {
+                    quotation.Notes = rejectDto.Notes;
+                }
+                quotation.UpdatedAt = DateTime.Now;
+
+                await _context.SaveChangesAsync();
+
+                // Map to DTO
+                var quotationDto = new SupplierQuotationDto
+                {
+                    Id = quotation.Id,
+                    QuotationNumber = quotation.QuotationNumber,
+                    SupplierId = quotation.SupplierId,
+                    SupplierName = quotation.Supplier?.SupplierName ?? string.Empty,
+                    SupplierCode = quotation.Supplier?.SupplierCode ?? string.Empty,
+                    PartId = quotation.PartId,
+                    PartNumber = quotation.Part?.PartNumber ?? string.Empty,
+                    PartName = quotation.Part?.PartName ?? string.Empty,
+                    QuotationDate = quotation.QuotationDate,
+                    ValidUntil = quotation.ValidUntil,
+                    UnitPrice = quotation.UnitPrice,
+                    MinimumOrderQuantity = quotation.MinimumOrderQuantity,
+                    LeadTimeDays = quotation.LeadTimeDays,
+                    WarrantyPeriod = quotation.WarrantyPeriod,
+                    WarrantyTerms = quotation.WarrantyTerms,
+                    Status = quotation.Status,
+                    RequestedById = quotation.RequestedById,
+                    RequestedByName = quotation.RequestedBy?.Name,
+                    RequestedDate = quotation.RequestedDate,
+                    ResponseDate = quotation.ResponseDate,
+                    RequestedQuantity = quotation.RequestedQuantity,
+                    RequestNotes = quotation.RequestNotes,
+                    ResponseNotes = quotation.ResponseNotes,
+                    Notes = quotation.Notes
+                };
+
+                _logger.LogInformation($"Rejected quotation {id}");
+
+                return Ok(ApiResponse<SupplierQuotationDto>.SuccessResult(quotationDto, "Quotation rejected successfully"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error rejecting quotation");
+                return StatusCode(500, ApiResponse<SupplierQuotationDto>.ErrorResult("Error rejecting quotation", ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// Generate Supplier Quotation Number: RQ-YYYY-NNNNN
+        /// ✅ OPTIMIZED: Use database query to get max number directly (faster than loading all)
+        /// </summary>
+        private async Task<string> GenerateSupplierQuotationNumberAsync()
+        {
+            var today = DateTime.Now;
+            var prefix = $"RQ-{today:yyyy}-";
+
+            // ✅ OPTIMIZED: Get max number directly from database using SQL
+            // This is much faster than loading all quotations into memory
+            var maxQuotation = await _context.Set<SupplierQuotation>()
+                .AsNoTracking()
+                .Where(sq => sq.QuotationNumber.StartsWith(prefix))
+                .OrderByDescending(sq => sq.QuotationNumber)
+                .FirstOrDefaultAsync();
+
+            int nextNumber = 1;
+            if (maxQuotation != null && !string.IsNullOrEmpty(maxQuotation.QuotationNumber))
+            {
+                // ✅ FIX: Validate QuotationNumber length before Substring to prevent IndexOutOfRangeException
+                if (maxQuotation.QuotationNumber.Length > prefix.Length)
+                {
+                    var numPart = maxQuotation.QuotationNumber.Substring(prefix.Length);
+                    if (int.TryParse(numPart, out int maxNumber) && maxNumber > 0)
+                    {
+                        nextNumber = maxNumber + 1;
+                    }
+                }
+            }
+
+            // Note: In high-concurrency scenarios, consider using database sequence or lock
+            // For now, transaction will help prevent duplicates
+            return $"{prefix}{nextNumber:D5}";
         }
 
         #endregion

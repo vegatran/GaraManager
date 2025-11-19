@@ -200,6 +200,14 @@ namespace GarageManagementSystem.Shared.DTOs
         [StringLength(50)]
         public string? PaymentTerms { get; set; }
         
+        /// <summary>
+        /// ✅ 4.3.2.3: Số ngày credit trực tiếp (nếu có). Ưu tiên hơn PaymentTerms parse.
+        /// Nếu null, sẽ parse từ PaymentTerms. Hỗ trợ số ngày linh hoạt: 30, 35, 45, 60, etc.
+        /// -1 = Prepaid, 0 = COD, > 0 = số ngày credit
+        /// </summary>
+        [Range(-1, 365, ErrorMessage = "Số ngày credit phải từ -1 (Prepaid) đến 365")]
+        public int? CreditDays { get; set; }
+        
         [StringLength(100)]
         public string? DeliveryTerms { get; set; }
         
@@ -276,6 +284,14 @@ namespace GarageManagementSystem.Shared.DTOs
         
         [StringLength(200)]
         public string? PaymentTerms { get; set; }
+        
+        /// <summary>
+        /// ✅ 4.3.2.3: Số ngày credit trực tiếp (nếu có). Ưu tiên hơn PaymentTerms parse.
+        /// Nếu null, sẽ parse từ PaymentTerms. Hỗ trợ số ngày linh hoạt: 30, 35, 45, 60, etc.
+        /// -1 = Prepaid, 0 = COD, > 0 = số ngày credit
+        /// </summary>
+        [Range(-1, 365, ErrorMessage = "Số ngày credit phải từ -1 (Prepaid) đến 365")]
+        public int? CreditDays { get; set; }
         
         [StringLength(500)]
         public string? DeliveryAddress { get; set; }

@@ -215,6 +215,74 @@ namespace GarageManagementSystem.Web.Controllers
             }
         }
 
+        /// <summary>
+        /// Tạo demo data cho Giai đoạn 1: Tiếp nhận & Báo giá
+        /// </summary>
+        [HttpPost("CreatePhase1")]
+        public async Task<IActionResult> CreatePhase1()
+        {
+            try
+            {
+                var result = await _apiService.PostAsync<object>(ApiEndpoints.Setup.CreatePhase1, null);
+                return Json(new { success = result.Success, message = result.Message, data = result.Data });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Tạo demo data cho Giai đoạn 2: Sửa chữa & Quản lý xuất kho
+        /// </summary>
+        [HttpPost("CreatePhase2")]
+        public async Task<IActionResult> CreatePhase2()
+        {
+            try
+            {
+                var result = await _apiService.PostAsync<object>(ApiEndpoints.Setup.CreatePhase2, null);
+                return Json(new { success = result.Success, message = result.Message, data = result.Data });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Tạo demo data cho Giai đoạn 3: Quyết toán & Chăm sóc hậu mãi
+        /// </summary>
+        [HttpPost("CreatePhase3")]
+        public async Task<IActionResult> CreatePhase3()
+        {
+            try
+            {
+                var result = await _apiService.PostAsync<object>(ApiEndpoints.Setup.CreatePhase3, null);
+                return Json(new { success = result.Success, message = result.Message, data = result.Data });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Tạo demo data cho Giai đoạn 4: Chuẩn hóa quản lý phụ tùng & Procurement
+        /// </summary>
+        [HttpPost("CreatePhase4")]
+        public async Task<IActionResult> CreatePhase4()
+        {
+            try
+            {
+                var result = await _apiService.PostAsync<object>(ApiEndpoints.Setup.CreatePhase4, null);
+                return Json(new { success = result.Success, message = result.Message, data = result.Data });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
         #region Create Methods for Individual Modules
 
         /// <summary>

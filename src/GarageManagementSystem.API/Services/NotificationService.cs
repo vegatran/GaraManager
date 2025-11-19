@@ -11,6 +11,7 @@ namespace GarageManagementSystem.API.Services
         Task NotifyInventoryAlertUpdatedAsync(int alertCount);
         Task NotifyInventoryAlertCreatedAsync(string alertType, int partId, string partName, string message);
         Task NotifyInventoryAlertResolvedAsync(int partId, string partName);
+        Task NotifyPODeliveryAlertAsync(int poId, string orderNumber, string supplierName, string deliveryStatus, int daysDiff); // ✅ Phase 4.2.4
     }
 
     public class NotificationService : INotificationService
@@ -85,6 +86,33 @@ namespace GarageManagementSystem.API.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error sending inventory alert resolved notification");
+            }
+        }
+
+        /// <summary>
+        /// ✅ Phase 4.2.4: Notify all clients about PO delivery alerts (At Risk, Delayed)
+        /// </summary>
+        public async Task NotifyPODeliveryAlertAsync(int poId, string orderNumber, string supplierName, string deliveryStatus, int daysDiff)
+        {
+            try
+            {
+                await _hubContext.Clients.All.SendAsync("PODeliveryAlert", new
+                {
+                    poId = poId,
+                    orderNumber = orderNumber,
+                    supplierName = supplierName,
+                    deliveryStatus = deliveryStatus,
+                    daysDiff = daysDiff,
+                    message = deliveryStatus == "Delayed" 
+                        ? $"PO {orderNumber} từ {supplierName} đã quá hạn {Math.Abs(daysDiff)} ngày"
+                        : $"PO {orderNumber} từ {supplierName} sắp đến hạn trong {daysDiff} ngày",
+                    timestamp = DateTime.UtcNow
+                });
+                _logger.LogInformation("Sent PO delivery alert notification: PO {OrderNumber}, Status: {Status}", orderNumber, deliveryStatus);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error sending PO delivery alert notification");
             }
         }
     }

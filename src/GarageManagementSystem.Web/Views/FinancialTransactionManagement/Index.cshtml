@@ -78,6 +78,9 @@
                     <div class="card-header">
                         <h3 class="card-title">Danh Sách Phiếu Thu/Chi</h3>
                         <div class="card-tools">
+                            <button type="button" class="btn btn-primary btn-sm mr-1" id="createTransactionBtn">
+                                <i class="fas fa-plus"></i> Tạo Mới
+                            </button>
                             <button type="button" class="btn btn-success btn-sm mr-1" id="filterIncomeBtn">
                                 <i class="fas fa-arrow-up"></i> Phiếu Thu
                             </button>
@@ -146,6 +149,10 @@
         </div>
     </div>
 </section>
+
+@await Html.PartialAsync("_CreateTransactionModal")
+@await Html.PartialAsync("_EditTransactionModal")
+@await Html.PartialAsync("_ViewTransactionModal")
 
 @section Scripts {
     <script src="~/js/financial-transaction-management.js" asp-append-version="true"></script>

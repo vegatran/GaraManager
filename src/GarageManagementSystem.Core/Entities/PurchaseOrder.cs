@@ -41,6 +41,12 @@ namespace GarageManagementSystem.Core.Entities
         [StringLength(50)]
         public string? PaymentTerms { get; set; } // Điều khoản thanh toán
         
+        /// <summary>
+        /// ✅ 4.3.2.3: Số ngày credit được parse từ PaymentTerms (Net 30 → 30, COD → 0, Prepaid → -1)
+        /// Dùng để tính DueDate và OverdueDays ở DB level
+        /// </summary>
+        public int? CreditDays { get; set; } // Số ngày credit (null = default 30)
+        
         [StringLength(100)]
         public string? DeliveryTerms { get; set; } // Điều khoản giao hàng
         

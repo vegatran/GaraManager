@@ -494,6 +494,219 @@ namespace GarageManagementSystem.Web.Controllers
                 });
             }
         }
+
+        #region Phase 4.2.2 Optional: Request Quotation
+
+        /// <summary>
+        /// Hiển thị trang Quản lý Báo giá Nhà cung cấp (Supplier Quotation Management)
+        /// </summary>
+        [HttpGet("SupplierQuotationManagement")]
+        public IActionResult SupplierQuotationManagement()
+        {
+            return View();
+        }
+
+        /// <summary>
+        /// Lấy danh sách báo giá từ suppliers
+        /// </summary>
+        [HttpGet("GetQuotations")]
+        public async Task<IActionResult> GetQuotations(
+            int pageNumber = 1,
+            int pageSize = 20,
+            int? partId = null,
+            int? supplierId = null,
+            string? status = null)
+        {
+            try
+            {
+                var queryParams = new List<string>
+                {
+                    $"pageNumber={pageNumber}",
+                    $"pageSize={pageSize}"
+                };
+
+                if (partId.HasValue)
+                    queryParams.Add($"partId={partId.Value}");
+                if (supplierId.HasValue)
+                    queryParams.Add($"supplierId={supplierId.Value}");
+                if (!string.IsNullOrEmpty(status))
+                    queryParams.Add($"status={Uri.EscapeDataString(status)}");
+
+                var endpoint = ApiEndpoints.Procurement.GetQuotations + "?" + string.Join("&", queryParams);
+                var response = await _apiService.GetAsync<PagedResponse<SupplierQuotationDto>>(endpoint);
+
+                if (response.Success && response.Data != null)
+                {
+                    return Json(response.Data);
+                }
+                else
+                {
+                    return Json(new PagedResponse<SupplierQuotationDto>
+                    {
+                        Data = new List<SupplierQuotationDto>(),
+                        TotalCount = 0,
+                        PageNumber = pageNumber,
+                        PageSize = pageSize,
+                        Success = false,
+                        Message = response.ErrorMessage ?? "Lỗi khi lấy danh sách báo giá"
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                return Json(new PagedResponse<SupplierQuotationDto>
+                {
+                    Data = new List<SupplierQuotationDto>(),
+                    TotalCount = 0,
+                    PageNumber = pageNumber,
+                    PageSize = pageSize,
+                    Success = false,
+                    Message = $"Lỗi: {ex.Message}"
+                });
+            }
+        }
+
+        /// <summary>
+        /// Gửi yêu cầu báo giá cho nhà cung cấp
+        /// </summary>
+        [HttpPost("RequestQuotation")]
+        public async Task<IActionResult> RequestQuotation([FromBody] RequestQuotationDto dto)
+        {
+            try
+            {
+                var endpoint = ApiEndpoints.Procurement.RequestQuotation;
+                var response = await _apiService.PostAsync<RequestQuotationResponseDto>(endpoint, dto);
+                return Json(response);
+            }
+            catch (Exception ex)
+            {
+                return Json(new ApiResponse<RequestQuotationResponseDto>
+                {
+                    Success = false,
+                    ErrorMessage = $"Lỗi: {ex.Message}"
+                });
+            }
+        }
+
+        /// <summary>
+        /// Cập nhật báo giá (supplier response)
+        /// </summary>
+        [HttpPut("UpdateQuotation/{id}")]
+        public async Task<IActionResult> UpdateQuotation(int id, [FromBody] UpdateQuotationDto dto)
+        {
+            try
+            {
+                var endpoint = string.Format(ApiEndpoints.Procurement.UpdateQuotation, id);
+                var response = await _apiService.PutAsync<SupplierQuotationDto>(endpoint, dto);
+                return Json(response);
+            }
+            catch (Exception ex)
+            {
+                return Json(new ApiResponse<SupplierQuotationDto>
+                {
+                    Success = false,
+                    ErrorMessage = $"Lỗi: {ex.Message}"
+                });
+            }
+        }
+
+        /// <summary>
+        /// Chấp nhận báo giá
+        /// </summary>
+        [HttpPut("AcceptQuotation/{id}")]
+        public async Task<IActionResult> AcceptQuotation(int id, [FromBody] AcceptRejectQuotationDto? dto)
+        {
+            try
+            {
+                var endpoint = string.Format(ApiEndpoints.Procurement.AcceptQuotation, id);
+                var response = await _apiService.PutAsync<SupplierQuotationDto>(endpoint, dto ?? new AcceptRejectQuotationDto());
+                return Json(response);
+            }
+            catch (Exception ex)
+            {
+                return Json(new ApiResponse<SupplierQuotationDto>
+                {
+                    Success = false,
+                    ErrorMessage = $"Lỗi: {ex.Message}"
+                });
+            }
+        }
+
+        /// <summary>
+        /// Từ chối báo giá
+        /// </summary>
+        [HttpPut("RejectQuotation/{id}")]
+        public async Task<IActionResult> RejectQuotation(int id, [FromBody] AcceptRejectQuotationDto? dto)
+        {
+            try
+            {
+                var endpoint = string.Format(ApiEndpoints.Procurement.RejectQuotation, id);
+                var response = await _apiService.PutAsync<SupplierQuotationDto>(endpoint, dto ?? new AcceptRejectQuotationDto());
+                return Json(response);
+            }
+            catch (Exception ex)
+            {
+                return Json(new ApiResponse<SupplierQuotationDto>
+                {
+                    Success = false,
+                    ErrorMessage = $"Lỗi: {ex.Message}"
+                });
+            }
+        }
+
+        /// <summary>
+        /// Lấy chi tiết báo giá theo ID
+        /// </summary>
+        [HttpGet("GetQuotation/{id}")]
+        public async Task<IActionResult> GetQuotation(int id)
+        {
+            try
+            {
+                var endpoint = string.Format(ApiEndpoints.Procurement.GetQuotationById, id);
+                var response = await _apiService.GetAsync<SupplierQuotationDto>(endpoint);
+                return Json(response);
+            }
+            catch (Exception ex)
+            {
+                return Json(new ApiResponse<SupplierQuotationDto>
+                {
+                    Success = false,
+                    ErrorMessage = $"Lỗi: {ex.Message}"
+                });
+            }
+        }
+
+        /// <summary>
+        /// Lấy danh sách parts cho dropdown
+        /// </summary>
+        [HttpGet("GetParts")]
+        public async Task<IActionResult> GetParts()
+        {
+            try
+            {
+                var endpoint = ApiEndpoints.Parts.GetAll + "?pageNumber=1&pageSize=1000";
+                var response = await _apiService.GetAsync<PagedResponse<PartDto>>(endpoint);
+                
+                if (response.Success && response.Data != null && response.Data.Data != null)
+                {
+                    // Filter only active parts (API should already filter deleted, but double check)
+                    var activeParts = response.Data.Data
+                        .Where(p => p.IsActive)
+                        .ToList();
+                    return Json(activeParts);
+                }
+                else
+                {
+                    return Json(new List<PartDto>());
+                }
+            }
+            catch (Exception ex)
+            {
+                return Json(new List<PartDto>());
+            }
+        }
+
+        #endregion
     }
 
 }

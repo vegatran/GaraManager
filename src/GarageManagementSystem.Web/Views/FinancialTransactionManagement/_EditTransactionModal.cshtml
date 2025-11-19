@@ -1,0 +1,113 @@
+<!-- Edit Financial Transaction Modal -->
+<div class="modal fade" id="editTransactionModal" tabindex="-1" role="dialog" data-backdrop="static" data-keyboard="false">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h4 class="modal-title"><i class="fas fa-edit mr-2"></i>Chỉnh Sửa Phiếu Tài Chính</h4>
+                <button type="button" class="close text-white" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <form id="editTransactionForm">
+                <input type="hidden" id="editTransactionId" name="Id">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="editTransactionType">Loại Giao Dịch <span class="text-danger">*</span></label>
+                                <select class="form-control form-control-sm" id="editTransactionType" name="TransactionType" required>
+                                    <option value="">-- Chọn Loại --</option>
+                                    <option value="Income">Thu</option>
+                                    <option value="Expense">Chi</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="editCategory">Danh Mục <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control form-control-sm" id="editCategory" name="Category" required placeholder="Ví dụ: Service Revenue, Parts Purchase">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="editSubCategory">Danh Mục Phụ</label>
+                                <input type="text" class="form-control form-control-sm" id="editSubCategory" name="SubCategory" placeholder="Ví dụ: Service Order, Labor">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="editAmount">Số Tiền <span class="text-danger">*</span></label>
+                                <input type="number" step="0.01" min="0" class="form-control form-control-sm" id="editAmount" name="Amount" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="editTransactionDate">Ngày Giao Dịch <span class="text-danger">*</span></label>
+                                <input type="datetime-local" class="form-control form-control-sm" id="editTransactionDate" name="TransactionDate" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="editPaymentMethod">Phương Thức Thanh Toán <span class="text-danger">*</span></label>
+                                <select class="form-control form-control-sm" id="editPaymentMethod" name="PaymentMethod" required>
+                                    <option value="">-- Chọn Phương Thức --</option>
+                                    <option value="Cash">Tiền mặt</option>
+                                    <option value="Bank Transfer">Chuyển khoản</option>
+                                    <option value="Credit Card">Thẻ tín dụng</option>
+                                    <option value="Check">Séc</option>
+                                    <option value="E-Wallet">Ví điện tử</option>
+                                    <option value="Other">Khác</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="editReferenceNumber">Số Tham Chiếu</label>
+                                <input type="text" class="form-control form-control-sm" id="editReferenceNumber" name="ReferenceNumber" placeholder="Ví dụ: Receipt number, Invoice number">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="editEmployeeId">Người Tạo</label>
+                                <select class="form-control form-control-sm select2" id="editEmployeeId" name="EmployeeId" style="width: 100%;">
+                                    <option value="">-- Chọn Nhân Viên --</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label for="editDescription">Mô Tả</label>
+                                <textarea class="form-control form-control-sm" id="editDescription" name="Description" rows="2" placeholder="Mô tả chi tiết giao dịch"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label for="editNotes">Ghi Chú</label>
+                                <textarea class="form-control form-control-sm" id="editNotes" name="Notes" rows="2" placeholder="Ghi chú bổ sung"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">
+                        <i class="fas fa-times mr-1"></i> Hủy
+                    </button>
+                    <button type="submit" class="btn btn-warning btn-sm">
+                        <i class="fas fa-save mr-1"></i> Cập Nhật
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+

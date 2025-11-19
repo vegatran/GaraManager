@@ -84,20 +84,17 @@ namespace GarageManagementSystem.API.Controllers
                 // Order by OrderDate descending
                 query = query.OrderByDescending(so => so.OrderDate);
 
-                // ✅ OPTIMIZED: Get total count ở database level (trước khi paginate)
-                var totalCount = await query.CountAsync();
-                
-                // ✅ OPTIMIZED: Apply pagination ở database level với Skip/Take
-                var orders = await query
-                    .Skip((pageNumber - 1) * pageSize)
-                    .Take(pageSize)
+                // ✅ OPTIMIZED: Apply Include before pagination
+                query = query
                     .Include(so => so.Customer)
                     .Include(so => so.Vehicle)
                     .Include(so => so.ServiceOrderItems)
                         .ThenInclude(item => item.Service)
                     .Include(so => so.ServiceOrderItems)
-                        .ThenInclude(item => item.AssignedTechnician)
-                    .ToListAsync();
+                        .ThenInclude(item => item.AssignedTechnician);
+                
+                // ✅ OPTIMIZED: Get paged results with total count - automatically chooses best method
+                var (orders, totalCount) = await query.ToPagedListWithCountAsync(pageNumber, pageSize, _context);
                 
                 var orderDtos = new List<ServiceOrderDto>();
                 foreach (var order in orders)

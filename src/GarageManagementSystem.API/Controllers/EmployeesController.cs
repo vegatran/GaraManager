@@ -58,16 +58,13 @@ namespace GarageManagementSystem.API.Controllers
                     query = query.Where(e => e.Department == department);
                 }
 
-                // ✅ OPTIMIZED: Get total count ở database level (trước khi paginate)
-                var totalCount = await query.CountAsync();
-                
-                // ✅ OPTIMIZED: Apply pagination ở database level với Skip/Take
-                var pagedEmployees = await query
-                    .Skip((pageNumber - 1) * pageSize)
-                    .Take(pageSize)
+                // ✅ OPTIMIZED: Apply Include before pagination
+                query = query
                     .Include(e => e.PositionNavigation)
-                    .Include(e => e.DepartmentNavigation)
-                    .ToListAsync();
+                    .Include(e => e.DepartmentNavigation);
+                
+                // ✅ OPTIMIZED: Get paged results with total count - automatically chooses best method
+                var (pagedEmployees, totalCount) = await query.ToPagedListWithCountAsync(pageNumber, pageSize, _context);
                 
                 var employeeDtos = pagedEmployees.Select(e => _mapper.Map<EmployeeDto>(e)).ToList();
                 

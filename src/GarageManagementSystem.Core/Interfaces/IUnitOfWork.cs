@@ -18,6 +18,7 @@ namespace GarageManagementSystem.Core.Interfaces
         IStockTransactionRepository StockTransactions { get; }
         ISupplierRepository Suppliers { get; }
         IPaymentTransactionRepository PaymentTransactions { get; }
+        IFinancialTransactionRepository FinancialTransactions { get; }
         IAppointmentRepository Appointments { get; }
         IPrintTemplateRepository PrintTemplates { get; }
         ICustomerReceptionRepository CustomerReceptions { get; }
