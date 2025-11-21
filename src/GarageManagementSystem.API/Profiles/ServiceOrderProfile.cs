@@ -13,6 +13,7 @@ namespace GarageManagementSystem.API.Profiles
                 .ForMember(dest => dest.Customer, opt => opt.MapFrom(src => src.Customer))
                 .ForMember(dest => dest.Vehicle, opt => opt.MapFrom(src => src.Vehicle))
                 .ForMember(dest => dest.ServiceOrderItems, opt => opt.MapFrom(src => src.ServiceOrderItems))
+                .ForMember(dest => dest.ServiceOrderParts, opt => opt.MapFrom(src => src.ServiceOrderParts))
                 .ForMember(dest => dest.Warranties, opt => opt.MapFrom(src => src.Warranties.Where(w => !w.IsDeleted)))
                 .ForMember(dest => dest.ServiceOrderFees, opt => opt.MapFrom(src => src.ServiceOrderFees.Where(f => !f.IsDeleted)));
 
@@ -67,6 +68,18 @@ namespace GarageManagementSystem.API.Profiles
                 .ForMember(dest => dest.CompletedTime, opt => opt.MapFrom(src => src.CompletedTime))
                 // ✅ 2.4.3: Map ReworkHours
                 .ForMember(dest => dest.ReworkHours, opt => opt.MapFrom(src => src.ReworkHours));
+
+            CreateMap<ServiceOrderPart, ServiceOrderPartDto>()
+                .ForMember(dest => dest.PartId, opt => opt.MapFrom(src => src.PartId))
+                .ForMember(dest => dest.PartName, opt => opt.MapFrom(src => src.PartName))
+                .ForMember(dest => dest.UnitCost, opt => opt.MapFrom(src => src.UnitCost))
+                .ForMember(dest => dest.UnitPrice, opt => opt.MapFrom(src => src.UnitPrice))
+                .ForMember(dest => dest.TotalPrice, opt => opt.MapFrom(src => src.TotalPrice))
+                .ForMember(dest => dest.Notes, opt => opt.MapFrom(src => src.Notes))
+                .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status))
+                .ForMember(dest => dest.IsWarranty, opt => opt.MapFrom(src => src.IsWarranty))
+                .ForMember(dest => dest.WarrantyUntil, opt => opt.MapFrom(src => src.WarrantyUntil))
+                .ForMember(dest => dest.ReturnDate, opt => opt.MapFrom(src => src.ReturnDate));
 
             CreateMap<CreateServiceOrderItemDto, ServiceOrderItem>()
                 .ForMember(dest => dest.Id, opt => opt.Ignore())

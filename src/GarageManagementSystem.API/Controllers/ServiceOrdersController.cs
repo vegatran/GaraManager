@@ -88,9 +88,9 @@ namespace GarageManagementSystem.API.Controllers
                 query = query
                     .Include(so => so.Customer)
                     .Include(so => so.Vehicle)
-                    .Include(so => so.ServiceOrderItems)
+                    .Include(so => so.ServiceOrderItems.Where(item => !item.IsDeleted))
                         .ThenInclude(item => item.Service)
-                    .Include(so => so.ServiceOrderItems)
+                    .Include(so => so.ServiceOrderItems.Where(item => !item.IsDeleted))
                         .ThenInclude(item => item.AssignedTechnician);
                 
                 // ✅ OPTIMIZED: Get paged results with total count - automatically chooses best method
@@ -272,6 +272,16 @@ namespace GarageManagementSystem.API.Controllers
                     _ => "Pending"                     // Thanh toán khách hàng
                 };
 
+                Core.Entities.ServiceQuotation? sourceQuotation = null;
+                if (createDto.ServiceQuotationId.HasValue)
+                {
+                    sourceQuotation = await _unitOfWork.ServiceQuotations.GetByIdWithDetailsAsync(createDto.ServiceQuotationId.Value);
+                    if (sourceQuotation == null)
+                    {
+                        return BadRequest(ApiResponse<ServiceOrderDto>.ErrorResult("Không tìm thấy báo giá gốc"));
+                    }
+                }
+
                 // Tạo đơn hàng bằng AutoMapper
                 var order = _mapper.Map<Core.Entities.ServiceOrder>(createDto);
                 order.OrderNumber = GenerateOrderNumber();
@@ -284,11 +294,12 @@ namespace GarageManagementSystem.API.Controllers
 
                 // Calculate totals and add service items
                 decimal totalAmount = 0;
-                if (createDto.ServiceQuotationId.HasValue && (createDto.ServiceOrderItems == null || !createDto.ServiceOrderItems.Any()))
+                if (sourceQuotation != null && (createDto.ServiceOrderItems == null || !createDto.ServiceOrderItems.Any()))
                 {
                     // Tự động copy items từ báo giá nếu client không gửi service items
-                    var quotationItems = await _unitOfWork.ServiceQuotationItems
-                        .FindAsync(i => i.ServiceQuotationId == createDto.ServiceQuotationId.Value);
+                    var quotationItems = sourceQuotation.Items
+                        .Where(i => !i.IsDeleted)
+                        .ToList();
                     foreach (var qItem in quotationItems)
                     {
                         // ✅ SỬA: Xử lý labor items (tiền công) không có ServiceId/PartId
@@ -339,7 +350,7 @@ namespace GarageManagementSystem.API.Controllers
                             var orderPart = new Core.Entities.ServiceOrderPart
                             {
                                 PartId = part.Id,
-                                PartName = part.PartName,
+                            PartName = !string.IsNullOrEmpty(qItem.ItemName) ? qItem.ItemName : part.PartName,
                                 Quantity = qItem.Quantity,
                                 UnitCost = part.AverageCostPrice,
                                 UnitPrice = qItem.UnitPrice,
@@ -359,8 +370,8 @@ namespace GarageManagementSystem.API.Controllers
                 }
                 else
                 {
-                foreach (var itemDto in createDto.ServiceOrderItems)
-                {
+                    foreach (var itemDto in createDto.ServiceOrderItems)
+                    {
                         // ✅ SỬA: Kiểm tra ServiceId có giá trị không (có thể null cho labor items)
                         if (!itemDto.ServiceId.HasValue)
                         {
@@ -399,8 +410,27 @@ namespace GarageManagementSystem.API.Controllers
                     }
                 }
 
-                order.TotalAmount = totalAmount;
-                order.FinalAmount = totalAmount - order.DiscountAmount;
+                var serviceTotal = order.ServiceOrderItems.Sum(i => i.TotalPrice);
+                var partsTotal = order.ServiceOrderParts.Sum(p => p.TotalPrice);
+
+                order.ServiceTotal = serviceTotal;
+                order.PartsTotal = partsTotal;
+
+                if (sourceQuotation != null)
+                {
+                    order.SubTotal = sourceQuotation.SubTotal;
+                    order.VATAmount = sourceQuotation.VATAmount;
+                    order.DiscountAmount = sourceQuotation.DiscountAmount;
+                    order.TotalAmount = sourceQuotation.TotalAmount;
+                    order.FinalAmount = sourceQuotation.TotalAmount;
+                }
+                else
+                {
+                    order.SubTotal = totalAmount;
+                    order.VATAmount = 0;
+                    order.TotalAmount = totalAmount;
+                    order.FinalAmount = totalAmount - order.DiscountAmount;
+                }
 
                 // Bắt đầu transaction để đảm bảo tính toàn vẹn dữ liệu
                 await _unitOfWork.BeginTransactionAsync();
@@ -743,6 +773,11 @@ namespace GarageManagementSystem.API.Controllers
             if (order.ServiceOrderFees != null && order.ServiceOrderFees.Count > 0)
             {
                 dto.ServiceOrderFees = _mapper.Map<List<ServiceOrderFeeDto>>(order.ServiceOrderFees.Where(f => !f.IsDeleted));
+            }
+
+            if (order.ServiceOrderParts != null && order.ServiceOrderParts.Count > 0)
+            {
+                dto.ServiceOrderParts = _mapper.Map<List<ServiceOrderPartDto>>(order.ServiceOrderParts.Where(p => !p.IsDeleted));
             }
             
             return dto;

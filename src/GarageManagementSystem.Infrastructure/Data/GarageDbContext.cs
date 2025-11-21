@@ -144,11 +144,23 @@ namespace GarageManagementSystem.Infrastructure.Data
                 entity.Property(e => e.Address).HasMaxLength(500);
                 entity.Property(e => e.Gender).HasMaxLength(20);
                 
-                // Unique index chỉ áp dụng cho bản ghi chưa xóa (IsDeleted = false)
-                entity.HasIndex(e => e.Phone)
+                // ✅ FIX: Shadow properties for computed unique indexes (chỉ enforce với bản ghi chưa xóa)
+                // Email unique chỉ áp dụng khi IsDeleted = false
+                entity.Property<string>("EmailUnique")
+                    .HasMaxLength(200)
+                    .HasColumnType("varchar(200)")
+                    .HasComputedColumnSql("CASE WHEN (`IsDeleted` = 0 AND `Email` IS NOT NULL AND `Email` != '') THEN `Email` ELSE NULL END", stored: true);
+
+                entity.HasIndex("EmailUnique")
                     .IsUnique();
-                    
-                entity.HasIndex(e => e.Email)
+                
+                // Phone unique chỉ áp dụng khi IsDeleted = false
+                entity.Property<string>("PhoneUnique")
+                    .HasMaxLength(20)
+                    .HasColumnType("varchar(20)")
+                    .HasComputedColumnSql("CASE WHEN (`IsDeleted` = 0 AND `Phone` IS NOT NULL AND `Phone` != '') THEN `Phone` ELSE NULL END", stored: true);
+
+                entity.HasIndex("PhoneUnique")
                     .IsUnique();
             });
 
@@ -183,16 +195,23 @@ namespace GarageManagementSystem.Infrastructure.Data
                 entity.Property(e => e.Department).HasMaxLength(100);
                 entity.Property(e => e.CostCenter).HasMaxLength(50);
                 
-                // Shadow property for computed unique index (chỉ enforce với bản ghi chưa xóa)
+                // ✅ FIX: Shadow properties for computed unique indexes (chỉ enforce với bản ghi chưa xóa)
+                // LicensePlate unique chỉ áp dụng khi IsDeleted = false
                 entity.Property<string>("LicensePlateUnique")
                     .HasMaxLength(20)
                     .HasColumnType("varchar(20)")
-                    .HasComputedColumnSql("CASE WHEN (`IsDeleted` = 0) THEN `LicensePlate` ELSE NULL END", stored: true);
+                    .HasComputedColumnSql("CASE WHEN (`IsDeleted` = 0 AND `LicensePlate` IS NOT NULL AND `LicensePlate` != '') THEN `LicensePlate` ELSE NULL END", stored: true);
 
                 entity.HasIndex("LicensePlateUnique")
                     .IsUnique();
-                    
-                entity.HasIndex(e => e.VIN)
+                
+                // ✅ FIX: VIN unique chỉ áp dụng khi IsDeleted = false
+                entity.Property<string>("VINUnique")
+                    .HasMaxLength(17)
+                    .HasColumnType("varchar(17)")
+                    .HasComputedColumnSql("CASE WHEN (`IsDeleted` = 0 AND `VIN` IS NOT NULL AND `VIN` != '') THEN `VIN` ELSE NULL END", stored: true);
+
+                entity.HasIndex("VINUnique")
                     .IsUnique();
 
                 entity.HasOne(e => e.Customer)
@@ -226,8 +245,21 @@ namespace GarageManagementSystem.Infrastructure.Data
                 entity.Property(e => e.WarrantyCode).HasMaxLength(50);
                 entity.Property(e => e.WarrantyExpiryDate).HasColumnType("datetime(6)");
                 
-                // Unique index cho OrderNumber (chỉ áp dụng cho bản ghi chưa xóa)
-                entity.HasIndex(e => e.OrderNumber)
+                // ✅ FIX: Shadow property for computed unique index (chỉ enforce với bản ghi chưa xóa)
+                // OrderNumber unique chỉ áp dụng khi IsDeleted = false
+                entity.Property<string>("OrderNumberUnique")
+                    .HasMaxLength(50)
+                    .HasColumnType("varchar(50)")
+                    .HasComputedColumnSql("CASE WHEN (`IsDeleted` = 0 AND `OrderNumber` IS NOT NULL AND `OrderNumber` != '') THEN `OrderNumber` ELSE NULL END", stored: true);
+
+                entity.HasIndex("OrderNumberUnique")
+                    .IsUnique();
+
+                entity.Property<int?>("ServiceQuotationIdUnique")
+                    .HasColumnType("int")
+                    .HasComputedColumnSql("CASE WHEN (`IsDeleted` = 0 AND `ServiceQuotationId` IS NOT NULL) THEN `ServiceQuotationId` ELSE NULL END", stored: true);
+
+                entity.HasIndex("ServiceQuotationIdUnique")
                     .IsUnique();
 
                 entity.HasOne(e => e.Customer)
@@ -246,7 +278,16 @@ namespace GarageManagementSystem.Infrastructure.Data
             {
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.WarrantyCode).IsRequired().HasMaxLength(50);
-                entity.HasIndex(e => e.WarrantyCode).IsUnique();
+                
+                // ✅ FIX: Shadow property for computed unique index (chỉ enforce với bản ghi chưa xóa)
+                // WarrantyCode unique chỉ áp dụng khi IsDeleted = false
+                entity.Property<string>("WarrantyCodeUnique")
+                    .HasMaxLength(50)
+                    .HasColumnType("varchar(50)")
+                    .HasComputedColumnSql("CASE WHEN (`IsDeleted` = 0 AND `WarrantyCode` IS NOT NULL AND `WarrantyCode` != '') THEN `WarrantyCode` ELSE NULL END", stored: true);
+
+                entity.HasIndex("WarrantyCodeUnique")
+                    .IsUnique();
                 entity.Property(e => e.Status).HasMaxLength(20);
                 entity.Property(e => e.Notes).HasMaxLength(1000);
                 entity.Property(e => e.HandoverBy).HasMaxLength(50);
@@ -297,7 +338,16 @@ namespace GarageManagementSystem.Infrastructure.Data
             {
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.ClaimNumber).IsRequired().HasMaxLength(50);
-                entity.HasIndex(e => e.ClaimNumber).IsUnique();
+                
+                // ✅ FIX: Shadow property for computed unique index (chỉ enforce với bản ghi chưa xóa)
+                // ClaimNumber unique chỉ áp dụng khi IsDeleted = false
+                entity.Property<string>("ClaimNumberUnique")
+                    .HasMaxLength(50)
+                    .HasColumnType("varchar(50)")
+                    .HasComputedColumnSql("CASE WHEN (`IsDeleted` = 0 AND `ClaimNumber` IS NOT NULL AND `ClaimNumber` != '') THEN `ClaimNumber` ELSE NULL END", stored: true);
+
+                entity.HasIndex("ClaimNumberUnique")
+                    .IsUnique();
                 entity.Property(e => e.IssueDescription).HasMaxLength(1000);
                 entity.Property(e => e.Status).HasMaxLength(20);
                 entity.Property(e => e.Resolution).HasMaxLength(1000);
@@ -456,7 +506,15 @@ namespace GarageManagementSystem.Infrastructure.Data
             // MaterialRequest configuration
             modelBuilder.Entity<MaterialRequest>(entity =>
             {
-                entity.HasIndex(e => e.MRNumber).IsUnique();
+                // ✅ FIX: Shadow property for computed unique index (chỉ enforce với bản ghi chưa xóa)
+                // MRNumber unique chỉ áp dụng khi IsDeleted = false
+                entity.Property<string>("MRNumberUnique")
+                    .HasMaxLength(50)
+                    .HasColumnType("varchar(50)")
+                    .HasComputedColumnSql("CASE WHEN (`IsDeleted` = 0 AND `MRNumber` IS NOT NULL AND `MRNumber` != '') THEN `MRNumber` ELSE NULL END", stored: true);
+
+                entity.HasIndex("MRNumberUnique")
+                    .IsUnique();
                 entity.Property(e => e.Status).HasConversion<int>();
                 entity.HasOne(e => e.ServiceOrder)
                       .WithMany()
@@ -525,8 +583,14 @@ namespace GarageManagementSystem.Infrastructure.Data
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.InspectionNumber).IsRequired().HasMaxLength(50);
                 
-                // Unique index cho InspectionNumber (chỉ áp dụng cho bản ghi chưa xóa)
-                entity.HasIndex(e => e.InspectionNumber)
+                // ✅ FIX: Shadow property for computed unique index (chỉ enforce với bản ghi chưa xóa)
+                // InspectionNumber unique chỉ áp dụng khi IsDeleted = false
+                entity.Property<string>("InspectionNumberUnique")
+                    .HasMaxLength(50)
+                    .HasColumnType("varchar(50)")
+                    .HasComputedColumnSql("CASE WHEN (`IsDeleted` = 0 AND `InspectionNumber` IS NOT NULL AND `InspectionNumber` != '') THEN `InspectionNumber` ELSE NULL END", stored: true);
+
+                entity.HasIndex("InspectionNumberUnique")
                     .IsUnique();
                 entity.Property(e => e.InspectionType).HasMaxLength(50);
                 entity.Property(e => e.FuelLevel).HasMaxLength(20);
@@ -707,8 +771,14 @@ namespace GarageManagementSystem.Infrastructure.Data
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.QuotationNumber).IsRequired().HasMaxLength(50);
                 
-                // Unique index cho QuotationNumber (chỉ áp dụng cho bản ghi chưa xóa)
-                entity.HasIndex(e => e.QuotationNumber)
+                // ✅ FIX: Shadow property for computed unique index (chỉ enforce với bản ghi chưa xóa)
+                // QuotationNumber unique chỉ áp dụng khi IsDeleted = false
+                entity.Property<string>("QuotationNumberUnique")
+                    .HasMaxLength(50)
+                    .HasColumnType("varchar(50)")
+                    .HasComputedColumnSql("CASE WHEN (`IsDeleted` = 0 AND `QuotationNumber` IS NOT NULL AND `QuotationNumber` != '') THEN `QuotationNumber` ELSE NULL END", stored: true);
+
+                entity.HasIndex("QuotationNumberUnique")
                     .IsUnique();
                 entity.Property(e => e.Status).HasMaxLength(20);
                 entity.Property(e => e.SubTotal).HasColumnType("decimal(18,2)");
@@ -816,15 +886,32 @@ namespace GarageManagementSystem.Infrastructure.Data
                 entity.Property(e => e.Barcode).HasMaxLength(150);
                 entity.Property(e => e.DefaultUnit).HasMaxLength(20);
                 
-                // Unique index cho PartNumber (chỉ áp dụng cho bản ghi chưa xóa)
-                entity.HasIndex(e => e.PartNumber)
-                    .IsUnique();
-                    // Note: MySQL filtered index syntax is different, handled at database level
+                // ✅ FIX: Shadow properties for computed unique indexes (chỉ enforce với bản ghi chưa xóa)
+                // PartNumber unique chỉ áp dụng khi IsDeleted = false
+                entity.Property<string>("PartNumberUnique")
+                    .HasMaxLength(50)
+                    .HasColumnType("varchar(50)")
+                    .HasComputedColumnSql("CASE WHEN (`IsDeleted` = 0 AND `PartNumber` IS NOT NULL AND `PartNumber` != '') THEN `PartNumber` ELSE NULL END", stored: true);
 
-                entity.HasIndex(e => e.Sku)
+                entity.HasIndex("PartNumberUnique")
                     .IsUnique();
 
-                entity.HasIndex(e => e.Barcode)
+                // Sku unique chỉ áp dụng khi IsDeleted = false
+                entity.Property<string>("SkuUnique")
+                    .HasMaxLength(100)
+                    .HasColumnType("varchar(100)")
+                    .HasComputedColumnSql("CASE WHEN (`IsDeleted` = 0 AND `Sku` IS NOT NULL AND `Sku` != '') THEN `Sku` ELSE NULL END", stored: true);
+
+                entity.HasIndex("SkuUnique")
+                    .IsUnique();
+
+                // Barcode unique chỉ áp dụng khi IsDeleted = false
+                entity.Property<string>("BarcodeUnique")
+                    .HasMaxLength(150)
+                    .HasColumnType("varchar(150)")
+                    .HasComputedColumnSql("CASE WHEN (`IsDeleted` = 0 AND `Barcode` IS NOT NULL AND `Barcode` != '') THEN `Barcode` ELSE NULL END", stored: true);
+
+                entity.HasIndex("BarcodeUnique")
                     .IsUnique();
             });
 
@@ -925,10 +1012,15 @@ namespace GarageManagementSystem.Infrastructure.Data
                 entity.Property(e => e.SupplierCode).IsRequired().HasMaxLength(50);
                 entity.Property(e => e.SupplierName).IsRequired().HasMaxLength(200);
                 
-                // Unique index cho SupplierCode (chỉ áp dụng cho bản ghi chưa xóa)
-                entity.HasIndex(e => e.SupplierCode)
+                // ✅ FIX: Shadow property for computed unique index (chỉ enforce với bản ghi chưa xóa)
+                // SupplierCode unique chỉ áp dụng khi IsDeleted = false
+                entity.Property<string>("SupplierCodeUnique")
+                    .HasMaxLength(50)
+                    .HasColumnType("varchar(50)")
+                    .HasComputedColumnSql("CASE WHEN (`IsDeleted` = 0 AND `SupplierCode` IS NOT NULL AND `SupplierCode` != '') THEN `SupplierCode` ELSE NULL END", stored: true);
+
+                entity.HasIndex("SupplierCodeUnique")
                     .IsUnique();
-                    // Note: MySQL filtered index syntax is different, handled at database level
             });
 
             // StockTransaction configuration
@@ -939,8 +1031,14 @@ namespace GarageManagementSystem.Infrastructure.Data
                 entity.Property(e => e.UnitPrice).HasColumnType("decimal(18,2)");
                 entity.Property(e => e.TotalAmount).HasColumnType("decimal(18,2)");
                 
-                // Unique index cho TransactionNumber (chỉ áp dụng cho bản ghi chưa xóa)
-                entity.HasIndex(e => e.TransactionNumber)
+                // ✅ FIX: Shadow property for computed unique index (chỉ enforce với bản ghi chưa xóa)
+                // TransactionNumber unique chỉ áp dụng khi IsDeleted = false
+                entity.Property<string>("TransactionNumberUnique")
+                    .HasMaxLength(50)
+                    .HasColumnType("varchar(50)")
+                    .HasComputedColumnSql("CASE WHEN (`IsDeleted` = 0 AND `TransactionNumber` IS NOT NULL AND `TransactionNumber` != '') THEN `TransactionNumber` ELSE NULL END", stored: true);
+
+                entity.HasIndex("TransactionNumberUnique")
                     .IsUnique();
 
                 entity.HasOne(e => e.Part)
@@ -990,8 +1088,14 @@ namespace GarageManagementSystem.Infrastructure.Data
                 entity.Property(e => e.ReceiptNumber).IsRequired().HasMaxLength(50);
                 entity.Property(e => e.Amount).HasColumnType("decimal(18,2)");
                 
-                // Unique index cho ReceiptNumber (chỉ áp dụng cho bản ghi chưa xóa)
-                entity.HasIndex(e => e.ReceiptNumber)
+                // ✅ FIX: Shadow property for computed unique index (chỉ enforce với bản ghi chưa xóa)
+                // ReceiptNumber unique chỉ áp dụng khi IsDeleted = false
+                entity.Property<string>("ReceiptNumberUnique")
+                    .HasMaxLength(50)
+                    .HasColumnType("varchar(50)")
+                    .HasComputedColumnSql("CASE WHEN (`IsDeleted` = 0 AND `ReceiptNumber` IS NOT NULL AND `ReceiptNumber` != '') THEN `ReceiptNumber` ELSE NULL END", stored: true);
+
+                entity.HasIndex("ReceiptNumberUnique")
                     .IsUnique();
 
                 entity.HasOne(e => e.ServiceOrder)
@@ -1059,8 +1163,14 @@ namespace GarageManagementSystem.Infrastructure.Data
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.AppointmentNumber).IsRequired().HasMaxLength(50);
                 
-                // Unique index cho AppointmentNumber (chỉ áp dụng cho bản ghi chưa xóa)
-                entity.HasIndex(e => e.AppointmentNumber)
+                // ✅ FIX: Shadow property for computed unique index (chỉ enforce với bản ghi chưa xóa)
+                // AppointmentNumber unique chỉ áp dụng khi IsDeleted = false
+                entity.Property<string>("AppointmentNumberUnique")
+                    .HasMaxLength(50)
+                    .HasColumnType("varchar(50)")
+                    .HasComputedColumnSql("CASE WHEN (`IsDeleted` = 0 AND `AppointmentNumber` IS NOT NULL AND `AppointmentNumber` != '') THEN `AppointmentNumber` ELSE NULL END", stored: true);
+
+                entity.HasIndex("AppointmentNumberUnique")
                     .IsUnique();
 
                 entity.HasOne(e => e.Customer)
@@ -1656,8 +1766,14 @@ namespace GarageManagementSystem.Infrastructure.Data
                 entity.Property(e => e.VehicleMake).HasMaxLength(50);
                 entity.Property(e => e.VehicleModel).HasMaxLength(50);
 
-                // Unique index cho ReceptionNumber
-                entity.HasIndex(e => e.ReceptionNumber)
+                // ✅ FIX: Shadow property for computed unique index (chỉ enforce với bản ghi chưa xóa)
+                // ReceptionNumber unique chỉ áp dụng khi IsDeleted = false
+                entity.Property<string>("ReceptionNumberUnique")
+                    .HasMaxLength(50)
+                    .HasColumnType("varchar(50)")
+                    .HasComputedColumnSql("CASE WHEN (`IsDeleted` = 0 AND `ReceptionNumber` IS NOT NULL AND `ReceptionNumber` != '') THEN `ReceptionNumber` ELSE NULL END", stored: true);
+
+                entity.HasIndex("ReceptionNumberUnique")
                     .IsUnique();
 
                 // Foreign key relationships
@@ -1688,7 +1804,16 @@ namespace GarageManagementSystem.Infrastructure.Data
             {
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.AdjustmentNumber).IsRequired().HasMaxLength(50);
-                entity.HasIndex(e => e.AdjustmentNumber).IsUnique();
+                
+                // ✅ FIX: Shadow property for computed unique index (chỉ enforce với bản ghi chưa xóa)
+                // AdjustmentNumber unique chỉ áp dụng khi IsDeleted = false
+                entity.Property<string>("AdjustmentNumberUnique")
+                    .HasMaxLength(50)
+                    .HasColumnType("varchar(50)")
+                    .HasComputedColumnSql("CASE WHEN (`IsDeleted` = 0 AND `AdjustmentNumber` IS NOT NULL AND `AdjustmentNumber` != '') THEN `AdjustmentNumber` ELSE NULL END", stored: true);
+
+                entity.HasIndex("AdjustmentNumberUnique")
+                    .IsUnique();
                 entity.Property(e => e.Status).IsRequired().HasMaxLength(50).HasDefaultValue("Pending");
                 entity.Property(e => e.Reason).HasMaxLength(1000);
                 entity.Property(e => e.RejectionReason).HasMaxLength(1000);

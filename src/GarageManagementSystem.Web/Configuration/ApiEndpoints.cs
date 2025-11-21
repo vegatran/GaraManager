@@ -475,6 +475,9 @@ namespace GarageManagementSystem.Web.Configuration
             public const string CreatePhase2 = "setup/create-phase-2";
             public const string CreatePhase3 = "setup/create-phase-3";
             public const string CreatePhase4 = "setup/create-phase-4";
+            public const string ClearPhase1 = "setup/clear-phase-1";
+            public const string ClearPhase2 = "setup/clear-phase-2";
+            public const string ClearPhase3 = "setup/clear-phase-3";
         }
 
         /// <summary>

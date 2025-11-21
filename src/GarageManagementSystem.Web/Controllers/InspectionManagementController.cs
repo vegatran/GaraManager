@@ -286,11 +286,13 @@ namespace GarageManagementSystem.Web.Controllers
         {
             try
             {
+                // ✅ FIX: API trả về ApiResponse<VehicleInspectionDto>, ApiService cũng wrap thành ApiResponse
+                // Đổi sang GetAsync<VehicleInspectionDto> để tránh double nesting
                 // Load inspection data
-                var inspectionResponse = await _apiService.GetAsync<ApiResponse<VehicleInspectionDto>>(
+                var inspectionResponse = await _apiService.GetAsync<VehicleInspectionDto>(
                     ApiEndpoints.VehicleInspections.GetById.Replace("{0}", id.ToString()));
                 
-                if (!inspectionResponse.Success || inspectionResponse.Data?.Data == null)
+                if (!inspectionResponse.Success || inspectionResponse.Data == null)
                 {
                     return NotFound("Không tìm thấy phiếu kiểm tra xe");
                 }
@@ -301,7 +303,8 @@ namespace GarageManagementSystem.Web.Controllers
                 
                 var template = templateResponse.Success ? templateResponse.Data : null;
 
-                var inspection = inspectionResponse.Data.Data;
+                // ✅ FIX: response.Data giờ là VehicleInspectionDto trực tiếp (không cần .Data.Data)
+                var inspection = inspectionResponse.Data;
 
                 // Create view model
                 var viewModel = new PrintInspectionViewModel

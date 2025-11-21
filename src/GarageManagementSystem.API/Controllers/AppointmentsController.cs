@@ -39,14 +39,21 @@ namespace GarageManagementSystem.API.Controllers
         {
             try
             {
-                var appointments = await _unitOfWork.Appointments.GetAllWithDetailsAsync();
-                var query = appointments.AsQueryable();
+                // ✅ FIX: Query trực tiếp từ DbContext thay vì load tất cả vào memory
+                // GetAllWithDetailsAsync() trả về IEnumerable, .AsQueryable() chỉ tạo in-memory queryable
+                // Không có IAsyncQueryProvider → không thể dùng async operations
+                var query = _context.Appointments
+                    .Include(a => a.Customer)
+                    .Include(a => a.Vehicle)
+                    .Include(a => a.AssignedTo)
+                    .Where(a => !a.IsDeleted)
+                    .AsQueryable();
                 
                 // Apply search filter if provided
                 if (!string.IsNullOrEmpty(searchTerm))
                 {
                     query = query.Where(a => 
-                        a.CustomerNotes.Contains(searchTerm));
+                        (a.CustomerNotes != null && a.CustomerNotes.Contains(searchTerm)));
                 }
                 
                 // Apply status filter if provided

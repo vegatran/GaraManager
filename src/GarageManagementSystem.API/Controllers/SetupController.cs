@@ -121,6 +121,63 @@ namespace GarageManagementSystem.API.Controllers
             }
         }
 
+        [HttpPost("clear-phase-1")]
+        public async Task<ActionResult<ApiResponse<object>>> ClearPhase1DemoData()
+        {
+            try
+            {
+                var summary = await ClearPhase1Async();
+                return Ok(ApiResponse<object>.SuccessResult(new
+                {
+                    message = "Đã xóa dữ liệu Phase 1",
+                    phase = "Phase 1",
+                    cleared = summary
+                }));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<object>.ErrorResult("Lỗi khi xóa dữ liệu Phase 1", ex.Message));
+            }
+        }
+
+        [HttpPost("clear-phase-2")]
+        public async Task<ActionResult<ApiResponse<object>>> ClearPhase2DemoData()
+        {
+            try
+            {
+                var summary = await ClearPhase2Async();
+                return Ok(ApiResponse<object>.SuccessResult(new
+                {
+                    message = "Đã xóa dữ liệu Phase 2",
+                    phase = "Phase 2",
+                    cleared = summary
+                }));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<object>.ErrorResult("Lỗi khi xóa dữ liệu Phase 2", ex.Message));
+            }
+        }
+
+        [HttpPost("clear-phase-3")]
+        public async Task<ActionResult<ApiResponse<object>>> ClearPhase3DemoData()
+        {
+            try
+            {
+                var summary = await ClearPhase3Async();
+                return Ok(ApiResponse<object>.SuccessResult(new
+                {
+                    message = "Đã xóa dữ liệu Phase 3",
+                    phase = "Phase 3",
+                    cleared = summary
+                }));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<object>.ErrorResult("Lỗi khi xóa dữ liệu Phase 3", ex.Message));
+            }
+        }
+
         /// <summary>
         /// Xóa toàn bộ dữ liệu hiện có và tạo lại dataset demo đầy đủ
         /// </summary>
@@ -256,15 +313,56 @@ namespace GarageManagementSystem.API.Controllers
             {
                 // ✅ Rollback transaction nếu có lỗi
                 await transaction.RollbackAsync();
-                var errorResponse = ApiResponse<object>.ErrorResult(ex.Message);
-                errorResponse.Data = new { message = ex.Message, seeded };
+                // ✅ FIX: Đảm bảo luôn có message, không được rỗng
+                var errorMessage = !string.IsNullOrWhiteSpace(ex.Message) 
+                    ? ex.Message 
+                    : "Có lỗi xảy ra khi tạo demo data cho Giai đoạn 1";
+                
+                // ✅ FIX: Nếu vẫn rỗng, thêm thông tin từ seeded list
+                if (string.IsNullOrWhiteSpace(errorMessage))
+                {
+                    errorMessage = "Có lỗi xảy ra khi tạo demo data cho Giai đoạn 1";
+                    if (seeded.Any())
+                    {
+                        var lastFailed = seeded.LastOrDefault(s => s.GetType().GetProperty("success")?.GetValue(s)?.ToString() == "False");
+                        if (lastFailed != null)
+                        {
+                            var lastMessage = lastFailed.GetType().GetProperty("message")?.GetValue(lastFailed)?.ToString();
+                            if (!string.IsNullOrWhiteSpace(lastMessage))
+                            {
+                                errorMessage = lastMessage;
+                            }
+                        }
+                    }
+                }
+                
+                var errorResponse = ApiResponse<object>.ErrorResult(errorMessage);
+                errorResponse.Data = new { message = errorMessage, seeded, error = ex.Message ?? "Unknown error" };
                 return BadRequest(errorResponse);
             }
             catch (Exception ex)
             {
                 // ✅ Rollback transaction nếu có exception
                 await transaction.RollbackAsync();
-                return StatusCode(500, ApiResponse<object>.ErrorResult("Lỗi khi tạo demo data cho Giai đoạn 1", ex.Message));
+                // ✅ FIX: Đảm bảo luôn có message, không được rỗng
+                var errorMessage = !string.IsNullOrWhiteSpace(ex.Message) 
+                    ? $"Lỗi khi tạo demo data cho Giai đoạn 1: {ex.Message}" 
+                    : "Có lỗi xảy ra khi tạo demo data cho Giai đoạn 1 (không có thông báo lỗi cụ thể)";
+                    
+                if (ex.InnerException != null && !string.IsNullOrWhiteSpace(ex.InnerException.Message))
+                {
+                    errorMessage += $" Chi tiết: {ex.InnerException.Message}";
+                }
+                
+                // ✅ FIX: Nếu vẫn rỗng, thêm thông tin từ exception type
+                if (string.IsNullOrWhiteSpace(errorMessage))
+                {
+                    errorMessage = $"Lỗi khi tạo demo data cho Giai đoạn 1: {ex.GetType().Name}";
+                }
+                
+                var errorResponse = ApiResponse<object>.ErrorResult(errorMessage);
+                errorResponse.Data = new { message = errorMessage, seeded, error = ex.Message ?? ex.GetType().Name, innerError = ex.InnerException?.Message };
+                return StatusCode(500, errorResponse);
             }
         }
 
@@ -510,67 +608,185 @@ namespace GarageManagementSystem.API.Controllers
             await ClearAsync("WarehouseZones", _unitOfWork.WarehouseZones);
             await ClearAsync("Warehouses", _unitOfWork.Warehouses);
 
-                await _unitOfWork.SaveChangesAsync();
+            await _unitOfWork.SaveChangesAsync();
+            return summary;
+        }
+
+        private async Task ClearEntitiesAsync<T>(List<object> summary, string name, IGenericRepository<T> repository) where T : BaseEntity
+        {
+            var entities = (await repository.GetAllAsync()).ToList();
+            if (!entities.Any())
+            {
+                return;
+            }
+
+            foreach (var entity in entities)
+            {
+                await repository.DeleteAsync(entity);
+            }
+
+            summary.Add(new { entity = name, cleared = entities.Count });
+        }
+
+        private async Task<List<object>> ClearPhase1Async()
+        {
+            var summary = new List<object>();
+            await ClearEntitiesAsync(summary, "Appointments", _unitOfWork.Appointments);
+            await ClearEntitiesAsync(summary, "Quotations", _unitOfWork.ServiceQuotations);
+            await ClearEntitiesAsync(summary, "Inspections", _unitOfWork.VehicleInspections);
+            await ClearEntitiesAsync(summary, "LaborItems", _unitOfWork.Repository<LaborItem>());
+            await ClearEntitiesAsync(summary, "LaborCategories", _unitOfWork.Repository<LaborCategory>());
+            await ClearEntitiesAsync(summary, "Suppliers", _unitOfWork.Suppliers);
+            await ClearEntitiesAsync(summary, "Parts", _unitOfWork.Parts);
+            await ClearEntitiesAsync(summary, "Services", _unitOfWork.Services);
+            await ClearEntitiesAsync(summary, "Employees", _unitOfWork.Employees);
+            await ClearEntitiesAsync(summary, "Vehicles", _unitOfWork.Vehicles);
+            await ClearEntitiesAsync(summary, "Customers", _unitOfWork.Customers);
+            await _unitOfWork.SaveChangesAsync();
+            return summary;
+        }
+
+        private async Task<List<object>> ClearPhase2Async()
+        {
+            var summary = new List<object>();
+            await ClearEntitiesAsync(summary, "MaterialRequestItems", _unitOfWork.Repository<Core.Entities.MaterialRequestItem>());
+            await ClearEntitiesAsync(summary, "MaterialRequests", _unitOfWork.Repository<Core.Entities.MaterialRequest>());
+            await ClearEntitiesAsync(summary, "ServiceOrderLabors", _unitOfWork.Repository<ServiceOrderLabor>());
+            await ClearEntitiesAsync(summary, "ServiceOrderParts", _unitOfWork.Repository<ServiceOrderPart>());
+            await ClearEntitiesAsync(summary, "ServiceOrderItems", _unitOfWork.Repository<ServiceOrderItem>());
+            await ClearEntitiesAsync(summary, "ServiceOrders", _unitOfWork.ServiceOrders);
+            await _unitOfWork.SaveChangesAsync();
+            return summary;
+        }
+
+        private async Task<List<object>> ClearPhase3Async()
+        {
+            var summary = new List<object>();
+            await ClearEntitiesAsync(summary, "CustomerFeedbacks", _unitOfWork.CustomerFeedbacks);
+            await ClearEntitiesAsync(summary, "FeedbackChannels", _unitOfWork.Repository<Core.Entities.FeedbackChannel>());
+            await ClearEntitiesAsync(summary, "Warranties", _unitOfWork.Warranties);
+            await ClearEntitiesAsync(summary, "ServiceOrderFees", _unitOfWork.ServiceOrderFees);
+            await ClearEntitiesAsync(summary, "ServiceFeeTypes", _unitOfWork.Repository<Core.Entities.ServiceFeeType>());
+            await ClearEntitiesAsync(summary, "PaymentTransactions", _unitOfWork.PaymentTransactions);
+            await _unitOfWork.SaveChangesAsync();
             return summary;
         }
 
         private async Task<(bool Success, object Result, string Message)> ExecuteSeedAsync(Func<Task<object>> seedFunc)
         {
-            var result = await seedFunc();
-            var resultType = result.GetType();
-
-            bool success = false;
-            string message = string.Empty;
-
-            var successProp = resultType.GetProperty("success", BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
-            if (successProp != null && successProp.PropertyType == typeof(bool))
+            try
             {
-                success = (bool)(successProp.GetValue(result) ?? false);
-            }
+                var result = await seedFunc();
+                var resultType = result.GetType();
 
-            var messageProp = resultType.GetProperty("message", BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
-            if (messageProp != null)
+                bool success = false;
+                string message = string.Empty;
+
+                var successProp = resultType.GetProperty("success", BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
+                if (successProp != null && successProp.PropertyType == typeof(bool))
+                {
+                    success = (bool)(successProp.GetValue(result) ?? false);
+                }
+
+                var messageProp = resultType.GetProperty("message", BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance);
+                if (messageProp != null)
+                {
+                    message = messageProp.GetValue(result)?.ToString() ?? string.Empty;
+                }
+
+                // ✅ FIX: Nếu success = false nhưng message rỗng, tạo message mặc định
+                if (!success && string.IsNullOrWhiteSpace(message))
+                {
+                    message = "Tạo dữ liệu thất bại nhưng không có thông báo lỗi cụ thể.";
+                }
+
+                return (success, result, message);
+            }
+            catch (Exception ex)
             {
-                message = messageProp.GetValue(result)?.ToString() ?? string.Empty;
+                // ✅ FIX: Catch exception và return error message đầy đủ
+                // ✅ Đảm bảo luôn có message, không được rỗng
+                var errorMessage = !string.IsNullOrWhiteSpace(ex.Message) 
+                    ? $"Lỗi khi tạo dữ liệu: {ex.Message}" 
+                    : $"Lỗi khi tạo dữ liệu: {ex.GetType().Name}";
+                    
+                if (ex.InnerException != null && !string.IsNullOrWhiteSpace(ex.InnerException.Message))
+                {
+                    errorMessage += $" Chi tiết: {ex.InnerException.Message}";
+                }
+                
+                // ✅ FIX: Nếu vẫn rỗng, tạo message mặc định
+                if (string.IsNullOrWhiteSpace(errorMessage))
+                {
+                    errorMessage = "Lỗi khi tạo dữ liệu (không có thông báo lỗi cụ thể)";
+                }
+                
+                return (false, new { success = false, message = errorMessage }, errorMessage);
             }
-
-            return (success, result, message);
         }
 
         private async Task<object> CreateCustomersAsync()
         {
+            // Kiểm tra existing customers để tránh duplicate
+            var existingEmails = (await _context.Customers
+                .Where(c => !c.IsDeleted)
+                .Select(c => c.Email)
+                .ToListAsync())
+                .Where(e => !string.IsNullOrEmpty(e))
+                .ToHashSet();
+
+            var existingPhones = (await _context.Customers
+                .Where(c => !c.IsDeleted)
+                .Select(c => c.Phone)
+                .ToListAsync())
+                .Where(p => !string.IsNullOrEmpty(p))
+                .ToHashSet();
+
+            var customersToCreate = new List<Core.Entities.Customer>();
+
             var customers = new[]
             {
-                new Core.Entities.Customer
-                {
-                    Name = "Nguyễn Văn An",
-                    Email = "an.nguyen@email.com",
-                    Phone = "0901234567",
-                    Address = "123 Đường ABC, Quận 1, TP.HCM"
-                },
-                new Core.Entities.Customer
-                {
-                    Name = "Trần Thị Bình",
-                    Email = "binh.tran@email.com",
-                    Phone = "0907654321",
-                    Address = "456 Đường XYZ, Quận 2, TP.HCM"
-                },
-                new Core.Entities.Customer
-                {
-                    Name = "Lê Văn Cường",
-                    Email = "cuong.le@email.com",
-                    Phone = "0909876543",
-                    Address = "789 Đường DEF, Quận 3, TP.HCM"
-                }
+                new { Name = "Nguyễn Văn An", Email = "an.nguyen@email.com", Phone = "0901234567", Address = "123 Đường ABC, Quận 1, TP.HCM" },
+                new { Name = "Trần Thị Bình", Email = "binh.tran@email.com", Phone = "0907654321", Address = "456 Đường XYZ, Quận 2, TP.HCM" },
+                new { Name = "Lê Văn Cường", Email = "cuong.le@email.com", Phone = "0909876543", Address = "789 Đường DEF, Quận 3, TP.HCM" }
             };
 
-            foreach (var customer in customers)
+            foreach (var customerData in customers)
             {
-                await _unitOfWork.Customers.AddAsync(customer);
-            }
-            await _unitOfWork.SaveChangesAsync();
+                // Kiểm tra duplicate email hoặc phone
+                if ((!string.IsNullOrEmpty(customerData.Email) && existingEmails.Contains(customerData.Email)) ||
+                    (!string.IsNullOrEmpty(customerData.Phone) && existingPhones.Contains(customerData.Phone)))
+                {
+                    continue; // Bỏ qua nếu đã tồn tại
+                }
 
-            return new { success = true, count = customers.Length, message = $"Đã tạo {customers.Length} khách hàng" };
+                customersToCreate.Add(new Core.Entities.Customer
+                {
+                    Name = customerData.Name,
+                    Email = customerData.Email,
+                    Phone = customerData.Phone,
+                    Address = customerData.Address,
+                    CreatedDate = DateTime.Now,
+                    IsActive = true
+                });
+
+                // Thêm vào hashset để tránh duplicate trong cùng batch
+                if (!string.IsNullOrEmpty(customerData.Email))
+                    existingEmails.Add(customerData.Email);
+                if (!string.IsNullOrEmpty(customerData.Phone))
+                    existingPhones.Add(customerData.Phone);
+            }
+
+            if (customersToCreate.Any())
+            {
+                foreach (var customer in customersToCreate)
+                {
+                    await _unitOfWork.Customers.AddAsync(customer);
+                }
+                await _unitOfWork.SaveChangesAsync();
+            }
+
+            return new { success = true, count = customersToCreate.Count, message = $"Đã tạo {customersToCreate.Count} khách hàng" };
         }
 
         private async Task<object> CreateVehiclesAsync()
@@ -582,101 +798,111 @@ namespace GarageManagementSystem.API.Controllers
                 return new { success = false, message = "Cần tạo khách hàng trước khi tạo xe" };
             }
 
-            var vehicles = new[]
+            // ✅ FIX: Kiểm tra existing license plates và VINs để tránh duplicate (chỉ check records chưa deleted)
+            var existingLicensePlates = (await _context.Vehicles
+                .Where(v => !v.IsDeleted)
+                .Select(v => v.LicensePlate)
+                .ToListAsync())
+                .ToHashSet();
+                
+            var existingVINs = (await _context.Vehicles
+                .Where(v => !v.IsDeleted)
+                .Select(v => v.VIN)
+                .ToListAsync())
+                .Where(v => !string.IsNullOrEmpty(v))
+                .ToHashSet();
+
+            var vehiclesToCreate = new List<Core.Entities.Vehicle>();
+
+            var vehiclesData = new[]
             {
-                new Core.Entities.Vehicle
-                {
-                    LicensePlate = "51A-12345",
-                    Brand = "Honda",
-                    Model = "Civic",
-                    Year = "2020",
-                    Color = "Trắng",
-                    VIN = "JH4DB1650MS123456",
-                    EngineNumber = "R18A123456",
-                    CustomerId = customers.First().Id,
-                    VehicleType = "Personal",
-                    InsuranceCompany = "Bảo Việt",
-                    PolicyNumber = "BV-2024-001",
-                    CoverageType = "Full"
-                },
-                new Core.Entities.Vehicle
-                {
-                    LicensePlate = "29B-67890",
-                    Brand = "Toyota",
-                    Model = "Vios",
-                    Year = "2019",
-                    Color = "Xám",
-                    VIN = "JTDKB20U123456789",
-                    EngineNumber = "2NZFE123456",
-                    CustomerId = customers.Count > 1 ? customers[1].Id : customers.First().Id,
-                    VehicleType = "Insurance",
-                    InsuranceCompany = "Bảo Minh",
-                    PolicyNumber = "BM-2024-002",
-                    CoverageType = "Third Party",
-                    ClaimNumber = "CL-2024-001",
-                    AdjusterName = "Nguyễn Văn A",
-                    AdjusterPhone = "0901234567"
-                },
-                new Core.Entities.Vehicle
-                {
-                    LicensePlate = "43C-11111",
-                    Brand = "Hyundai",
-                    Model = "Accent",
-                    Year = "2021",
-                    Color = "Đỏ",
-                    VIN = "KMHDN41D6MU123456",
-                    EngineNumber = "G4LC123456",
-                    CustomerId = customers.Count > 2 ? customers[2].Id : customers.First().Id,
-                    VehicleType = "Company",
-                    CompanyName = "Công ty ABC",
-                    TaxCode = "0123456789",
-                    ContactPerson = "Trần Thị B",
-                    ContactPhone = "0907654321",
-                    Department = "Kế toán",
-                    CostCenter = "CC-001"
-                },
-                new Core.Entities.Vehicle
-                {
-                    LicensePlate = "30D-22222",
-                    Brand = "Ford",
-                    Model = "Ranger",
-                    Year = "2022",
-                    Color = "Đen",
-                    VIN = "MR0KB3CD7MM123456",
-                    EngineNumber = "P5AT123456",
-                    CustomerId = customers.First().Id,
-                    VehicleType = "Personal",
-                    InsuranceCompany = "PVI",
-                    PolicyNumber = "PVI-2024-003",
-                    CoverageType = "Comprehensive"
-                },
-                new Core.Entities.Vehicle
-                {
-                    LicensePlate = "61E-33333",
-                    Brand = "Mazda",
-                    Model = "CX-5",
-                    Year = "2023",
-                    Color = "Bạc",
-                    VIN = "JM3KFADL7N0123456",
-                    EngineNumber = "PY-VPTS123456",
-                    CustomerId = customers.Count > 1 ? customers[1].Id : customers.First().Id,
-                    VehicleType = "Insurance",
-                    InsuranceCompany = "PTI",
-                    PolicyNumber = "PTI-2024-004",
-                    CoverageType = "Full",
-                    ClaimNumber = "CL-2024-002",
-                    AdjusterName = "Lê Văn C",
-                    AdjusterPhone = "0909876543"
-                }
+                new { LicensePlate = "51A-12345", Brand = "Honda", Model = "Civic", Year = "2020", Color = "Trắng", VIN = "JH4DB1650MS123456", EngineNumber = "R18A123456", CustomerIndex = 0, VehicleType = "Personal", InsuranceCompany = (string?)"Bảo Việt", PolicyNumber = (string?)"BV-2024-001", CoverageType = (string?)"Full", ClaimNumber = (string?)null, AdjusterName = (string?)null, AdjusterPhone = (string?)null, CompanyName = (string?)null, TaxCode = (string?)null, ContactPerson = (string?)null, ContactPhone = (string?)null, Department = (string?)null, CostCenter = (string?)null },
+                new { LicensePlate = "29B-67890", Brand = "Toyota", Model = "Vios", Year = "2019", Color = "Xám", VIN = "JTDKB20U123456789", EngineNumber = "2NZFE123456", CustomerIndex = 1, VehicleType = "Insurance", InsuranceCompany = (string?)"Bảo Minh", PolicyNumber = (string?)"BM-2024-002", CoverageType = (string?)"Third Party", ClaimNumber = (string?)"CL-2024-001", AdjusterName = (string?)"Nguyễn Văn A", AdjusterPhone = (string?)"0901234567", CompanyName = (string?)null, TaxCode = (string?)null, ContactPerson = (string?)null, ContactPhone = (string?)null, Department = (string?)null, CostCenter = (string?)null },
+                new { LicensePlate = "43C-11111", Brand = "Hyundai", Model = "Accent", Year = "2021", Color = "Đỏ", VIN = "KMHDN41D6MU123456", EngineNumber = "G4LC123456", CustomerIndex = 2, VehicleType = "Company", InsuranceCompany = (string?)null, PolicyNumber = (string?)null, CoverageType = (string?)null, ClaimNumber = (string?)null, AdjusterName = (string?)null, AdjusterPhone = (string?)null, CompanyName = (string?)"Công ty ABC", TaxCode = (string?)"0123456789", ContactPerson = (string?)"Trần Thị B", ContactPhone = (string?)"0907654321", Department = (string?)"Kế toán", CostCenter = (string?)"CC-001" },
+                new { LicensePlate = "30D-22222", Brand = "Ford", Model = "Ranger", Year = "2022", Color = "Đen", VIN = "MR0KB3CD7MM123456", EngineNumber = "P5AT123456", CustomerIndex = 0, VehicleType = "Personal", InsuranceCompany = (string?)"PVI", PolicyNumber = (string?)"PVI-2024-003", CoverageType = (string?)"Comprehensive", ClaimNumber = (string?)null, AdjusterName = (string?)null, AdjusterPhone = (string?)null, CompanyName = (string?)null, TaxCode = (string?)null, ContactPerson = (string?)null, ContactPhone = (string?)null, Department = (string?)null, CostCenter = (string?)null },
+                new { LicensePlate = "61E-33333", Brand = "Mazda", Model = "CX-5", Year = "2023", Color = "Bạc", VIN = "JM3KFADL7N0123456", EngineNumber = "PY-VPTS123456", CustomerIndex = 1, VehicleType = "Insurance", InsuranceCompany = (string?)"PTI", PolicyNumber = (string?)"PTI-2024-004", CoverageType = (string?)"Full", ClaimNumber = (string?)"CL-2024-002", AdjusterName = (string?)"Lê Văn C", AdjusterPhone = (string?)"0909876543", CompanyName = (string?)null, TaxCode = (string?)null, ContactPerson = (string?)null, ContactPhone = (string?)null, Department = (string?)null, CostCenter = (string?)null }
             };
 
-            foreach (var vehicle in vehicles)
+            foreach (var vehicleData in vehiclesData)
             {
-                await _unitOfWork.Vehicles.AddAsync(vehicle);
-            }
-            await _unitOfWork.SaveChangesAsync();
+                // ✅ FIX: Kiểm tra duplicate license plate và VIN (chỉ check records chưa deleted)
+                if (existingLicensePlates.Contains(vehicleData.LicensePlate) ||
+                    (!string.IsNullOrEmpty(vehicleData.VIN) && existingVINs.Contains(vehicleData.VIN)))
+                {
+                    continue; // Bỏ qua nếu đã tồn tại
+                }
 
-            return new { success = true, count = vehicles.Length, message = $"Đã tạo {vehicles.Length} xe" };
+                // ✅ SAFE: customers.Any() checked at line 608, so First() is safe here
+                // But use FirstOrDefault() + null check for extra safety
+                var customer = vehicleData.CustomerIndex < customers.Count 
+                    ? customers[vehicleData.CustomerIndex] 
+                    : customers.FirstOrDefault();
+                
+                if (customer == null)
+                {
+                    // Should not happen due to check at line 608, but defensive check
+                    continue;
+                }
+
+                var vehicle = new Core.Entities.Vehicle
+                {
+                    LicensePlate = vehicleData.LicensePlate,
+                    Brand = vehicleData.Brand,
+                    Model = vehicleData.Model,
+                    Year = vehicleData.Year,
+                    Color = vehicleData.Color,
+                    VIN = vehicleData.VIN,
+                    EngineNumber = vehicleData.EngineNumber,
+                    CustomerId = customer.Id,
+                    VehicleType = vehicleData.VehicleType,
+                    OwnershipType = vehicleData.VehicleType,
+                    UsageType = "Private"
+                };
+
+                // Set optional fields
+                if (!string.IsNullOrEmpty(vehicleData.InsuranceCompany))
+                {
+                    vehicle.InsuranceCompany = vehicleData.InsuranceCompany;
+                    vehicle.PolicyNumber = vehicleData.PolicyNumber;
+                    vehicle.CoverageType = vehicleData.CoverageType;
+                    vehicle.HasInsurance = true;
+                    vehicle.IsInsuranceActive = true;
+                }
+
+                if (!string.IsNullOrEmpty(vehicleData.ClaimNumber))
+                {
+                    vehicle.ClaimNumber = vehicleData.ClaimNumber;
+                    vehicle.AdjusterName = vehicleData.AdjusterName;
+                    vehicle.AdjusterPhone = vehicleData.AdjusterPhone;
+                    vehicle.ClaimStatus = "Pending";
+                }
+
+                if (!string.IsNullOrEmpty(vehicleData.CompanyName))
+                {
+                    vehicle.CompanyName = vehicleData.CompanyName;
+                    vehicle.TaxCode = vehicleData.TaxCode;
+                    vehicle.ContactPerson = vehicleData.ContactPerson;
+                    vehicle.ContactPhone = vehicleData.ContactPhone;
+                    vehicle.Department = vehicleData.Department;
+                    vehicle.CostCenter = vehicleData.CostCenter;
+                }
+
+                vehiclesToCreate.Add(vehicle);
+                existingLicensePlates.Add(vehicleData.LicensePlate); // Thêm vào hashset để tránh duplicate trong cùng batch
+                if (!string.IsNullOrEmpty(vehicleData.VIN))
+                    existingVINs.Add(vehicleData.VIN); // Thêm VIN vào hashset để tránh duplicate trong cùng batch
+            }
+
+            if (vehiclesToCreate.Any())
+            {
+                foreach (var vehicle in vehiclesToCreate)
+                {
+                    await _unitOfWork.Vehicles.AddAsync(vehicle);
+                }
+                await _unitOfWork.SaveChangesAsync();
+            }
+
+            return new { success = true, count = vehiclesToCreate.Count, message = $"Đã tạo {vehiclesToCreate.Count} xe" };
         }
 
         private async Task<object> CreateEmployeesAsync()
@@ -1516,10 +1742,13 @@ namespace GarageManagementSystem.API.Controllers
             var customers = (await _unitOfWork.Customers.GetAllAsync()).ToList();
             var employees = (await _unitOfWork.Employees.GetAllAsync()).ToList();
 
+            // ✅ FIX: Check số lượng tối thiểu
             if (!vehicles.Any() || !customers.Any() || !employees.Any())
             {
                 return new { success = false, message = "Cần tạo Vehicles, Customers và Employees trước khi tạo inspections" };
             }
+            
+            // ✅ FIX: Đảm bảo có đủ dữ liệu (hoặc sẽ dùng modulo nếu thiếu)
 
             var inspections = new[]
             {
@@ -1549,9 +1778,10 @@ namespace GarageManagementSystem.API.Controllers
                 new Core.Entities.VehicleInspection
                 {
                     InspectionNumber = "INS-2024-002",
-                    VehicleId = vehicles.Count > 1 ? vehicles[1].Id : vehicles.First().Id,
-                    CustomerId = customers.Count > 1 ? customers[1].Id : customers.First().Id,
-                    InspectorId = employees.Count > 1 ? employees[1].Id : employees.First().Id,
+                    // ✅ FIX: Sử dụng modulo để tránh IndexOutOfRangeException
+                    VehicleId = vehicles[1 % vehicles.Count].Id,
+                    CustomerId = customers[1 % customers.Count].Id,
+                    InspectorId = employees[1 % employees.Count].Id,
                     InspectionDate = DateTime.Now.AddDays(-3),
                     InspectionType = "Diagnostic",
                     CurrentMileage = 78000,
@@ -1572,9 +1802,10 @@ namespace GarageManagementSystem.API.Controllers
                 new Core.Entities.VehicleInspection
                 {
                     InspectionNumber = "INS-2024-003",
-                    VehicleId = vehicles.Count > 2 ? vehicles[2].Id : vehicles.First().Id,
-                    CustomerId = customers.Count > 2 ? customers[2].Id : customers.First().Id,
-                    InspectorId = employees.First().Id,
+                    // ✅ FIX: Sử dụng modulo để tránh IndexOutOfRangeException
+                    VehicleId = vehicles[2 % vehicles.Count].Id,
+                    CustomerId = customers[2 % customers.Count].Id,
+                    InspectorId = employees[0 % employees.Count].Id, // Sử dụng employee đầu tiên
                     InspectionDate = DateTime.Now.AddDays(-1),
                     InspectionType = "Pre-service",
                     CurrentMileage = 25000,
@@ -1612,10 +1843,15 @@ namespace GarageManagementSystem.API.Controllers
             var services = (await _unitOfWork.Services.GetAllAsync()).ToList();
             var parts = (await _unitOfWork.Parts.GetAllAsync()).ToList();
 
+            // ✅ FIX: Check số lượng tối thiểu để tránh IndexOutOfRangeException
             if (!inspections.Any() || !customers.Any() || !vehicles.Any() || !employees.Any() || !services.Any() || !parts.Any())
             {
                 return new { success = false, message = "Cần tạo đầy đủ dữ liệu trước khi tạo quotations" };
             }
+
+            // ✅ FIX: Đảm bảo có đủ dữ liệu để tạo 3 quotations (hoặc sử dụng modulo nếu không đủ)
+            // Tối thiểu cần: 1 inspection, 1 customer, 1 vehicle, 1 employee (sẽ dùng lại nếu thiếu)
+            // Nhưng nên có ít nhất 2-3 để tạo dữ liệu đa dạng
 
             var quotations = new[]
             {
@@ -1644,10 +1880,11 @@ namespace GarageManagementSystem.API.Controllers
                 new Core.Entities.ServiceQuotation
                 {
                     QuotationNumber = "QUO-2024-002",
-                    VehicleInspectionId = inspections.Count > 1 ? inspections[1].Id : inspections.First().Id,
-                    CustomerId = customers.Count > 1 ? customers[1].Id : customers.First().Id,
-                    VehicleId = vehicles.Count > 1 ? vehicles[1].Id : vehicles.First().Id,
-                    PreparedById = employees.Count > 1 ? employees[1].Id : employees.First().Id,
+                    // ✅ FIX: Sử dụng modulo để tránh IndexOutOfRangeException
+                    VehicleInspectionId = inspections[1 % inspections.Count].Id,
+                    CustomerId = customers[1 % customers.Count].Id,
+                    VehicleId = vehicles[1 % vehicles.Count].Id,
+                    PreparedById = employees[1 % employees.Count].Id,
                     QuotationDate = DateTime.Now.AddDays(-2),
                     ValidUntil = DateTime.Now.AddDays(30),
                     Description = "Báo giá sửa chữa toàn diện",
@@ -1667,10 +1904,11 @@ namespace GarageManagementSystem.API.Controllers
                 new Core.Entities.ServiceQuotation
                 {
                     QuotationNumber = "QUO-2024-003",
-                    VehicleInspectionId = inspections.Count > 2 ? inspections[2].Id : inspections.First().Id,
-                    CustomerId = customers.Count > 2 ? customers[2].Id : customers.First().Id,
-                    VehicleId = vehicles.Count > 2 ? vehicles[2].Id : vehicles.First().Id,
-                    PreparedById = employees.First().Id,
+                    // ✅ FIX: Sử dụng modulo để tránh IndexOutOfRangeException
+                    VehicleInspectionId = inspections[2 % inspections.Count].Id,
+                    CustomerId = customers[2 % customers.Count].Id,
+                    VehicleId = vehicles[2 % vehicles.Count].Id,
+                    PreparedById = employees[0 % employees.Count].Id, // Sử dụng employee đầu tiên
                     QuotationDate = DateTime.Now.AddDays(-1),
                     ValidUntil = DateTime.Now.AddDays(30),
                     Description = "Báo giá bảo dưỡng định kỳ",
@@ -1718,6 +1956,8 @@ namespace GarageManagementSystem.API.Controllers
                     Quantity = 1,
                     UnitPrice = services.First().Price,
                     TotalPrice = services.First().Price,
+                    ItemType = "Service", // ✅ FIX: Set ItemType để phân biệt Service vs Part
+                    ItemCategory = "Service", // ✅ FIX: Set ItemCategory
                     IsOptional = false,
                     IsApproved = true,
                     DisplayOrder = 1
@@ -1731,6 +1971,8 @@ namespace GarageManagementSystem.API.Controllers
                     Quantity = 1,
                     UnitPrice = parts.First().SellPrice,
                     TotalPrice = parts.First().SellPrice,
+                    ItemType = "Part", // ✅ FIX: Set ItemType để phân biệt Service vs Part
+                    ItemCategory = "Material", // ✅ FIX: Set ItemCategory
                     IsOptional = false,
                     IsApproved = true,
                     DisplayOrder = 2
@@ -1749,6 +1991,8 @@ namespace GarageManagementSystem.API.Controllers
                     Quantity = 1,
                     UnitPrice = services.Count > 1 ? services[1].Price : services.First().Price,
                     TotalPrice = services.Count > 1 ? services[1].Price : services.First().Price,
+                    ItemType = "Service", // ✅ FIX: Set ItemType
+                    ItemCategory = "Service", // ✅ FIX: Set ItemCategory
                     IsOptional = false,
                     IsApproved = false,
                     DisplayOrder = 1
@@ -1762,6 +2006,8 @@ namespace GarageManagementSystem.API.Controllers
                     Quantity = 2,
                     UnitPrice = parts.Count > 1 ? parts[1].SellPrice : parts.First().SellPrice,
                     TotalPrice = (parts.Count > 1 ? parts[1].SellPrice : parts.First().SellPrice) * 2,
+                    ItemType = "Part", // ✅ FIX: Set ItemType
+                    ItemCategory = "Material", // ✅ FIX: Set ItemCategory
                     IsOptional = false,
                     IsApproved = false,
                     DisplayOrder = 2
@@ -1780,6 +2026,8 @@ namespace GarageManagementSystem.API.Controllers
                     Quantity = 1,
                     UnitPrice = services.First().Price,
                     TotalPrice = services.First().Price,
+                    ItemType = "Service", // ✅ FIX: Set ItemType
+                    ItemCategory = "Service", // ✅ FIX: Set ItemCategory
                     IsOptional = false,
                     IsApproved = false,
                     DisplayOrder = 1
@@ -1797,6 +2045,20 @@ namespace GarageManagementSystem.API.Controllers
 
         private async Task<object> CreateServiceOrdersAsync()
         {
+            // ✅ FIX: Không tạo lại khi đã có ServiceOrders để tránh duplicate index
+            var existingServiceOrdersCount = await _context.ServiceOrders
+                .Where(so => !so.IsDeleted)
+                .CountAsync();
+
+            if (existingServiceOrdersCount > 0)
+            {
+                return new
+                {
+                    success = false,
+                    message = "Đã có đơn hàng sửa chữa trong hệ thống. Vui lòng xóa dữ liệu Phase 2 trước khi tạo lại."
+                };
+            }
+
             // Lấy dữ liệu cần thiết
             var quotations = (await _unitOfWork.ServiceQuotations.GetAllAsync()).ToList();
             var customers = (await _unitOfWork.Customers.GetAllAsync()).ToList();
@@ -1836,8 +2098,9 @@ namespace GarageManagementSystem.API.Controllers
                 new Core.Entities.ServiceOrder
                 {
                     OrderNumber = "SO-2024-002",
-                    CustomerId = customers.Count > 1 ? customers[1].Id : customers.First().Id,
-                    VehicleId = vehicles.Count > 1 ? vehicles[1].Id : vehicles.First().Id,
+                    // ✅ FIX: Sử dụng modulo để tránh IndexOutOfRangeException
+                    CustomerId = customers[1 % customers.Count].Id,
+                    VehicleId = vehicles[1 % vehicles.Count].Id,
                     OrderDate = DateTime.Now.AddDays(-1),
                     ScheduledDate = DateTime.Now.AddHours(2),
                     Status = "InProgress",
@@ -1846,8 +2109,8 @@ namespace GarageManagementSystem.API.Controllers
                     DiscountAmount = 0,
                     FinalAmount = 3500000,
                     PaymentStatus = "Partial",
-                    ServiceQuotationId = quotations.Count > 1 ? quotations[1].Id : null,
-                    PrimaryTechnicianId = employees.Count > 1 ? employees[1].Id : employees.First().Id,
+                    ServiceQuotationId = quotations.Any() ? quotations[1 % quotations.Count].Id : null,
+                    PrimaryTechnicianId = employees[1 % employees.Count].Id,
                     ServiceTotal = 800000,
                     PartsTotal = 1300000,
                     AmountPaid = 1500000,
@@ -1856,8 +2119,9 @@ namespace GarageManagementSystem.API.Controllers
                 new Core.Entities.ServiceOrder
                 {
                     OrderNumber = "SO-2024-003",
-                    CustomerId = customers.Count > 2 ? customers[2].Id : customers.First().Id,
-                    VehicleId = vehicles.Count > 2 ? vehicles[2].Id : vehicles.First().Id,
+                    // ✅ FIX: Sử dụng modulo để tránh IndexOutOfRangeException
+                    CustomerId = customers[2 % customers.Count].Id,
+                    VehicleId = vehicles[2 % vehicles.Count].Id,
                     OrderDate = DateTime.Now.AddHours(-4),
                     ScheduledDate = DateTime.Now.AddHours(4),
                     Status = "Pending",
@@ -1866,8 +2130,8 @@ namespace GarageManagementSystem.API.Controllers
                     DiscountAmount = 80000,
                     FinalAmount = 640000,
                     PaymentStatus = "Unpaid",
-                    ServiceQuotationId = quotations.Count > 2 ? quotations[2].Id : null,
-                    PrimaryTechnicianId = employees.First().Id,
+                    ServiceQuotationId = quotations.Any() ? quotations[2 % quotations.Count].Id : null,
+                    PrimaryTechnicianId = employees[0 % employees.Count].Id, // Sử dụng employee đầu tiên
                     ServiceTotal = 500000,
                     PartsTotal = 220000,
                     AmountPaid = 0,
@@ -1877,6 +2141,19 @@ namespace GarageManagementSystem.API.Controllers
 
             foreach (var order in serviceOrders)
             {
+                if (order.ServiceQuotationId.HasValue)
+                {
+                    var quotation = quotations.FirstOrDefault(q => q.Id == order.ServiceQuotationId.Value);
+                    if (quotation != null)
+                    {
+                        order.SubTotal = quotation.SubTotal;
+                        order.VATAmount = quotation.VATAmount;
+                        order.DiscountAmount = quotation.DiscountAmount;
+                        order.TotalAmount = quotation.TotalAmount;
+                        order.FinalAmount = quotation.TotalAmount;
+                    }
+                }
+
                 await _unitOfWork.ServiceOrders.AddAsync(order);
             }
             await _unitOfWork.SaveChangesAsync();

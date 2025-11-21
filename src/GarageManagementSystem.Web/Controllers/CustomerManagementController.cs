@@ -59,12 +59,14 @@ namespace GarageManagementSystem.Web.Controllers
         [HttpGet("GetActiveCustomers")]
         public async Task<IActionResult> GetActiveCustomers()
         {
-            var response = await _apiService.GetAsync<ApiResponse<List<CustomerDto>>>(ApiEndpoints.Customers.GetAll);
+            // ✅ FIX: Đổi sang GetAsync<List<CustomerDto>> để tránh double nesting
+            var response = await _apiService.GetAsync<List<CustomerDto>>(ApiEndpoints.Customers.GetAll);
             
             if (response.Success && response.Data != null)
             {
+                // ✅ FIX: response.Data giờ là List<CustomerDto> trực tiếp (không cần .Data.Data)
                 // Return all customers (no IsActive filter for now)
-                return Json(response.Data.Data);
+                return Json(response.Data);
             }
             
             return Json(new List<CustomerDto>());
@@ -201,13 +203,16 @@ namespace GarageManagementSystem.Web.Controllers
         [HttpGet("GetCustomer/{id}")]
         public async Task<IActionResult> GetCustomer(int id)
         {
-            var response = await _apiService.GetAsync<ApiResponse<CustomerDto>>(
+            // ✅ FIX: API trả về ApiResponse<CustomerDto>, ApiService cũng wrap thành ApiResponse
+            // Nên response.Data là ApiResponse<CustomerDto>, response.Data.Data là CustomerDto
+            var response = await _apiService.GetAsync<CustomerDto>(
                 ApiEndpoints.Builder.WithId(ApiEndpoints.Customers.GetById, id)
             );
             
             if (response.Success && response.Data != null)
             {
-                var customer = response.Data.Data;
+                // ✅ FIX: response.Data giờ là CustomerDto trực tiếp (không cần .Data.Data)
+                var customer = response.Data;
                 var customerData = new
                 {
                     id = customer.Id,
@@ -222,7 +227,7 @@ namespace GarageManagementSystem.Web.Controllers
                 return Json(new ApiResponse { Data = customerData, Success = true, StatusCode = System.Net.HttpStatusCode.OK });
             }
             
-            return Json(new { success = false, error = "Customer not found" });
+            return Json(new { success = false, error = response.ErrorMessage ?? "Customer not found" });
         }
 
         /// <summary>

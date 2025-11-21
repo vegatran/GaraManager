@@ -88,7 +88,9 @@ window.AppointmentManagement = {
             }
         ];
         
-        this.appointmentTable = DataTablesUtility.initServerSideTable('#appointmentTable', '/api/appointments', columns, {
+        // ✅ FIX: Gọi qua AppointmentManagementController thay vì gọi trực tiếp API
+        // API endpoint trả về PagedResponse, nhưng controller Web đã xử lý và trả về format phù hợp với DataTables
+        this.appointmentTable = DataTablesUtility.initServerSideTable('#appointmentTable', '/AppointmentManagement/GetAppointments', columns, {
             order: [[0, 'desc']],
             pageLength: 10
         });
@@ -102,7 +104,7 @@ window.AppointmentManagement = {
     },
 
     // Load customers
-    loadCustomers: function() {
+    loadCustomers: function(callback) {
         $.ajax({
             url: '/CustomerManagement/GetActiveCustomers',
             type: 'GET',
@@ -115,16 +117,27 @@ window.AppointmentManagement = {
                         options += `<option value="${customer.id}">${customer.name}</option>`;
                     });
                     $('#createCustomerId, #editCustomerId').html(options);
+                    
+                    // ✅ FIX: Gọi callback nếu có
+                    if (callback && typeof callback === 'function') {
+                        callback();
+                    }
                 } else {
+                    if (callback && typeof callback === 'function') {
+                        callback();
+                    }
                 }
             },
             error: function(xhr, status, error) {
+                if (callback && typeof callback === 'function') {
+                    callback();
+                }
             }
         });
     },
 
     // Load employees
-    loadEmployees: function() {
+    loadEmployees: function(callback) {
         $.ajax({
             url: '/AppointmentManagement/GetEmployees',
             type: 'GET',
@@ -136,10 +149,21 @@ window.AppointmentManagement = {
                         options += `<option value="${employee.id}">${employee.text}</option>`;
                     });
                     $('#createAssignedEmployeeId, #editAssignedEmployeeId').html(options);
+                    
+                    // ✅ FIX: Gọi callback nếu có
+                    if (callback && typeof callback === 'function') {
+                        callback();
+                    }
                 } else {
+                    if (callback && typeof callback === 'function') {
+                        callback();
+                    }
                 }
             },
             error: function(xhr, status, error) {
+                if (callback && typeof callback === 'function') {
+                    callback();
+                }
             }
         });
     },
@@ -166,7 +190,7 @@ window.AppointmentManagement = {
     },
 
     // Load available vehicles (not currently in service)
-    loadAvailableVehicles: function(targetSelect) {
+    loadAvailableVehicles: function(targetSelect, callback) {
         var self = this;
         $.ajax({
             url: '/AppointmentManagement/GetAvailableVehicles',
@@ -184,12 +208,23 @@ window.AppointmentManagement = {
                     if (targetSelect === '#createVehicleId' || targetSelect === '#editVehicleId') {
                         self.setupVehicleChangeHandler(targetSelect);
                     }
+                    
+                    // ✅ FIX: Gọi callback nếu có để set value sau khi load xong
+                    if (callback && typeof callback === 'function') {
+                        callback();
+                    }
                 } else {
                     $(targetSelect).html('<option value="">-- Chọn Xe --</option>');
+                    if (callback && typeof callback === 'function') {
+                        callback();
+                    }
                 }
             },
             error: function(xhr, status, error) {
                 $(targetSelect).html('<option value="">-- Chọn Xe --</option>');
+                if (callback && typeof callback === 'function') {
+                    callback();
+                }
             }
         });
     },
@@ -222,9 +257,13 @@ window.AppointmentManagement = {
     },
 
     // Load vehicles by customer (keep for backward compatibility)
-    loadVehiclesByCustomer: function(customerId, targetSelect) {
+    loadVehiclesByCustomer: function(customerId, targetSelect, callback) {
+        var self = this;
         if (!customerId) {
-            $(targetSelect).html('<option value="">Select Vehicle</option>');
+            $(targetSelect).html('<option value="">-- Chọn Xe --</option>');
+            if (callback && typeof callback === 'function') {
+                callback();
+            }
             return;
         }
 
@@ -239,12 +278,33 @@ window.AppointmentManagement = {
                         options += `<option value="${vehicle.id}">${vehicle.text}</option>`;
                     });
                     $(targetSelect).html(options);
+                    
+                    // Setup vehicle change handler if this is for create/edit modal
+                    if (targetSelect === '#createVehicleId' || targetSelect === '#editVehicleId') {
+                        // Remove existing handler to avoid duplicate
+                        $(targetSelect).off('change');
+                        // Setup new handler
+                        if (self && self.setupVehicleChangeHandler) {
+                            self.setupVehicleChangeHandler(targetSelect);
+                        }
+                    }
+                    
+                    // ✅ FIX: Gọi callback nếu có để set value sau khi load xong
+                    if (callback && typeof callback === 'function') {
+                        callback();
+                    }
                 } else {
                     $(targetSelect).html('<option value="">-- Chọn Xe --</option>');
+                    if (callback && typeof callback === 'function') {
+                        callback();
+                    }
                 }
             },
             error: function(xhr, status, error) {
                 $(targetSelect).html('<option value="">-- Chọn Xe --</option>');
+                if (callback && typeof callback === 'function') {
+                    callback();
+                }
             }
         });
     },
@@ -253,11 +313,6 @@ window.AppointmentManagement = {
     bindEvents: function() {
         var self = this;
 
-        // Search functionality
-        $('#searchInput').on('keyup', function() {
-            self.appointmentTable.search(this.value).draw();
-        });
-
         // Add appointment button
         $(document).on('click', '#addAppointmentBtn', function() {
             self.showCreateModal();
@@ -265,15 +320,174 @@ window.AppointmentManagement = {
 
         // Load available vehicles when modal opens
         $(document).on('shown.bs.modal', '#createAppointmentModal', function() {
-            self.loadAvailableVehicles('#createVehicleId');
             // Reset customer dropdown
-            $('#createCustomerId').prop('disabled', true).val('').trigger('change');
+            $('#createCustomerId').prop('disabled', false).val('').trigger('change');
+            $('#createVehicleId').html('<option value="">-- Chọn Xe --</option>');
         });
 
         $(document).on('shown.bs.modal', '#editAppointmentModal', function() {
-            self.loadAvailableVehicles('#editVehicleId');
-            // Reset customer dropdown  
-            $('#editCustomerId').prop('disabled', true).val('').trigger('change');
+            // ✅ FIX: Lấy appointment data từ modal data attribute
+            var appointment = $('#editAppointmentModal').data('appointment-data');
+            
+            if (appointment) {
+                // Reset và enable dropdowns
+                $('#editCustomerId').prop('disabled', false);
+                $('#editVehicleId').html('<option value="">-- Chọn Xe --</option>');
+                
+                // ✅ FIX: Đợi một chút để đảm bảo DOM đã render và dropdowns đã được populate
+                // Modal animation cần thời gian để hoàn thành
+                setTimeout(function() {
+                    setCustomerAndVehicle();
+                    setEmployee();
+                }, 100);
+                
+                var setCustomerAndVehicle = function() {
+                    var $customerSelect = $('#editCustomerId');
+                    var customerId = appointment.customerId;
+                    
+                    if (customerId) {
+                        // Kiểm tra xem option đã tồn tại chưa
+                        var optionExists = $customerSelect.find('option[value="' + customerId + '"]').length > 0;
+                        
+                        if (!optionExists) {
+                            // Nếu option chưa tồn tại, thêm option mới
+                            var customerName = appointment.customer?.name || appointment.customerName || 'Khách hàng #' + customerId;
+                            $customerSelect.append(`<option value="${customerId}">${customerName}</option>`);
+                        }
+                        
+                        // ✅ FIX: Destroy Select2 trước nếu đã có
+                        if ($customerSelect.hasClass('select2-hidden-accessible')) {
+                            $customerSelect.select2('destroy');
+                        }
+                        
+                        // ✅ FIX: Set value TRƯỚC khi reinitialize Select2
+                        $customerSelect.val(customerId);
+                        
+                        // ✅ FIX: Reinitialize Select2 SAU KHI đã set value
+                        $customerSelect.select2({
+                            placeholder: '-- Chọn Khách Hàng --',
+                            allowClear: true,
+                            width: '100%'
+                        });
+                        
+                        // ✅ FIX: Trigger change để Select2 update display
+                        $customerSelect.trigger('change.select2');
+                        
+                        // ✅ FIX: Load vehicles của customer này, sau đó mới set vehicle value
+                        AppointmentManagement.loadVehiclesByCustomer(customerId, '#editVehicleId', function() {
+                            // Sau khi load vehicles xong, set vehicle value
+                            var $vehicleSelect = $('#editVehicleId');
+                            var vehicleId = appointment.vehicleId;
+                            
+                            if (vehicleId) {
+                                // Kiểm tra xem option đã tồn tại chưa
+                                var vehicleOptionExists = $vehicleSelect.find('option[value="' + vehicleId + '"]').length > 0;
+                                
+                                if (!vehicleOptionExists) {
+                                    // Nếu option chưa tồn tại, thêm option mới
+                                    var vehicleText = appointment.vehicle?.licensePlate || 
+                                                     (appointment.vehicle?.brand && appointment.vehicle?.model 
+                                                      ? appointment.vehicle.brand + ' ' + appointment.vehicle.model + ' - ' + appointment.vehicle.licensePlate
+                                                      : 'Xe #' + vehicleId);
+                                    
+                                    $vehicleSelect.append(`<option value="${vehicleId}">${vehicleText}</option>`);
+                                }
+                                
+                                // ✅ FIX: Destroy Select2 trước nếu đã có
+                                if ($vehicleSelect.hasClass('select2-hidden-accessible')) {
+                                    $vehicleSelect.select2('destroy');
+                                }
+                                
+                                // ✅ FIX: Set value TRƯỚC khi reinitialize Select2
+                                $vehicleSelect.val(vehicleId);
+                                
+                                // ✅ FIX: Reinitialize Select2 SAU KHI đã set value
+                                $vehicleSelect.select2({
+                                    placeholder: '-- Chọn Xe --',
+                                    allowClear: true,
+                                    width: '100%'
+                                });
+                                
+                                // ✅ FIX: Trigger change để Select2 update display
+                                $vehicleSelect.trigger('change.select2');
+                            }
+                        });
+                    } else {
+                        // Nếu không có customerId, load tất cả available vehicles
+                        AppointmentManagement.loadAvailableVehicles('#editVehicleId', function() {
+                            var $vehicleSelect = $('#editVehicleId');
+                            var vehicleId = appointment.vehicleId;
+                            
+                            if (vehicleId) {
+                                var vehicleOptionExists = $vehicleSelect.find('option[value="' + vehicleId + '"]').length > 0;
+                                
+                                if (!vehicleOptionExists) {
+                                    var vehicleText = appointment.vehicle?.licensePlate || 
+                                                     (appointment.vehicle?.brand && appointment.vehicle?.model 
+                                                      ? appointment.vehicle.brand + ' ' + appointment.vehicle.model + ' - ' + appointment.vehicle.licensePlate
+                                                      : 'Xe #' + vehicleId);
+                                    
+                                    $vehicleSelect.append(`<option value="${vehicleId}">${vehicleText}</option>`);
+                                }
+                                
+                                // ✅ FIX: Destroy Select2 trước nếu đã có
+                                if ($vehicleSelect.hasClass('select2-hidden-accessible')) {
+                                    $vehicleSelect.select2('destroy');
+                                }
+                                
+                                // ✅ FIX: Set value TRƯỚC khi reinitialize Select2
+                                $vehicleSelect.val(vehicleId);
+                                
+                                // ✅ FIX: Reinitialize Select2 SAU KHI đã set value
+                                $vehicleSelect.select2({
+                                    placeholder: '-- Chọn Xe --',
+                                    allowClear: true,
+                                    width: '100%'
+                                });
+                                
+                                // ✅ FIX: Trigger change để Select2 update display
+                                $vehicleSelect.trigger('change.select2');
+                            }
+                        });
+                    }
+                };
+                
+                // ✅ FIX: Set employee (kỹ thuật viên) value
+                var setEmployee = function() {
+                    var $employeeSelect = $('#editAssignedEmployeeId');
+                    var assignedToId = appointment.assignedToId;
+                    
+                    if (assignedToId) {
+                        // Kiểm tra xem option đã tồn tại chưa
+                        var optionExists = $employeeSelect.find('option[value="' + assignedToId + '"]').length > 0;
+                        
+                        if (!optionExists) {
+                            // Nếu option chưa tồn tại, thêm option mới
+                            var employeeName = appointment.assignedTo?.name || appointment.assignedEmployeeName || 'Nhân viên #' + assignedToId;
+                            $employeeSelect.append(`<option value="${assignedToId}">${employeeName}</option>`);
+                        }
+                        
+                        // ✅ FIX: Set value (không cần Select2 vì employee dropdown thường là select thông thường)
+                        $employeeSelect.val(assignedToId);
+                        
+                        // ✅ FIX: Trigger change để update display
+                        $employeeSelect.trigger('change');
+                    }
+                };
+            }
+        });
+        
+        // ✅ FIX: Load vehicles khi customer change (cho cả create và edit modal)
+        $(document).on('change', '#createCustomerId, #editCustomerId', function() {
+            var customerId = $(this).val();
+            var isCreate = $(this).attr('id') === 'createCustomerId';
+            var vehicleSelect = isCreate ? '#createVehicleId' : '#editVehicleId';
+            
+            if (customerId) {
+                self.loadVehiclesByCustomer(customerId, vehicleSelect);
+            } else {
+                $(vehicleSelect).html('<option value="">-- Chọn Xe --</option>');
+            }
         });
 
         // View appointment
@@ -351,6 +565,8 @@ window.AppointmentManagement = {
             success: function(response) {
                 if (AuthHandler.validateApiResponse(response)) {
                     if (response.success) {
+                        // ✅ FIX: Lưu appointment data vào modal data attribute để xử lý trong shown.bs.modal
+                        $('#editAppointmentModal').data('appointment-data', response.data);
                         self.populateEditModal(response.data);
                         $('#editAppointmentModal').modal('show');
                     } else {
@@ -530,13 +746,9 @@ window.AppointmentManagement = {
     populateEditModal: function(appointment) {
         var self = this;
         
-        // Load all dropdowns first
-        this.loadCustomers();
-        this.loadEmployees();
-        this.loadAppointmentTypes();
-        
-        // Set values after dropdowns are loaded
-        setTimeout(function() {
+        // ✅ FIX: Load customers với callback để đảm bảo đã load xong
+        this.loadCustomers(function() {
+            // Sau khi customers đã load xong, set các values khác
             $('#editId').val(appointment.id);
             
             // Set other values
@@ -546,11 +758,14 @@ window.AppointmentManagement = {
             $('#editDescription').val(appointment.serviceRequested || appointment.description);
             $('#editStatus').val(appointment.status);
             $('#editAssignedEmployeeId').val(appointment.assignedToId);
-            
-            // Set vehicle first, customer will be auto-set by vehicle change handler
-            $('#editVehicleId').val(appointment.vehicleId);
-            $('#editVehicleId').trigger('change');
-        }, 200);
+        });
+        
+        // Load other dropdowns
+        this.loadEmployees();
+        this.loadAppointmentTypes();
+        
+        // ✅ FIX: Customer và Vehicle sẽ được xử lý trong shown.bs.modal event
+        // Nhưng đảm bảo loadCustomers đã hoàn thành trước
     }
 };
 

@@ -61,6 +61,7 @@ namespace GarageManagementSystem.Shared.DTOs
         public List<ServiceOrderItemDto> ServiceOrderItems { get; set; } = new();
         public List<WarrantyDto> Warranties { get; set; } = new();
         public List<ServiceOrderFeeDto> ServiceOrderFees { get; set; } = new();
+        public List<ServiceOrderPartDto> ServiceOrderParts { get; set; } = new();
     }
 
     public class CreateServiceOrderDto

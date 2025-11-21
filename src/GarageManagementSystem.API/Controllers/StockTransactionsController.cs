@@ -11,8 +11,10 @@ using GarageManagementSystem.Core.DTOs;
 using GarageManagementSystem.Shared.DTOs;
 using GarageManagementSystem.Shared.Models;
 using GarageManagementSystem.API.Services;
+using GarageManagementSystem.Infrastructure.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace GarageManagementSystem.API.Controllers
 {
@@ -24,12 +26,18 @@ namespace GarageManagementSystem.API.Controllers
         private readonly IUnitOfWork _unitOfWork;
         private readonly IExcelImportService _excelImportService;
         private readonly GarageManagementSystem.API.Services.ICacheService _cacheService;
+        private readonly GarageDbContext _context;
 
-        public StockTransactionsController(IUnitOfWork unitOfWork, IExcelImportService excelImportService, GarageManagementSystem.API.Services.ICacheService cacheService)
+        public StockTransactionsController(
+            IUnitOfWork unitOfWork, 
+            IExcelImportService excelImportService, 
+            GarageManagementSystem.API.Services.ICacheService cacheService,
+            GarageDbContext context)
         {
             _unitOfWork = unitOfWork;
             _excelImportService = excelImportService;
             _cacheService = cacheService;
+            _context = context;
         }
 
         [HttpGet]
@@ -42,16 +50,22 @@ namespace GarageManagementSystem.API.Controllers
         {
             try
             {
-                // ✅ SỬA: Sử dụng GetByDateRangeAsync để include Part information
-                var allTransactions = await _unitOfWork.StockTransactions.GetByDateRangeAsync(DateTime.MinValue, DateTime.MaxValue);
-                var query = allTransactions.AsQueryable();
+                // ✅ FIX: Query trực tiếp từ DbContext thay vì load tất cả vào memory
+                // GetByDateRangeAsync() trả về IEnumerable, .AsQueryable() chỉ tạo in-memory queryable
+                // Không có IAsyncQueryProvider → không thể dùng async operations
+                var query = _context.StockTransactions
+                    .Include(t => t.Part)
+                    .Include(t => t.Supplier)
+                    .Include(t => t.ProcessedBy)
+                    .Where(t => !t.IsDeleted)
+                    .AsQueryable();
                 
                 // Apply search filter if provided
                 if (!string.IsNullOrEmpty(searchTerm))
                 {
                     query = query.Where(t => 
-                        t.ReferenceNumber.Contains(searchTerm) || 
-                        t.Notes.Contains(searchTerm));
+                        (t.ReferenceNumber != null && t.ReferenceNumber.Contains(searchTerm)) || 
+                        (t.Notes != null && t.Notes.Contains(searchTerm)));
                 }
                 
                 // Apply transaction type filter if provided
@@ -68,11 +82,8 @@ namespace GarageManagementSystem.API.Controllers
 
                 query = query.OrderByDescending(t => t.TransactionDate);
 
-                // Get total count
-                var totalCount = query.Count();
-                
-                // Apply pagination
-                var transactions = query.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToList();
+                // ✅ OPTIMIZED: Get paged results with total count - automatically chooses best method
+                var (transactions, totalCount) = await query.ToPagedListWithCountAsync(pageNumber, pageSize, _context);
                 var transactionDtos = transactions.Select(MapToDto).ToList();
                 
                 return Ok(PagedResponse<StockTransactionDto>.CreateSuccessResult(

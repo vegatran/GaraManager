@@ -1083,6 +1083,13 @@ window.QuotationManagement = {
         // ✅ SỬA: Đảm bảo vatRate là số hợp lệ
         vatRate = parseFloat(vatRate) || 0;
         
+        // ✅ FIX: API trả về VAT rate dưới dạng decimal (0.1 = 10%), nhưng UI hiển thị phần trăm (10 = 10%)
+        // Nếu vatRate < 1, coi như decimal format → nhân với 100 để hiển thị phần trăm
+        // Nếu vatRate >= 1, coi như đã là phần trăm → giữ nguyên
+        if (vatRate > 0 && vatRate < 1) {
+            vatRate = vatRate * 100; // Convert decimal (0.1) to percentage (10)
+        }
+        
         var hasInvoice = itemData.hasInvoice !== undefined ? itemData.hasInvoice : 
                         (itemData.HasInvoice !== undefined ? itemData.HasInvoice : false);
         var isVATApplicable = itemData.isVATApplicable !== undefined ? itemData.isVATApplicable : 
@@ -1660,6 +1667,9 @@ window.QuotationManagement = {
             var itemCategory = row.find('.item-category-input').val() || 'Material';
             // ✅ SỬA: Lấy VAT rate từ input (đã được set từ Part data khi chọn part)
             var vatRate = parseFloat(row.find('.vat-rate-input').val()) || 0;
+            // ✅ FIX: API expect decimal format (0.1 = 10%), nhưng UI hiển thị phần trăm (10 = 10%)
+            // Chia cho 100 khi submit để convert từ phần trăm sang decimal
+            var vatRateForAPI = vatRate > 0 ? vatRate / 100 : 0;
             // ✅ SỬA: VAT chỉ áp dụng nếu checkbox checked VÀ vatRate > 0
             var isVATApplicable = hasInvoice && vatRate > 0;
             
@@ -1672,7 +1682,7 @@ window.QuotationManagement = {
                     IsOptional: false,
                     HasInvoice: hasInvoice,
                     IsVATApplicable: isVATApplicable, // ✅ SỬA: Set từ checkbox và VAT rate
-                    VATRate: vatRate, // ✅ SỬA: Lấy từ input
+                    VATRate: vatRateForAPI, // ✅ FIX: Convert từ phần trăm sang decimal
                     Notes: hasInvoice ? 'Có hóa đơn' : 'Không có hóa đơn',
                     ServiceType: 'parts',
                     ItemCategory: itemCategory,  // ✅ THÊM ItemCategory
@@ -1692,6 +1702,9 @@ window.QuotationManagement = {
             var itemCategory = row.find('.item-category-input').val() || 'Material';
             // ✅ SỬA: Lấy VAT rate từ input, không mặc định 10
             var vatRate = parseFloat(row.find('.vat-rate-input').val()) || 0;
+            // ✅ FIX: API expect decimal format (0.1 = 10%), nhưng UI hiển thị phần trăm (10 = 10%)
+            // Chia cho 100 khi submit để convert từ phần trăm sang decimal
+            var vatRateForAPI = vatRate > 0 ? vatRate / 100 : 0;
             // ✅ SỬA: VAT chỉ áp dụng nếu checkbox checked VÀ vatRate > 0
             var isVATApplicable = hasInvoice && vatRate > 0;
             
@@ -1704,7 +1717,7 @@ window.QuotationManagement = {
                     IsOptional: false,
                     HasInvoice: hasInvoice, // ✅ THÊM HasInvoice
                     IsVATApplicable: isVATApplicable, // ✅ SỬA: Set từ checkbox và VAT rate
-                    VATRate: vatRate, // ✅ SỬA: Lấy từ input
+                    VATRate: vatRateForAPI, // ✅ FIX: Convert từ phần trăm sang decimal
                     Notes: 'Giá có thể thay đổi tùy theo mức độ hư hại',
                     ServiceType: 'repair',
                     ItemCategory: itemCategory,  // ✅ THÊM ItemCategory
@@ -1724,6 +1737,9 @@ window.QuotationManagement = {
             var itemCategory = row.find('.item-category-input').val() || 'Material';
             // ✅ SỬA: Lấy VAT rate từ input, không mặc định 10
             var vatRate = parseFloat(row.find('.vat-rate-input').val()) || 0;
+            // ✅ FIX: API expect decimal format (0.1 = 10%), nhưng UI hiển thị phần trăm (10 = 10%)
+            // Chia cho 100 khi submit để convert từ phần trăm sang decimal
+            var vatRateForAPI = vatRate > 0 ? vatRate / 100 : 0;
             // ✅ SỬA: VAT chỉ áp dụng nếu checkbox checked VÀ vatRate > 0
             var isVATApplicable = hasInvoice && vatRate > 0;
             
@@ -1736,7 +1752,7 @@ window.QuotationManagement = {
                     IsOptional: false,
                     HasInvoice: hasInvoice, // ✅ THÊM HasInvoice
                     IsVATApplicable: isVATApplicable, // ✅ SỬA: Set từ checkbox và VAT rate
-                    VATRate: vatRate, // ✅ SỬA: Lấy từ input
+                    VATRate: vatRateForAPI, // ✅ FIX: Convert từ phần trăm sang decimal
                     Notes: 'Giá có thể thay đổi tùy theo kích thước vùng bị trầy xước',
                     ServiceType: 'paint',
                     ItemCategory: itemCategory,  // ✅ THÊM ItemCategory
@@ -1829,6 +1845,9 @@ window.QuotationManagement = {
             var itemCategory = row.find('.item-category-input').val() || 'Material';
             // ✅ SỬA: Lấy VAT rate từ input (đã được set từ Part data khi chọn part), không mặc định 10
             var vatRate = parseFloat(row.find('.vat-rate-input').val()) || 0;
+            // ✅ FIX: API expect decimal format (0.1 = 10%), nhưng UI hiển thị phần trăm (10 = 10%)
+            // Chia cho 100 khi submit để convert từ phần trăm sang decimal
+            var vatRateForAPI = vatRate > 0 ? vatRate / 100 : 0;
             // ✅ SỬA: VAT chỉ áp dụng nếu checkbox checked VÀ vatRate > 0
             var isVATApplicable = hasInvoice && vatRate > 0;
             
@@ -1841,7 +1860,7 @@ window.QuotationManagement = {
                     IsOptional: false,
                     HasInvoice: hasInvoice,
                     IsVATApplicable: isVATApplicable, // ✅ SỬA: Set từ checkbox và VAT rate
-                    VATRate: vatRate, // ✅ SỬA: Lấy từ input, không mặc định 10
+                    VATRate: vatRateForAPI, // ✅ FIX: Convert từ phần trăm sang decimal
                     Notes: hasInvoice ? 'Có hóa đơn' : 'Không có hóa đơn',
                     ServiceType: 'parts',
                     ItemCategory: itemCategory,
@@ -1861,6 +1880,9 @@ window.QuotationManagement = {
             var itemCategory = row.find('.item-category-input').val() || 'Material';
             // ✅ SỬA: Lấy VAT rate từ input, không mặc định 10
             var vatRate = parseFloat(row.find('.vat-rate-input').val()) || 0;
+            // ✅ FIX: API expect decimal format (0.1 = 10%), nhưng UI hiển thị phần trăm (10 = 10%)
+            // Chia cho 100 khi submit để convert từ phần trăm sang decimal
+            var vatRateForAPI = vatRate > 0 ? vatRate / 100 : 0;
             // ✅ SỬA: VAT chỉ áp dụng nếu checkbox checked VÀ vatRate > 0
             var isVATApplicable = hasInvoice && vatRate > 0;
             
@@ -1873,7 +1895,7 @@ window.QuotationManagement = {
                     IsOptional: false,
                     HasInvoice: hasInvoice,
                     IsVATApplicable: isVATApplicable, // ✅ SỬA: Set từ checkbox và VAT rate
-                    VATRate: vatRate, // ✅ SỬA: Lấy từ input, không mặc định 10
+                    VATRate: vatRateForAPI, // ✅ FIX: Convert từ phần trăm sang decimal
                     Notes: 'Giá có thể thay đổi tùy theo mức độ hư hại',
                     ServiceType: 'repair',
                     ItemCategory: itemCategory,
@@ -1893,6 +1915,9 @@ window.QuotationManagement = {
             var itemCategory = row.find('.item-category-input').val() || 'Material';
             // ✅ SỬA: Lấy VAT rate từ input, không mặc định 10
             var vatRate = parseFloat(row.find('.vat-rate-input').val()) || 0;
+            // ✅ FIX: API expect decimal format (0.1 = 10%), nhưng UI hiển thị phần trăm (10 = 10%)
+            // Chia cho 100 khi submit để convert từ phần trăm sang decimal
+            var vatRateForAPI = vatRate > 0 ? vatRate / 100 : 0;
             // ✅ SỬA: VAT chỉ áp dụng nếu checkbox checked VÀ vatRate > 0
             var isVATApplicable = hasInvoice && vatRate > 0;
             
@@ -1905,7 +1930,7 @@ window.QuotationManagement = {
                     IsOptional: false,
                     HasInvoice: hasInvoice,
                     IsVATApplicable: isVATApplicable, // ✅ SỬA: Set từ checkbox và VAT rate
-                    VATRate: vatRate, // ✅ SỬA: Lấy từ input, không mặc định 10
+                    VATRate: vatRateForAPI, // ✅ FIX: Convert từ phần trăm sang decimal
                     Notes: 'Giá có thể thay đổi tùy theo kích thước vùng bị trầy xước',
                     ServiceType: 'paint',
                     ItemCategory: itemCategory,

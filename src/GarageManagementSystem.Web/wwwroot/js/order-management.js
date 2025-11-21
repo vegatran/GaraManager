@@ -829,6 +829,26 @@ window.OrderManagement = {
                     </tr>
                 `;
             });
+
+            if (order.serviceOrderParts && order.serviceOrderParts.length > 0) {
+                order.serviceOrderParts.forEach(function(part) {
+                    var displayName = part.partName || part.notes || 'Phụ tùng';
+                    itemsHtml += `
+                        <tr data-part-id="${part.id}">
+                            <td><strong>${displayName}</strong></td>
+                            <td>${part.quantity || 1}</td>
+                            <td>${DataTablesUtility.renderCurrency(part.unitPrice)}</td>
+                            <td>${DataTablesUtility.renderCurrency(part.totalPrice)}</td>
+                            <td><span class="text-muted">-</span></td>
+                            <td><span class="text-muted">-</span></td>
+                            <td>${self.formatItemStatus(part.status)}</td>
+                            <td><span class="text-muted">-</span></td>
+                            <td><span class="text-muted">-</span></td>
+                            <td><span class="text-muted">-</span></td>
+                        </tr>
+                    `;
+                });
+            }
             $('#viewOrderItems').html(itemsHtml);
             
             // ✅ HP3: Hiển thị tổng giờ công và progress indicator

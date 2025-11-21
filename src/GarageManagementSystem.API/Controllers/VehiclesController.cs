@@ -39,16 +39,21 @@ namespace GarageManagementSystem.API.Controllers
         {
             try
             {
-                var vehicles = await _unitOfWork.Vehicles.GetAllWithCustomerAsync();
-                var query = vehicles.AsQueryable();
+                // ✅ FIX: Query trực tiếp từ DbContext thay vì load tất cả vào memory
+                // GetAllWithCustomerAsync() trả về IEnumerable, .AsQueryable() chỉ tạo in-memory queryable
+                // Không có IAsyncQueryProvider → không thể dùng async operations
+                var query = _context.Vehicles
+                    .Include(v => v.Customer)
+                    .Where(v => !v.IsDeleted)
+                    .AsQueryable();
                 
                 // Apply search filter if provided
                 if (!string.IsNullOrEmpty(searchTerm))
                 {
                     query = query.Where(v => 
-                        v.LicensePlate.Contains(searchTerm) || 
-                        v.VIN.Contains(searchTerm) || 
-                        v.Model.Contains(searchTerm));
+                        (v.LicensePlate != null && v.LicensePlate.Contains(searchTerm)) || 
+                        (v.VIN != null && v.VIN.Contains(searchTerm)) || 
+                        (v.Model != null && v.Model.Contains(searchTerm)));
                 }
                 
                 // Apply brand filter if provided
@@ -62,6 +67,9 @@ namespace GarageManagementSystem.API.Controllers
                 {
                     query = query.Where(v => v.CustomerId == customerId.Value);
                 }
+
+                // Order by CreatedAt descending
+                query = query.OrderByDescending(v => v.CreatedAt);
 
                 // ✅ OPTIMIZED: Get paged results with total count - automatically chooses best method
                 var (pagedVehicles, totalCount) = await query.ToPagedListWithCountAsync(pageNumber, pageSize, _context);

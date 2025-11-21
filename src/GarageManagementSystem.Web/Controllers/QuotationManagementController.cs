@@ -135,21 +135,25 @@ namespace GarageManagementSystem.Web.Controllers
         {
             try
             {
-                var response = await _apiService.GetAsync<ApiResponse<ServiceQuotationDto>>(
+                // ✅ FIX: API trả về ApiResponse<ServiceQuotationDto>, ApiService cũng wrap thành ApiResponse
+                // Đổi sang GetAsync<ServiceQuotationDto> để tránh double nesting
+                var response = await _apiService.GetAsync<ServiceQuotationDto>(
                     ApiEndpoints.Builder.WithId(ApiEndpoints.ServiceQuotations.GetById, id)
                 );
                 
                 if (response.Success && response.Data != null)
                 {
-                    var quotation = response.Data.Data;
+                    // ✅ FIX: response.Data giờ là ServiceQuotationDto trực tiếp (không cần .Data.Data)
+                    var quotation = response.Data;
                     // Lấy thông tin bảo hiểm (nếu có) để trả thêm insuranceFilePath
                     string? insuranceFilePath = null;
                     if (string.Equals(quotation.QuotationType, "Insurance", StringComparison.OrdinalIgnoreCase))
                     {
-                        var insuranceRes = await _apiService.GetAsync<ApiResponse<InsuranceApprovedPricingDto>>(
+                        // ✅ FIX: Sửa insuranceRes cũng tương tự
+                        var insuranceRes = await _apiService.GetAsync<InsuranceApprovedPricingDto>(
                             ApiEndpoints.Builder.WithId(ApiEndpoints.ServiceQuotations.GetInsuranceApprovedPricing, id)
                         );
-                        insuranceFilePath = insuranceRes?.Data?.Data?.InsuranceFilePath;
+                        insuranceFilePath = insuranceRes?.Data?.InsuranceFilePath;
                     }
                     var quotationData = new
                     {
@@ -352,8 +356,8 @@ namespace GarageManagementSystem.Web.Controllers
         [HttpPost("ApproveQuotation/{id}")]
         public async Task<IActionResult> ApproveQuotation(int id, [FromBody] ApproveQuotationDto approveDto)
         {
-            // ✅ 2.3.3: API trả về ApiResponse<ServiceOrderDto> khi có CreateServiceOrder
-            var response = await _apiService.PostAsync<ApiResponse<ServiceOrderDto>>(
+            // ✅ FIX: Đổi sang PostAsync<ServiceOrderDto> để tránh double nesting
+            var response = await _apiService.PostAsync<ServiceOrderDto>(
                 ApiEndpoints.Builder.WithId(ApiEndpoints.ServiceQuotations.Approve, id),
                 approveDto
             );
@@ -361,7 +365,8 @@ namespace GarageManagementSystem.Web.Controllers
             // ✅ 2.3.3: Trả về thông tin đầy đủ bao gồm ServiceOrderId và IsAdditionalOrder
             if (response.Success && response.Data != null)
             {
-                var serviceOrder = response.Data.Data;
+                // ✅ FIX: response.Data giờ là ServiceOrderDto trực tiếp (không cần .Data.Data)
+                var serviceOrder = response.Data;
                 return Json(new 
                 { 
                     success = true,
@@ -518,8 +523,10 @@ namespace GarageManagementSystem.Web.Controllers
         {
             try
             {
+                // ✅ FIX: API trả về ApiResponse<ServiceQuotationDto>, ApiService cũng wrap thành ApiResponse
+                // Đổi sang GetAsync<ServiceQuotationDto> để tránh double nesting
                 // Load quotation data
-                var quotationResponse = await _apiService.GetAsync<ApiResponse<ServiceQuotationDto>>(ApiEndpoints.ServiceQuotations.GetById.Replace("{0}", id.ToString()));
+                var quotationResponse = await _apiService.GetAsync<ServiceQuotationDto>(ApiEndpoints.ServiceQuotations.GetById.Replace("{0}", id.ToString()));
                 
                 if (!quotationResponse.Success || quotationResponse.Data == null)
                 {
@@ -538,8 +545,9 @@ namespace GarageManagementSystem.Web.Controllers
                     System.Diagnostics.Debug.WriteLine($"Template not found. Success: {templateResponse.Success}, Message: {templateResponse.ErrorMessage}");
                 }
 
+                // ✅ FIX: response.Data giờ là ServiceQuotationDto trực tiếp (không cần .Data.Data)
                 // ✅ SỬA: Hiển thị tất cả items (bao gồm cả labor) khi in báo giá
-                var quotation = quotationResponse.Data.Data;
+                var quotation = quotationResponse.Data;
 
                 // Create view model
                 var viewModel = new PrintQuotationViewModel

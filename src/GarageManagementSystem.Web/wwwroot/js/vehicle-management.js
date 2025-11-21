@@ -376,8 +376,9 @@ window.VehicleManagement = {
 
     // Populate edit modal
     populateEditModal: function(vehicle) {
+        var self = this;
+        
         $('#editId').val(vehicle.id);
-        $('#editCustomerId').val(vehicle.customerId);
         $('#editLicensePlate').val(vehicle.licensePlate);
         $('#editBrand').val(vehicle.brand);
         $('#editModel').val(vehicle.model);
@@ -386,6 +387,42 @@ window.VehicleManagement = {
         $('#editVIN').val(vehicle.vin);
         $('#editEngineNumber').val(vehicle.engineNumber);
         $('#editMileage').val(vehicle.mileage);
+        
+        // ✅ FIX: Set customer dropdown value cho Select2
+        // Cần đảm bảo dropdown đã có options trước khi set value
+        var $customerSelect = $('#editCustomerId');
+        var customerId = vehicle.customerId;
+        
+        if (customerId) {
+            // Kiểm tra xem option đã tồn tại chưa
+            var optionExists = $customerSelect.find('option[value="' + customerId + '"]').length > 0;
+            
+            if (!optionExists) {
+                // Nếu option chưa tồn tại, cần load lại customers hoặc thêm option mới
+                // Lấy customer name từ vehicle data nếu có
+                var customerName = vehicle.customerName || 'Khách hàng #' + customerId;
+                $customerSelect.append(`<option value="${customerId}">${customerName}</option>`);
+            }
+            
+            // Set value và trigger change cho Select2
+            $customerSelect.val(customerId);
+            
+            // ✅ FIX: Reinitialize Select2 để update display
+            if ($customerSelect.hasClass('select2-hidden-accessible')) {
+                $customerSelect.select2('destroy');
+            }
+            $customerSelect.select2({
+                placeholder: '-- Chọn Khách Hàng --',
+                allowClear: true,
+                width: '100%'
+            });
+            
+            // Set lại value sau khi reinitialize Select2
+            $customerSelect.val(customerId).trigger('change');
+        } else {
+            // Reset dropdown nếu không có customerId
+            $customerSelect.val('').trigger('change');
+        }
     }
 };
 

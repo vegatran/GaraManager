@@ -104,13 +104,16 @@ namespace GarageManagementSystem.Web.Controllers
         [HttpGet("GetPart/{id}")]
         public async Task<IActionResult> GetPart(int id)
         {
-            var response = await _apiService.GetAsync<ApiResponse<PartDto>>(
+            // ✅ FIX: API trả về ApiResponse<PartDto>, ApiService cũng wrap thành ApiResponse
+            // Đổi sang GetAsync<PartDto> để tránh double nesting
+            var response = await _apiService.GetAsync<PartDto>(
                 ApiEndpoints.Builder.WithId(ApiEndpoints.Parts.GetById, id)
             );
             
-            if (response.Success && response.Data?.Data != null)
+            if (response.Success && response.Data != null)
             {
-                var partData = _mapper.Map<PartDetailsViewModel>(response.Data.Data);
+                // ✅ FIX: response.Data giờ là PartDto trực tiếp (không cần .Data.Data)
+                var partData = _mapper.Map<PartDetailsViewModel>(response.Data);
                 return Json(new { success = true, data = partData });
             }
             
@@ -209,12 +212,14 @@ namespace GarageManagementSystem.Web.Controllers
         {
             try
             {
-                var response = await _apiService.GetAsync<ApiResponse<List<PartDto>>>(
+                // ✅ FIX: Đổi sang GetAsync<List<PartDto>> để tránh double nesting
+                var response = await _apiService.GetAsync<List<PartDto>>(
                     ApiEndpoints.Parts.Search + "?searchTerm=" + Uri.EscapeDataString(searchTerm ?? ""));
                 
                 if (response.Success && response.Data != null)
                 {
-                    var parts = response.Data.Data.Select(p => new
+                    // ✅ FIX: response.Data giờ là List<PartDto> trực tiếp (không cần .Data.Data)
+                    var parts = response.Data.Select(p => new
                     {
                         id = p.Id,
                         partId = p.Id,

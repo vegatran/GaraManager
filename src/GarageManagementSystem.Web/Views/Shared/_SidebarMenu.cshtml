@@ -12,8 +12,8 @@
         </li>
 
         <!-- QUY TRÌNH NGHIỆP VỤ - GIAI ĐOẠN 1 (Multilevel) -->
-        <li class="nav-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "CustomerReception" || ViewContext.RouteData.Values["Controller"]?.ToString() == "InspectionManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "QuotationManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "OrderManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "AppointmentManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "MaterialRequestManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "QCManagement" ? "menu-open" : "")">
-            <a href="#" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "CustomerReception" || ViewContext.RouteData.Values["Controller"]?.ToString() == "InspectionManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "QuotationManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "OrderManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "AppointmentManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "MaterialRequestManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "QCManagement" ? "active" : "")">
+        <li class="nav-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "CustomerReception" || ViewContext.RouteData.Values["Controller"]?.ToString() == "InspectionManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "QuotationManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "OrderManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "AppointmentManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "MaterialRequestManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "QCManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "CustomerFeedbackManagement" ? "menu-open" : "")">
+            <a href="#" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "CustomerReception" || ViewContext.RouteData.Values["Controller"]?.ToString() == "InspectionManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "QuotationManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "OrderManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "AppointmentManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "MaterialRequestManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "QCManagement" || ViewContext.RouteData.Values["Controller"]?.ToString() == "CustomerFeedbackManagement" ? "active" : "")">
                 <i class="nav-icon fas fa-project-diagram text-primary"></i>
                 <p>
                     Quy Trình Nghiệp Vụ
@@ -114,14 +114,6 @@
                 <!-- GIAI ĐOẠN 3: QUYẾT TOÁN & CHĂM SÓC HẬU MÃI -->
                 <li class="nav-header text-sm" style="padding: 8px 16px; color: #6c757d; font-weight: bold; margin-top: 10px;">
                     <i class="fas fa-chart-pie text-success"></i> GIAI ĐOẠN 3: Quyết Toán & Chăm Sóc Hậu Mãi
-                </li>
-                
-                <!-- Báo Cáo COGS -->
-                <li class="nav-item">
-                    <a href="@Url.Action("CogsSummary", "OrderManagement")" class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "OrderManagement" && ViewContext.RouteData.Values["Action"]?.ToString() == "CogsSummary" ? "active" : "")">
-                        <i class="fas fa-chart-bar nav-icon text-primary"></i>
-                        <p>Báo Cáo COGS</p>
-                    </a>
                 </li>
                 
                 <!-- Phản Hồi Khách Hàng -->

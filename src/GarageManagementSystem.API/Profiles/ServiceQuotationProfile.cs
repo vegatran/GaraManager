@@ -50,7 +50,14 @@ namespace GarageManagementSystem.API.Profiles
             // QuotationItem mappings
             CreateMap<QuotationItem, QuotationItemDto>()
                 .ForMember(dest => dest.Service, opt => opt.MapFrom(src => src.Service))
-                .ForMember(dest => dest.ServiceType, opt => opt.MapFrom(src => src.ItemType))
+                // ✅ FIX: Map ItemType sang ServiceType với format đúng (parts, repair, paint)
+                // ItemType = "Part" -> ServiceType = "parts"
+                // ItemType = "Service" -> ServiceType = "repair" (mặc định) hoặc "paint" nếu Service.LaborType = "Sơn"
+                .ForMember(dest => dest.ServiceType, opt => opt.MapFrom(src => 
+                    src.ItemType == "Part" ? "parts" :
+                    src.ItemType == "Service" && src.Service != null && src.Service.LaborType != null && src.Service.LaborType.ToLower().Contains("sơn") ? "paint" :
+                    src.ItemType == "Service" ? "repair" :
+                    string.IsNullOrEmpty(src.ItemType) ? "repair" : src.ItemType.ToLower()))
                 .ForMember(dest => dest.HasInvoice, opt => opt.MapFrom(src => src.HasInvoice))
                 .ForMember(dest => dest.IsVATApplicable, opt => opt.MapFrom(src => src.IsVATApplicable))
                 .ForMember(dest => dest.VATRate, opt => opt.MapFrom(src => src.VATRate)) // ✅ THÊM: Map VATRate từ entity
@@ -65,7 +72,11 @@ namespace GarageManagementSystem.API.Profiles
                 .ForMember(dest => dest.Id, opt => opt.Ignore())
                 .ForMember(dest => dest.ServiceQuotationId, opt => opt.Ignore())
                 .ForMember(dest => dest.Service, opt => opt.Ignore())
-                .ForMember(dest => dest.ItemType, opt => opt.MapFrom(src => src.ServiceType ?? "Service"))
+                // ✅ FIX: Map ServiceType (parts, repair, paint) sang ItemType (Part, Service)
+                .ForMember(dest => dest.ItemType, opt => opt.MapFrom(src => 
+                    src.ServiceType == "parts" ? "Part" :
+                    src.ServiceType == "repair" || src.ServiceType == "paint" ? "Service" :
+                    string.IsNullOrEmpty(src.ServiceType) ? "Service" : src.ServiceType))
                 .ForMember(dest => dest.HasInvoice, opt => opt.MapFrom(src => src.HasInvoice))
                 .ForMember(dest => dest.IsVATApplicable, opt => opt.MapFrom(src => src.IsVATApplicable)) // ✅ THÊM: Map IsVATApplicable
                 .ForMember(dest => dest.VATRate, opt => opt.MapFrom(src => src.VATRate)) // ✅ THÊM: Map VATRate

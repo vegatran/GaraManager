@@ -94,13 +94,16 @@ namespace GarageManagementSystem.Web.Controllers
         [HttpGet("GetSupplier/{id}")]
         public async Task<IActionResult> GetSupplier(int id)
         {
-            var response = await _apiService.GetAsync<ApiResponse<SupplierDto>>(
+            // ✅ FIX: Đổi sang GetAsync<SupplierDto> để tránh double nesting
+            // ApiService đã tự động unwrap ApiResponse rồi
+            var response = await _apiService.GetAsync<SupplierDto>(
                 ApiEndpoints.Builder.WithId(ApiEndpoints.Suppliers.GetById, id)
             );
             
             if (response.Success && response.Data != null)
             {
-                var supplier = response.Data.Data;
+                // ✅ FIX: response.Data giờ là SupplierDto trực tiếp (không cần .Data.Data)
+                var supplier = response.Data;
                 var supplierData = new
                 {
                     id = supplier.Id,
@@ -116,7 +119,7 @@ namespace GarageManagementSystem.Web.Controllers
                 return Json(new ApiResponse { Data = supplierData, Success = true, StatusCode = System.Net.HttpStatusCode.OK });
             }
             
-            return Json(new { success = false, error = "Nhà cung cấp không tồn tại" });
+            return Json(new { success = false, error = response.ErrorMessage ?? "Nhà cung cấp không tồn tại" });
         }
 
         /// <summary>
@@ -145,12 +148,14 @@ namespace GarageManagementSystem.Web.Controllers
                     return BadRequest(new { success = false, message = "Dữ liệu không hợp lệ", errors = errors });
                 }
 
-                var response = await _apiService.PostAsync<ApiResponse<SupplierDto>>(ApiEndpoints.Suppliers.Create, model);
+                // ✅ FIX: Đổi sang PostAsync<SupplierDto> để tránh double nesting
+                var response = await _apiService.PostAsync<SupplierDto>(ApiEndpoints.Suppliers.Create, model);
                 
                 Console.WriteLine($"DEBUG: API Response: {System.Text.Json.JsonSerializer.Serialize(response)}");
 
                 if (response.Success)
                 {
+                    // ✅ FIX: response.Data giờ là SupplierDto trực tiếp (không cần .Data.Data)
                     return Ok(new { success = true, message = "Tạo nhà cung cấp thành công", data = response.Data });
                 }
                 else

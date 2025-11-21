@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using GarageManagementSystem.Web.Services;
 using GarageManagementSystem.Web.Configuration;
 using GarageManagementSystem.Shared.Models;
+using System.Reflection;
 
 namespace GarageManagementSystem.Web.Controllers
 {
@@ -166,27 +167,69 @@ namespace GarageManagementSystem.Web.Controllers
         {
             try
             {
-                var status = new
+                // ✅ FIX: Gọi endpoint counts từ API thay vì gọi từng GetAll (pagination)
+                // GetAll trả về PagedResponse với pageSize=10 → chỉ lấy 10 items
+                // Counts endpoint trả về tổng số records với IsDeleted = false
+                var response = await _apiService.GetAsync<object>(ApiEndpoints.Setup.GetCounts);
+                
+                if (response.Success && response.Data != null)
                 {
-                    customers = await GetEntityCount("customers"),
-                    vehicles = await GetEntityCount("vehicles"),
-                    employees = await GetEntityCount("employees"),
-                    services = await GetEntityCount("services"),
-                    parts = await GetEntityCount("parts"),
-                    suppliers = await GetEntityCount("suppliers"),
-                    inspections = await GetEntityCount("vehicleinspections"),
-                    quotations = await GetEntityCount("servicequotations"),
-                    orders = await GetEntityCount("serviceorders"),
-                    payments = await GetEntityCount("paymenttransactions"),
-                    appointments = await GetEntityCount("appointments")
-                };
+                    // Map từ API response sang format frontend cần
+                    var counts = response.Data;
+                    var status = new
+                    {
+                        customers = GetCountValue(counts, "customerCount"),
+                        vehicles = GetCountValue(counts, "vehicleCount"),
+                        employees = GetCountValue(counts, "employeeCount"),
+                        services = GetCountValue(counts, "serviceCount"),
+                        parts = GetCountValue(counts, "partCount"),
+                        suppliers = GetCountValue(counts, "supplierCount"),
+                        inspections = GetCountValue(counts, "inspectionCount"),
+                        quotations = GetCountValue(counts, "quotationCount"),
+                        orders = GetCountValue(counts, "orderCount"),
+                        payments = GetCountValue(counts, "paymentCount"),
+                        appointments = GetCountValue(counts, "appointmentCount")
+                    };
 
-                return Json(new { success = true, data = status });
+                    return Json(new { success = true, data = status });
+                }
+
+                return Json(new { success = false, message = "Không thể lấy số lượng dữ liệu" });
             }
             catch (Exception ex)
             {
                 return Json(new { success = false, message = ex.Message });
             }
+        }
+
+        /// <summary>
+        /// Helper method để lấy giá trị count từ dynamic object hoặc JsonElement
+        /// </summary>
+        private int GetCountValue(object counts, string propertyName)
+        {
+            try
+            {
+                // ✅ FIX: Handle JsonElement (System.Text.Json deserialize object thành JsonElement)
+                if (counts is System.Text.Json.JsonElement jsonElement)
+                {
+                    if (jsonElement.TryGetProperty(propertyName, out var property))
+                    {
+                        return property.GetInt32();
+                    }
+                }
+                else
+                {
+                    // Handle regular object với reflection
+                    var property = counts.GetType().GetProperty(propertyName);
+                    if (property != null)
+                    {
+                        var value = property.GetValue(counts);
+                        return value != null ? Convert.ToInt32(value) : 0;
+                    }
+                }
+            }
+            catch { }
+            return 0;
         }
 
         /// <summary>
@@ -210,6 +253,48 @@ namespace GarageManagementSystem.Web.Controllers
                 }
             }
             catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpPost("ClearPhase1")]
+        public async Task<IActionResult> ClearPhase1()
+        {
+            try
+            {
+                var result = await _apiService.PostAsync<object>(ApiEndpoints.Setup.ClearPhase1, null);
+                return Json(new { success = result.Success, message = result.Message, data = result.Data });
+            }
+            catch(Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpPost("ClearPhase2")]
+        public async Task<IActionResult> ClearPhase2()
+        {
+            try
+            {
+                var result = await _apiService.PostAsync<object>(ApiEndpoints.Setup.ClearPhase2, null);
+                return Json(new { success = result.Success, message = result.Message, data = result.Data });
+            }
+            catch(Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpPost("ClearPhase3")]
+        public async Task<IActionResult> ClearPhase3()
+        {
+            try
+            {
+                var result = await _apiService.PostAsync<object>(ApiEndpoints.Setup.ClearPhase3, null);
+                return Json(new { success = result.Success, message = result.Message, data = result.Data });
+            }
+            catch(Exception ex)
             {
                 return Json(new { success = false, message = ex.Message });
             }
@@ -409,43 +494,8 @@ namespace GarageManagementSystem.Web.Controllers
                 }
             }
 
-            /// <summary>
-            /// Lấy số lượng entity
-            /// </summary>
-            [Route("GetEntityCount")]
-            private async Task<int> GetEntityCount(string entityName)
-        {
-            try
-            {
-                // Sử dụng ApiEndpoints để map entity name sang endpoint
-                string endpoint = entityName switch
-                {
-                    "customers" => ApiEndpoints.Customers.GetAll,
-                    "vehicles" => ApiEndpoints.Vehicles.GetAll,
-                    "employees" => ApiEndpoints.Employees.GetAll,
-                    "services" => ApiEndpoints.Services.GetAll,
-                    "parts" => ApiEndpoints.Parts.GetAll,
-                    "suppliers" => ApiEndpoints.Suppliers.GetAll,
-                    "vehicleinspections" => ApiEndpoints.VehicleInspections.GetAll,
-                    "servicequotations" => ApiEndpoints.ServiceQuotations.GetAll,
-                    "serviceorders" => ApiEndpoints.ServiceOrders.GetAll,
-                    "paymenttransactions" => ApiEndpoints.PaymentTransactions.GetAll,
-                    "appointments" => ApiEndpoints.Appointments.GetAll,
-                    _ => entityName
-                };
-
-                // API trả về ApiResponse<List<CustomerDto>>, cần unwrap đúng cách
-                var response = await _apiService.GetAsync<List<object>>(endpoint);
-                if (response.Success && response.Data != null)
-                {
-                    return response.Data.Count;
-                }
-                return 0;
-            }
-            catch
-            {
-                return 0;
-            }
-        }
+            // ✅ REMOVED: GetEntityCount method - không còn dùng nữa
+            // Thay vào đó, CheckDataStatus gọi trực tiếp endpoint /api/Setup/counts
+            // để lấy tổng số records với IsDeleted = false (không bị giới hạn bởi pagination)
     }
 }

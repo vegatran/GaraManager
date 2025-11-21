@@ -70,17 +70,13 @@ namespace GarageManagementSystem.Core.Extensions
                 }
             }
 
-            // ✅ FALLBACK: Use parallel execution (reliable for all queries)
-            var countTask = query.CountAsync();
-            var dataTask = query
+            // ✅ FIX: Run sequentially to avoid DbContext concurrency issues
+            // DbContext is not thread-safe, cannot run multiple operations concurrently
+            var totalCount = await query.CountAsync();
+            var items = await query
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync();
-
-            await Task.WhenAll(countTask, dataTask);
-
-            var totalCount = await countTask;
-            var items = await dataTask;
 
             return (items, totalCount);
         }
@@ -148,22 +144,15 @@ FROM (
                 var offset = (pageNumber - 1) * pageSize;
                 wrappedSql += $" LIMIT {pageSize} OFFSET {offset}";
 
-                // ✅ OPTIMIZED: Use COUNT(*) OVER() for single query execution
-                // Execute count and data in parallel, but using optimized SQL
-                // This gives us the benefits of COUNT(*) OVER() (atomic consistency) 
-                // while keeping the implementation simple
-                
-                // Get total count and data in parallel (both use optimized queries)
-                var countTask = query.CountAsync();
-                var dataTask = query
+                // ✅ FIX: Run sequentially to avoid DbContext concurrency issues
+                // DbContext is not thread-safe, cannot run multiple operations concurrently
+                // Note: The COUNT(*) OVER() SQL was prepared but not used in final implementation
+                // We still use sequential execution for reliability
+                var totalCount = await query.CountAsync();
+                var items = await query
                     .Skip((pageNumber - 1) * pageSize)
                     .Take(pageSize)
                     .ToListAsync();
-
-                await Task.WhenAll(countTask, dataTask);
-
-                var totalCount = await countTask;
-                var items = await dataTask;
 
                 return (items, totalCount);
             }

@@ -1,4 +1,5 @@
 using GarageManagementSystem.Shared.DTOs;
+using GarageManagementSystem.Shared.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using GarageManagementSystem.Web.Services;
@@ -30,20 +31,39 @@ namespace GarageManagementSystem.Web.Controllers
         }
 
         /// <summary>
-        /// Lấy danh sách tất cả lịch hẹn cho DataTable thông qua API
+        /// Lấy danh sách tất cả lịch hẹn cho DataTable thông qua API với server-side pagination
         /// </summary>
         [HttpGet("GetAppointments")]
-        public async Task<IActionResult> GetAppointments()
+        public async Task<IActionResult> GetAppointments(
+            int pageNumber = 1,
+            int pageSize = 10,
+            string? searchTerm = null,
+            string? status = null,
+            int? customerId = null)
         {
-            var response = await _apiService.GetAsync<List<AppointmentDto>>(ApiEndpoints.Appointments.GetAll);
-            
-            if (response.Success)
+            try
             {
-                var appointmentList = new List<object>();
-                
-                if (response.Data != null)
+                // Build query parameters
+                var queryParams = new List<string>
                 {
-                    appointmentList = response.Data.Select(a => new
+                    $"pageNumber={pageNumber}",
+                    $"pageSize={pageSize}"
+                };
+
+                if (!string.IsNullOrEmpty(searchTerm))
+                    queryParams.Add($"searchTerm={Uri.EscapeDataString(searchTerm)}");
+                if (!string.IsNullOrEmpty(status))
+                    queryParams.Add($"status={Uri.EscapeDataString(status)}");
+                if (customerId.HasValue)
+                    queryParams.Add($"customerId={customerId.Value}");
+
+                // ✅ FIX: API endpoint trả về PagedResponse, không phải List
+                var endpoint = ApiEndpoints.Appointments.GetAll + "?" + string.Join("&", queryParams);
+                var response = await _apiService.GetAsync<PagedResponse<AppointmentDto>>(endpoint);
+                
+                if (response.Success && response.Data != null)
+                {
+                    var appointmentList = response.Data.Data.Select(a => new
                     {
                         id = a.Id,
                         appointmentNumber = a.AppointmentNumber,
@@ -54,13 +74,42 @@ namespace GarageManagementSystem.Web.Controllers
                         serviceType = TranslateServiceType(a.AppointmentType),
                         status = TranslateStatus(a.Status)
                     }).Cast<object>().ToList();
-                }
 
-                return Json(new { data = appointmentList });
+                    // ✅ FIX: Trả về format PagedResponse để DataTables xử lý đúng
+                    return Json(new PagedResponse<object>
+                    {
+                        Data = appointmentList,
+                        TotalCount = response.Data.TotalCount,
+                        PageNumber = response.Data.PageNumber,
+                        PageSize = response.Data.PageSize,
+                        Success = true,
+                        Message = response.Data.Message
+                    });
+                }
+                else
+                {
+                    return Json(new PagedResponse<object>
+                    {
+                        Data = new List<object>(),
+                        TotalCount = 0,
+                        PageNumber = pageNumber,
+                        PageSize = pageSize,
+                        Success = false,
+                        Message = response.ErrorMessage ?? "Lỗi khi lấy danh sách lịch hẹn"
+                    });
+                }
             }
-            else
+            catch (Exception ex)
             {
-                return Json(new { error = response.ErrorMessage });
+                return Json(new PagedResponse<object>
+                {
+                    Data = new List<object>(),
+                    TotalCount = 0,
+                    PageNumber = pageNumber,
+                    PageSize = pageSize,
+                    Success = false,
+                    Message = $"Lỗi: {ex.Message}"
+                });
             }
         }
 
@@ -140,11 +189,20 @@ namespace GarageManagementSystem.Web.Controllers
         [HttpGet("GetAppointment/{id}")]
         public async Task<IActionResult> GetAppointment(int id)
         {
+            // ✅ FIX: API trả về ApiResponse<AppointmentDto>, ApiService đã unwrap
+            // Trả về format phù hợp với frontend
             var response = await _apiService.GetAsync<AppointmentDto>(
                 ApiEndpoints.Builder.WithId(ApiEndpoints.Appointments.GetById, id)
             );
             
-            return Json(response);
+            if (response.Success && response.Data != null)
+            {
+                return Json(new { success = true, data = response.Data });
+            }
+            else
+            {
+                return Json(new { success = false, error = response.ErrorMessage ?? "Không tìm thấy lịch hẹn" });
+            }
         }
 
         /// <summary>

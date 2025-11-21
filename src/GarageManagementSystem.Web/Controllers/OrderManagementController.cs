@@ -1,5 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Net;
+using System.Text.Json;
+using System.Text.RegularExpressions;
 using GarageManagementSystem.Shared.DTOs;
 using GarageManagementSystem.Shared.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -165,17 +168,20 @@ namespace GarageManagementSystem.Web.Controllers
         {
             try
             {
-                var response = await _apiService.GetAsync<ApiResponse<ServiceOrderDto>>(
+                // ✅ FIX: API trả về ApiResponse<ServiceOrderDto>, ApiService cũng wrap thành ApiResponse
+                // Đổi sang GetAsync<ServiceOrderDto> để tránh double nesting
+                var response = await _apiService.GetAsync<ServiceOrderDto>(
                     ApiEndpoints.Builder.WithId(ApiEndpoints.ServiceOrders.GetById, id)
                 );
                 
-                if (response.Success && response.Data != null && response.Data?.Data !=null)
+                if (response.Success && response.Data != null)
                 {
-                    return Json(new { success = true, data = response.Data.Data });
+                    // ✅ FIX: response.Data giờ là ServiceOrderDto trực tiếp (không cần .Data.Data)
+                    return Json(new { success = true, data = response.Data });
                 }
                 else
                 {
-                    return Json(new { success = false, error = response.Message ?? response.ErrorMessage ?? "Không tìm thấy phiếu sửa chữa" });
+                    return Json(new { success = false, error = response.ErrorMessage ?? "Không tìm thấy phiếu sửa chữa" });
                 }
             }
             catch (Exception ex)
@@ -192,12 +198,15 @@ namespace GarageManagementSystem.Web.Controllers
         {
             try
             {
+                // ✅ FIX: API trả về ApiResponse<ServiceOrderProgressDto>, ApiService cũng wrap thành ApiResponse
+                // Đổi sang GetAsync<ServiceOrderProgressDto> để tránh double nesting
                 var endpoint = ApiEndpoints.Builder.WithId(ApiEndpoints.ServiceOrders.GetProgress, id);
-                var response = await _apiService.GetAsync<ApiResponse<ServiceOrderProgressDto>>(endpoint);
+                var response = await _apiService.GetAsync<ServiceOrderProgressDto>(endpoint);
                 
                 if (response.Success && response.Data != null)
                 {
-                    return Json(new { success = true, data = response.Data.Data });
+                    // ✅ FIX: response.Data giờ là ServiceOrderProgressDto trực tiếp (không cần .Data.Data)
+                    return Json(new { success = true, data = response.Data });
                 }
                 else
                 {
@@ -218,21 +227,15 @@ namespace GarageManagementSystem.Web.Controllers
         {
             try
             {
+                // ✅ FIX: API trả về ApiResponse<COGSBreakdownDto>, ApiService cũng wrap thành ApiResponse
+                // Đổi sang GetAsync<COGSBreakdownDto> để tránh double nesting
                 var endpoint = ApiEndpoints.Builder.WithId(ApiEndpoints.ServiceOrders.GetCogsDetails, id);
-                var response = await _apiService.GetAsync<ApiResponse<COGSBreakdownDto>>(endpoint);
+                var response = await _apiService.GetAsync<COGSBreakdownDto>(endpoint);
 
                 if (response.Success && response.Data != null)
                 {
-                    if (response.Data.Success && response.Data.Data != null)
-                    {
-                        return Json(new { success = true, data = response.Data.Data, message = response.Data.Message });
-                    }
-
-                    return Json(new
-                    {
-                        success = false,
-                        error = response.Data.ErrorMessage ?? response.Data.Message ?? "Không thể lấy chi tiết COGS"
-                    });
+                    // ✅ FIX: response.Data giờ là COGSBreakdownDto trực tiếp (không cần .Data.Data)
+                    return Json(new { success = true, data = response.Data, message = response.Message });
                 }
 
                 return Json(new { success = false, error = response.ErrorMessage ?? "Không thể lấy chi tiết COGS" });
@@ -288,20 +291,13 @@ namespace GarageManagementSystem.Web.Controllers
             try
             {
                 var endpoint = ApiEndpoints.Builder.WithId(ApiEndpoints.ServiceOrders.GetGrossProfit, id);
-                var response = await _apiService.GetAsync<ApiResponse<GrossProfitDto>>(endpoint);
+                // ✅ FIX: Đổi sang GetAsync<GrossProfitDto> để tránh double nesting
+                var response = await _apiService.GetAsync<GrossProfitDto>(endpoint);
 
                 if (response.Success && response.Data != null)
                 {
-                    if (response.Data.Success && response.Data.Data != null)
-                    {
-                        return Json(new { success = true, data = response.Data.Data, message = response.Data.Message });
-                    }
-
-                    return Json(new
-                    {
-                        success = false,
-                        error = response.Data.ErrorMessage ?? response.Data.Message ?? "Không thể lấy lợi nhuận gộp"
-                    });
+                    // ✅ FIX: response.Data giờ là GrossProfitDto trực tiếp (không cần .Data.Data)
+                    return Json(new { success = true, data = response.Data, message = response.ErrorMessage ?? "Lấy thông tin lợi nhuận thành công" });
                 }
 
                 return Json(new { success = false, error = response.ErrorMessage ?? "Không thể lấy lợi nhuận gộp" });
@@ -465,13 +461,74 @@ namespace GarageManagementSystem.Web.Controllers
             try
             {
                 var endpoint = ApiEndpoints.Builder.WithId(ApiEndpoints.Warranties.GetByServiceOrder, id);
-                var response = await _apiService.GetAsync<ApiResponse<WarrantyDto>>(endpoint);
-                return Json(response);
+                var response = await _apiService.GetAsync<WarrantyDto>(endpoint);
+
+                if (response.Success && response.Data != null)
+                {
+                    return Json(response);
+                }
+
+                var friendlyMessage = ExtractFriendlyWarrantyMessage(response);
+                return Json(ApiResponse<WarrantyDto>.ErrorResult(friendlyMessage));
             }
             catch (Exception ex)
             {
                 return Json(new { success = false, errorMessage = $"Lỗi: {ex.Message}" });
             }
+        }
+
+        private string ExtractFriendlyWarrantyMessage(ApiResponse<WarrantyDto> response)
+        {
+            if (response == null)
+            {
+                return "Không tìm thấy bảo hành cho phiếu sửa chữa này";
+            }
+
+            if (!string.IsNullOrWhiteSpace(response.ErrorMessage))
+            {
+                var jsonMatch = Regex.Match(response.ErrorMessage, @"\{.*\}");
+                if (jsonMatch.Success)
+                {
+                    try
+                    {
+                        var options = new JsonSerializerOptions
+                        {
+                            PropertyNameCaseInsensitive = true
+                        };
+                        var inner = JsonSerializer.Deserialize<ApiResponse<WarrantyDto>>(jsonMatch.Value, options);
+                        if (inner != null)
+                        {
+                            if (!string.IsNullOrWhiteSpace(inner.Message))
+                            {
+                                return inner.Message;
+                            }
+
+                            if (!string.IsNullOrWhiteSpace(inner.ErrorMessage))
+                            {
+                                return inner.ErrorMessage;
+                            }
+                        }
+                    }
+                    catch
+                    {
+                        // ignore parse errors
+                    }
+                }
+
+                return response.ErrorMessage;
+            }
+
+            if (!string.IsNullOrWhiteSpace(response.Message))
+            {
+                return response.Message;
+            }
+
+            if (response.StatusCode == HttpStatusCode.NotFound)
+            {
+                return "Không tìm thấy bảo hành cho phiếu sửa chữa này";
+            }
+
+            return "Không thể lấy thông tin bảo hành";
         }
 
         /// <summary>
@@ -519,11 +576,13 @@ namespace GarageManagementSystem.Web.Controllers
             try
             {
                 // ✅ Dùng API chuyên biệt để lấy danh sách báo giá đã duyệt, đủ điều kiện tạo SO
-                var response = await _apiService.GetAsync<ApiResponse<List<object>>>(ApiEndpoints.ServiceQuotations.GetApprovedAvailableForOrder);
+                // ✅ FIX: Đổi sang GetAsync<List<object>> để tránh double nesting
+                var response = await _apiService.GetAsync<List<object>>(ApiEndpoints.ServiceQuotations.GetApprovedAvailableForOrder);
                 
-                if (response.Success && response.Data?.Data != null)
+                if (response.Success && response.Data != null)
                 {
-                    return Json(response.Data.Data);
+                    // ✅ FIX: response.Data giờ là List<object> trực tiếp (không cần .Data.Data)
+                    return Json(response.Data);
                 }
                 else
                 {
@@ -685,11 +744,13 @@ namespace GarageManagementSystem.Web.Controllers
         [HttpGet("GetActiveEmployees")]
         public async Task<IActionResult> GetActiveEmployees()
         {
-            var response = await _apiService.GetAsync<ApiResponse<List<EmployeeDto>>>(ApiEndpoints.Employees.GetActive);
+            // ✅ FIX: Đổi sang GetAsync<List<EmployeeDto>> để tránh double nesting
+            var response = await _apiService.GetAsync<List<EmployeeDto>>(ApiEndpoints.Employees.GetActive);
             
-            if (response.Success && response.Data != null && response.Data?.Data != null)
+            if (response.Success && response.Data != null)
             {
-                var employeeList = response.Data.Data.Select(e => new
+                // ✅ FIX: response.Data giờ là List<EmployeeDto> trực tiếp (không cần .Data.Data)
+                var employeeList = response.Data.Select(e => new
                 {
                     id = e.Id,
                     text = e.Name + " - " + (e.Position ?? "")

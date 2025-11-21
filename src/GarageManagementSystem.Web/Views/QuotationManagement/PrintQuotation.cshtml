@@ -523,7 +523,11 @@
                 }
             }
             
-            decimal grandTotal = subtotal + totalTaxAmount;
+            // ✅ FIX: Lấy discount amount từ quotation
+            decimal discountAmount = Model.Quotation.DiscountAmount;
+            
+            // ✅ FIX: Tính grandTotal = subtotal + tax - discount
+            decimal grandTotal = subtotal + totalTaxAmount - discountAmount;
             
             // TaxRate tổng thể cho hiển thị (nếu cần)
             decimal taxRate = Model.Quotation.TaxRate;
@@ -701,6 +705,13 @@
                             <tr class="grand-total-row">
                                 <td colspan="5" class="text-right"><strong>THUẾ VAT</strong></td>
                                 <td style="width:20%"><strong>@totalTaxAmount.ToString("N0") VNĐ</strong></td>
+                            </tr>
+                        }
+                        @if (discountAmount > 0)
+                        {
+                            <tr class="grand-total-row" style="background: #28a745 !important; color: white;">
+                                <td colspan="5" class="text-right"><strong>GIẢM GIÁ</strong></td>
+                                <td style="width:20%"><strong>-@discountAmount.ToString("N0") VNĐ</strong></td>
                             </tr>
                         }
                         <tr class="grand-total-row" style="background: #ff6b35 !important; color: white;">

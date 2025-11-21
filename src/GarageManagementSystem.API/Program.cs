@@ -120,6 +120,14 @@ builder.Services.AddDbContext<GarageDbContext>((serviceProvider, options) =>
 // và I{Name}Service -> {Name}Service
 builder.Services.AddApplicationServices();
 
+// ✅ FIX: Đăng ký các Services nằm trong Core.Interfaces (không được auto-register bởi AddApplicationServices)
+// Các service này có interface trong Core.Interfaces nhưng implementation ở Infrastructure hoặc Core.Services
+builder.Services.AddScoped<GarageManagementSystem.Core.Interfaces.ICOGSCalculationService, GarageManagementSystem.Infrastructure.Services.COGSCalculationService>();
+builder.Services.AddScoped<GarageManagementSystem.Core.Interfaces.IWarrantyService, GarageManagementSystem.Infrastructure.Services.WarrantyService>();
+builder.Services.AddScoped<GarageManagementSystem.Core.Interfaces.IProfitReportService, GarageManagementSystem.Infrastructure.Services.ProfitReportService>();
+builder.Services.AddScoped<GarageManagementSystem.Core.Interfaces.IFinancialTransactionService, GarageManagementSystem.Infrastructure.Services.FinancialTransactionService>();
+builder.Services.AddScoped<GarageManagementSystem.Core.Interfaces.IPrintTemplateService, GarageManagementSystem.Core.Services.PrintTemplateService>();
+
 // Cache Service (Singleton - đăng ký riêng vì cần Singleton)
 builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<ICacheService, CacheService>();
@@ -140,7 +148,11 @@ builder.Services.AddCors(options =>
                 "https://localhost:7000",   // Web app HTTPS
                 "http://localhost:7003",    // Web app HTTP
                 "https://localhost:7001",   // Alternative Web app port
-                "http://localhost:7002"     // Alternative Web app port
+                "http://localhost:7002",    // Alternative Web app port
+                "https://localhost:44352",  // ✅ FIX: Web app development port
+                "http://localhost:44352",   // ✅ FIX: Web app HTTP (if any)
+                "https://localhost:44303",  // ✅ FIX: API development port (for same-origin requests)
+                "http://localhost:44303"    // ✅ FIX: API HTTP (if any)
               )
               .AllowAnyMethod()
               .AllowAnyHeader()
@@ -181,7 +193,8 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-// SignalR Hub
+// ✅ FIX: SignalR Hub - Map after CORS to ensure CORS headers are sent
+// Note: SignalR hub access should be controlled via JavaScript authentication if needed
 app.MapHub<GarageManagementSystem.API.Hubs.NotificationHub>("/hubs/notifications");
 
 app.Run();

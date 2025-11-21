@@ -111,13 +111,17 @@ namespace GarageManagementSystem.Web.Controllers
         [HttpGet("GetVehicle/{id}")]
         public async Task<IActionResult> Details(int id)
         {
-            var response = await _apiService.GetAsync<ApiResponse<VehicleDto>>(
+            // ✅ FIX: API trả về ApiResponse<VehicleDto>, ApiService cũng wrap thành ApiResponse
+            // Nên response.Data là ApiResponse<VehicleDto>, response.Data.Data là VehicleDto
+            // Đổi sang GetAsync<VehicleDto> để tránh double nesting
+            var response = await _apiService.GetAsync<VehicleDto>(
                 ApiEndpoints.Builder.WithId(ApiEndpoints.Vehicles.GetById, id)
             );
             
             if (response.Success && response.Data != null)
             {
-                var vehicle = response.Data.Data;
+                // ✅ FIX: response.Data giờ là VehicleDto trực tiếp (không cần .Data.Data)
+                var vehicle = response.Data;
                 var vehicleData = new
                 {
                     id = vehicle.Id,
@@ -136,7 +140,7 @@ namespace GarageManagementSystem.Web.Controllers
                 return Json(new ApiResponse { Data = vehicleData, Success = true, StatusCode = System.Net.HttpStatusCode.OK });
             }
             
-            return Json(new { success = false, error = "Vehicle not found" });
+            return Json(new { success = false, error = response.ErrorMessage ?? "Vehicle not found" });
         }
 
         /// <summary>
@@ -254,11 +258,13 @@ namespace GarageManagementSystem.Web.Controllers
         [HttpGet("GetActiveCustomers")]
         public async Task<IActionResult> GetActiveCustomers()
         {
-            var response = await _apiService.GetAsync<ApiResponse<List<CustomerDto>>>(ApiEndpoints.Customers.GetAll);
+            // ✅ FIX: Đổi sang GetAsync<List<CustomerDto>> để tránh double nesting
+            var response = await _apiService.GetAsync<List<CustomerDto>>(ApiEndpoints.Customers.GetAll);
             
             if (response.Success && response.Data != null)
             {
-                var customerList = response.Data.Data.Select(c => new
+                // ✅ FIX: response.Data giờ là List<CustomerDto> trực tiếp (không cần .Data.Data)
+                var customerList = response.Data.Select(c => new
                 {
                     id = c.Id,
                     name = c.Name
@@ -350,11 +356,14 @@ namespace GarageManagementSystem.Web.Controllers
         {
             try
             {
-                var response = await _apiService.GetAsync<ApiResponse<VehicleInspectionDto>>(ApiEndpoints.Builder.WithId(ApiEndpoints.VehicleInspections.GetById, id));
+                // ✅ FIX: API trả về ApiResponse<VehicleInspectionDto>, ApiService cũng wrap thành ApiResponse
+                // Đổi sang GetAsync<VehicleInspectionDto> để tránh double nesting
+                var response = await _apiService.GetAsync<VehicleInspectionDto>(ApiEndpoints.Builder.WithId(ApiEndpoints.VehicleInspections.GetById, id));
                 
                 if (response.Success && response.Data != null)
                 {
-                    var inspection = response.Data.Data;
+                    // ✅ FIX: response.Data giờ là VehicleInspectionDto trực tiếp (không cần .Data.Data)
+                    var inspection = response.Data;
                     
                     // Format dates for HTML input fields
                     var inspectionData = new
@@ -477,11 +486,13 @@ namespace GarageManagementSystem.Web.Controllers
         {
             try
             {
-                var response = await _apiService.GetAsync<ApiResponse<List<EmployeeDto>>>(ApiEndpoints.Employees.GetActive);
+                // ✅ FIX: Đổi sang GetAsync<List<EmployeeDto>> để tránh double nesting
+                var response = await _apiService.GetAsync<List<EmployeeDto>>(ApiEndpoints.Employees.GetActive);
                 
                 if (response.Success && response.Data != null)
                 {
-                    var allEmployees = response.Data.Data.ToList();
+                    // ✅ FIX: response.Data giờ là List<EmployeeDto> trực tiếp (không cần .Data.Data)
+                    var allEmployees = response.Data.ToList();
                     
                     var inspectors = allEmployees
                         .Where(e => e.Position != null && (
@@ -590,11 +601,13 @@ namespace GarageManagementSystem.Web.Controllers
         {
             try
             {
-                var response = await _apiService.GetAsync<ApiResponse<List<EmployeeDto>>>(ApiEndpoints.Employees.GetActive);
+                // ✅ FIX: Đổi sang GetAsync<List<EmployeeDto>> để tránh double nesting
+                var response = await _apiService.GetAsync<List<EmployeeDto>>(ApiEndpoints.Employees.GetActive);
                 
                 if (response.Success && response.Data != null)
                 {
-                    var employees = response.Data.Data.Select(e => new
+                    // ✅ FIX: response.Data giờ là List<EmployeeDto> trực tiếp (không cần .Data.Data)
+                    var employees = response.Data.Select(e => new
                     {
                         value = e.Id.ToString(),
                         text = e.Name + " - " + (e.Position ?? "N/A")
