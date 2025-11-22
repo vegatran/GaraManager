@@ -97,7 +97,7 @@
                             <div class="col-md-3">
                                 <div class="form-group">
                                     <label>Nhà Cung Cấp</label>
-                                    <select id="supplierFilter" class="form-control select2" style="width: 100%;">
+                                    <select id="supplierFilter" class="form-control form-control-sm select2" style="width: 100%;">
                                         <option value="">-- Tất cả --</option>
                                     </select>
                                 </div>
@@ -105,7 +105,7 @@
                             <div class="col-md-3">
                                 <div class="form-group">
                                     <label>Trạng Thái Giao Hàng</label>
-                                    <select id="deliveryStatusFilter" class="form-control">
+                                    <select id="deliveryStatusFilter" class="form-control form-control-sm">
                                         <option value="">-- Tất cả --</option>
                                         <option value="OnTime">Đúng Hạn</option>
                                         <option value="AtRisk">Sắp Đến Hạn</option>
@@ -116,13 +116,13 @@
                             <div class="col-md-3">
                                 <div class="form-group">
                                     <label>Số Ngày Đến Hạn</label>
-                                    <input type="number" id="daysUntilFilter" class="form-control" placeholder="VD: 3" min="0" />
+                                    <input type="number" id="daysUntilFilter" class="form-control form-control-sm" placeholder="VD: 3" min="0" />
                                 </div>
                             </div>
                             <div class="col-md-3">
                                 <div class="form-group">
                                     <label>&nbsp;</label>
-                                    <button type="button" class="btn btn-primary btn-block" id="btnSearch">
+                                    <button type="button" class="btn btn-primary btn-sm btn-block" id="btnSearch">
                                         <i class="fas fa-search"></i> Tìm Kiếm
                                     </button>
                                 </div>
@@ -140,7 +140,7 @@
                     <div class="card-header">
                         <h3 class="card-title">Danh Sách PO Đang Chờ Giao Hàng</h3>
                         <div class="card-tools">
-                            <button type="button" class="btn btn-success btn-sm" id="btnRefresh">
+            <button type="button" class="btn btn-success btn-sm" id="btnRefresh">
                                 <i class="fas fa-sync-alt"></i> Làm Mới
                             </button>
                         </div>
@@ -185,15 +185,15 @@
                     <input type="hidden" id="updatePoId" />
                     <div class="row">
                         <div class="col-md-6">
-                            <div class="form-group">
+                        <div class="form-group">
                                 <label>Mã Vận Đơn</label>
-                                <input type="text" id="updateTrackingNumber" class="form-control" />
+                                <input type="text" id="updateTrackingNumber" class="form-control form-control-sm" />
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label>Phương Thức Vận Chuyển</label>
-                                <input type="text" id="updateShippingMethod" class="form-control" placeholder="VD: Xe tải, Giao hàng nhanh..." />
+                                <input type="text" id="updateShippingMethod" class="form-control form-control-sm" placeholder="VD: Xe tải, Giao hàng nhanh..." />
                             </div>
                         </div>
                     </div>
@@ -201,13 +201,13 @@
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label>Ngày Dự Kiến Giao Hàng</label>
-                                <input type="date" id="updateExpectedDeliveryDate" class="form-control" />
+                                <input type="date" id="updateExpectedDeliveryDate" class="form-control form-control-sm" />
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label>Ngày Gửi Hàng (In-Transit)</label>
-                                <input type="date" id="updateInTransitDate" class="form-control" />
+                                <input type="date" id="updateInTransitDate" class="form-control form-control-sm" />
                             </div>
                         </div>
                     </div>
@@ -215,7 +215,7 @@
                         <div class="col-md-12">
                             <div class="form-group">
                                 <label>Ghi Chú</label>
-                                <textarea id="updateDeliveryNotes" class="form-control" rows="3"></textarea>
+                                <textarea id="updateDeliveryNotes" class="form-control form-control-sm" rows="3"></textarea>
                             </div>
                         </div>
                     </div>
@@ -232,8 +232,8 @@
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Đóng</button>
-                <button type="button" class="btn btn-primary" id="btnSaveTracking">Lưu</button>
+                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Đóng</button>
+                <button type="button" class="btn btn-primary btn-sm" id="btnSaveTracking">Lưu</button>
             </div>
         </div>
     </div>
@@ -255,7 +255,7 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Đóng</button>
+                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Đóng</button>
             </div>
         </div>
     </div>

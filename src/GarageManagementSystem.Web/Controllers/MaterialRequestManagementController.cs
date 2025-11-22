@@ -145,6 +145,22 @@ namespace GarageManagementSystem.Web.Controllers
             }
         }
 
+        [HttpGet("GetMR/{id}")]
+        public async Task<IActionResult> GetMR(int id)
+        {
+            try
+            {
+                var response = await _apiService.GetAsync<MaterialRequestDto>(
+                    ApiEndpoints.Builder.WithId(ApiEndpoints.MaterialRequests.GetById, id));
+
+                return Json(response);
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
         /// <summary>
         /// Lấy chi tiết Service Order (JO) bao gồm các phụ tùng để gợi ý cho Material Request
         /// Lấy từ ServiceQuotation.Items (các items có PartId)

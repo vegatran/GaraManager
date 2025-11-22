@@ -17,7 +17,7 @@
                         <label for="approveCustomerNotes">
                             Ghi chú khách hàng <span class="text-muted">(Tùy chọn)</span>
                         </label>
-                        <textarea class="form-control" id="approveCustomerNotes" rows="3" 
+                        <textarea class="form-control form-control-sm" id="approveCustomerNotes" rows="3" 
                                   placeholder="Nhập ghi chú từ khách hàng hoặc lý do duyệt..."></textarea>
                         <small class="form-text text-muted">Ghi chú này sẽ được lưu lại cùng với báo giá đã duyệt.</small>
                     </div>
@@ -40,7 +40,7 @@
                         <label for="approveScheduledDate">
                             Ngày hẹn sửa chữa <span class="text-muted">(Tùy chọn)</span>
                         </label>
-                        <input type="date" class="form-control" id="approveScheduledDate" 
+                        <input type="date" class="form-control form-control-sm" id="approveScheduledDate" 
                                min="@DateTime.Now.ToString("yyyy-MM-dd")">
                         <small class="form-text text-muted">Chọn ngày bắt đầu sửa chữa (mặc định là ngày hiện tại).</small>
                     </div>
@@ -53,10 +53,10 @@
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">
                     <i class="fas fa-times"></i> Hủy
                 </button>
-                <button type="button" class="btn btn-success" id="btnSubmitApproveQuotation">
+                <button type="button" class="btn btn-success btn-sm" id="btnSubmitApproveQuotation">
                     <i class="fas fa-check"></i> Xác nhận Duyệt
                 </button>
             </div>

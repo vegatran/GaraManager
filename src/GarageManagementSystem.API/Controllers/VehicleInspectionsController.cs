@@ -77,6 +77,7 @@ namespace GarageManagementSystem.API.Controllers
                     .Take(pageSize)
                     .Include(i => i.Customer)
                     .Include(i => i.Vehicle)
+                    .Include(i => i.Inspector)
                     .Include(i => i.Issues)
                     .Include(i => i.Photos)
                     .ToListAsync();

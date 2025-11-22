@@ -18,6 +18,8 @@
         bindCommonEvents();
         bindPhaseButtons();
         bindPhaseClearButtons();
+        bindLayerClearButtons();
+        bindLayerButtons();
     }
 
     function bindCommonEvents() {
@@ -58,6 +60,24 @@
         });
         $('#btnClearPhase3').on('click', function () {
             clearPhaseData(3);
+        });
+    }
+
+    function bindLayerClearButtons() {
+        $('#btnClearFinancialLayer').on('click', function () {
+            clearLayerData('financial');
+        });
+        $('#btnClearFeedbackLayer').on('click', function () {
+            clearLayerData('feedback');
+        });
+    }
+
+    function bindLayerButtons() {
+        $('#btnFinancialLayer').on('click', function () {
+            createLayerData('financial');
+        });
+        $('#btnFeedbackLayer').on('click', function () {
+            createLayerData('feedback');
         });
     }
 
@@ -157,6 +177,21 @@
 
         $('#statusCards').html(html);
     }
+
+    var layerNames = {
+        financial: 'Layer Tài chính',
+        feedback: 'Layer Hậu mãi và Phản hồi'
+    };
+
+    var layerCreateLabels = {
+        financial: 'tạo Layer Tài chính',
+        feedback: 'tạo Layer Hậu mãi'
+    };
+
+    var layerClearLabels = {
+        financial: 'xóa Layer Tài chính',
+        feedback: 'xóa Layer Hậu mãi'
+    };
 
     function setupModule(moduleId) {
         $.ajax({
@@ -342,6 +377,104 @@
                         loadSetupModules();
                     } else {
                         Swal.fire({ icon: 'error', title: 'Lỗi!', text: 'Lỗi xóa dữ liệu: ' + (response.message || 'Không xác định') });
+                    }
+                },
+                error: function (xhr) {
+                    handleAjaxError(xhr);
+                },
+                complete: function () {
+                    $btn.prop('disabled', false).html(originalHtml);
+                }
+            });
+        });
+    }
+
+    function createLayerData(layer) {
+        if (!window.setupConfig.createLayerUrls || !window.setupConfig.createLayerUrls[layer]) {
+            Swal.fire({ icon: 'error', title: 'Lỗi!', text: 'Không tìm thấy endpoint cấu hình cho ' + (layerNames[layer] || 'layer') });
+            return;
+        }
+
+        Swal.fire({
+            title: 'Xác nhận',
+            text: 'Bạn có chắc muốn tạo ' + (layerNames[layer] || 'layer dữ liệu') + '?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Có, tạo ngay!',
+            cancelButtonText: 'Hủy'
+        }).then(function (result) {
+            if (!result.isConfirmed) {
+                return;
+            }
+
+            var btnId = '#btn' + (layer === 'financial' ? 'FinancialLayer' : 'FeedbackLayer');
+            var $btn = $(btnId);
+            var originalHtml = $btn.html();
+            $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Đang tạo...');
+
+            $.ajax({
+                url: window.setupConfig.createLayerUrls[layer],
+                type: 'POST',
+                success: function (response) {
+                    handlePhaseResponse(response, $btn, originalHtml, layerCreateLabels[layer] || 'tạo layer');
+                    if (response.success) {
+                        loadSetupModules();
+                    }
+                },
+                error: function (xhr) {
+                    handleAjaxError(xhr);
+                },
+                complete: function () {
+                    $btn.prop('disabled', false).html(originalHtml);
+                }
+            });
+        });
+    }
+
+    function clearLayerData(layer) {
+        if (!window.setupConfig.clearLayerUrls || !window.setupConfig.clearLayerUrls[layer]) {
+            Swal.fire({ icon: 'error', title: 'Lỗi!', text: 'Không tìm thấy endpoint để xóa ' + (layerNames[layer] || 'layer') });
+            return;
+        }
+
+        Swal.fire({
+            title: 'Xác nhận',
+            text: 'Bạn có chắc muốn xóa ' + (layerNames[layer] || 'layer') + '?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Có, xóa ngay!',
+            cancelButtonText: 'Hủy'
+        }).then(function (result) {
+            if (!result.isConfirmed) {
+                return;
+            }
+
+            var btnId = '#btnClear' + (layer === 'financial' ? 'FinancialLayer' : 'FeedbackLayer');
+            var $btn = $(btnId);
+            var originalHtml = $btn.html();
+            $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Đang xóa...');
+
+            $.ajax({
+                url: window.setupConfig.clearLayerUrls[layer],
+                type: 'POST',
+                success: function (response) {
+                    if (response.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Đã xóa',
+                            text: response.message || (layerNames[layer] || 'Layer') + ' đã được xóa',
+                            timer: 2500,
+                            showConfirmButton: false
+                        });
+                        loadDataStatus();
+                        loadSetupModules();
+                    } else {
+                        var errorMsg = extractErrorMessage(response);
+                        Swal.fire({ icon: 'error', title: 'Lỗi!', text: errorMsg });
                     }
                 },
                 error: function (xhr) {

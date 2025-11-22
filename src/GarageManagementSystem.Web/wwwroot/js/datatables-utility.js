@@ -150,10 +150,21 @@ window.DataTablesUtility = {
                 type: 'GET',
                 data: function(d) {
                     // Convert DataTables parameters to API parameters
+                    var length = parseInt(d.length, 10);
+                    var start = parseInt(d.start, 10);
+
+                    if (isNaN(length) || length <= 0) {
+                        length = 10;
+                    }
+                    if (isNaN(start) || start < 0) {
+                        start = 0;
+                    }
+
                     var params = {
-                        pageNumber: (d.start / d.length) + 1,
-                        pageSize: d.length,
-                        searchTerm: d.search.value
+                        draw: d.draw,
+                        pageNumber: Math.floor(start / length) + 1,
+                        pageSize: length,
+                        searchTerm: d.search ? d.search.value : ''
                     };
                     
                     // Add custom filters if provided

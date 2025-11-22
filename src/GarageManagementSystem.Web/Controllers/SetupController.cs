@@ -368,6 +368,62 @@ namespace GarageManagementSystem.Web.Controllers
             }
         }
 
+        [HttpPost("CreateFinancialLayer")]
+        public async Task<IActionResult> CreateFinancialLayer()
+        {
+            try
+            {
+                var result = await _apiService.PostAsync<object>(ApiEndpoints.Setup.CreateFinancialLayer, null);
+                return Json(new { success = result.Success, message = result.Message, data = result.Data });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpPost("CreateFeedbackLayer")]
+        public async Task<IActionResult> CreateFeedbackLayer()
+        {
+            try
+            {
+                var result = await _apiService.PostAsync<object>(ApiEndpoints.Setup.CreateFeedbackLayer, null);
+                return Json(new { success = result.Success, message = result.Message, data = result.Data });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpPost("ClearFinancialLayer")]
+        public async Task<IActionResult> ClearFinancialLayer()
+        {
+            try
+            {
+                var result = await _apiService.PostAsync<object>(ApiEndpoints.Setup.ClearFinancialLayer, null);
+                return Json(new { success = result.Success, message = result.Message, data = result.Data });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpPost("ClearFeedbackLayer")]
+        public async Task<IActionResult> ClearFeedbackLayer()
+        {
+            try
+            {
+                var result = await _apiService.PostAsync<object>(ApiEndpoints.Setup.ClearFeedbackLayer, null);
+                return Json(new { success = result.Success, message = result.Message, data = result.Data });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
         #region Create Methods for Individual Modules
 
         /// <summary>

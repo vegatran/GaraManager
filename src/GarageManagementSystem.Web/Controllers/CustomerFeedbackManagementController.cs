@@ -178,21 +178,25 @@ namespace GarageManagementSystem.Web.Controllers
         {
             try
             {
-                var endpoint = string.Format(ApiEndpoints.CustomerFeedbacks.GetById, id);
-                var response = await _apiService.GetAsync<ApiResponse<CustomerFeedbackDto>>(endpoint);
+                var endpoint = ApiEndpoints.Builder.WithId(ApiEndpoints.CustomerFeedbacks.GetById, id);
+                var response = await _apiService.GetAsync<CustomerFeedbackDto>(endpoint);
 
                 if (response.Success && response.Data != null)
                 {
-                    return Json(response.Data);
-                }
-                else
-                {
-                    return Json(new ApiResponse<CustomerFeedbackDto>
+                    return Json(new
                     {
-                        Success = false,
-                        ErrorMessage = response.ErrorMessage ?? "Không tìm thấy phản hồi"
+                        success = true,
+                        data = response.Data,
+                        message = response.Message ?? "Đã tải phản hồi"
                     });
                 }
+
+                return Json(new
+                {
+                    success = false,
+                    data = (CustomerFeedbackDto?)null,
+                    message = response.ErrorMessage ?? response.Message ?? "Không tìm thấy phản hồi"
+                });
             }
             catch (Exception ex)
             {

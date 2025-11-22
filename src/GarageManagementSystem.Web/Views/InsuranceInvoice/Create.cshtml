@@ -135,13 +135,13 @@
                                                 <div class="col-md-2">
                                                     <div class="form-group">
                                                         <label>Giá duyệt <span class="text-danger">*</span></label>
-                                                        <input name="Items[@i].ApprovedPrice" type="number" value="@Model.Items[i].ApprovedPrice" class="form-control approved-price" placeholder="0" />
+                                        <input name="Items[@i].ApprovedPrice" type="number" value="@Model.Items[i].ApprovedPrice" class="form-control form-control-sm approved-price" placeholder="0" />
                                                     </div>
                                                 </div>
                                                 <div class="col-md-2">
                                                     <div class="form-group">
                                                         <label>Trách nhiệm KH</label>
-                                                        <input name="Items[@i].CustomerPrice" type="number" value="@Model.Items[i].CustomerPrice" class="form-control customer-price" placeholder="0" />
+                                                        <input name="Items[@i].CustomerPrice" type="number" value="@Model.Items[i].CustomerPrice" class="form-control form-control-sm customer-price" placeholder="0" />
                                                     </div>
                                                 </div>
                                                 <div class="col-md-2">
@@ -198,10 +198,10 @@
                                 </div>
 
                                 <div class="form-group">
-                                    <button type="submit" class="btn btn-primary btn-block">
+                                        <button type="submit" class="btn btn-primary btn-sm btn-block">
                                         <i class="fas fa-save"></i> Tạo Hóa Đơn
                                     </button>
-                                    <a href="@Url.Action("Index")" class="btn btn-secondary btn-block">
+                                    <a href="@Url.Action("Index")" class="btn btn-secondary btn-sm btn-block">
                                         <i class="fas fa-arrow-left"></i> Quay lại
                                     </a>
                                 </div>
@@ -238,18 +238,18 @@
                                 </select>
                             </div>
                         </div>
-                        <div class="col-md-2">
-                            <div class="form-group">
-                                <label>Giá duyệt <span class="text-danger">*</span></label>
-                                <input name="Items[${itemIndex}].ApprovedPrice" type="number" class="form-control approved-price" placeholder="0" required />
-                            </div>
-                        </div>
-                        <div class="col-md-2">
-                            <div class="form-group">
-                                <label>Trách nhiệm KH</label>
-                                <input name="Items[${itemIndex}].CustomerPrice" type="number" class="form-control customer-price" placeholder="0" />
-                            </div>
-                        </div>
+                                        <div class="col-md-2">
+                                            <div class="form-group">
+                                                <label>Giá duyệt <span class="text-danger">*</span></label>
+                                                <input name="Items[${itemIndex}].ApprovedPrice" type="number" class="form-control form-control-sm approved-price" placeholder="0" required />
+                                            </div>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <div class="form-group">
+                                                <label>Trách nhiệm KH</label>
+                                                <input name="Items[${itemIndex}].CustomerPrice" type="number" class="form-control form-control-sm customer-price" placeholder="0" />
+                                            </div>
+                                        </div>
                         <div class="col-md-2">
                             <div class="form-group">
                                 <label>Ghi chú</label>

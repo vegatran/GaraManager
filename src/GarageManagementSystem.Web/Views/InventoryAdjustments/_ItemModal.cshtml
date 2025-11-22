@@ -16,7 +16,7 @@
                     <!-- Part Selection -->
                     <div class="form-group">
                         <label for="createItemPartSearch">Phụ Tùng <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="createItemPartSearch" placeholder="Tìm kiếm phụ tùng..." autocomplete="off" required>
+                        <input type="text" class="form-control form-control-sm" id="createItemPartSearch" placeholder="Tìm kiếm phụ tùng..." autocomplete="off" required>
                         <small class="form-text text-muted">Nhập tên hoặc mã phụ tùng để tìm kiếm</small>
                     </div>
 
@@ -37,14 +37,14 @@
                     <!-- System Quantity Before (Read-only) -->
                     <div class="form-group">
                         <label for="createItemSystemQuantityBefore">Tồn Kho Hiện Tại</label>
-                        <input type="number" class="form-control" id="createItemSystemQuantityBefore" readonly>
+                        <input type="number" class="form-control form-control-sm" id="createItemSystemQuantityBefore" readonly>
                         <small class="form-text text-muted">Số lượng trong hệ thống (tự động lấy từ tồn kho)</small>
                     </div>
 
                     <!-- Quantity Change -->
                     <div class="form-group">
                         <label for="createItemQuantityChange">Số Lượng Thay Đổi <span class="text-danger">*</span></label>
-                        <input type="number" class="form-control" id="createItemQuantityChange" required>
+                        <input type="number" class="form-control form-control-sm" id="createItemQuantityChange" required>
                         <small class="form-text text-muted">
                             Nhập số dương để tăng, số âm để giảm (VD: +10 để tăng 10, -5 để giảm 5)
                         </small>
@@ -53,7 +53,7 @@
                     <!-- System Quantity After (Read-only, auto-calculated) -->
                     <div class="form-group">
                         <label for="createItemSystemQuantityAfter">Tồn Kho Sau Điều Chỉnh</label>
-                        <input type="number" class="form-control" id="createItemSystemQuantityAfter" readonly>
+                        <input type="number" class="form-control form-control-sm" id="createItemSystemQuantityAfter" readonly>
                         <small class="form-text text-muted" id="createItemQuantityAfterHint">
                             Tồn kho sau = Tồn kho hiện tại + Thay đổi (tự động tính)
                         </small>
@@ -65,12 +65,12 @@
                     <!-- Notes -->
                     <div class="form-group">
                         <label for="createItemNotes">Ghi Chú</label>
-                        <textarea class="form-control" id="createItemNotes" rows="3" placeholder="Nhập ghi chú (nếu có)"></textarea>
+                        <textarea class="form-control form-control-sm" id="createItemNotes" rows="3" placeholder="Nhập ghi chú (nếu có)"></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Hủy</button>
-                    <button type="submit" class="btn btn-primary">Lưu</button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary btn-sm">Lưu</button>
                 </div>
             </form>
         </div>

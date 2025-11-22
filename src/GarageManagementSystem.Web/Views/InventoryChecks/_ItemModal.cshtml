@@ -17,7 +17,7 @@
                     <!-- Part Selection -->
                     <div class="form-group">
                         <label for="itemPartSearch">Phụ Tùng <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="itemPartSearch" placeholder="Tìm kiếm phụ tùng..." autocomplete="off" required>
+                        <input type="text" class="form-control form-control-sm" id="itemPartSearch" placeholder="Tìm kiếm phụ tùng..." autocomplete="off" required>
                         <small class="form-text text-muted">Nhập tên hoặc mã phụ tùng để tìm kiếm</small>
                     </div>
 
@@ -38,33 +38,33 @@
                     <!-- System Quantity (Read-only) -->
                     <div class="form-group">
                         <label for="itemSystemQuantity">Số Lượng Hệ Thống</label>
-                        <input type="number" class="form-control" id="itemSystemQuantity" readonly>
+                        <input type="number" class="form-control form-control-sm" id="itemSystemQuantity" readonly>
                         <small class="form-text text-muted">Số lượng trong hệ thống (tự động lấy từ tồn kho)</small>
                     </div>
 
                     <!-- Actual Quantity -->
                     <div class="form-group">
                         <label for="itemActualQuantity">Số Lượng Thực Tế <span class="text-danger">*</span></label>
-                        <input type="number" class="form-control" id="itemActualQuantity" min="0" required>
+                        <input type="number" class="form-control form-control-sm" id="itemActualQuantity" min="0" required>
                         <small class="form-text text-muted">Số lượng thực tế khi kiểm kê</small>
                     </div>
 
                     <!-- Discrepancy Quantity (Read-only, auto-calculated) -->
                     <div class="form-group">
                         <label for="itemDiscrepancyQuantity">Chênh Lệch</label>
-                        <input type="number" class="form-control" id="itemDiscrepancyQuantity" readonly>
+                        <input type="number" class="form-control form-control-sm" id="itemDiscrepancyQuantity" readonly>
                         <small class="form-text text-muted">Chênh lệch = Thực tế - Hệ thống (tự động tính)</small>
                     </div>
 
                     <!-- Notes -->
                     <div class="form-group">
                         <label for="itemNotes">Ghi Chú</label>
-                        <textarea class="form-control" id="itemNotes" rows="3" placeholder="Nhập ghi chú (nếu có)"></textarea>
+                        <textarea class="form-control form-control-sm" id="itemNotes" rows="3" placeholder="Nhập ghi chú (nếu có)"></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Hủy</button>
-                    <button type="submit" class="btn btn-primary">Lưu</button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary btn-sm">Lưu</button>
                 </div>
             </form>
         </div>

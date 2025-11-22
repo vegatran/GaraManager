@@ -83,6 +83,13 @@ GarageApp.MR = {
             $(this).closest('tr').remove();
         });
 
+        $(document).on('click', '.mr-view', function() {
+            var mrId = $(this).data('id');
+            if (mrId) {
+                self.showMRDetails(mrId);
+            }
+        });
+
         $(document).on('click', '#btnSubmitCreateMR', function(){
             self.submitCreateMR();
         });
@@ -190,6 +197,61 @@ GarageApp.MR = {
         self.loadServiceOrders(function() {
             // Hiển thị modal sau khi load xong
             $('#createMRModal').modal('show');
+        });
+    },
+
+    showMRDetails: function(mrId) {
+        var modal = $('#viewMRModal');
+        modal.find('#viewMRItemsBody').empty();
+        modal.find('#viewMRNumber').text('');
+        modal.find('#viewServiceOrderId').text('');
+        modal.find('#viewMRStatus').text('');
+        modal.find('#viewMRNotes').text('');
+        modal.modal('show');
+
+        $.ajax({
+            url: '/MaterialRequestManagement/GetMR/' + mrId,
+            type: 'GET',
+            success: function(res) {
+                if (AuthHandler && !AuthHandler.validateApiResponse(res)) {
+                    return;
+                }
+
+                if (!res || !res.success || !res.data) {
+                    GarageApp.showError(GarageApp.parseErrorMessage(res) || 'Không thể tải chi tiết MR');
+                    return;
+                }
+
+                var mr = res.data;
+                modal.find('#viewMRNumber').text(mr.mrNumber);
+                modal.find('#viewServiceOrderId').text(mr.serviceOrderId);
+                modal.find('#viewMRStatus').text(mr.status);
+                modal.find('#viewMRNotes').text(mr.notes || 'Không có ghi chú');
+
+                var itemsBody = modal.find('#viewMRItemsBody');
+                itemsBody.empty();
+                if (mr.items && mr.items.length > 0) {
+                    mr.items.forEach(function(item) {
+                        var row = $('<tr>');
+                        row.append($('<td>').text(item.partName || ''));
+                        row.append($('<td>').text(item.quantityRequested || 0));
+                        row.append($('<td>').text(item.quantityApproved || 0));
+                        row.append($('<td>').text(item.quantityPicked || 0));
+                        row.append($('<td>').text(item.quantityIssued || 0));
+                        itemsBody.append(row);
+                    });
+                } else {
+                    itemsBody.append('<tr><td colspan="5" class="text-center text-muted">Không có vật tư</td></tr>');
+                }
+            },
+            error: function(xhr) {
+                if (AuthHandler && AuthHandler.isUnauthorized(xhr)) {
+                    AuthHandler.handleUnauthorized(xhr, true);
+                } else {
+                    GarageApp.showError('Lỗi khi tải chi tiết MR');
+                }
+                modal.modal('hide');
+            }
         });
     },
 

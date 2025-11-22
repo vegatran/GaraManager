@@ -87,7 +87,7 @@
                             <div class="col-md-3">
                                 <div class="form-group">
                                     <label>Ưu Tiên</label>
-                                    <select id="filterPriority" class="form-control">
+                                    <select id="filterPriority" class="form-control form-control-sm">
                                         <option value="">Tất cả</option>
                                         <option value="High">Cao</option>
                                         <option value="Medium">Trung Bình</option>
@@ -98,7 +98,7 @@
                             <div class="col-md-3">
                                 <div class="form-group">
                                     <label>Nguồn</label>
-                                    <select id="filterSource" class="form-control">
+                                    <select id="filterSource" class="form-control form-control-sm">
                                         <option value="">Tất cả</option>
                                         <option value="InventoryAlert">Cảnh Báo Tồn Kho</option>
                                         <option value="ServiceOrder">Đơn Hàng Sửa Chữa</option>
@@ -108,7 +108,7 @@
                             <div class="col-md-3">
                                 <div class="form-group">
                                     <label>&nbsp;</label>
-                                    <button type="button" class="btn btn-primary btn-block" id="btnApplyFilters">
+                                    <button type="button" class="btn btn-primary btn-sm btn-block" id="btnApplyFilters">
                                         <i class="fas fa-filter"></i> Áp Dụng Bộ Lọc
                                     </button>
                                 </div>
@@ -116,7 +116,7 @@
                             <div class="col-md-3">
                                 <div class="form-group">
                                     <label>&nbsp;</label>
-                                    <button type="button" class="btn btn-secondary btn-block" id="btnResetFilters">
+                                    <button type="button" class="btn btn-secondary btn-sm btn-block" id="btnResetFilters">
                                         <i class="fas fa-redo"></i> Đặt Lại
                                     </button>
                                 </div>
@@ -184,21 +184,21 @@
                 <form id="bulkCreatePOForm">
                     <div class="form-group">
                         <label>Nhà Cung Cấp <span class="text-danger">*</span></label>
-                        <select id="supplierSelect" class="form-control" required>
+                        <select id="supplierSelect" class="form-control form-control-sm" required>
                             <option value="">-- Chọn nhà cung cấp --</option>
                         </select>
                     </div>
                     <div class="form-group">
                         <label>Ngày Đặt Hàng</label>
-                        <input type="date" id="orderDate" class="form-control" />
+                        <input type="date" id="orderDate" class="form-control form-control-sm" />
                     </div>
                     <div class="form-group">
                         <label>Ngày Giao Hàng Dự Kiến</label>
-                        <input type="date" id="expectedDeliveryDate" class="form-control" />
+                        <input type="date" id="expectedDeliveryDate" class="form-control form-control-sm" />
                     </div>
                     <div class="form-group">
                         <label>Ghi Chú</label>
-                        <textarea id="notes" class="form-control" rows="3"></textarea>
+                        <textarea id="notes" class="form-control form-control-sm" rows="3"></textarea>
                     </div>
                     <div class="form-group">
                         <label>Danh Sách Phụ Tùng Đã Chọn:</label>
@@ -220,9 +220,9 @@
                     </div>
                 </form>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Đóng</button>
-                <button type="button" class="btn btn-primary" id="btnConfirmCreatePO">
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Đóng</button>
+                    <button type="button" class="btn btn-primary btn-sm" id="btnConfirmCreatePO">
                     <i class="fas fa-check"></i> Tạo PO
                 </button>
             </div>

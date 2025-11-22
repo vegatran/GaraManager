@@ -570,6 +570,30 @@ namespace GarageManagementSystem.API.Controllers
                 return StatusCode(500, ApiResponse<object>.ErrorResult("Lỗi khi xuất vật tư", ex.Message));
             }
         }
+
+        [HttpGet("{id}")]
+        public async Task<ActionResult<ApiResponse<MaterialRequestDto>>> GetById(int id)
+        {
+            try
+            {
+                var mr = await _context.MaterialRequests
+                    .Include(m => m.Items)
+                    .FirstOrDefaultAsync(m => m.Id == id && !m.IsDeleted);
+
+                if (mr == null)
+                {
+                    return NotFound(ApiResponse<MaterialRequestDto>.ErrorResult("Không tìm thấy MR"));
+                }
+
+                var dto = _mapper.Map<MaterialRequestDto>(mr);
+                return Ok(ApiResponse<MaterialRequestDto>.SuccessResult(dto, "Lấy MR thành công"));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting MR by id");
+                return StatusCode(500, ApiResponse<MaterialRequestDto>.ErrorResult("Lỗi khi lấy MR"));
+            }
+        }
     }
 }
 

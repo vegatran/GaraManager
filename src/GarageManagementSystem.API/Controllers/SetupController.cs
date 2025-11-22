@@ -259,6 +259,348 @@ namespace GarageManagementSystem.API.Controllers
         }
 
         /// <summary>
+        /// Tạo dữ liệu nền tảng (Core Entities)
+        /// </summary>
+        [HttpPost("create-core")]
+        public async Task<ActionResult<ApiResponse<object>>> CreateCoreEntities()
+        {
+            var seeded = new List<object>();
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                async Task RunModuleAsync(string moduleName, Func<Task<object>> moduleFactory)
+                {
+                    var (success, result, message) = await ExecuteSeedAsync(moduleFactory);
+                    seeded.Add(new { module = moduleName, success, message, result });
+
+                    if (!success)
+                    {
+                        throw new InvalidOperationException(
+                            string.IsNullOrWhiteSpace(message)
+                                ? $"Tạo dữ liệu cho module {moduleName} thất bại."
+                                : message);
+                    }
+                }
+
+                await RunModuleAsync("customers", CreateCustomersAsync);
+                await RunModuleAsync("vehicles", CreateVehiclesAsync);
+                await RunModuleAsync("employees", CreateEmployeesAsync);
+                await RunModuleAsync("services", CreateServicesAsync);
+                await RunModuleAsync("parts", CreatePartsAsync);
+                await RunModuleAsync("suppliers", CreateSuppliersAsync);
+
+                await transaction.CommitAsync();
+
+                return Ok(ApiResponse<object>.SuccessResult(new
+                {
+                    message = "Đã tạo dữ liệu nền tảng thành công",
+                    seeded
+                }));
+            }
+            catch (InvalidOperationException ex)
+            {
+                await transaction.RollbackAsync();
+                var errorResponse = ApiResponse<object>.ErrorResult(ex.Message);
+                errorResponse.Data = new { message = ex.Message, seeded };
+                return BadRequest(errorResponse);
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                return StatusCode(500, ApiResponse<object>.ErrorResult("Lỗi khi tạo dữ liệu nền tảng", ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// Tạo dữ liệu kho và kho vận cơ bản
+        /// </summary>
+        [HttpPost("create-inventory")]
+        public async Task<ActionResult<ApiResponse<object>>> CreateInventorySetup()
+        {
+            var seeded = new List<object>();
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                async Task RunModuleAsync(string moduleName, Func<Task<object>> moduleFactory)
+                {
+                    var (success, result, message) = await ExecuteSeedAsync(moduleFactory);
+                    seeded.Add(new { module = moduleName, success, message, result });
+
+                    if (!success)
+                    {
+                        throw new InvalidOperationException(
+                            string.IsNullOrWhiteSpace(message)
+                                ? $"Tạo dữ liệu cho module {moduleName} thất bại."
+                                : message);
+                    }
+                }
+
+                await RunModuleAsync("warehouses", CreateWarehousesAsync);
+                await RunModuleAsync("inventorychecks", CreateInventoryChecksAsync);
+                await RunModuleAsync("inventoryadjustments", CreateInventoryAdjustmentsAsync);
+
+                await transaction.CommitAsync();
+
+                return Ok(ApiResponse<object>.SuccessResult(new
+                {
+                    message = "Đã tạo dữ liệu kho & kiểm tra cơ bản thành công",
+                    seeded
+                }));
+            }
+            catch (InvalidOperationException ex)
+            {
+                await transaction.RollbackAsync();
+                var errorResponse = ApiResponse<object>.ErrorResult(ex.Message);
+                errorResponse.Data = new { message = ex.Message, seeded };
+                return BadRequest(errorResponse);
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                return StatusCode(500, ApiResponse<object>.ErrorResult("Lỗi khi tạo dữ liệu kho", ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// Tạo dữ liệu kiểm tra và báo giá hậu thuẫn
+        /// </summary>
+        [HttpPost("create-inspection-layer")]
+        public async Task<ActionResult<ApiResponse<object>>> CreateInspectionLayer()
+        {
+            var seeded = new List<object>();
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                async Task RunModuleAsync(string moduleName, Func<Task<object>> moduleFactory)
+                {
+                    var (success, result, message) = await ExecuteSeedAsync(moduleFactory);
+                    seeded.Add(new { module = moduleName, success, message, result });
+
+                    if (!success)
+                    {
+                        throw new InvalidOperationException(
+                            string.IsNullOrWhiteSpace(message)
+                                ? $"Tạo dữ liệu cho module {moduleName} thất bại."
+                                : message);
+                    }
+                }
+
+                await RunModuleAsync("inspections", CreateInspectionsAsync);
+                await RunModuleAsync("quotations", CreateQuotationsAsync);
+
+                await transaction.CommitAsync();
+
+                return Ok(ApiResponse<object>.SuccessResult(new
+                {
+                    message = "Đã tạo dữ liệu kiểm tra và báo giá thành công",
+                    seeded
+                }));
+            }
+            catch (InvalidOperationException ex)
+            {
+                await transaction.RollbackAsync();
+                var errorResponse = ApiResponse<object>.ErrorResult(ex.Message);
+                errorResponse.Data = new { message = ex.Message, seeded };
+                return BadRequest(errorResponse);
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                return StatusCode(500, ApiResponse<object>.ErrorResult("Lỗi khi tạo dữ liệu kiểm tra/báo giá", ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// Tạo dữ liệu đơn hàng &amp; vật tư
+        /// </summary>
+        [HttpPost("create-order-layer")]
+        public async Task<ActionResult<ApiResponse<object>>> CreateOrderLayer()
+        {
+            var seeded = new List<object>();
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+
+            try
+            {
+                async Task RunModuleAsync(string moduleName, Func<Task<object>> moduleFactory)
+                {
+                    var (success, result, message) = await ExecuteSeedAsync(moduleFactory);
+                    seeded.Add(new { module = moduleName, success, message, result });
+
+                    if (!success)
+                    {
+                        throw new InvalidOperationException(
+                            string.IsNullOrWhiteSpace(message)
+                                ? $"Tạo dữ liệu cho module {moduleName} thất bại."
+                                : message);
+                    }
+                }
+
+                await RunModuleAsync("orders", CreateServiceOrdersAsync);
+                await RunModuleAsync("serviceOrderLabors", CreateServiceOrderLaborsAsync);
+                await RunModuleAsync("materialRequests", CreateMaterialRequestsAsync);
+
+                await transaction.CommitAsync();
+
+                return Ok(ApiResponse<object>.SuccessResult(new
+                {
+                    message = "Đã tạo dữ liệu đơn hàng và vật tư thành công",
+                    seeded
+                }));
+            }
+            catch (InvalidOperationException ex)
+            {
+                await transaction.RollbackAsync();
+                var errorResponse = ApiResponse<object>.ErrorResult(ex.Message);
+                errorResponse.Data = new { message = ex.Message, seeded };
+                return BadRequest(errorResponse);
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                return StatusCode(500, ApiResponse<object>.ErrorResult("Lỗi khi tạo dữ liệu đơn hàng/vật tư", ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// Tạo dữ liệu tài chính &amp; thanh toán
+        /// </summary>
+        [HttpPost("create-financial-layer")]
+        public async Task<ActionResult<ApiResponse<object>>> CreateFinancialLayer()
+        {
+            var seeded = new List<object>();
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+
+            try
+            {
+                async Task RunModuleAsync(string moduleName, Func<Task<object>> moduleFactory)
+                {
+                    var (success, result, message) = await ExecuteSeedAsync(moduleFactory);
+                    seeded.Add(new { module = moduleName, success, message, result });
+
+                    if (!success)
+                    {
+                        throw new InvalidOperationException(
+                            string.IsNullOrWhiteSpace(message)
+                                ? $"Tạo dữ liệu cho module {moduleName} thất bại."
+                                : message);
+                    }
+                }
+
+                await RunModuleAsync("payments", CreatePaymentsAsync);
+                await RunModuleAsync("serviceFeeTypes", CreateServiceFeeTypesAsync);
+                await RunModuleAsync("serviceOrderFees", CreateServiceOrderFeesAsync);
+
+                await transaction.CommitAsync();
+
+                return Ok(ApiResponse<object>.SuccessResult(new
+                {
+                    message = "Đã tạo dữ liệu tài chính và thanh toán thành công",
+                    seeded
+                }));
+            }
+            catch (InvalidOperationException ex)
+            {
+                await transaction.RollbackAsync();
+                var errorResponse = ApiResponse<object>.ErrorResult(ex.Message);
+                errorResponse.Data = new { message = ex.Message, seeded };
+                return BadRequest(errorResponse);
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                return StatusCode(500, ApiResponse<object>.ErrorResult("Lỗi khi tạo dữ liệu tài chính", ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// Tạo dữ liệu hậu mãi &amp; phản hồi
+        /// </summary>
+        [HttpPost("create-feedback-layer")]
+        public async Task<ActionResult<ApiResponse<object>>> CreateFeedbackLayer()
+        {
+            var seeded = new List<object>();
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+
+            try
+            {
+                async Task RunModuleAsync(string moduleName, Func<Task<object>> moduleFactory)
+                {
+                    var (success, result, message) = await ExecuteSeedAsync(moduleFactory);
+                    seeded.Add(new { module = moduleName, success, message, result });
+
+                    if (!success)
+                    {
+                        throw new InvalidOperationException(
+                            string.IsNullOrWhiteSpace(message)
+                                ? $"Tạo dữ liệu cho module {moduleName} thất bại."
+                                : message);
+                    }
+                }
+
+                await RunModuleAsync("warranties", CreateWarrantiesAsync);
+                await RunModuleAsync("feedbackChannels", CreateFeedbackChannelsAsync);
+                await RunModuleAsync("customerFeedbacks", CreateCustomerFeedbacksAsync);
+                await RunModuleAsync("appointments", CreateAppointmentsAsync);
+
+                await transaction.CommitAsync();
+
+                return Ok(ApiResponse<object>.SuccessResult(new
+                {
+                    message = "Đã tạo dữ liệu hậu mãi và phản hồi thành công",
+                    seeded
+                }));
+            }
+            catch (InvalidOperationException ex)
+            {
+                await transaction.RollbackAsync();
+                var errorResponse = ApiResponse<object>.ErrorResult(ex.Message);
+                errorResponse.Data = new { message = ex.Message, seeded };
+                return BadRequest(errorResponse);
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                return StatusCode(500, ApiResponse<object>.ErrorResult("Lỗi khi tạo dữ liệu hậu mãi", ex.Message));
+            }
+        }
+
+        [HttpPost("clear-financial-layer")]
+        public async Task<ActionResult<ApiResponse<object>>> ClearFinancialLayer()
+        {
+            try
+            {
+                var summary = await ClearFinancialLayerAsync();
+                return Ok(ApiResponse<object>.SuccessResult(new
+                {
+                    message = "Đã xóa dữ liệu Layer Tài chính",
+                    cleared = summary
+                }));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<object>.ErrorResult("Lỗi khi xóa dữ liệu Layer Tài chính", ex.Message));
+            }
+        }
+
+        [HttpPost("clear-feedback-layer")]
+        public async Task<ActionResult<ApiResponse<object>>> ClearFeedbackLayer()
+        {
+            try
+            {
+                var summary = await ClearFeedbackLayerAsync();
+                return Ok(ApiResponse<object>.SuccessResult(new
+                {
+                    message = "Đã xóa dữ liệu Layer Hậu mãi và Phản hồi",
+                    cleared = summary
+                }));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<object>.ErrorResult("Lỗi khi xóa dữ liệu Layer Hậu mãi", ex.Message));
+            }
+        }
+
+        /// <summary>
         /// Tạo demo data cho Giai đoạn 1: Tiếp nhận &amp; Báo giá
         /// </summary>
         [HttpPost("create-phase-1")]
@@ -668,6 +1010,27 @@ namespace GarageManagementSystem.API.Controllers
             await ClearEntitiesAsync(summary, "ServiceOrderFees", _unitOfWork.ServiceOrderFees);
             await ClearEntitiesAsync(summary, "ServiceFeeTypes", _unitOfWork.Repository<Core.Entities.ServiceFeeType>());
             await ClearEntitiesAsync(summary, "PaymentTransactions", _unitOfWork.PaymentTransactions);
+            await _unitOfWork.SaveChangesAsync();
+            return summary;
+        }
+
+        private async Task<List<object>> ClearFinancialLayerAsync()
+        {
+            var summary = new List<object>();
+            await ClearEntitiesAsync(summary, "PaymentTransactions", _unitOfWork.PaymentTransactions);
+            await ClearEntitiesAsync(summary, "ServiceOrderFees", _unitOfWork.ServiceOrderFees);
+            await ClearEntitiesAsync(summary, "ServiceFeeTypes", _unitOfWork.Repository<Core.Entities.ServiceFeeType>());
+            await _unitOfWork.SaveChangesAsync();
+            return summary;
+        }
+
+        private async Task<List<object>> ClearFeedbackLayerAsync()
+        {
+            var summary = new List<object>();
+            await ClearEntitiesAsync(summary, "CustomerFeedbacks", _unitOfWork.CustomerFeedbacks);
+            await ClearEntitiesAsync(summary, "FeedbackChannels", _unitOfWork.Repository<Core.Entities.FeedbackChannel>());
+            await ClearEntitiesAsync(summary, "Warranties", _unitOfWork.Warranties);
+            await ClearEntitiesAsync(summary, "Appointments", _unitOfWork.Appointments);
             await _unitOfWork.SaveChangesAsync();
             return summary;
         }

@@ -24,7 +24,7 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Hiển thị trang quản lý dịch vụ
         /// </summary>
-        [HttpGet]
+        [HttpGet("")]
         public IActionResult Index()
         {
             return View();
@@ -33,7 +33,6 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Lấy danh sách tất cả dịch vụ cho DataTable thông qua API
         /// </summary>
-        [HttpGet]
         [HttpGet("GetServices")]
         public async Task<IActionResult> GetServices()
         {
@@ -71,7 +70,6 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Lấy thông tin chi tiết dịch vụ theo ID thông qua API
         /// </summary>
-        [HttpGet]
         [HttpGet("GetService/{id}")]
         public async Task<IActionResult> Details(int id)
         {
@@ -90,7 +88,6 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Tạo dịch vụ mới thông qua API
         /// </summary>
-        [HttpPost]
         [HttpPost("CreateService")]
         public async Task<IActionResult> Create(CreateServiceDto model)
         {
@@ -110,7 +107,6 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Cập nhật thông tin dịch vụ thông qua API
         /// </summary>
-        [HttpPost]
         [HttpPut("UpdateService/{id}")]
         public async Task<IActionResult> Edit(UpdateServiceDto model)
         {
@@ -130,7 +126,6 @@ namespace GarageManagementSystem.Web.Controllers
         /// <summary>
         /// Xóa dịch vụ thông qua API
         /// </summary>
-        [HttpPost]
         [HttpDelete("DeleteService/{id}")]
         public async Task<IActionResult> Delete(int id)
         {

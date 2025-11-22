@@ -373,8 +373,8 @@ window.CustomerFeedbackManagement = {
             }
 
             // ✅ SỬA: Check cả Success (capital) và success (lowercase) để tương thích
-            if ((response.Success || response.success) && (response.Data || response.data)) {
-                var feedback = response.Data || response.data;
+            if ((response.Success || response.success) && (response.data || response.Data)) {
+                var feedback = response.data || response.Data;
                 $('#viewCustomerName').text(feedback.customerName || '-');
                 $('#viewOrderNumber').text(feedback.orderNumber || '-');
                 $('#viewChannel').text(feedback.feedbackChannelName || '-');
@@ -385,7 +385,8 @@ window.CustomerFeedbackManagement = {
                 $('#viewNotes').text(feedback.notes || '-');
                 $('#viewFeedbackModal').modal('show');
             } else {
-                GarageApp.showError(response.errorMessage || 'Không tìm thấy phản hồi');
+                var msg = response.message || response.Message || response.errorMessage || response.ErrorMessage || 'Không tìm thấy phản hồi';
+                GarageApp.showError(msg);
             }
         })
         .fail(function(xhr) {

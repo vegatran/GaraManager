@@ -372,6 +372,7 @@ namespace GarageManagementSystem.Web.Configuration
         public static class MaterialRequests
         {
             public const string GetAll = "materialrequests"; // paged
+            public const string GetById = "materialrequests/{0}";
             public const string Create = "materialrequests";
             public const string Submit = "materialrequests/{0}/submit";
             public const string Approve = "materialrequests/{0}/approve";
@@ -475,9 +476,13 @@ namespace GarageManagementSystem.Web.Configuration
             public const string CreatePhase2 = "setup/create-phase-2";
             public const string CreatePhase3 = "setup/create-phase-3";
             public const string CreatePhase4 = "setup/create-phase-4";
+            public const string CreateFinancialLayer = "setup/create-financial-layer";
+            public const string CreateFeedbackLayer = "setup/create-feedback-layer";
             public const string ClearPhase1 = "setup/clear-phase-1";
             public const string ClearPhase2 = "setup/clear-phase-2";
             public const string ClearPhase3 = "setup/clear-phase-3";
+            public const string ClearFinancialLayer = "setup/clear-financial-layer";
+            public const string ClearFeedbackLayer = "setup/clear-feedback-layer";
         }
 
         /// <summary>

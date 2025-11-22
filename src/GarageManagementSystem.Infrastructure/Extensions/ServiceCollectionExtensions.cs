@@ -1,7 +1,9 @@
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using GarageManagementSystem.Core.Interfaces;
+using GarageManagementSystem.Core.Services;
 using GarageManagementSystem.Infrastructure.Repositories;
+using GarageManagementSystem.Infrastructure.Services;
 
 namespace GarageManagementSystem.Infrastructure.Extensions
 {
@@ -151,6 +153,20 @@ namespace GarageManagementSystem.Infrastructure.Extensions
             services.AddServices();
             return services;
         }
+
+    /// <summary>
+    /// Đăng ký các service cần cấu hình thủ công (lock-in từ Core namespace nhưng implementation nằm ở Infrastructure)
+    /// </summary>
+    public static IServiceCollection AddManualInfrastructureServices(this IServiceCollection services)
+    {
+        services.AddScoped<ICOGSCalculationService, COGSCalculationService>();
+        services.AddScoped<IWarrantyService, WarrantyService>();
+        services.AddScoped<IProfitReportService, ProfitReportService>();
+        services.AddScoped<IFinancialTransactionService, FinancialTransactionService>();
+        services.AddScoped<IPrintTemplateService, PrintTemplateService>();
+        services.AddScoped<IExcelImportService, ExcelImportService>();
+        return services;
+    }
     }
 }
 

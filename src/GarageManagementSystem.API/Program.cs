@@ -120,13 +120,8 @@ builder.Services.AddDbContext<GarageDbContext>((serviceProvider, options) =>
 // và I{Name}Service -> {Name}Service
 builder.Services.AddApplicationServices();
 
-// ✅ FIX: Đăng ký các Services nằm trong Core.Interfaces (không được auto-register bởi AddApplicationServices)
-// Các service này có interface trong Core.Interfaces nhưng implementation ở Infrastructure hoặc Core.Services
-builder.Services.AddScoped<GarageManagementSystem.Core.Interfaces.ICOGSCalculationService, GarageManagementSystem.Infrastructure.Services.COGSCalculationService>();
-builder.Services.AddScoped<GarageManagementSystem.Core.Interfaces.IWarrantyService, GarageManagementSystem.Infrastructure.Services.WarrantyService>();
-builder.Services.AddScoped<GarageManagementSystem.Core.Interfaces.IProfitReportService, GarageManagementSystem.Infrastructure.Services.ProfitReportService>();
-builder.Services.AddScoped<GarageManagementSystem.Core.Interfaces.IFinancialTransactionService, GarageManagementSystem.Infrastructure.Services.FinancialTransactionService>();
-builder.Services.AddScoped<GarageManagementSystem.Core.Interfaces.IPrintTemplateService, GarageManagementSystem.Core.Services.PrintTemplateService>();
+// ✅ FIX: Đăng ký các service đặc thù (interface ở Core nhưng implementation ở Infrastructure)
+builder.Services.AddManualInfrastructureServices();
 
 // Cache Service (Singleton - đăng ký riêng vì cần Singleton)
 builder.Services.AddMemoryCache();

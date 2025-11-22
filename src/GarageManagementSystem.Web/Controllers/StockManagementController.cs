@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using GarageManagementSystem.Web.Services;
 using GarageManagementSystem.Web.Configuration;
+using System.Linq;
 
 namespace GarageManagementSystem.Web.Controllers
 {
@@ -59,34 +60,48 @@ namespace GarageManagementSystem.Web.Controllers
 
                 var endpoint = ApiEndpoints.StockTransactions.GetAll + "?" + string.Join("&", queryParams);
                 var response = await _apiService.GetAsync<PagedResponse<StockTransactionDto>>(endpoint);
-                
+                var drawValue = 0;
+                var drawString = Request.Query["draw"].FirstOrDefault();
+                if (!string.IsNullOrEmpty(drawString) && int.TryParse(drawString, out var parsedDraw))
+                {
+                    drawValue = parsedDraw;
+                }
+
                 if (response.Success && response.Data != null)
                 {
-                    return Json(response.Data);
+                    return Json(new
+                    {
+                        success = true,
+                        draw = drawValue,
+                        recordsTotal = response.Data.TotalCount,
+                        recordsFiltered = response.Data.TotalCount,
+                        data = response.Data.Data
+                    });
                 }
                 else
                 {
-                    return Json(new PagedResponse<StockTransactionDto>
+                    return Json(new
                     {
-                        Data = new List<StockTransactionDto>(),
-                        TotalCount = 0,
-                        PageNumber = pageNumber,
-                        PageSize = pageSize,
-                        Success = false,
-                        Message = response.ErrorMessage ?? "Lỗi khi lấy danh sách giao dịch kho"
+                        success = false,
+                        draw = drawValue,
+                        recordsTotal = 0,
+                        recordsFiltered = 0,
+                        data = new List<StockTransactionDto>(),
+                        message = response.ErrorMessage ?? "Lỗi khi lấy danh sách giao dịch kho"
                     });
                 }
             }
             catch (Exception ex)
             {
-                return Json(new PagedResponse<StockTransactionDto>
+                var drawValue = Request.Query["draw"].FirstOrDefault() ?? "0";
+                return Json(new
                 {
-                    Data = new List<StockTransactionDto>(),
-                    TotalCount = 0,
-                    PageNumber = pageNumber,
-                    PageSize = pageSize,
-                    Success = false,
-                    Message = $"Lỗi: {ex.Message}"
+                    success = false,
+                    draw = drawValue,
+                    recordsTotal = 0,
+                    recordsFiltered = 0,
+                    data = new List<StockTransactionDto>(),
+                    message = $"Lỗi: {ex.Message}"
                 });
             }
         }
